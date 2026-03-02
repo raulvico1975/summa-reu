@@ -93,7 +93,12 @@ function useOrganizationBySlug(orgSlug?: string) {
     const loadOrganization = async () => {
       setIsLoading(true);
       setError(null);
+      setOrganization(null);
+      setOrganizationId(null);
+      setUserProfile(null);
       setMember(null);
+      // Evita rols stale entre canvis d'organització (important per queries protegides)
+      setUserRole(null);
 
       try {
         let orgDoc: Organization | null = null;
@@ -289,6 +294,7 @@ function useOrganizationBySlug(orgSlug?: string) {
               userOverrides,
               userGrants,
             });
+            setUserRole(role);
           } else {
             setUserProfile(null);
             setMember(null);

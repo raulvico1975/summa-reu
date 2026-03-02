@@ -358,7 +358,7 @@ function TopCategoriesTable({
 
 export default function DashboardPage() {
   const { firestore, user } = useFirebase();
-  const { organizationId, organization, userRole } = useCurrentOrganization();
+  const { organizationId, organization, userRole, isLoading: isOrganizationLoading } = useCurrentOrganization();
   const { t, tr, language } = useTranslations();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   // Helper local per interpolació de placeholders {key} en claus JSON
@@ -568,14 +568,14 @@ export default function DashboardPage() {
 
   const fiscalAlertsQuery = useMemoFirebase(
     () => {
-      if (!organizationId || userRole !== 'admin') return null;
+      if (!organizationId || isOrganizationLoading || userRole !== 'admin') return null;
       return query(
         collection(firestore, 'organizations', organizationId, 'adminAlerts'),
         where('type', '==', FISCAL_PENDING_REVIEW_ALERT_TYPE),
         where('status', '==', 'open')
       );
     },
-    [firestore, organizationId, userRole]
+    [firestore, organizationId, isOrganizationLoading, userRole]
   );
   const { data: fiscalAlerts } = useCollection<DashboardAdminAlert>(fiscalAlertsQuery);
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
