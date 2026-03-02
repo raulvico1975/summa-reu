@@ -51,13 +51,13 @@ Aquesta classificació determina els requisits de validació (secció 4).
 
 ## 3. Ritual de desenvolupament
 
-1. Des del **repositori de control** (a `main`, net): `npm run inicia` o `npm run implementa`
-2. El sistema crea **branca `codex/*` + worktree extern** a `../summa-social-worktrees/<branch>`
+1. Des del **repositori de control** (a `main`, net): `npm run inicia` o `npm run implementa` (opcional: `npm run inicia -- <area>`)
+2. El sistema crea **branca `codex/*` + worktree extern** a `../summa-social-worktrees/<branch>` i, si hi ha `area`, evita solapaments amb una altra tasca oberta de la mateixa àrea
 3. **Treballar i validar** dins del worktree de tasca:
    ```bash
    node scripts/check-build-env.mjs && npm run build && npm test
    ```
-4. `npm run acabat` des del worktree: checks + commit + push + integració a `main` (control)
+4. `npm run acabat` des del worktree: checks + commit + push + cua d'integració + prova prèvia de merge + integració a `main` (control)
 5. Després d'`acabat`, el sistema pregunta si vols tancar el worktree (`npm run worktree:close`)
 
 ---
@@ -119,7 +119,7 @@ El ritual complet d'"acabar feina" i publicar s'executa via scripts deterministe
 ```bash
 npm run inicia    # crea branca codex/* + worktree extern de tasca
 npm run implementa # equivalent a inicia
-npm run acabat    # tanca tasca des del worktree (checks + commit + push + integració a main)
+npm run acabat    # tanca tasca des del worktree (checks + commit + push + cua + integració a main)
 npm run publica   # publica main -> prod (només des del repositori de control)
 npm run worktree:list
 npm run worktree:close
@@ -128,12 +128,24 @@ npm run worktree:gc
 
 `npm run inicia` i `npm run implementa` (`scripts/workflow.sh inicia|implementa`) només funcionen al repositori de control (`main` net) i creen una tasca aïllada: branca `codex/...` + worktree extern.
 
+Si es vol reservar una àrea funcional, es pot fer servir:
+
+```bash
+npm run inicia -- remeses
+```
+
+Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOCKED_SAFE`) per evitar solapaments.
+
 `npm run acabat` (`scripts/workflow.sh acabat`) fa aquests passos de forma seqüencial:
 1. Detectar canvis pendents i classificar risc (ALT/MITJÀ/BAIX)
-2. Verificacions (`verify-local.sh`, `verify-ci.sh`)
-3. Commit i push de la branca de treball (`codex/...`)
-4. Integració automàtica a `main` via repositori de control (si no hi ha conflictes)
-5. Pregunta operativa de tancament del worktree
+2. Verificacions (`verify-local.sh`, `verify-ci.sh`) quan hi ha canvis locals
+3. Commit i push automàtics de la branca de treball (`codex/...`) quan hi ha canvis locals
+4. Entrada a **cua d'integració única** (lock) per evitar carreres entre agents
+5. **Prova prèvia de merge** contra `main` actualitzat (sense publicar encara)
+6. Integració automàtica a `main` via repositori de control si la prova passa
+7. Pregunta operativa de tancament del worktree
+
+No cal cap flag manual per integrar.
 
 `npm run publica` executa `scripts/deploy.sh`, que fa:
 1. Preflight git al **repositori de control** (branca=main, working tree net, pull ff-only)
@@ -183,6 +195,8 @@ npm run worktree:gc
 - Check post-producció de 3 minuts automatitzat.
 - Mini-registre d'incidència quan un deploy queda bloquejat.
 - Si no hi ha URLs de smoke definides, el sistema prova automàticament amb `DEPLOY_BASE_URL` o amb la URL publicada detectada a `firebase.json`.
+- Cua d'integració única per `acabat` (evita integracions simultànies sobre `main`).
+- Prova prèvia de merge a `acabat` per detectar solapaments abans d'integrar.
 
 ### Missatge de commit
 

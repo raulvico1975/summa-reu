@@ -189,6 +189,14 @@ Aquesta ordre prepara el desenvolupament:
 - crea branca `codex/...` + worktree extern de tasca
 - Claude continua la implementació dins del worktree creat
 
+Opcionalment, si s'indica una àrea funcional, Claude pot reservar-la:
+
+```bash
+npm run inicia -- remeses
+```
+
+Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOCKED_SAFE`) per evitar solapaments.
+
 Quan Raül escriu literalment:
 
 > "Implementa"
@@ -215,7 +223,9 @@ npm run acabat
 Això llança `scripts/workflow.sh acabat`, que:
 - executa verificacions locals i CI (`verify-local.sh`, `verify-ci.sh`)
 - commiteja i fa push
-- integra a `main` al repositori de control quan és segur
+- entra a una cua d'integració única
+- prova el merge contra `main` actualitzat abans d'integrar
+- integra a `main` al repositori de control només si la prova passa
 - pregunta operativament si cal tancar el worktree de tasca
 
 Després de completar aquesta fase, Claude:
@@ -239,7 +249,7 @@ Precondició obligatòria: executar-ho des del repositori de control (`/Users/ra
 Això llança `scripts/deploy.sh`, que és un script determinista i bloquejant que:
 - verifica git, detecta canvis
 - executa backup curt automàtic en risc ALT fiscal (si està configurat)
-- si toca àrea fiscal, demana confirmació de la verificació manual (`docs/QA-FISCAL.md`)
+- analitza impacte fiscal i bloqueja si les comprovacions no són suficients
 - executa verificacions locals
 - prepara rollback automàtic a `docs/DEPLOY-ROLLBACK-LATEST.md`
 - fa el merge ritual (main→prod) i push
@@ -303,21 +313,17 @@ Abans de crear worktree:
 - si no està net o no és `main`, aturar i demanar neteja o autorització explícita per stash/reset segons governança
 
 ### Flux operatiu obligatori
-1. executar `npm run inicia -- <slug>` des de `/Users/raulvico/Documents/summa-social` (control)
+1. executar `npm run inicia` des de `/Users/raulvico/Documents/summa-social` (control)  
+   opcional: `npm run inicia -- <area>` per reservar àrea i evitar solapament
 2. canviar a la ruta del worktree creat
 3. implementar i commitejar només dins del worktree
 4. integrar amb `npm run acabat`
-5. oferir tancament i executar `npm run worktree:close -- <slug>` si l'usuari diu `OK`
+5. oferir tancament i executar `npm run worktree:close` si l'usuari diu `OK`
 6. tornar al control només per `npm run publica` (si escau)
 
 ### Regles de context
 - No crear worktree per consultes o anàlisi.
-- Si hi ha un worktree actiu i arriba una nova ordre `Implementa:`, `Inicia:`, `Hotfix:` o `Refactor:`, aturar i respondre exactament:
-  - `Hi ha una tasca activa.`
-  - `Vols:`
-  - `A) acabar-la`
-  - `B) pausar-la i obrir un nou worktree?`
-- No crear un nou worktree automàticament mentre n'hi hagi un d'actiu sense decisió explícita.
+- Si la petició indica àrea (`npm run inicia -- <area>`), respectar el bloqueig automàtic d'àrea activa (`BLOCKED_SAFE`) i no forçar l'obertura d'una nova tasca en la mateixa àrea.
 - Mai executar `publica` fora del control.
 - Si algú intenta publicar fora del control, mostrar missatge de bloqueig:
   - `BLOQUEIG: npm run publica només es pot executar des del repositori de control a main.`
@@ -328,6 +334,7 @@ Abans de crear worktree:
 - Claude/Codex mai integra una branca que no sigui la activa.
 - Claude/Codex mai fa merge manual al control.
 - Claude/Codex sempre usa `npm run acabat`.
+- `acabat` usa cua d'integració i prova prèvia de merge abans de tocar `main`.
 - La gestió de múltiples tasques és seqüencial per execució i paral·lela per aïllament físic.
 
 ### Format de petició recomanat

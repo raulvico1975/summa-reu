@@ -148,9 +148,13 @@ El hook Husky (`.husky/pre-commit`) bloqueja `git commit` si estàs a la branca 
    - branca `codex/...`
    - worktree extern a `../summa-social-worktrees/<branch>`
 3. Implementar dins del worktree nou
-4. Tancar amb `npm run acabat` des del worktree
+4. Tancar amb `npm run acabat` des del worktree (checks + commit/push + cua + integració)
 5. Respondre la pregunta operativa de tancament:
    - recomanat: `npm run worktree:close`
+
+**Reserva d'àrea (opcional, recomanada):**
+- Pots iniciar amb àrea per evitar solapaments: `npm run inicia -- remeses` (també vàlid amb `implementa`).
+- Si ja hi ha una tasca activa de la mateixa àrea, el sistema bloqueja l'inici (`BLOCKED_SAFE`).
 
 **Operacions de manteniment:**
 - Llistar worktrees: `npm run worktree:list`
@@ -186,7 +190,7 @@ Guia ràpida d'execució: [scripts/verify-fiscal.md](../scripts/verify-fiscal.md
 Flux guiat recomanat:
 
 ```bash
-npm run inicia        # o: npm run implementa
+npm run inicia -- remeses # opcional: reserva d'àrea (exemple)
 npm run worktree:list # identifica la ruta del worktree actiu
 npm run estat         # et suggereix quan dir "Acabat" amb resum no tècnic
 npm run acabat
@@ -197,6 +201,7 @@ npm run publica
 
 `inicia` i `implementa` són equivalents.
 `Inicia` i `Implementa` serveixen igual.
+Si no vols reservar àrea, usa `npm run inicia` / `npm run implementa` sense arguments.
 
 **Important:** `npm run publica` només es pot executar des del repositori de control (`/Users/raulvico/Documents/summa-social`) a la branca `main`.
 
@@ -217,6 +222,7 @@ npm run publica
 Per defecte, si no es defineixen URLs de comprovació, el sistema intenta deduir-les automàticament a partir de `DEPLOY_BASE_URL` o de la URL publicada detectada a `firebase.json`.
 
 **Si falla:**
+- Solapament detectat a `acabat` (prova prèvia de merge) → el canvi queda guardat a la teva branca; cal reintentar després d'actualitzar o resoldre el conflicte.
 - Conflicte de merge → el script aborta i torna a `main`. Resol el conflicte manualment.
 - Verificació falla → corregeix els errors i torna a executar `npm run publica`.
 - Si no es pot expressar impacte en llenguatge de negoci → bloqueja `BLOCKED_SAFE`.

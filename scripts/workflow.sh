@@ -41,21 +41,116 @@ if [ -z "$GIT_COMMON_DIR" ]; then
   exit 1
 fi
 CONTROL_REPO_DIR="${WORKFLOW_CONTROL_REPO_DIR:-$(cd "$GIT_COMMON_DIR/.." && pwd)}"
+WORKFLOW_STATE_DIR="$GIT_COMMON_DIR/workflow-state"
+INTEGRATION_LOCK_DIR="$WORKFLOW_STATE_DIR/integration.lock"
+INTEGRATION_LOCK_HELD=false
+
+cleanup_integration_lock_on_exit() {
+  if [ "$INTEGRATION_LOCK_HELD" != "true" ]; then
+    return
+  fi
+  rm -rf "$INTEGRATION_LOCK_DIR" 2>/dev/null || true
+  INTEGRATION_LOCK_HELD=false
+}
+
+trap cleanup_integration_lock_on_exit EXIT
 
 say() {
   printf '%s\n' "$1"
 }
 
-env_flag_enabled() {
-  local value="${1:-}"
-  case "$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')" in
-    1|true|yes|on)
+sanitize_area_slug() {
+  local raw="${1:-}"
+  printf '%s' "$raw" \
+    | tr '[:upper:]' '[:lower:]' \
+    | tr '/[:space:]' '-' \
+    | tr -cd '[:alnum:]_.-' \
+    | sed -E 's/[._]+/-/g; s/^-+//; s/-+$//'
+}
+
+ensure_workflow_state_dir() {
+  mkdir -p "$WORKFLOW_STATE_DIR"
+}
+
+cleanup_stale_integration_lock_if_needed() {
+  if [ ! -d "$INTEGRATION_LOCK_DIR" ]; then
+    return
+  fi
+
+  local pid_file pid
+  pid_file="$INTEGRATION_LOCK_DIR/pid"
+  pid="$(cat "$pid_file" 2>/dev/null || true)"
+
+  if [ -z "$pid" ]; then
+    rm -rf "$INTEGRATION_LOCK_DIR" 2>/dev/null || true
+    return
+  fi
+
+  if kill -0 "$pid" >/dev/null 2>&1; then
+    return
+  fi
+
+  rm -rf "$INTEGRATION_LOCK_DIR" 2>/dev/null || true
+}
+
+acquire_integration_lock() {
+  local branch="$1"
+  local wait_seconds elapsed start_ts notice_bucket last_notice_bucket active_branch
+
+  ensure_workflow_state_dir
+  wait_seconds="${INTEGRATION_LOCK_WAIT_SECONDS:-300}"
+  if ! [[ "$wait_seconds" =~ ^[0-9]+$ ]]; then
+    wait_seconds=300
+  fi
+
+  start_ts="$(date +%s)"
+  last_notice_bucket=-1
+
+  while true; do
+    if mkdir "$INTEGRATION_LOCK_DIR" 2>/dev/null; then
+      printf '%s\n' "$$" > "$INTEGRATION_LOCK_DIR/pid"
+      printf '%s\n' "$branch" > "$INTEGRATION_LOCK_DIR/branch"
+      INTEGRATION_LOCK_HELD=true
       return 0
-      ;;
-    *)
+    fi
+
+    cleanup_stale_integration_lock_if_needed
+    if mkdir "$INTEGRATION_LOCK_DIR" 2>/dev/null; then
+      printf '%s\n' "$$" > "$INTEGRATION_LOCK_DIR/pid"
+      printf '%s\n' "$branch" > "$INTEGRATION_LOCK_DIR/branch"
+      INTEGRATION_LOCK_HELD=true
+      return 0
+    fi
+
+    elapsed=$(( $(date +%s) - start_ts ))
+    if [ "$elapsed" -ge "$wait_seconds" ]; then
+      active_branch="$(cat "$INTEGRATION_LOCK_DIR/branch" 2>/dev/null || true)"
+      say "BLOCKED_SAFE"
+      if [ -n "$active_branch" ]; then
+        say "Hi ha una altra integració en curs: $active_branch"
+      else
+        say "Hi ha una altra integració en curs."
+      fi
+      say "Torna a dir 'Acabat' en uns minuts."
       return 1
-      ;;
-  esac
+    fi
+
+    notice_bucket=$((elapsed / 15))
+    if [ "$notice_bucket" -ne "$last_notice_bucket" ]; then
+      say "Esperant torn d'integració..."
+      last_notice_bucket="$notice_bucket"
+    fi
+
+    sleep 2
+  done
+}
+
+release_integration_lock() {
+  if [ "$INTEGRATION_LOCK_HELD" != "true" ]; then
+    return
+  fi
+  rm -rf "$INTEGRATION_LOCK_DIR" 2>/dev/null || true
+  INTEGRATION_LOCK_HELD=false
 }
 
 git_control() {
@@ -451,6 +546,46 @@ push_branch() {
   git push -u origin "$branch"
 }
 
+build_area_branch_name() {
+  local area_slug="$1"
+  local base candidate counter
+
+  base="codex/${area_slug}-$(date '+%Y%m%d-%H%M%S')"
+  candidate="$base"
+  counter=1
+
+  while git_control show-ref --verify --quiet "refs/heads/$candidate"; do
+    candidate="${base}-${counter}"
+    counter=$((counter + 1))
+  done
+
+  printf '%s' "$candidate"
+}
+
+find_active_branch_for_area() {
+  local area_slug="$1"
+  local branch
+
+  while IFS= read -r branch; do
+    [ -z "$branch" ] && continue
+    if [[ "$branch" != codex/"$area_slug"-* ]]; then
+      continue
+    fi
+    if git_control merge-base --is-ancestor "$branch" main >/dev/null 2>&1; then
+      continue
+    fi
+    printf '%s' "$branch"
+    return 0
+  done < <(git_control worktree list --porcelain | awk '
+    $1=="branch" {
+      sub("refs/heads/", "", $2)
+      print $2
+    }
+  ')
+
+  printf '%s' ""
+}
+
 ensure_control_repo_for_deploy_or_merge() {
   local control_branch
   control_branch="$(git_control rev-parse --abbrev-ref HEAD)"
@@ -466,6 +601,26 @@ ensure_control_repo_for_deploy_or_merge() {
     say "El repositori de control ha d'estar net abans d'integrar o publicar."
     exit 1
   fi
+}
+
+dry_run_integrate_to_main() {
+  local branch="$1"
+
+  ensure_control_repo_for_deploy_or_merge
+
+  if ! git_control pull --ff-only origin main >/dev/null 2>&1; then
+    say "$STATUS_NO"
+    say "No s'ha pogut actualitzar main al repositori de control."
+    return 1
+  fi
+
+  if ! git_control merge --no-commit --no-ff "$branch" >/dev/null 2>&1; then
+    git_control merge --abort >/dev/null 2>&1 || git_control reset --merge >/dev/null 2>&1 || true
+    return 1
+  fi
+
+  git_control merge --abort >/dev/null 2>&1 || git_control reset --merge >/dev/null 2>&1 || true
+  return 0
 }
 
 integrate_to_main() {
@@ -544,33 +699,55 @@ require_clean_tree_for_publica() {
 
 run_inicia() {
   local mode="${1:-auto}"
+  local area_arg=""
+  local area_slug=""
+  local busy_branch=""
+  local task_branch=""
 
   if [ "$mode" = "main" ]; then
     say "El mode 'main' queda substituït per worktree-first."
+  elif [ -n "$mode" ] && [ "$mode" != "auto" ]; then
+    area_arg="$mode"
+    area_slug="$(sanitize_area_slug "$area_arg")"
+    if [ -z "$area_slug" ]; then
+      area_slug="general"
+    fi
   fi
 
   say "$STATUS_NO"
-  if ! bash "$SCRIPT_DIR/worktree.sh" create; then
-    exit 1
+
+  if [ -n "$area_slug" ] && [ "$area_slug" != "general" ]; then
+    busy_branch="$(find_active_branch_for_area "$area_slug")"
+    if [ -n "$busy_branch" ]; then
+      say "BLOCKED_SAFE"
+      say "Aquesta àrea ja té una tasca activa: $busy_branch"
+      say "Per evitar solapaments, primer integra o tanca aquesta tasca."
+      exit 1
+    fi
+
+    task_branch="$(build_area_branch_name "$area_slug")"
+    if ! bash "$SCRIPT_DIR/worktree.sh" create --branch "$task_branch"; then
+      exit 1
+    fi
+  else
+    if ! bash "$SCRIPT_DIR/worktree.sh" create; then
+      exit 1
+    fi
   fi
 
   emit_next_step_block "Continua implementació dins del worktree creat. Quan estigui llest, digues Acabat des d'allà."
 }
 
 run_acabat() {
-  local allow_arg="${1:-}"
-  local final_status branch control_branch control_main_ref ahead_count
+  local legacy_arg="${1:-}"
+  local final_status branch control_branch control_main_ref control_main_sha ahead_count
+  local changed_files risk
   branch="$(current_branch)"
 
-  local allow_main_merge=false
-  if [ "$allow_arg" = "--allow-main-merge" ] || env_flag_enabled "${ALLOW_MAIN_MERGE:-0}"; then
-    allow_main_merge=true
-  fi
-
-  if [ -n "$allow_arg" ] && [ "$allow_arg" != "--allow-main-merge" ]; then
+  if [ -n "$legacy_arg" ] && [ "$legacy_arg" != "--allow-main-merge" ]; then
     say "BLOCKED_SAFE"
-    say "Argument no reconegut per 'acabat': $allow_arg"
-    say "Opció suportada: --allow-main-merge"
+    say "Argument no reconegut per 'acabat': $legacy_arg"
+    say "No cal cap opció manual per integrar."
     exit 1
   fi
 
@@ -592,10 +769,24 @@ run_acabat() {
     exit 1
   fi
 
-  if [ -n "$(git status --porcelain)" ]; then
-    say "BLOCKED_SAFE"
-    say "Hi ha canvis locals no commitejats al worktree. Fes commit o descarta abans d'Acabat."
-    exit 1
+  changed_files="$(collect_changed_files)"
+  if [ -n "$changed_files" ]; then
+    risk="$(classify_risk "$changed_files")"
+    if ! run_checks; then
+      say "BLOCKED_SAFE"
+      say "Les comprovacions automàtiques han fallat. Cal corregir abans d'integrar."
+      exit 1
+    fi
+
+    if ! stage_changes; then
+      say "BLOCKED_SAFE"
+      say "No s'han pogut preparar canvis per tancar la tasca."
+      exit 1
+    fi
+    guard_no_prohibited_staged_paths
+
+    commit_changes "$risk"
+    say "Canvis validats i desats per tancar la tasca."
   fi
 
   if ! git_control fetch origin --quiet >/dev/null 2>&1; then
@@ -612,13 +803,14 @@ run_acabat() {
   fi
 
   control_main_ref="main"
-  if ! git rev-parse --verify "$control_main_ref" >/dev/null 2>&1; then
+  if ! git_control rev-parse --verify "$control_main_ref" >/dev/null 2>&1; then
     say "BLOCKED_SAFE"
     say "No s'ha trobat la referència $control_main_ref per calcular integració."
     exit 1
   fi
 
-  ahead_count="$(git rev-list --count "$control_main_ref..HEAD")"
+  control_main_sha="$(git_control rev-parse "$control_main_ref")"
+  ahead_count="$(git rev-list --count "${control_main_sha}..HEAD")"
   if [ "$ahead_count" -eq 0 ]; then
     final_status="$(compute_repo_status)"
     say "$final_status"
@@ -633,17 +825,23 @@ run_acabat() {
     exit 1
   fi
 
-  if [ "$allow_main_merge" != "true" ]; then
-    say "$STATUS_READY"
-    say "merge/push disabled by default."
-    say "Per integrar a main cal flag explícit: ALLOW_MAIN_MERGE=1 o --allow-main-merge"
-    emit_next_step_block "Obre PR manual o torna a executar amb flag explícit si vols integrar."
-    return
+  say "No hi ha canvis locals nous, pero la branca te commits pendents d'integrar."
+  push_branch "$branch"
+
+  if ! acquire_integration_lock "$branch"; then
+    exit 1
   fi
 
-  say "No hi ha canvis locals nous, pero la branca te commits pendents d'integrar (mode allow-main-merge)."
-  push_branch "$branch"
+  if ! dry_run_integrate_to_main "$branch"; then
+    release_integration_lock
+    say "BLOCKED_SAFE"
+    say "S'ha detectat un solapament amb canvis recents a main."
+    say "El teu canvi queda guardat a $branch fins resoldre la integració."
+    exit 1
+  fi
+
   integrate_to_main "$branch"
+  release_integration_lock
 
   final_status="$(compute_repo_status)"
   say "$final_status"
@@ -713,7 +911,7 @@ main() {
   local arg1="${2:-}"
 
   if [ -z "$cmd" ]; then
-    say "Us: bash scripts/workflow.sh [inicia|implementa|acabat|publica|estat]"
+    say "Us: bash scripts/workflow.sh [inicia [area]|implementa [area]|acabat|publica|estat]"
     exit 1
   fi
 
@@ -735,7 +933,7 @@ main() {
       ;;
     *)
       say "Comanda desconeguda: $cmd"
-      say "Us: bash scripts/workflow.sh [inicia|implementa|acabat|publica|estat]"
+      say "Us: bash scripts/workflow.sh [inicia [area]|implementa [area]|acabat|publica|estat]"
       exit 1
       ;;
   esac
