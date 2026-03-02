@@ -274,6 +274,26 @@ Validació funcional mínima obligatòria a una org de prova abans de prod.
 
 ---
 
+### VF-16 Desfer devolucions remesa sense `remittanceId` (desktop + mòbil)
+
+**Context:**
+Hi ha remeses de devolucions legacy on el pare té `isRemittance=true` però no sempre `remittanceId`.
+
+**Passos:**
+1. Obrir `/{org}/dashboard/movimientos`.
+2. Filtrar una remesa de devolucions (pare) amb `isRemittance=true` i sense `remittanceId`.
+3. Obrir menú d'accions (desktop) i verificar que apareix "Desfer remesa".
+4. Executar "Desfer remesa" i confirmar.
+5. Repetir la validació en vista mòbil (mateix tipus de pare).
+
+**Expected:**
+- [ ] L'acció "Desfer remesa" és visible encara que falti `remittanceId`.
+- [ ] L'undo s'executa correctament i arxiva filles fiscals.
+- [ ] El pare queda resetejat (sense estat de remesa processada).
+- [ ] En mòbil també existeix l'acció "Desfer remesa".
+
+---
+
 ## 3. Resultat de la sessió
 
 | Data | Executor | VF-1 | VF-2 | VF-3 | VF-4 | VF-5 | VF-6 | VF-7 | VF-8 | VF-9 | VF-10 | VF-11 | VF-12 | VF-13 | VF-14 | VF-15 | Notes |
