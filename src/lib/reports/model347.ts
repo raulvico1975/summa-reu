@@ -57,12 +57,41 @@ export interface Model347Result {
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+function normalizeTxDate(
+  value: unknown
+): Date | null {
+  if (!value) return null;
+
+  let parsed: Date | null = null;
+
+  if (value instanceof Date) {
+    parsed = value;
+  } else if (typeof value === 'string' || typeof value === 'number') {
+    parsed = new Date(value);
+  } else if (typeof value === 'object') {
+    const withToDate = value as { toDate?: () => Date };
+    if (typeof withToDate.toDate === 'function') {
+      parsed = withToDate.toDate();
+    } else {
+      const withSeconds = value as { seconds?: number; nanoseconds?: number };
+      if (typeof withSeconds.seconds === 'number') {
+        const millis = withSeconds.seconds * 1000 + Math.floor((withSeconds.nanoseconds ?? 0) / 1_000_000);
+        parsed = new Date(millis);
+      }
+    }
+  }
+
+  if (!parsed || Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
 /**
  * Retorna el trimestre (1–4) per una data ISO string.
  * Mes 0–2 → Q1, 3–5 → Q2, 6–8 → Q3, 9–11 → Q4
  */
-export function getQuarter(dateStr: string): 1 | 2 | 3 | 4 {
-  const month = new Date(dateStr).getMonth();
+export function getQuarter(dateValue: unknown): 1 | 2 | 3 | 4 {
+  const parsed = normalizeTxDate(dateValue);
+  const month = parsed ? parsed.getMonth() : Number.NaN;
   if (month <= 2) return 1;
   if (month <= 5) return 2;
   if (month <= 8) return 3;
@@ -126,18 +155,23 @@ export function computeModel347(
   }>();
 
   for (const tx of transactions) {
-    // Filtre d'any
-    if (new Date(tx.date).getFullYear() !== year) continue;
+    const txDate = normalizeTxDate(tx.date);
 
-    // Filtre d'abast: NOMÉS proveïdors
-    if (tx.contactType !== 'supplier') continue;
+    // Filtre d'any
+    if (!txDate || txDate.getFullYear() !== year) continue;
+
+    // Filtre d'abast: només transaccions amb contactId existent
+    // (legacy: hi ha registres amb contactType buit però contactId de proveïdor)
     if (!tx.contactId) continue;
 
     const supplier = supplierMap.get(tx.contactId);
     if (!supplier) continue;
 
+    // Si contactType és explícit i no és supplier, descartem.
+    if (tx.contactType && tx.contactType !== 'supplier') continue;
+
     // Determinar direcció
-    if (tx.amount === 0) continue;
+    if (!Number.isFinite(tx.amount) || tx.amount === 0) continue;
     const direction: Direction = tx.amount < 0 ? 'expense' : 'income';
 
     const key = `${tx.contactId}:${direction}`;
@@ -152,10 +186,10 @@ export function computeModel347(
 
     buckets.get(key)!.transactions.push({
       id: tx.id,
-      date: tx.date,
+      date: typeof tx.date === 'string' ? tx.date : txDate.toISOString().slice(0, 10),
       description: tx.description || '',
       amount: Math.abs(tx.amount),
-      quarter: getQuarter(tx.date),
+      quarter: getQuarter(txDate),
       categoryId: tx.category ?? null,
       categoryName: tx.category ? (categoryMap.get(tx.category) ?? null) : null,
     });

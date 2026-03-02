@@ -147,6 +147,46 @@ describe('computeModel347', () => {
     assert.strictEqual(result.expenses.length, 0);
     assert.strictEqual(result.income.length, 0);
   });
+
+  it('admet data Firestore i contactType legacy a l export server-side', () => {
+    const transactions: Transaction[] = [
+      {
+        id: 't1',
+        date: { toDate: () => new Date('2025-01-15T00:00:00.000Z') } as unknown as string,
+        description: 'Factura legacy',
+        amount: -4100,
+        category: null,
+        document: null,
+        contactId: 's1',
+      },
+      {
+        id: 't2',
+        date: { seconds: 1741996800, nanoseconds: 0 } as unknown as string, // 2025-03-15
+        description: 'Moviment no supplier',
+        amount: -5000,
+        category: null,
+        document: null,
+        contactId: 's1',
+        contactType: 'donor',
+      },
+    ];
+
+    const suppliers: Supplier[] = [
+      { id: 's1', type: 'supplier', name: 'Proveidor 1', taxId: 'B12345678', zipCode: '08001', createdAt: '2024-01-01' },
+    ];
+
+    const result = computeModel347(
+      transactions,
+      suppliers,
+      [],
+      2025,
+      new Set<string>()
+    );
+
+    assert.strictEqual(result.expenses.length, 1);
+    assert.strictEqual(result.expenses[0].quarters.total, 4100);
+    assert.strictEqual(result.income.length, 0);
+  });
 });
 
 describe('generateModel347AEATFile', () => {
