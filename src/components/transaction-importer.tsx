@@ -55,6 +55,7 @@ import {
   getBankMappingColumnCount,
   type BankMappingFieldId,
 } from '@/lib/importers/bank/mapping-ui';
+import { normalizeImportTransactionTypeForPersist } from '@/lib/importers/bank/normalize-import-transaction-type';
 
 interface ImportTransactionsApiResponse {
   success: boolean;
@@ -849,19 +850,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           const normalizedTx = normalizeTransaction(tx) as Record<string, unknown>;
           const { id: _ignored, ...withoutId } = normalizedTx as { id?: string } & Record<string, unknown>;
           const sanitizedTx = { ...withoutId };
-
-          // Import bancari: no crear "returns" automàtiques sense flux dedicat
-          if (sanitizedTx.transactionType === 'return') {
-            sanitizedTx.transactionType = 'normal';
-
-            if (!sanitizedTx.contactId) {
-              sanitizedTx.contactId = null;
-            }
-
-            if ('linkedTransactionId' in sanitizedTx) {
-              sanitizedTx.linkedTransactionId = null;
-            }
-          }
+          sanitizedTx.transactionType = normalizeImportTransactionTypeForPersist(sanitizedTx.transactionType);
 
           return sanitizedTx;
         });

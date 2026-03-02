@@ -610,8 +610,8 @@ export function useTransactionActions({
         });
         // Missatge específic per soft-delete
         toast({
-          title: 'Transacció arxivada',
-          description: 'La transacció fiscal ha estat arxivada (no eliminada).',
+          title: 'Moviment arxivat',
+          description: 'El moviment fiscal ha estat arxivat (no eliminat).',
         });
       } catch (error) {
         console.error('[handleDeleteConfirm] Error archiving transaction:', error);
@@ -624,7 +624,7 @@ export function useTransactionActions({
     } else {
       // Delete normal per transaccions no fiscals
       deleteDocumentNonBlocking(doc(transactionsCollection, transactionToDelete.id));
-      toast({ title: t.movements.table.transactionDeleted });
+      toast({ title: 'Moviment eliminat' });
     }
 
     // Toast informatiu si s'ha desfet alguna conciliació
