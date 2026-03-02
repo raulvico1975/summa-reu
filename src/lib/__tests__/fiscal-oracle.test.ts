@@ -8,6 +8,7 @@ import {
   resolveEffectiveFiscalKind,
   type FiscalOracleTransaction,
 } from '../fiscal/fiscal-oracle';
+import { isFiscalDonationCandidate } from '../fiscal/is-fiscal-donation-candidate';
 
 describe('fiscal oracle fixture', () => {
   it('matches expected donor net, model 182 total, certificate net and pending exclusions', () => {
@@ -24,7 +25,7 @@ describe('fiscal oracle fixture', () => {
     assert.deepStrictEqual(metrics, FISCAL_ORACLE_EXPECTED);
   });
 
-  it('legacy remittance and transactionType=donation resolve as donation', () => {
+  it('uses the same strict donation predicate as model 182/certificates', () => {
     const remittanceTx: FiscalOracleTransaction = {
       id: 'tx-remittance',
       date: '2026-01-01',
@@ -45,7 +46,9 @@ describe('fiscal oracle fixture', () => {
       transactionType: 'donation',
     };
 
-    assert.strictEqual(resolveEffectiveFiscalKind(remittanceTx), 'donation');
+    assert.strictEqual(isFiscalDonationCandidate(remittanceTx), false);
+    assert.strictEqual(resolveEffectiveFiscalKind(remittanceTx), 'pending_review');
+    assert.strictEqual(isFiscalDonationCandidate(stripeLegacyTx), true);
     assert.strictEqual(resolveEffectiveFiscalKind(stripeLegacyTx), 'donation');
   });
 

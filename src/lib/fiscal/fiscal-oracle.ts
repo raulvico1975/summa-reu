@@ -1,4 +1,5 @@
 import type { TransactionType } from '@/lib/data';
+import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
 
 export type FiscalKind = 'donation' | 'non_fiscal' | 'pending_review';
 
@@ -44,10 +45,10 @@ export const FISCAL_ORACLE_AMOUNTS = {
 } as const;
 
 export const FISCAL_ORACLE_EXPECTED: Readonly<FiscalOracleMetrics> = Object.freeze({
-  donorNet: 135,
-  total182: 135,
-  certificateNet: 135,
-  pendingExcludedCount: 1,
+  donorNet: 125,
+  total182: 125,
+  certificateNet: 125,
+  pendingExcludedCount: 2,
 });
 
 interface OracleFixtureInput {
@@ -154,17 +155,7 @@ export function resolveEffectiveFiscalKind(tx: FiscalOracleTransaction): FiscalK
     return tx.fiscalKind;
   }
 
-  if (tx.transactionType === 'donation') {
-    return 'donation';
-  }
-
-  if (
-    tx.source === 'remittance' &&
-    tx.amount > 0 &&
-    tx.contactType === 'donor' &&
-    !!tx.contactId &&
-    !tx.archivedAt
-  ) {
+  if (isFiscalDonationCandidate(tx)) {
     return 'donation';
   }
 
