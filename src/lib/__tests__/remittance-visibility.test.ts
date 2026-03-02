@@ -20,6 +20,20 @@ describe('isVisibleInMovementsLedger', () => {
       isRemittance: false,
       isRemittanceItem: true,
       source: 'remittance',
+      parentTransactionId: 'parent-1',
+      archivedAt: null,
+    }, {
+      showArchived: false,
+    });
+    assert.equal(visible, false);
+  });
+
+  it("oculta filla legacy (sense isRemittanceItem) amb source='remittance' i parentTransactionId", () => {
+    const visible = isVisibleInMovementsLedger({
+      isRemittance: false,
+      isRemittanceItem: false,
+      source: 'remittance',
+      parentTransactionId: 'parent-legacy-1',
       archivedAt: null,
     }, {
       showArchived: false,
@@ -47,6 +61,7 @@ describe('isVisibleInMovementsLedger', () => {
       isRemittance: false,
       isRemittanceItem: false,
       source: 'remittance',
+      parentTransactionId: null,
       archivedAt: null,
     }, {
       showArchived: false,
