@@ -53,6 +53,7 @@ interface TransactionRowMobileProps {
   onSplitAmount?: (tx: Transaction) => void;
   onOpenSplitDetail?: (txId: string) => void;
   onUndoSplit?: (txId: string) => void;
+  onUndoRemittance?: (tx: Transaction) => void;
   isSplitDeleteBlocked?: boolean;
   deleteBlockedReason?: DeleteTransactionBlockedReason | null;
   onOpenReturnDialog?: (tx: Transaction) => void;
@@ -77,6 +78,7 @@ interface TransactionRowMobileProps {
     viewRemittanceDetail: string;
     splitProcessedLabel?: string;
     undoSplit?: string;
+    undoRemittance?: string;
     remittanceQuotes: string;
     manageReturn?: string;
     generateReturnEmail?: string;
@@ -95,6 +97,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   onSplitAmount,
   onOpenSplitDetail,
   onUndoSplit,
+  onUndoRemittance,
   isSplitDeleteBlocked,
   deleteBlockedReason,
   onOpenReturnDialog,
@@ -212,6 +215,15 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       onUndoSplit(tx.id);
     }, 50);
   }, [onUndoSplit, tx.id]);
+
+  const handleUndoRemittance = React.useCallback(() => {
+    if (!onUndoRemittance) return;
+    setIsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onUndoRemittance(tx);
+    }, 50);
+  }, [onUndoRemittance, tx]);
 
   const handleAttachDoc = React.useCallback(() => {
     if (!onAttachDocument) return;
@@ -388,6 +400,12 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               <DropdownMenuItem onClick={handleUndoSplit} className="text-orange-600">
                 <Undo2 className="h-4 w-4 mr-2" />
                 {t.undoSplit || 'Desfer desglossament'}
+              </DropdownMenuItem>
+            )}
+            {tx.isRemittance && onUndoRemittance && (
+              <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
+                <Undo2 className="h-4 w-4 mr-2" />
+                {t.undoRemittance || 'Desfer remesa'}
               </DropdownMenuItem>
             )}
             {deleteBlockedMessage ? (

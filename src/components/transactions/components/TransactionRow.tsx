@@ -1001,7 +1001,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.reconcileSepa || 'Desagregar i conciliar'}
               </DropdownMenuItem>
             )}
-            {tx.isRemittance && tx.remittanceId && onUndoRemittance && (
+            {tx.isRemittance && onUndoRemittance && (
               <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
                 <Undo2 className="mr-2 h-4 w-4" />
                 {t.undoRemittance || 'Desfer remesa'}

@@ -2131,6 +2131,7 @@ export function TransactionsTable({
               onSplitAmount={handleSplitAmount}
               onOpenSplitDetail={handleOpenSplitDetail}
               onUndoSplit={handleUndoSplit}
+              onUndoRemittance={handleUndoRemittance}
               isSplitDeleteBlocked={isSplitDeleteBlockedInMemory(tx)}
               deleteBlockedReason={getDeleteTransactionBlockedReason(tx)}
               onOpenReturnDialog={handleOpenReturnDialog}
