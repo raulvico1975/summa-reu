@@ -1239,6 +1239,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             const childTxData: Record<string, unknown> = {
               source: 'remittance',
               parentTransactionId: parentId,
+              isRemittanceItem: true,
               amount: -Math.abs(ret.amount),  // Import SEMPRE negatiu (devolució)
               date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
               transactionType: 'return',
@@ -1464,6 +1465,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               // Camps de la filla
               source: 'remittance',
               parentTransactionId: group.originalTransaction.id,
+              isRemittanceItem: true,
               amount: -Math.abs(ret.amount),  // Import SEMPRE negatiu (devolució)
               date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
               transactionType: 'return',
