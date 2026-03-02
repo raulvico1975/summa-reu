@@ -340,8 +340,9 @@ function validateRuntimeAndFiscalInvariants(
     };
   }
 
-  // Invariant A1: contactId segons tipus
-  if (tx.transactionType === 'return' && !tx.contactId) {
+  // Import bancari: permetem returns sense contactId en fase d'ingesta.
+  // Es podran vincular al donant posteriorment (p. ex. Return Importer).
+  if (tx.transactionType === 'return' && !tx.contactId && tx.source !== 'bank') {
     return {
       ok: false,
       error: `transactions[${index}] (return) requereix contactId`,
