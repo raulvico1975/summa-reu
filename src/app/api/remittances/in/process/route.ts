@@ -625,6 +625,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
           date: parentData.date,
           description: parentData.description,
           amount: toEuros(item.amountCents),
+          transactionType: 'donation' as const,
           category: category || parentData.category || null,
           document: null,
 
