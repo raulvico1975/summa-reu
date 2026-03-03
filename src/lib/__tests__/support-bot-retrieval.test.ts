@@ -110,6 +110,16 @@ test('retrieveCard direct-intent maps document upload question reliably', () => 
   assert.equal(result.confidence, 'high')
 })
 
+test('retrieveCard falls back safely for out-of-scope long query', () => {
+  const result = retrieveCard(
+    'quina és la millor estratègia de màrqueting digital per a una startup saas?',
+    'ca',
+    cards
+  )
+  assert.equal(result.card.id, 'fallback-no-answer')
+  assert.equal(result.mode, 'fallback')
+})
+
 test('inferQuestionDomain detects fiscal and remittances', () => {
   assert.equal(inferQuestionDomain('Com envio certificat de donació model 182?'), 'fiscal')
   assert.equal(inferQuestionDomain('Puc desfer una remesa de rebuts?'), 'remittances')

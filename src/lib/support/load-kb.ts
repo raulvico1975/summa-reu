@@ -41,6 +41,7 @@ const __dirname2 = dirname(__filename2)
 const KB_DIR = join(__dirname2, '..', '..', '..', 'docs', 'kb')
 const CARDS_DIR = join(KB_DIR, 'cards')
 const FALLBACKS_PATH = join(KB_DIR, '_fallbacks.json')
+const GENERATED_HELP_BOT_PATH = join(__dirname2, '..', '..', '..', 'docs', 'generated', 'help-bot.json')
 const I18N_DIR = join(__dirname2, '..', '..', 'i18n', 'locales')
 
 // -------------------------------------------------------------------
@@ -49,6 +50,19 @@ const I18N_DIR = join(__dirname2, '..', '..', 'i18n', 'locales')
 
 let cachedCards: KBCard[] | null = null
 const cachedI18n: Record<string, Record<string, string>> = {}
+
+type GeneratedHelpBotCard = {
+  id?: string
+  title?: { ca?: string; es?: string } | string
+  domain?: string
+  risk?: string
+  guardrail?: string
+  answerMode?: string
+  uiPaths?: string[]
+  keywords?: string[]
+  intents?: { ca?: string[]; es?: string[] }
+  answer?: { ca?: string; es?: string } | string
+}
 
 // -------------------------------------------------------------------
 // Helpers
@@ -115,6 +129,117 @@ function extractStepsFromCardText(cardText: string): string[] {
   return uniqueItems(steps, 8)
 }
 
+function normalizeDomain(domain?: string): string {
+  const value = (domain ?? '').toLowerCase().trim()
+  const allowed = new Set([
+    'general',
+    'config',
+    'donors',
+    'transactions',
+    'remittances',
+    'sepa',
+    'fiscal',
+    'documents',
+    'projects',
+    'superadmin',
+  ])
+  return allowed.has(value) ? value : 'general'
+}
+
+function normalizeRisk(risk?: string): string {
+  const value = (risk ?? '').toLowerCase().trim()
+  return value === 'guarded' ? 'guarded' : 'safe'
+}
+
+function normalizeGuardrail(guardrail?: string, domain = 'general'): string {
+  const value = (guardrail ?? '').toLowerCase().trim()
+  const allowed = new Set(['none', 'b1_fiscal', 'b1_sepa', 'b1_remittances', 'b1_danger'])
+  if (allowed.has(value)) return value
+  if (domain === 'fiscal') return 'b1_fiscal'
+  if (domain === 'sepa') return 'b1_sepa'
+  if (domain === 'remittances') return 'b1_remittances'
+  if (domain === 'superadmin') return 'b1_danger'
+  return 'none'
+}
+
+function normalizeAnswerMode(answerMode?: string): string {
+  const value = (answerMode ?? '').toLowerCase().trim()
+  return value === 'limited' ? 'limited' : 'full'
+}
+
+function toLocalizedText(
+  value: { ca?: string; es?: string } | string | undefined,
+  fallback = ''
+): { ca?: string; es?: string } {
+  if (typeof value === 'string') {
+    return { ca: value || fallback, es: value || fallback }
+  }
+  return {
+    ca: value?.ca ?? fallback,
+    es: value?.es ?? fallback,
+  }
+}
+
+function toStringArray(values: unknown): string[] {
+  if (!Array.isArray(values)) return []
+  return values
+    .map(value => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean)
+}
+
+function convertGeneratedHelpCard(card: GeneratedHelpBotCard): KBCard | null {
+  const id = typeof card.id === 'string' ? card.id.trim() : ''
+  if (!id) return null
+
+  const domain = normalizeDomain(card.domain)
+  const risk = normalizeRisk(card.risk)
+  const guardrail = normalizeGuardrail(card.guardrail, domain)
+  const answerMode = normalizeAnswerMode(card.answerMode)
+  const title = toLocalizedText(card.title, id)
+  const answer = toLocalizedText(card.answer)
+  const intents = card.intents && typeof card.intents === 'object'
+    ? {
+        ca: toStringArray(card.intents.ca),
+        es: toStringArray(card.intents.es),
+      }
+    : { ca: [], es: [] }
+
+  return {
+    id,
+    type: 'howto',
+    domain,
+    risk,
+    guardrail,
+    answerMode,
+    title,
+    intents,
+    guideId: null,
+    answer,
+    uiPaths: toStringArray(card.uiPaths),
+    needsSnapshot: false,
+    keywords: toStringArray(card.keywords),
+    related: [],
+    error_key: null,
+    symptom: { ca: null, es: null },
+  }
+}
+
+function loadGeneratedHelpCards(): KBCard[] {
+  try {
+    const parsed = JSON.parse(readFileSync(GENERATED_HELP_BOT_PATH, 'utf-8')) as GeneratedHelpBotCard[]
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map(convertGeneratedHelpCard)
+      .filter((value): value is KBCard => value !== null)
+  } catch (error) {
+    // Optional artifact: runtime keeps working with legacy cards.
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[load-kb] Cannot load generated help-bot.json:', error)
+    }
+    return []
+  }
+}
+
 // -------------------------------------------------------------------
 // Public API
 // -------------------------------------------------------------------
@@ -145,6 +270,17 @@ export function loadAllCards(): KBCard[] {
     }
   } catch (e) {
     console.error('[load-kb] Cannot read cards dir:', e)
+  }
+
+  // Generated operational layer for Help+Bot.
+  // Priority: generated cards override legacy cards by ID.
+  const generatedCards = loadGeneratedHelpCards()
+  if (generatedCards.length > 0) {
+    const byId = new Map<string, KBCard>()
+    for (const card of cards) byId.set(card.id, card)
+    for (const card of generatedCards) byId.set(card.id, card)
+    cachedCards = Array.from(byId.values())
+    return cachedCards
   }
 
   cachedCards = cards

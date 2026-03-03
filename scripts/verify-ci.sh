@@ -4,6 +4,9 @@ set -e
 echo "[verify-ci] Fiscal paths guardrail..."
 node scripts/ci/fiscal-guardrail.mjs
 
+echo "[verify-ci] Doc sync guardrail..."
+node scripts/ci/check-doc-sync.mjs
+
 echo "[verify-ci] Fiscal oracle..."
 node --import tsx scripts/fiscal/run-oracle.ts --stage=ci
 

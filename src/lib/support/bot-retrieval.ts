@@ -294,6 +294,31 @@ function scoreTokenOverlap(tokens: string[], phrases: string[]): number {
   return overlap * 12 + Math.round(coverage * 24)
 }
 
+function countTokenEvidence(tokens: string[], phrases: string[]): number {
+  if (!tokens.length || !phrases.length) return 0
+  const tokenSet = new Set(tokens)
+  const phraseTokenSet = new Set(phrases.flatMap(normalize))
+
+  let overlap = 0
+  for (const token of tokenSet) {
+    if (phraseTokenSet.has(token)) {
+      overlap++
+      continue
+    }
+
+    let approxHit = false
+    for (const candidate of phraseTokenSet) {
+      if (isApproxTokenMatch(token, candidate)) {
+        approxHit = true
+        break
+      }
+    }
+    if (approxHit) overlap++
+  }
+
+  return overlap
+}
+
 function scorePhraseSimilarity(normalizedMessage: string, phrases: string[]): number {
   if (!normalizedMessage || !phrases.length) return 0
   const messageTrigrams = buildTrigrams(normalizedMessage)
@@ -460,6 +485,30 @@ function hasToken(tokens: Set<string>, ...candidates: string[]): boolean {
 function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   const set = new Set(tokens)
 
+  // "Tinc problemes per dividir una remesa"
+  if (
+    hasToken(set, 'dividir', 'separar', 'repartir') &&
+    hasToken(set, 'remesa', 'cuota')
+  ) {
+    return { cardId: 'guide-split-remittance', minScore: 650 }
+  }
+
+  // "Com s'obre un projecte?" / "Como abrir un proyecto?"
+  if (
+    hasToken(set, 'obrir', 'abrir', 'entrar', 'accedir') &&
+    hasToken(set, 'projecte', 'proyecto')
+  ) {
+    return { cardId: 'project-open', minScore: 650 }
+  }
+
+  // "Com creo un projecte?" / "Como crear un proyecto?"
+  if (
+    hasToken(set, 'crear', 'creo', 'crea', 'alta', 'nou', 'nuevo') &&
+    hasToken(set, 'projecte', 'proyecto')
+  ) {
+    return { cardId: 'guide-projects', minScore: 620 }
+  }
+
   // "Com imputo una despesa a diferents projectes?"
   if (
     hasToken(set, 'imputar', 'repartir', 'distribuir') &&
@@ -507,6 +556,14 @@ function isRetrievableCard(card: KBCard): boolean {
   return true
 }
 
+function hasMinimumEvidenceForDirectMatch(tokens: string[], card: KBCard, lang: KbLang): boolean {
+  if (tokens.length === 0) return false
+  const overlap = countTokenEvidence(tokens, collectSearchPhrases(card, lang))
+  if (tokens.length <= 2) return overlap >= 1
+  if (tokens.length <= 4) return overlap >= 1
+  return overlap >= 2
+}
+
 export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): RetrievalResult {
   const tokens = normalize(message)
   const normalizedMessage = normalizePlain(message)
@@ -542,7 +599,11 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
   const secondScore = second?.score ?? 0
   const confidence = buildRetrievalConfidence(bestScore, secondScore)
 
-  if (best && bestScore >= DIRECT_MATCH_THRESHOLD) {
+  if (
+    best &&
+    bestScore >= DIRECT_MATCH_THRESHOLD &&
+    hasMinimumEvidenceForDirectMatch(tokens, best.card, lang)
+  ) {
     return {
       card: best.card,
       mode: 'card',

@@ -1,0 +1,221 @@
+[
+  {
+    "id": "donor-create",
+    "title": {
+      "ca": "Crear un donant",
+      "es": "Crear un donante"
+    },
+    "domain": "donors",
+    "risk": "safe",
+    "guardrail": "none",
+    "answerMode": "full",
+    "uiPaths": [
+      "Donants -> Nou donant",
+      "Donantes -> Nuevo donante"
+    ],
+    "keywords": [
+      "donant",
+      "crear",
+      "contacte",
+      "nif",
+      "donante",
+      "contacto"
+    ],
+    "intents": {
+      "ca": [
+        "com crear un donant",
+        "alta nou donant",
+        "afegir contacte donant",
+        "Crear un donant",
+        "Necessites donar d alta un nou donant amb dades minimes correctes per poder operar i reportar."
+      ],
+      "es": [
+        "como crear un donante",
+        "alta nuevo donante",
+        "anadir contacto donante",
+        "Crear un donante",
+        "Necesitas dar de alta un donante nuevo con datos minimos correctos para operar y reportar."
+      ]
+    },
+    "answer": {
+      "ca": "Ruta dins Summa: Donants -> Nou donant\n\nPassos exactes:\n1. Ves a Donants i prem Nou donant.\n2. Omple nom complet i identificador fiscal si aplica.\n3. Afegeix email o telefon de contacte.\n4. Desa el registre.\n\nComprovacio final: El donant apareix al llistat i pots obrir la seva fitxa sense errors.\nError tipic: Crear el donant sense dades de contacte i no poder gestionar incidencies despres.",
+      "es": "Ruta en Summa: Donantes -> Nuevo donante\n\nPasos exactos:\n1. Ve a Donantes y pulsa Nuevo donante.\n2. Completa nombre e identificador fiscal si aplica.\n3. Anade email o telefono de contacto.\n4. Guarda el registro.\n\nComprobacion final: El donante aparece en el listado y puedes abrir su ficha sin errores.\nError tipico: Crear el donante sin datos de contacto y bloquear la gestion de incidencias despues."
+    }
+  },
+  {
+    "id": "movement-import-bank",
+    "title": {
+      "ca": "Importar extracte bancari",
+      "es": "Importar extracto bancario"
+    },
+    "domain": "transactions",
+    "risk": "safe",
+    "guardrail": "none",
+    "answerMode": "full",
+    "uiPaths": [
+      "Moviments -> Importar -> Seleccionar fitxer",
+      "Movimientos -> Importar -> Seleccionar archivo"
+    ],
+    "keywords": [
+      "importar",
+      "extracte",
+      "moviments",
+      "csv",
+      "extracto",
+      "movimientos"
+    ],
+    "intents": {
+      "ca": [
+        "com importar extracte bancari",
+        "pujar csv del banc",
+        "afegir moviments des de fitxer",
+        "Importar extracte bancari",
+        "Cal carregar moviments del banc i no queda clar quin flux seguir per evitar duplicats o errors de format."
+      ],
+      "es": [
+        "como importar extracto bancario",
+        "subir csv del banco",
+        "anadir movimientos desde archivo",
+        "Importar extracto bancario",
+        "Necesitas cargar movimientos del banco y no esta claro que flujo seguir para evitar duplicados o errores de formato."
+      ]
+    },
+    "answer": {
+      "ca": "Ruta dins Summa: Moviments -> Importar -> Seleccionar fitxer\n\nPassos exactes:\n1. Ves a Moviments i prem Importar.\n2. Selecciona el compte bancari correcte abans de pujar el fitxer.\n3. Carrega el CSV o Excel amb el format del banc.\n4. Revisa la previsualitzacio i confirma la importacio.\n\nComprovacio final: Els nous moviments apareixen al llistat i no veus missatges d error de format.\nError tipic: Importar el mateix extracte dues vegades sense revisar data i saldo inicial.",
+      "es": "Ruta en Summa: Movimientos -> Importar -> Seleccionar archivo\n\nPasos exactos:\n1. Ve a Movimientos y pulsa Importar.\n2. Selecciona la cuenta bancaria correcta antes de subir el archivo.\n3. Carga el CSV o Excel con el formato del banco.\n4. Revisa la previsualizacion y confirma la importacion.\n\nComprobacion final: Los movimientos nuevos aparecen en el listado y no ves mensajes de error de formato.\nError tipico: Importar el mismo extracto dos veces sin revisar fecha y saldo inicial."
+    }
+  },
+  {
+    "id": "project-open",
+    "title": {
+      "ca": "Obrir un projecte",
+      "es": "Abrir un proyecto"
+    },
+    "domain": "projects",
+    "risk": "safe",
+    "guardrail": "none",
+    "answerMode": "full",
+    "uiPaths": [
+      "Projectes -> Llistat -> Selecciona projecte",
+      "Proyectos -> Listado -> Selecciona proyecto"
+    ],
+    "keywords": [
+      "projecte",
+      "obrir",
+      "llistat",
+      "despeses",
+      "proyecto",
+      "abrir",
+      "listado",
+      "gastos"
+    ],
+    "intents": {
+      "ca": [
+        "com s obre un projecte",
+        "no trobo com entrar a un projecte",
+        "obrir projecte a summa",
+        "Obrir un projecte",
+        "L usuari no sap des de quina pantalla ha d entrar a un projecte per veure despeses i pressupost.",
+        "com obrir un projecte"
+      ],
+      "es": [
+        "como se abre un proyecto",
+        "no encuentro donde entrar al proyecto",
+        "abrir proyecto en summa",
+        "Abrir un proyecto",
+        "La persona usuaria no sabe desde que pantalla debe entrar a un proyecto para ver gastos y presupuesto.",
+        "como abrir un proyecto"
+      ]
+    },
+    "answer": {
+      "ca": "Ruta dins Summa: Projectes -> Llistat -> Selecciona projecte\n\nPassos exactes:\n1. Ves a Dashboard -> Projectes.\n2. Revisa el llistat i localitza el projecte pel nom.\n3. Clica el projecte per obrir la vista de detall.\n4. Dins del detall, tria la pestanya de despeses o pressupost segons la tasca.\n\nComprovacio final: Veus el nom del projecte a la capcalera i el seu detall carregat sense errors.\nError tipic: Entrar a Moviments en lloc de Projectes i intentar obrir el projecte des d alla.",
+      "es": "Ruta en Summa: Proyectos -> Listado -> Selecciona proyecto\n\nPasos exactos:\n1. Ve a Dashboard -> Proyectos.\n2. Revisa el listado y localiza el proyecto por nombre.\n3. Haz clic en el proyecto para abrir su detalle.\n4. Dentro del detalle, elige la pestana de gastos o presupuesto segun tu tarea.\n\nComprobacion final: Ves el nombre del proyecto en la cabecera y su detalle cargado sin errores.\nError tipico: Entrar en Movimientos en lugar de Proyectos e intentar abrir el proyecto desde alli."
+    }
+  },
+  {
+    "id": "split-remittance",
+    "title": {
+      "ca": "Dividir una remesa",
+      "es": "Dividir una remesa"
+    },
+    "domain": "remittances",
+    "risk": "guarded",
+    "guardrail": "b1_remittances",
+    "answerMode": "full",
+    "uiPaths": [
+      "Moviments -> Remeses -> Veure detall -> Dividir",
+      "Movimientos -> Remesas -> Ver detalle -> Dividir"
+    ],
+    "keywords": [
+      "remesa",
+      "dividir",
+      "quota",
+      "rebut",
+      "cuota",
+      "recibo"
+    ],
+    "intents": {
+      "ca": [
+        "com dividir una remesa",
+        "separar una remesa en dues",
+        "he de repartir una remesa",
+        "Dividir una remesa",
+        "Una remesa te rebuts que no s han de processar igual i cal separar-los abans de continuar."
+      ],
+      "es": [
+        "como dividir una remesa",
+        "separar una remesa en dos",
+        "tengo que repartir una remesa",
+        "Dividir una remesa",
+        "Una remesa tiene recibos que no deben procesarse igual y hay que separarlos antes de continuar."
+      ]
+    },
+    "answer": {
+      "ca": "Ruta dins Summa: Moviments -> Remeses -> Veure detall -> Dividir\n\nPassos exactes:\n1. Ves a Moviments -> Remeses i obre la remesa afectada.\n2. Entra a Veure detall i selecciona els rebuts que vols separar.\n3. Prem Dividir i confirma la nova remesa creada.\n4. Revisa cada remesa abans de processar-la.\n\nComprovacio final: Veus dues remeses diferenciades i cada rebut ha quedat al bloc correcte.\nError tipic: Processar la remesa completa sense separar rebuts amb incidencies.",
+      "es": "Ruta en Summa: Movimientos -> Remesas -> Ver detalle -> Dividir\n\nPasos exactos:\n1. Ve a Movimientos -> Remesas y abre la remesa afectada.\n2. Entra en Ver detalle y selecciona los recibos que quieres separar.\n3. Pulsa Dividir y confirma la nueva remesa creada.\n4. Revisa cada remesa antes de procesarla.\n\nComprobacion final: Ves dos remesas separadas y cada recibo queda en el bloque correcto.\nError tipico: Procesar la remesa completa sin separar recibos con incidencias."
+    }
+  },
+  {
+    "id": "stripe-import",
+    "title": {
+      "ca": "Importar donacions de Stripe",
+      "es": "Importar donaciones de Stripe"
+    },
+    "domain": "transactions",
+    "risk": "safe",
+    "guardrail": "none",
+    "answerMode": "full",
+    "uiPaths": [
+      "Moviments -> Importar -> Stripe",
+      "Movimientos -> Importar -> Stripe"
+    ],
+    "keywords": [
+      "stripe",
+      "donacions",
+      "importar",
+      "conciliacio",
+      "donaciones",
+      "conciliacion"
+    ],
+    "intents": {
+      "ca": [
+        "com importar donacions de stripe",
+        "carregar pagaments stripe",
+        "moviments stripe no surten",
+        "Importar donacions de Stripe",
+        "Les donacions cobrades a Stripe no apareixen encara als moviments i cal importar-les correctament."
+      ],
+      "es": [
+        "como importar donaciones de stripe",
+        "cargar cobros stripe",
+        "movimientos stripe no aparecen",
+        "Importar donaciones de Stripe",
+        "Las donaciones cobradas en Stripe no aparecen todavia en Movimientos y hay que importarlas bien."
+      ]
+    },
+    "answer": {
+      "ca": "Ruta dins Summa: Moviments -> Importar -> Stripe\n\nPassos exactes:\n1. Ves a Moviments -> Importar i tria l opcio Stripe.\n2. Selecciona el periode que vols importar.\n3. Executa la importacio i espera la confirmacio.\n4. Revisa els moviments importats i categoritza els pendents.\n\nComprovacio final: Les donacions de Stripe apareixen al llistat de moviments amb import i data correctes.\nError tipic: Importar un periode equivocat i duplicar donacions ja registrades.",
+      "es": "Ruta en Summa: Movimientos -> Importar -> Stripe\n\nPasos exactos:\n1. Ve a Movimientos -> Importar y elige la opcion Stripe.\n2. Selecciona el periodo que quieres importar.\n3. Ejecuta la importacion y espera la confirmacion.\n4. Revisa los movimientos importados y categoriza los pendientes.\n\nComprobacion final: Las donaciones de Stripe aparecen en el listado con importe y fecha correctos.\nError tipico: Importar un periodo equivocado y duplicar donaciones ya registradas."
+    }
+  }
+]
