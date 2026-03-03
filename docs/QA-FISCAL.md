@@ -98,6 +98,23 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ---
 
+### VF-5b Sense doble còmput (return + donationStatus=returned)
+
+**Context:**
+Quan una devolució negativa està vinculada a la donació original, la fitxa/certificat no han de comptar dues devolucions pel mateix cas.
+
+**Passos:**
+1. Obrir fitxa d'un donant amb cas vinculat (`return` negatiu + donació `returned`) el mateix any.
+2. Revisar targeta "Devolucions" i la llista de "Últimes devolucions".
+3. Generar certificat anual del mateix any.
+
+**Expected:**
+- [ ] El cas vinculat compta una sola vegada com a devolució efectiva.
+- [ ] `Total devuelto` no suma duplicat del mateix cas.
+- [ ] El net del certificat no aplica doble resta pel mateix retorn.
+
+---
+
 ### VF-6 Undo de processament
 
 **Passos:**
