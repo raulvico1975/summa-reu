@@ -32,6 +32,51 @@ const MAX_INTENT_TIMEOUT_MS = 4000
 const MAX_INTENT_CANDIDATES = 14
 
 const CRITICAL_BUNDLED_CARDS = [
+  {
+    id: 'project-open',
+    type: 'howto',
+    domain: 'projects',
+    risk: 'safe',
+    guardrail: 'none',
+    answerMode: 'full',
+    title: { ca: 'Obrir un projecte', es: 'Abrir un proyecto' },
+    intents: {
+      ca: ['com s obre un projecte', 'com obro un projecte', 'obrir projecte a summa'],
+      es: ['como se abre un proyecto', 'como abro un proyecto', 'abrir proyecto en summa'],
+    },
+    guideId: null,
+    answer: {
+      ca: `Ruta dins Summa: Projectes -> Llistat -> Selecciona projecte
+
+Passos exactes:
+1. Ves a Dashboard -> Projectes.
+2. Revisa el llistat i localitza el projecte pel nom.
+3. Clica el projecte per obrir la vista de detall.
+4. Dins del detall, tria la pestanya de despeses o pressupost segons la tasca.
+
+Comprovacio final: Veus el nom del projecte a la capcalera i el seu detall carregat sense errors.
+Error tipic: Entrar a Moviments en lloc de Projectes i intentar obrir el projecte des d alla.`,
+      es: `Ruta en Summa: Proyectos -> Listado -> Selecciona proyecto
+
+Pasos exactos:
+1. Ve a Dashboard -> Proyectos.
+2. Revisa el listado y localiza el proyecto por nombre.
+3. Haz clic en el proyecto para abrir su detalle.
+4. Dentro del detalle, elige la pestana de gastos o presupuesto segun tu tarea.
+
+Comprobacion final: Ves el nombre del proyecto en la cabecera y su detalle cargado sin errores.
+Error tipico: Entrar en Movimientos en lugar de Proyectos e intentar abrir el proyecto desde alli.`,
+    },
+    uiPaths: [
+      'Projectes -> Llistat -> Selecciona projecte',
+      'Proyectos -> Listado -> Selecciona proyecto',
+    ],
+    needsSnapshot: false,
+    keywords: ['projecte', 'obrir', 'llistat', 'despeses', 'proyecto', 'abrir', 'listado', 'gastos'],
+    related: [],
+    error_key: null,
+    symptom: { ca: null, es: null },
+  } as KBCard,
   guideProjectsCardRaw as KBCard,
   guideAttachDocumentCardRaw as KBCard,
   manualMemberPaidQuotasCardRaw as KBCard,

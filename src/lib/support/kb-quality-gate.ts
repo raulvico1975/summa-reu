@@ -21,15 +21,20 @@ const REQUIRED_FALLBACK_IDS = [
 ] as const
 
 const REQUIRED_CRITICAL_CARD_IDS = [
+  'project-open',
   'guide-projects',
   'guide-attach-document',
   'manual-member-paid-quotas',
 ] as const
 
 const REQUIRED_CRITICAL_QUERIES: Array<{ lang: 'ca' | 'es'; q: string; expectedCardId: string }> = [
+  { lang: 'ca', q: 'com obro un projecte?', expectedCardId: 'project-open' },
+  { lang: 'ca', q: "com s'obre un projecte?", expectedCardId: 'project-open' },
   { lang: 'ca', q: 'com imputo una despesa a diversos projectes?', expectedCardId: 'guide-projects' },
   { lang: 'ca', q: 'com pujo una factura o rebut o nòmina?', expectedCardId: 'guide-attach-document' },
   { lang: 'ca', q: 'com puc saber les quotes que un soci ha pagat?', expectedCardId: 'manual-member-paid-quotas' },
+  { lang: 'es', q: 'como abro un proyecto?', expectedCardId: 'project-open' },
+  { lang: 'es', q: 'como se abre un proyecto?', expectedCardId: 'project-open' },
   { lang: 'es', q: 'como imputo un gasto a varios proyectos?', expectedCardId: 'guide-projects' },
   { lang: 'es', q: 'como subo una factura o recibo o nomina?', expectedCardId: 'guide-attach-document' },
   { lang: 'es', q: 'como puedo saber las cuotas que un socio ha pagado?', expectedCardId: 'manual-member-paid-quotas' },

@@ -32,12 +32,16 @@ export type GoldenSetMetrics = {
 export const GOLDEN_SET_MIN_CRITICAL_TOP1 = 0.98
 
 const CRITICAL_CASES: GoldenCase[] = [
+  { lang: 'ca', question: 'com obro un projecte?', expectedCardId: 'project-open', critical: true },
+  { lang: 'ca', question: "com s'obre un projecte?", expectedCardId: 'project-open', critical: true },
   { lang: 'ca', question: 'com imputo una despesa a diversos projectes?', expectedCardId: 'guide-projects', critical: true },
   { lang: 'ca', question: 'com imputo una despesa entre diferents projectes?', expectedCardId: 'guide-projects', critical: true },
   { lang: 'ca', question: 'com pujo una factura o rebut o nòmina?', expectedCardId: 'guide-attach-document', critical: true },
   { lang: 'ca', question: 'com puc saber les quotes que un soci ha pagat?', expectedCardId: 'manual-member-paid-quotas', critical: true },
   { lang: 'ca', question: 'com faig arribar el certificat de donatius a un soci?', expectedCardId: 'guide-donor-certificate', critical: true },
   { lang: 'ca', question: 'tinc problemes per dividir una remessa', expectedCardId: 'guide-split-remittance', critical: true },
+  { lang: 'es', question: 'como abro un proyecto?', expectedCardId: 'project-open', critical: true },
+  { lang: 'es', question: 'como se abre un proyecto?', expectedCardId: 'project-open', critical: true },
   { lang: 'es', question: 'como imputo un gasto a varios proyectos?', expectedCardId: 'guide-projects', critical: true },
   { lang: 'es', question: 'como subo una factura o recibo o nomina?', expectedCardId: 'guide-attach-document', critical: true },
   { lang: 'es', question: 'como puedo saber las cuotas que un socio ha pagado?', expectedCardId: 'manual-member-paid-quotas', critical: true },

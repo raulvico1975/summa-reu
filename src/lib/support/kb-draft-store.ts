@@ -16,6 +16,7 @@ export const REQUIRED_FALLBACK_IDS = [
 ] as const
 
 export const REQUIRED_CRITICAL_CARD_IDS = [
+  'project-open',
   'guide-projects',
   'guide-attach-document',
   'manual-member-paid-quotas',
