@@ -186,7 +186,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       (snapshot) => {
         // HOTFIX: Filtre client-side tolerant (inclou null, undefined, "")
         const donorTxs = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as Transaction))
+          .map(doc => ({ ...doc.data(), id: doc.id } as Transaction))
           .filter(tx => !tx.archivedAt);
         setTransactions(donorTxs);
         setIsLoading(false);
@@ -215,6 +215,54 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     years.add(String(currentYear));
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
   }, [transactions, currentYear]);
+
+  const getTransactionKey = React.useCallback((tx: Transaction, index: number): string => {
+    const rawId = typeof tx.id === 'string' ? tx.id.trim() : '';
+    if (rawId) return rawId;
+    return `noid:${tx.date}:${tx.amount}:${tx.transactionType ?? ''}:${tx.donationStatus ?? ''}:${tx.linkedTransactionId ?? ''}:${index}`;
+  }, []);
+
+  // Regla anti-doble: si una donació marcada "returned" ja té return negatiu vinculat, compta un sol cop.
+  const effectiveReturnKeySet = React.useMemo(() => {
+    if (!transactions) return new Set<string>();
+
+    const explicitReturnKeys = new Set<string>();
+    const explicitReturnIds = new Set<string>();
+    const explicitReturnLinkedDonationIds = new Set<string>();
+
+    transactions.forEach((tx, index) => {
+      if (tx.transactionType !== 'return' || tx.amount >= 0) return;
+      explicitReturnKeys.add(getTransactionKey(tx, index));
+
+      const returnId = typeof tx.id === 'string' ? tx.id.trim() : '';
+      if (returnId) explicitReturnIds.add(returnId);
+
+      const linkedDonationId = typeof tx.linkedTransactionId === 'string' ? tx.linkedTransactionId.trim() : '';
+      if (linkedDonationId) explicitReturnLinkedDonationIds.add(linkedDonationId);
+    });
+
+    const effective = new Set(explicitReturnKeys);
+
+    transactions.forEach((tx, index) => {
+      if (!(tx.amount > 0 && tx.donationStatus === 'returned')) return;
+
+      const donationId = typeof tx.id === 'string' ? tx.id.trim() : '';
+      const linkedReturnId = typeof tx.linkedTransactionId === 'string' ? tx.linkedTransactionId.trim() : '';
+      const hasExplicitTwin =
+        (donationId && explicitReturnLinkedDonationIds.has(donationId)) ||
+        (linkedReturnId && explicitReturnIds.has(linkedReturnId));
+
+      if (!hasExplicitTwin) {
+        effective.add(getTransactionKey(tx, index));
+      }
+    });
+
+    return effective;
+  }, [transactions, getTransactionKey]);
+
+  const isEffectiveReturn = React.useCallback((tx: Transaction, index: number): boolean => {
+    return effectiveReturnKeySet.has(getTransactionKey(tx, index));
+  }, [effectiveReturnKeySet, getTransactionKey]);
 
   // Calcular resums
   const summary = React.useMemo<DonationSummary>(() => {
@@ -276,7 +324,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       returnsCount: 0,
     };
 
-    transactions.forEach(tx => {
+    transactions.forEach((tx, index) => {
       if (tx.amount > 0 && isFiscalDonationCandidate(tx)) {
         // Donació vàlida (per mostrar a la UI)
         totalHistoric += tx.amount;
@@ -294,10 +342,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         }
       }
 
-      if (
-        (tx.amount < 0 && tx.transactionType === 'return') ||
-        (tx.amount > 0 && tx.donationStatus === 'returned')
-      ) {
+      if (isEffectiveReturn(tx, index)) {
         // Devolució (per al bloc de devolucions)
         returnsCount++;
         returnsAmount += Math.abs(tx.amount);
@@ -332,7 +377,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       previousYearReturned: Math.abs(previousYearNetResult.returnsCents) / 100,
       previousYearNet: Math.max(0, previousYearNetResult.netCents / 100),
     };
-  }, [transactions, currentYear, donor]);
+  }, [transactions, currentYear, donor, isEffectiveReturn]);
 
   // Per defecte: historial obert si <= 5 donacions
   React.useEffect(() => {
@@ -346,21 +391,19 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   const filteredTransactions = React.useMemo(() => {
     if (!transactions) return [];
 
-    return transactions.filter(tx => {
+    return transactions.filter((tx, index) => {
       // Filtrar per any
       if (!tx.date.startsWith(selectedYear)) return false;
 
       // Filtrar per estat
       if (filterStatus === 'returns') {
-        return (tx.transactionType === 'return' && tx.amount < 0) ||
-          (tx.amount > 0 && tx.donationStatus === 'returned');
+        return isEffectiveReturn(tx, index);
       }
       // 'all': mostrar donacions vàlides i devolucions
       return (tx.amount > 0 && isFiscalDonationCandidate(tx)) ||
-        (tx.transactionType === 'return' && tx.amount < 0) ||
-        (tx.amount > 0 && tx.donationStatus === 'returned');
+        isEffectiveReturn(tx, index);
     });
-  }, [transactions, selectedYear, filterStatus]);
+  }, [transactions, selectedYear, filterStatus, isEffectiveReturn]);
 
   // Paginació
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
@@ -644,12 +687,8 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     // Totes les devolucions del donant dins l'any:
     // - transactionType='return' (amount negatiu)
     // - donationStatus='returned' (neutralització de donació positiva)
-    const yearReturns = transactions?.filter(tx =>
-      tx.date.startsWith(year) &&
-      (
-        (tx.amount < 0 && tx.transactionType === 'return') ||
-        (tx.amount > 0 && tx.donationStatus === 'returned')
-      )
+    const yearReturns = transactions?.filter((tx, index) =>
+      tx.date.startsWith(year) && isEffectiveReturn(tx, index)
     ) || [];
 
     const grossAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);
@@ -1173,12 +1212,8 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     // Totes les devolucions del donant dins l'any:
     // - transactionType='return' (amount negatiu)
     // - donationStatus='returned' (neutralització de donació positiva)
-    const yearReturns = transactions?.filter(tx =>
-      tx.date.startsWith(year) &&
-      (
-        (tx.amount < 0 && tx.transactionType === 'return') ||
-        (tx.amount > 0 && tx.donationStatus === 'returned')
-      )
+    const yearReturns = transactions?.filter((tx, index) =>
+      tx.date.startsWith(year) && isEffectiveReturn(tx, index)
     ) || [];
 
     const grossAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);
