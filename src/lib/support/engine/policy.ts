@@ -11,14 +11,21 @@ const OPERATIONAL_PLACEHOLDER_RE =
 
 const OFFICIAL_UI_PATH_PREFIXES = [
   'Dashboard',
+  'Movimientos',
   'Moviments',
+  'Donantes',
   'Donants',
   'Informes',
+  'Proyectos',
   'Projectes',
+  'Configuración',
   'Configuració',
   'Header',
+  'Hub de Guías',
   'Hub de Guies',
+  'Liquidaciones',
   'Liquidacions',
+  'Página de login',
   'Pàgina de login',
   'Login',
 ] as const
@@ -40,9 +47,16 @@ function isCatalogPath(path: string): boolean {
   return OFFICIAL_UI_PATH_PREFIXES.some(prefix => cleaned === prefix || cleaned.startsWith(`${prefix} > `))
 }
 
+function normalizeUiPath(path: string): string {
+  return path
+    .trim()
+    .replace(/\s*(->|→)\s*/g, ' > ')
+    .replace(/\s+/g, ' ')
+}
+
 export function normalizeUiPathsAgainstCatalog(paths: string[] | null | undefined): string[] {
   if (!Array.isArray(paths)) return []
-  const unique = Array.from(new Set(paths.map(path => path.trim()).filter(Boolean)))
+  const unique = Array.from(new Set(paths.map(path => normalizeUiPath(path)).filter(Boolean)))
   return unique.filter(isCatalogPath)
 }
 
