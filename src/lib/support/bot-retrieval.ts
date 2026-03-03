@@ -495,7 +495,7 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
 
   // "Com s'obre un projecte?" / "Como abrir un proyecto?"
   if (
-    hasToken(set, 'obrir', 'abrir', 'entrar', 'accedir') &&
+    hasToken(set, 'obrir', 'obre', 'obro', 'abrir', 'abre', 'abro', 'entrar', 'accedir', 'accede') &&
     hasToken(set, 'projecte', 'proyecto')
   ) {
     return { cardId: 'project-open', minScore: 650 }

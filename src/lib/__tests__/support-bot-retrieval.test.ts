@@ -110,6 +110,16 @@ test('retrieveCard direct-intent maps document upload question reliably', () => 
   assert.equal(result.confidence, 'high')
 })
 
+test('retrieveCard direct-intent maps project-open variants reliably', () => {
+  const ca = retrieveCard('com obro un projecte?', 'ca', cards)
+  assert.equal(ca.card.id, 'project-open')
+  assert.equal(ca.mode, 'card')
+
+  const es = retrieveCard('como abro un proyecto?', 'es', cards)
+  assert.equal(es.card.id, 'project-open')
+  assert.equal(es.mode, 'card')
+})
+
 test('retrieveCard falls back safely for out-of-scope long query', () => {
   const result = retrieveCard(
     'quina és la millor estratègia de màrqueting digital per a una startup saas?',
