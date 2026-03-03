@@ -74,3 +74,22 @@ test('renderer refuses generic procedural guide content when steps are missing',
   assert.equal(containsProceduralFreeform(rendered.answer), false)
   assert.ok(rendered.uiPaths.length > 0)
 })
+
+test('renderer keeps all operational steps for trusted project-open card in ES', async () => {
+  const card = cards.find(item => item.id === 'project-open')
+  assert.ok(card, 'project-open card must exist in KB')
+
+  const rendered = await renderAnswer({
+    message: 'como abro un proyecto?',
+    kbLang: 'es',
+    card,
+    mode: 'card',
+    intentType: 'operational',
+    assistantTone: 'warm',
+    allowAiReformat: false,
+  })
+
+  assert.equal(rendered.trustedOperationalCard, true)
+  assert.match(rendered.answer, /\n1\.\s+Ve a Dashboard/)
+  assert.match(rendered.answer, /\n3\.\s+Haz clic en el proyecto/)
+})
