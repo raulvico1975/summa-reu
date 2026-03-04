@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
 import { StatusBadge } from "@/src/components/ui/status-badge";
 import { ResultsTable } from "@/src/components/polls/results-table";
 import { ClosePollForm } from "@/src/components/polls/close-poll-form";
+import { CopyVoteLinkButton } from "@/src/components/polls/copy-vote-link-button";
 import { ca } from "@/src/i18n/ca";
 import { getMeetingIdByPollId, getPollById, getPollVoteRows } from "@/src/lib/db/repo";
 import { formatDateTime } from "@/src/lib/dates";
@@ -66,23 +67,11 @@ export default async function PollManagePage({
               </Link>
             ) : null}
           </div>
-          <div className="grid gap-2 text-sm md:grid-cols-2">
-            <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {ca.poll.publicVoteLink}
-              </p>
-              <Link className="font-medium text-sky-700 hover:underline" href={`/p/${poll.slug}`}>
-                /p/{poll.slug}
-              </Link>
-            </div>
-            <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {ca.poll.publicResultsLink}
-              </p>
-              <Link className="font-medium text-sky-700 hover:underline" href={`/p/${poll.slug}/results`}>
-                /p/{poll.slug}/results
-              </Link>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <CopyVoteLinkButton slug={poll.slug} />
+            <Link className="rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600" href={`/p/${poll.slug}/results`}>
+              {ca.poll.openPublicResults}
+            </Link>
           </div>
         </CardContent>
       </Card>
@@ -94,11 +83,9 @@ export default async function PollManagePage({
         <CardContent className="space-y-4">
           <ResultsTable options={options} rows={rows} />
           <div className="flex flex-wrap gap-2 text-sm">
-            <Link className="rounded-md border border-slate-300 px-3 py-1.5" href={`/p/${poll.slug}`}>
-              {ca.poll.publicVoteLink}
-            </Link>
-            <Link className="rounded-md border border-slate-300 px-3 py-1.5" href={`/p/${poll.slug}/results`}>
-              {ca.poll.publicResultsLink}
+            <CopyVoteLinkButton slug={poll.slug} />
+            <Link className="rounded-md border border-slate-300 px-3 py-2 font-medium hover:bg-slate-100" href={`/p/${poll.slug}/results`}>
+              {ca.poll.openPublicResults}
             </Link>
           </div>
         </CardContent>
