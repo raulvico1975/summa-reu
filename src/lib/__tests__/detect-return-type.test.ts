@@ -8,6 +8,8 @@ describe('detectReturnType', () => {
     assert.strictEqual(detectReturnType('DEV.RECIBO ADEUDO SEPA'), 'return');
     assert.strictEqual(detectReturnType('RECIBO DEVUELTO CUOTA SOCIO'), 'return');
     assert.strictEqual(detectReturnType('RECHAZO RECIBO SEPA'), 'return');
+    assert.strictEqual(detectReturnType('ADEUDO RECIBOS RECHAZADOS'), 'return');
+    assert.strictEqual(detectReturnType('ADEUDO REBUTS REBUTJATS'), 'return');
   });
 
   it('detecta variants internacionals i codis operatius', () => {

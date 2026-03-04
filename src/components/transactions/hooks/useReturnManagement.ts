@@ -62,6 +62,7 @@ export function useReturnManagement({
   const [returnLinkedTxId, setReturnLinkedTxId] = React.useState<string | null>(null);
   const [donorDonations, setDonorDonations] = React.useState<Transaction[]>([]);
   const [isLoadingDonations, setIsLoadingDonations] = React.useState(false);
+  const donorIds = React.useMemo(() => new Set(donors.map((donor) => donor.id)), [donors]);
 
   // ---------------------------------------------------------------------------
   // LOAD DONATIONS FROM SELECTED DONOR
@@ -115,12 +116,16 @@ export function useReturnManagement({
   // ---------------------------------------------------------------------------
 
   const handleOpenReturnDialog = React.useCallback((tx: Transaction) => {
+    const preselectedDonorId = tx.contactId && donorIds.has(tx.contactId)
+      ? tx.contactId
+      : null;
+
     setReturnTransaction(tx);
-    setReturnDonorId(tx.contactId || null);
+    setReturnDonorId(preselectedDonorId);
     setReturnLinkedTxId(tx.linkedTransactionId || null);
     setDonorDonations([]);
     setIsReturnDialogOpen(true);
-  }, []);
+  }, [donorIds]);
 
   // ---------------------------------------------------------------------------
   // CLOSE RETURN DIALOG
@@ -140,17 +145,23 @@ export function useReturnManagement({
 
   const handleSaveReturn = React.useCallback(async () => {
     if (!returnTransaction || !transactionsCollection) return;
+    if (!returnDonorId || !donorIds.has(returnDonorId)) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.movements.table.assignDonorTooltip,
+      });
+      return;
+    }
 
     try {
       // 1. Update return with donor
       const returnUpdate: Record<string, unknown> = {
+        transactionType: 'return',
         contactId: returnDonorId,
-        contactType: returnDonorId ? 'donor' : null,
+        contactType: 'donor',
+        linkedTransactionId: returnLinkedTxId ?? null,
       };
-
-      if (returnLinkedTxId) {
-        returnUpdate.linkedTransactionId = returnLinkedTxId;
-      }
 
       updateDocumentNonBlocking(
         doc(transactionsCollection, returnTransaction.id),
@@ -186,7 +197,7 @@ export function useReturnManagement({
       toast({
         title: t.movements.table.returnAssigned,
         description: t.movements.table.returnAssignedDescription(
-          contactMap[returnDonorId as string]?.name || ''
+          contactMap[returnDonorId]?.name || ''
         ),
       });
 
@@ -207,6 +218,7 @@ export function useReturnManagement({
     transactionsCollection,
     contactsCollection,
     donors,
+    donorIds,
     contactMap,
     toast,
     t,

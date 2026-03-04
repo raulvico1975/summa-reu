@@ -247,6 +247,12 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isReturn = tx.transactionType === 'return';
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
+  const canManageReturn =
+    tx.amount < 0 &&
+    !tx.isRemittance &&
+    !tx.isRemittanceItem &&
+    tx.transactionType !== 'return_fee' &&
+    tx.source !== 'stripe';
   const canGenerateReturnEmail = isReturn && !!tx.contactId && tx.isRemittance !== true;
   const deleteBlockedMessage = React.useMemo(() => {
     if (deleteBlockedReason === 'parentRemittance') {
@@ -927,7 +933,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" forceMount>
-            {isReturn && !tx.isRemittance && (
+            {canManageReturn && (
               <>
                 <DropdownMenuItem onClick={handleOpenReturnDialog}>
                   <Link className="mr-2 h-4 w-4 text-red-500" />

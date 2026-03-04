@@ -124,6 +124,12 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   const hasBalanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter);
   const balanceText = hasBalanceAfter ? formatCurrencyEU(Math.abs(tx.balanceAfter!)) : '—';
   const isFromStripe = tx.source === 'stripe';
+  const canManageReturn =
+    tx.amount < 0 &&
+    !tx.isRemittance &&
+    !tx.isRemittanceItem &&
+    tx.transactionType !== 'return_fee' &&
+    !isFromStripe;
   const canSplitAmount =
     tx.amount > 0 &&
     !tx.isRemittance &&
@@ -435,7 +441,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
                 {t.viewRemittanceDetail}
               </DropdownMenuItem>
             )}
-            {isReturn && !tx.contactId && onOpenReturnDialog && (
+            {canManageReturn && onOpenReturnDialog && (
               <DropdownMenuItem onClick={handleManageReturn}>
                 <Undo2 className="h-4 w-4 mr-2" />
                 {t.manageReturn || 'Assignar donant'}

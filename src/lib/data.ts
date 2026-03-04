@@ -699,7 +699,10 @@ export const RETURN_PATTERNS = {
     /\bDEV\s+RECIBOS?\b/,                              // CaixaBank: "DEV.RECIBO ADEUDO SEPA"
     /\bRECIBOS?\s+DEVUELT[OA]S?\b/,                    // "RECIBO DEVUELTO"
     /\bRECIBOS?\s+IMPAGAD[OA]S?\b/,                    // "RECIBO IMPAGADO"
+    /\bRECIBOS?\s+RECHAZAD[OA]S?\b/,                   // "RECIBOS RECHAZADOS"
+    /\bRECHAZAD[OA]S?\s+RECIBOS?\b/,                   // "RECHAZADOS RECIBOS"
     /\bRECHAZO\s+RECIBOS?\b/,                          // "RECHAZO RECIBO"
+    /\bREBUTS?\s+REBUTJAT(?:S|A|ES)?\b/,               // "REBUTS REBUTJATS"
     /\bRETORNO\s+RECIBOS?\b/,                          // "RETORNO RECIBO"
     /\bADEUDO\s+SEPA\s+DEV\b/,                         // "ADEUDO SEPA DEV"
     /\bSEPA\s+DD\s+RETURN(?:ED)?\b/,                   // "SEPA DD RETURN"
@@ -731,6 +734,8 @@ const RETURN_SIGNAL_PATTERNS = [
   /\bDEVOLUCION(?:ES)?\b/,
   /\bDEVUELT[OA]S?\b/,
   /\bRECHAZO\b/,
+  /\bRECHAZAD[OA]S?\b/,
+  /\bREBUTJAT(?:S|A|ES)?\b/,
   /\bRETORNO\b/,
   /\bIMPAGAD[OA]S?\b/,
   /\bRETURN(?:ED)?\b/,
@@ -740,7 +745,10 @@ const RETURN_SIGNAL_PATTERNS = [
 
 const RETURN_CONTEXT_PATTERNS = [
   /\bRECIBOS?\b/,
+  /\bREBUTS?\b/,
   /\bADEUDO\b/,
+  /\bCUOTAS?\b/,
+  /\bQUOTES?\b/,
   /\bDOMICILIACION(?:ES)?\b/,
   /\bSEPA\b/,
   /\bDIRECT\s+DEBIT\b/,
