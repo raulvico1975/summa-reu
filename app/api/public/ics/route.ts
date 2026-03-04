@@ -2,23 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMeetingById } from "@/src/lib/db/repo";
 import { buildMeetingIcs } from "@/src/lib/ics";
 import { timestampToDate } from "@/src/lib/dates";
+import { ca } from "@/src/i18n/ca";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   const meetingId = request.nextUrl.searchParams.get("meetingId");
   if (!meetingId) {
-    return new NextResponse("Missing meetingId", { status: 400 });
+    return new NextResponse(ca.errors.missingMeetingId, { status: 400 });
   }
 
   const meeting = await getMeetingById(meetingId);
   if (!meeting) {
-    return new NextResponse("Meeting not found", { status: 404 });
+    return new NextResponse(ca.errors.meetingNotFound, { status: 404 });
   }
 
   const startsAt = timestampToDate(meeting.scheduledAt);
   if (!startsAt) {
-    return new NextResponse("Invalid meeting date", { status: 400 });
+    return new NextResponse(ca.errors.invalidMeetingDate, { status: 400 });
   }
 
   const ics = buildMeetingIcs({

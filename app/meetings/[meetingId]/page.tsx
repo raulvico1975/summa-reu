@@ -7,6 +7,7 @@ import { MinutesEditor } from "@/src/components/meetings/minutes-editor";
 import { getMeetingById } from "@/src/lib/db/repo";
 import { formatDateTime } from "@/src/lib/dates";
 import { requireOwnerPage } from "@/src/lib/ui/owner-page";
+import { ca } from "@/src/i18n/ca";
 
 export default async function MeetingPage({ params }: { params: Promise<{ meetingId: string }> }) {
   const owner = await requireOwnerPage();
@@ -26,28 +27,30 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">Reunió</h1>
+        <h1 className="text-2xl font-semibold">{ca.meeting.title}</h1>
         <p className="text-sm text-slate-600">{meeting.poll.title}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <h2 className="text-base font-semibold">Convocatòria</h2>
+          <h2 className="text-base font-semibold">{ca.meeting.sectionCall}</h2>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <p>Data: {formatDateTime(meeting.scheduledAt)}</p>
+          <p>
+            {ca.meeting.meetingDateLabel}: {formatDateTime(meeting.scheduledAt)}
+          </p>
           <div className="flex flex-wrap gap-3">
             <a
               href={`/api/public/ics?meetingId=${meeting.id}`}
               className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
             >
-              Descarregar ICS
+              {ca.meeting.exportIcs}
             </a>
             <a
               href={`/api/owner/minutes/export?meetingId=${meeting.id}`}
               className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
             >
-              Descarregar acta (.md)
+              {ca.meeting.exportMinutesMd}
             </a>
           </div>
         </CardContent>
@@ -55,7 +58,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
 
       <Card>
         <CardHeader>
-          <h2 className="text-base font-semibold">Gravacions</h2>
+          <h2 className="text-base font-semibold">{ca.meeting.sectionRecordings}</h2>
         </CardHeader>
         <CardContent className="space-y-4">
           <RecordingUploader meetingId={meeting.id} />
@@ -63,7 +66,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
 
           <div className="space-y-2">
             {meeting.recordings.length === 0 ? (
-              <p className="text-sm text-slate-500">Encara no hi ha gravacions.</p>
+              <p className="text-sm text-slate-500">{ca.meeting.emptyRecordings}</p>
             ) : (
               meeting.recordings.map((recording) => (
                 <div
@@ -84,7 +87,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
 
       <Card>
         <CardHeader>
-          <h2 className="text-base font-semibold">Transcripció</h2>
+          <h2 className="text-base font-semibold">{ca.meeting.sectionTranscript}</h2>
         </CardHeader>
         <CardContent>
           {latestTranscript?.text ? (
@@ -92,14 +95,14 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
               {latestTranscript.text}
             </pre>
           ) : (
-            <p className="text-sm text-slate-500">No hi ha transcripció encara.</p>
+            <p className="text-sm text-slate-500">{ca.meeting.emptyTranscript}</p>
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <h2 className="text-base font-semibold">Acta</h2>
+          <h2 className="text-base font-semibold">{ca.meeting.sectionMinutes}</h2>
         </CardHeader>
         <CardContent>
           {latestMinutes ? (
@@ -109,7 +112,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
               initialMarkdown={latestMinutes.minutesMarkdown}
             />
           ) : (
-            <p className="text-sm text-slate-500">No hi ha acta generada encara.</p>
+            <p className="text-sm text-slate-500">{ca.meeting.emptyMinutes}</p>
           )}
         </CardContent>
       </Card>

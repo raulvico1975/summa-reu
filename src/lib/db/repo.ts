@@ -19,6 +19,7 @@ import type {
   TranscriptDoc,
 } from "@/src/lib/db/types";
 import { defaultTimezone } from "@/src/lib/firebase/env";
+import { ca } from "@/src/i18n/ca";
 
 export type PollOption = PollOptionDoc & { id: string };
 
@@ -167,7 +168,7 @@ export async function getPollVoteRows(pollId: string): Promise<VoteMatrixRow[]> 
     const voter = voterMap.get(doc.id);
     return {
       voterId: doc.id,
-      voterName: voter?.name ?? "Participant",
+      voterName: voter?.name ?? ca.poll.participant,
       availabilityByOptionId: vote.availabilityByOptionId ?? {},
     };
   });

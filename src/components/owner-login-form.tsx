@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -59,6 +60,10 @@ export function OwnerLoginForm() {
       <Button type="submit" disabled={loading} className="w-full">
         {loading ? ca.login.loading : ca.login.submit}
       </Button>
+
+      <Link href="/signup" className="inline-block text-sm font-medium text-sky-700 hover:underline">
+        {ca.login.signupCta}
+      </Link>
     </form>
   );
 }

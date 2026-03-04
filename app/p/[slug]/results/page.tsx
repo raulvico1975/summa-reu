@@ -38,7 +38,9 @@ export default async function PublicPollResultsPage({ params }: { params: Promis
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Resultats: {poll.title}</h1>
+        <h1 className="text-2xl font-semibold">
+          {ca.poll.resultsTitlePrefix}: {poll.title}
+        </h1>
         <StatusBadge status={poll.status} />
       </div>
 
@@ -75,7 +77,7 @@ export default async function PublicPollResultsPage({ params }: { params: Promis
 
           {isOwner && poll.status === "open" ? (
             <Link href={`/polls/${poll.id}`} className="inline-block pt-2 text-sm font-medium text-sky-700 hover:underline">
-              Tancar votació
+              {ca.poll.closePollLink}
             </Link>
           ) : null}
         </CardContent>

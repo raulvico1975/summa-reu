@@ -9,6 +9,7 @@ import {
 import { hasGeminiApiKey } from "@/src/lib/gemini/client";
 import { getGeminiFallbackModel, getGeminiModel } from "@/src/lib/gemini/selectModel";
 import { processRecordingTask } from "@/src/lib/meetings/process-recording-task";
+import { ca } from "@/src/i18n/ca";
 
 export const runtime = "nodejs";
 
@@ -22,12 +23,12 @@ export async function POST(request: NextRequest) {
     const body = bodySchema.parse(await request.json());
     const owner = await getOwnerFromRequest(request);
     if (!owner) {
-      return NextResponse.json({ error: "No autoritzat" }, { status: 401 });
+      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 401 });
     }
 
     const meeting = await getMeetingById(body.meetingId);
     if (!meeting || meeting.orgId !== owner.orgId) {
-      return NextResponse.json({ error: "No autoritzat" }, { status: 403 });
+      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
     }
 
     const claim = await claimRecordingForProcessing({
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (claim === "missing") {
-      return NextResponse.json({ error: "Gravació no trobada" }, { status: 404 });
+      return NextResponse.json({ error: ca.errors.recordingNotFound }, { status: 404 });
     }
 
     if (claim === "processing") {
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
           meetingId: body.meetingId,
           recordingId: body.recordingId,
           status: "error",
-          error: error instanceof Error ? error.message : "Error de processament",
+          error: error instanceof Error ? error.message : ca.meeting.processRecordingError,
         });
 
         console.error("process-recording background error", {
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Dades no vàlides" },
+      { error: error instanceof Error ? error.message : ca.errors.invalidPayload },
       { status: 400 }
     );
   }

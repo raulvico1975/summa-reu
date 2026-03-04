@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Textarea } from "@/src/components/ui/field";
+import { ca } from "@/src/i18n/ca";
 
 export function MinutesEditor({
   meetingId,
@@ -29,14 +30,14 @@ export function MinutesEditor({
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? "No s'ha pogut guardar.");
+        throw new Error(data.error ?? ca.meeting.saveMinutesError);
       }
 
-      setState({ loading: false, message: "Acta actualitzada." });
+      setState({ loading: false, message: ca.meeting.minutesSaved });
     } catch (error) {
       setState({
         loading: false,
-        error: error instanceof Error ? error.message : "Error inesperat",
+        error: error instanceof Error ? error.message : ca.poll.unexpectedError,
       });
     }
   }
@@ -47,7 +48,7 @@ export function MinutesEditor({
       {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
       {state.message ? <p className="text-sm text-emerald-700">{state.message}</p> : null}
       <Button type="button" onClick={onSave} disabled={state.loading}>
-        {state.loading ? "Guardant..." : "Guardar canvis de l'acta"}
+        {state.loading ? ca.meeting.savingMinutes : ca.meeting.saveMinutes}
       </Button>
     </div>
   );

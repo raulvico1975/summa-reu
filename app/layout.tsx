@@ -40,9 +40,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                   <LogoutButton />
                 </>
               ) : (
-                <Link className="rounded-md px-3 py-1.5 hover:bg-slate-100" href="/login">
-                  {ca.nav.login}
-                </Link>
+                <>
+                  <Link className="rounded-md bg-sky-600 px-3 py-1.5 font-medium text-white hover:bg-sky-700" href="/login">
+                    {ca.nav.login}
+                  </Link>
+                  <Link className="rounded-md border border-slate-300 px-3 py-1.5 hover:bg-slate-100" href="/signup">
+                    {ca.nav.signup}
+                  </Link>
+                </>
               )}
             </nav>
           </div>

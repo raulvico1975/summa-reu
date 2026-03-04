@@ -29,7 +29,7 @@ export default async function PublicPollPage({ params }: { params: Promise<{ slu
 
       <Card>
         <CardHeader>
-          <h2 className="text-base font-semibold">Votació</h2>
+          <h2 className="text-base font-semibold">{ca.poll.sectionVoting}</h2>
         </CardHeader>
         <CardContent className="space-y-4">
           <VoteForm slug={slug} options={options} disabled={poll.status !== "open"} />

@@ -1,4 +1,5 @@
 import { Table, TableWrap } from "@/src/components/ui/table";
+import { ca } from "@/src/i18n/ca";
 
 type Option = { id: string; label: string };
 type VoteRow = { voterId: string; voterName: string; availabilityByOptionId: Record<string, boolean> };
@@ -19,7 +20,7 @@ export function ResultsTable({ options, rows }: { options: Option[]; rows: VoteR
       <Table>
         <thead className="bg-slate-50">
           <tr>
-            <th className="border-b border-slate-200 px-3 py-2 text-left font-medium">Participant</th>
+            <th className="border-b border-slate-200 px-3 py-2 text-left font-medium">{ca.poll.participant}</th>
             {options.map((option) => (
               <th key={option.id} className="border-b border-slate-200 px-3 py-2 text-left font-medium">
                 {option.label}
@@ -41,7 +42,7 @@ export function ResultsTable({ options, rows }: { options: Option[]; rows: VoteR
         </tbody>
         <tfoot className="bg-slate-50">
           <tr>
-            <td className="px-3 py-2 font-medium">Totals</td>
+            <td className="px-3 py-2 font-medium">{ca.poll.totals}</td>
             {options.map((option) => (
               <td key={option.id} className="px-3 py-2 font-medium">
                 {totals[option.id]}

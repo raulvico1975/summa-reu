@@ -3,6 +3,7 @@ import { z } from "zod";
 import { adminAuth } from "@/src/lib/firebase/admin";
 import { SESSION_COOKIE_NAME } from "@/src/lib/firebase/auth";
 import { getOwnerOrgByUid } from "@/src/lib/db/repo";
+import { ca } from "@/src/i18n/ca";
 
 const bodySchema = z.object({
   idToken: z.string().min(1),
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     const ownerOrg = await getOwnerOrgByUid(decoded.uid);
 
     if (!ownerOrg) {
-      return NextResponse.json({ error: "No autoritzat" }, { status: 403 });
+      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
     }
 
     const sessionCookie = await adminAuth.createSessionCookie(body.idToken, {
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "No autoritzat" },
+      { error: error instanceof Error ? error.message : ca.errors.unauthorized },
       { status: 401 }
     );
   }

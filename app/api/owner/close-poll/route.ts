@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { closePollCreateMeeting, getPollById } from "@/src/lib/db/repo";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
+import { ca } from "@/src/i18n/ca";
 
 export const runtime = "nodejs";
 
@@ -14,14 +15,14 @@ export async function POST(request: NextRequest) {
   try {
     const owner = await getOwnerFromRequest(request);
     if (!owner) {
-      return NextResponse.json({ error: "No autoritzat" }, { status: 401 });
+      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 401 });
     }
 
     const body = bodySchema.parse(await request.json());
     const poll = await getPollById(body.pollId);
 
     if (!poll || poll.orgId !== owner.orgId) {
-      return NextResponse.json({ error: "No autoritzat" }, { status: 403 });
+      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
     }
 
     const meetingId = await closePollCreateMeeting({
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ meetingId });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "No s'ha pogut tancar la votació" },
+      { error: error instanceof Error ? error.message : ca.poll.closePollError },
       { status: 400 }
     );
   }

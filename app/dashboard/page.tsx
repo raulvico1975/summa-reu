@@ -32,7 +32,9 @@ export default async function DashboardPage() {
               <StatusBadge status={poll.status} />
             </CardHeader>
             <CardContent className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-slate-500">Creada: {formatDateTime(poll.createdAt)}</p>
+              <p className="text-xs text-slate-500">
+                {ca.dashboard.createdLabel}: {formatDateTime(poll.createdAt)}
+              </p>
               <div className="flex gap-2 text-sm">
                 <Link href={`/polls/${poll.id}`} className="rounded-md bg-sky-500 px-3 py-1.5 text-white">
                   {ca.dashboard.manage}

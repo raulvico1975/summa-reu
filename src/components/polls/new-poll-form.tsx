@@ -231,13 +231,13 @@ export function NewPollForm() {
 
       const data = (await res.json()) as { pollId?: string; error?: string };
       if (!res.ok || !data.pollId) {
-        throw new Error(data.error ?? "No s'ha pogut crear la votació");
+        throw new Error(data.error ?? ca.poll.createPollError);
       }
 
       router.push(`/polls/${data.pollId}?created=1`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error inesperat");
+      setError(err instanceof Error ? err.message : ca.poll.unexpectedError);
       setLoading(false);
     }
   }
@@ -402,7 +402,9 @@ export function NewPollForm() {
                 <li key={`${label}-${index}`}>• {label}</li>
               ))}
               {optionPreview.length > 14 ? (
-                <li className="text-slate-500">+ {optionPreview.length - 14} franges més</li>
+                <li className="text-slate-500">
+                  {ca.poll.moreSlots.replace("{count}", String(optionPreview.length - 14))}
+                </li>
               ) : null}
             </ul>
           )}
@@ -411,7 +413,7 @@ export function NewPollForm() {
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <Button type="submit" disabled={loading}>
-        {loading ? "Creant..." : ca.poll.create}
+        {loading ? ca.poll.loadingCreating : ca.poll.create}
       </Button>
     </form>
   );

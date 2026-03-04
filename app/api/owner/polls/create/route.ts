@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createPollForOrg } from "@/src/lib/db/repo";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
+import { ca } from "@/src/i18n/ca";
 
 export const runtime = "nodejs";
 
@@ -16,14 +17,14 @@ export async function POST(request: NextRequest) {
   try {
     const owner = await getOwnerFromRequest(request);
     if (!owner) {
-      return NextResponse.json({ error: "No autoritzat" }, { status: 401 });
+      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 401 });
     }
 
     const body = bodySchema.parse(await request.json());
     const validDates = body.optionsIso.filter((value) => !Number.isNaN(new Date(value).getTime()));
 
     if (validDates.length === 0) {
-      return NextResponse.json({ error: "Cap opció vàlida" }, { status: 400 });
+      return NextResponse.json({ error: ca.errors.invalidOptionDates }, { status: 400 });
     }
 
     const created = await createPollForOrg({
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(created);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "No s'ha pogut crear la votació" },
+      { error: error instanceof Error ? error.message : ca.poll.createPollError },
       { status: 400 }
     );
   }

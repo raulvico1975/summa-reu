@@ -28,7 +28,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
       if (file) {
         const currentUser = clientAuth.currentUser;
         if (!currentUser) {
-          throw new Error("Sessió client no disponible. Torna a entrar.");
+          throw new Error(ca.meeting.clientSessionMissing);
         }
 
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -54,7 +54,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
 
       const registerData = (await registerRes.json()) as { recordingId?: string; error?: string };
       if (!registerRes.ok || !registerData.recordingId) {
-        throw new Error(registerData.error ?? "No s'ha pogut registrar la gravació.");
+        throw new Error(registerData.error ?? ca.meeting.registerRecordingError);
       }
 
       const processRes = await fetch("/api/owner/process-recording", {
@@ -74,7 +74,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
         status?: "processing" | "done" | "error";
       };
       if (!processRes.ok) {
-        throw new Error(processData.error ?? "No s'ha pogut processar la gravació.");
+        throw new Error(processData.error ?? ca.meeting.processRecordingError);
       }
 
       let message: string = ca.meeting.processingQueued;
@@ -96,7 +96,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
     } catch (error) {
       setState({
         loading: false,
-        error: error instanceof Error ? error.message : "Error inesperat",
+        error: error instanceof Error ? error.message : ca.poll.unexpectedError,
       });
     }
   }
@@ -104,7 +104,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
   return (
     <form className="space-y-3" onSubmit={onSubmit}>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Fitxer d&apos;àudio/vídeo (opcional)</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.meeting.recordingFileLabel}</label>
         <input
           type="file"
           accept="audio/*,video/*"
@@ -114,7 +114,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">Notes o transcripció base (opcional)</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.meeting.recordingNotesLabel}</label>
         <Textarea rows={5} value={rawText} onChange={(event) => setRawText(event.target.value)} />
       </div>
 
@@ -122,7 +122,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
       {state.message ? <p className="text-sm text-emerald-700">{state.message}</p> : null}
 
       <Button type="submit" disabled={state.loading || (!file && rawText.trim().length === 0)}>
-        {state.loading ? "Processant..." : "Pujar i processar"}
+        {state.loading ? ca.meeting.processingNowLabel : ca.meeting.uploadAndProcess}
       </Button>
     </form>
   );

@@ -107,7 +107,7 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
       ) : null}
 
       <Button type="submit" disabled={state.loading || disabled}>
-        {state.loading ? "Guardant..." : ca.poll.submitVote}
+        {state.loading ? ca.poll.loadingSaving : ca.poll.submitVote}
       </Button>
     </form>
   );

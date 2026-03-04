@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
+import { ca } from "@/src/i18n/ca";
 
 type Option = {
   id: string;
@@ -29,13 +30,13 @@ export function ClosePollForm({ pollId, options }: { pollId: string; options: Op
 
       const data = (await res.json()) as { meetingId?: string; error?: string };
       if (!res.ok || !data.meetingId) {
-        throw new Error(data.error ?? "No s'ha pogut tancar la votació.");
+        throw new Error(data.error ?? ca.poll.closePollError);
       }
 
       router.push(`/meetings/${data.meetingId}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error inesperat");
+      setError(err instanceof Error ? err.message : ca.poll.unexpectedError);
       setLoading(false);
     }
   }
@@ -57,7 +58,7 @@ export function ClosePollForm({ pollId, options }: { pollId: string; options: Op
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <Button type="submit" disabled={loading}>
-        {loading ? "Tancant..." : "Tancar votació"}
+        {loading ? ca.poll.loadingClosing : ca.poll.closePoll}
       </Button>
     </form>
   );

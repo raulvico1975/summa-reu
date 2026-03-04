@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { clientAuth } from "@/src/lib/firebase/client";
 import { Button } from "@/src/components/ui/button";
+import { ca } from "@/src/i18n/ca";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export function LogoutButton() {
 
   return (
     <Button variant="secondary" onClick={onLogout}>
-      Tancar sessió
+      {ca.nav.logout}
     </Button>
   );
 }
