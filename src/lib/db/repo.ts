@@ -72,10 +72,15 @@ async function ensureUniqueSlug(baseTitle: string): Promise<string> {
 }
 
 export async function getOwnerOrgByUid(uid: string): Promise<(OrgDoc & { id: string }) | null> {
-  const snap = await orgsCol.where("ownerUid", "==", uid).limit(1).get();
-  const doc = snap.docs[0];
-  if (!doc) return null;
-  return { id: doc.id, ...doc.data() };
+  const canonicalDoc = await orgsCol.doc(uid).get();
+  if (canonicalDoc.exists) {
+    return { id: canonicalDoc.id, ...(canonicalDoc.data() as OrgDoc) };
+  }
+
+  const legacySnap = await orgsCol.where("ownerUid", "==", uid).limit(1).get();
+  const legacyDoc = legacySnap.docs[0];
+  if (!legacyDoc) return null;
+  return { id: legacyDoc.id, ...legacyDoc.data() };
 }
 
 export async function listPollsByOrg(orgId: string): Promise<Array<PollDoc & { id: string }>> {
@@ -427,8 +432,8 @@ export async function updateMinutesMarkdown(input: {
 }
 
 export async function createOrgForOwner(input: { ownerUid: string; name: string }): Promise<string> {
-  const ref = orgsCol.doc();
-  await ref.set({
+  const ref = orgsCol.doc(input.ownerUid);
+  await ref.create({
     name: input.name,
     ownerUid: input.ownerUid,
     createdAt: FieldValue.serverTimestamp() as Timestamp,

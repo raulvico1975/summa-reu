@@ -11,13 +11,24 @@ export type OwnerContext = {
 };
 
 async function resolveOwnerContext(uid: string): Promise<OwnerContext | null> {
-  const snap = await adminDb
+  const canonicalDoc = await adminDb.collection("orgs").doc(uid).get();
+  if (canonicalDoc.exists) {
+    const data = canonicalDoc.data() as { name?: string };
+    return {
+      uid,
+      orgId: canonicalDoc.id,
+      orgName: data.name ?? "Organització",
+    };
+  }
+
+  // Backward compatibility for older org ids that were not owner uid.
+  const legacySnap = await adminDb
     .collection("orgs")
     .where("ownerUid", "==", uid)
     .limit(1)
     .get();
 
-  const orgDoc = snap.docs[0];
+  const orgDoc = legacySnap.docs[0];
   if (!orgDoc) {
     return null;
   }

@@ -12,7 +12,7 @@ export function LogoutButton() {
   async function onLogout() {
     await fetch("/api/auth/session-logout", { method: "POST" });
     await signOut(clientAuth).catch(() => undefined);
-    router.push("/login");
+    router.push("/");
     router.refresh();
   }
 

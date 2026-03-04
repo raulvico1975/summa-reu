@@ -4,19 +4,25 @@ import { buildMeetingIcs } from "@/src/lib/ics";
 import { timestampToDate } from "@/src/lib/dates";
 import { ca } from "@/src/i18n/ca";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
+import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   try {
+    const owner = await getOwnerFromRequest(request);
+    if (!owner) {
+      return new NextResponse(ca.errors.unauthorized, { status: 401 });
+    }
+
     const meetingId = request.nextUrl.searchParams.get("meetingId");
     if (!meetingId) {
       return new NextResponse(ca.errors.missingMeetingId, { status: 400 });
     }
 
     const meeting = await getMeetingById(meetingId);
-    if (!meeting) {
-      return new NextResponse(ca.errors.meetingNotFound, { status: 404 });
+    if (!meeting || meeting.orgId !== owner.orgId) {
+      return new NextResponse(ca.errors.unauthorized, { status: 403 });
     }
 
     const startsAt = timestampToDate(meeting.scheduledAt);

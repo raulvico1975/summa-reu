@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
 import { StatusBadge } from "@/src/components/ui/status-badge";
-import { ResultsTable } from "@/src/components/polls/results-table";
 import { ca } from "@/src/i18n/ca";
 import { getPollBySlug, getPollVoteRows } from "@/src/lib/db/repo";
 import { formatDateTime } from "@/src/lib/dates";
@@ -74,21 +73,17 @@ export default async function PublicPollResultsPage({ params }: { params: Promis
               {ca.poll.bestOption}: {topOptions[0].label}
             </p>
           ) : null}
+          {hasVotes ? (
+            <p className="pt-1 text-xs text-slate-500">
+              {ca.poll.votesReceived}: {rows.length}
+            </p>
+          ) : null}
 
           {isOwner && poll.status === "open" ? (
             <Link href={`/polls/${poll.id}`} className="inline-block pt-2 text-sm font-medium text-sky-700 hover:underline">
               {ca.poll.closePollLink}
             </Link>
           ) : null}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <h2 className="text-base font-semibold">{ca.poll.votesTable}</h2>
-        </CardHeader>
-        <CardContent>
-          <ResultsTable options={options} rows={rows} />
         </CardContent>
       </Card>
     </div>
