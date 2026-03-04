@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getMeetingById, updateMinutesMarkdown } from "@/src/lib/db/repo";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { ca } from "@/src/i18n/ca";
+import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 
 export const runtime = "nodejs";
 
@@ -34,6 +35,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    await reportApiUnexpectedError({
+      route: "/api/owner/minutes/update",
+      action: "intentàvem desar canvis a l'acta",
+      error,
+    });
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : ca.meeting.saveMinutesError },
       { status: 400 }

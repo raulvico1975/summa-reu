@@ -4,6 +4,7 @@ import { adminAuth } from "@/src/lib/firebase/admin";
 import { SESSION_COOKIE_NAME } from "@/src/lib/firebase/auth";
 import { getOwnerOrgByUid } from "@/src/lib/db/repo";
 import { ca } from "@/src/i18n/ca";
+import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 
 const bodySchema = z.object({
   idToken: z.string().min(1),
@@ -35,6 +36,12 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
+    await reportApiUnexpectedError({
+      route: "/api/auth/session-login",
+      action: "intentàvem iniciar la sessió d'una entitat",
+      error,
+    });
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : ca.errors.unauthorized },
       { status: 401 }

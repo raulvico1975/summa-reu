@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getMeetingById, registerMeetingRecording } from "@/src/lib/db/repo";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { ca } from "@/src/i18n/ca";
+import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ recordingId });
   } catch (error) {
+    await reportApiUnexpectedError({
+      route: "/api/owner/recordings/register",
+      action: "intentàvem registrar una gravació de reunió",
+      error,
+    });
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : ca.meeting.registerRecordingError },
       { status: 400 }

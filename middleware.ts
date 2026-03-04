@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const CANONICAL_HOST = process.env.CANONICAL_HOST ?? "summa-board.app";
+const FORCE_CANONICAL_REDIRECT = process.env.FORCE_CANONICAL_REDIRECT === "true";
 
 function isLocalHost(host: string): boolean {
   return host.startsWith("127.0.0.1") || host.startsWith("localhost");
 }
 
 export function middleware(request: NextRequest) {
+  if (!FORCE_CANONICAL_REDIRECT) {
+    return NextResponse.next();
+  }
+
   const host =
     request.headers.get("x-fh-requested-host")?.toLowerCase() ??
     request.headers.get("x-forwarded-host")?.toLowerCase() ??
@@ -21,7 +26,8 @@ export function middleware(request: NextRequest) {
   if (host.endsWith(".web.app") || host.endsWith(".firebaseapp.com")) {
     const nextUrl = request.nextUrl.clone();
     nextUrl.protocol = "https";
-    nextUrl.host = CANONICAL_HOST;
+    nextUrl.hostname = CANONICAL_HOST;
+    nextUrl.port = "";
     return NextResponse.redirect(nextUrl, 308);
   }
 

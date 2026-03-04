@@ -10,6 +10,10 @@ import { hasGeminiApiKey } from "@/src/lib/gemini/client";
 import { getGeminiFallbackModel, getGeminiModel } from "@/src/lib/gemini/selectModel";
 import { processRecordingTask } from "@/src/lib/meetings/process-recording-task";
 import { ca } from "@/src/i18n/ca";
+import {
+  reportApiUnexpectedError,
+  reportServerUnexpectedError,
+} from "@/src/lib/monitoring/report";
 
 export const runtime = "nodejs";
 
@@ -76,6 +80,12 @@ export async function POST(request: NextRequest) {
           error: error instanceof Error ? error.message : ca.meeting.processRecordingError,
         });
 
+        await reportServerUnexpectedError({
+          stage: "process-recording.background-task",
+          error,
+          dedupeKey: `process-recording:${body.meetingId}:${body.recordingId}`,
+        });
+
         console.error("process-recording background error", {
           meetingId: body.meetingId,
           recordingId: body.recordingId,
@@ -88,6 +98,12 @@ export async function POST(request: NextRequest) {
       { status: 202 }
     );
   } catch (error) {
+    await reportApiUnexpectedError({
+      route: "/api/owner/process-recording",
+      action: "intentàvem processar una gravació de reunió",
+      error,
+    });
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : ca.errors.invalidPayload },
       { status: 400 }

@@ -8,6 +8,7 @@ import {
   voterIdFromTokenHash,
 } from "@/src/lib/security";
 import { ca } from "@/src/i18n/ca";
+import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 
 export const runtime = "nodejs";
 
@@ -60,6 +61,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ voterToken, voterId });
   } catch (error) {
+    await reportApiUnexpectedError({
+      route: "/api/public/vote",
+      action: "intentàvem registrar un vot públic",
+      error,
+    });
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : ca.errors.invalidPayload },
       { status: 400 }

@@ -11,6 +11,7 @@
     "seed": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199 FIREBASE_PROJECT_ID=summa-board FIREBASE_STORAGE_BUCKET=summa-board.firebasestorage.app node scripts/seed.mjs",
     "test:smoke": "node scripts/smoke.mjs",
     "test:permissions": "node scripts/check-firebase-permissions.mjs",
+    "test:telegram": "node scripts/test-telegram-alert.mjs",
     "monitor:login": "node scripts/monitor-login.mjs --watch",
     "bootstrap:firebase": "bash scripts/bootstrap-firebase.sh"
   },

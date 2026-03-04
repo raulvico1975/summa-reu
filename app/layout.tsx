@@ -5,6 +5,7 @@ import "./globals.css";
 import { ca } from "@/src/i18n/ca";
 import { getOwnerFromServerCookies } from "@/src/lib/firebase/auth";
 import { LogoutButton } from "@/src/components/logout-button";
+import { ErrorMonitor } from "@/src/components/error-monitor";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -53,6 +54,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           </div>
         </header>
         <main className="mx-auto w-full max-w-4xl px-4 py-8">{children}</main>
+        <ErrorMonitor />
       </body>
     </html>
   );

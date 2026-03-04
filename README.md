@@ -20,6 +20,9 @@ Variables importants:
 - `FIREBASE_PROJECT_ID=summa-board`
 - `GEMINI_API_KEY=` (buit = STUB mode)
 - `GEMINI_MODEL=` (opcional override)
+- `TELEGRAM_BOT_TOKEN=` (obligatori per alertes)
+- `TELEGRAM_CHAT_ID=68198321`
+- `FORCE_CANONICAL_REDIRECT=false` (posa `true` quan el DNS de `summa-board.app` ja estigui actiu)
 
 ## Execució local
 
@@ -72,6 +75,8 @@ Guarda secrets fora del repo:
 
 ```bash
 scripts/secrets-keychain.sh set GEMINI_API_KEY "xxxx"
+scripts/secrets-keychain.sh set TELEGRAM_BOT_TOKEN "xxxx"
+scripts/secrets-keychain.sh set TELEGRAM_CHAT_ID "68198321"
 scripts/secrets-keychain.sh set FIREBASE_CLIENT_EMAIL "service-account@project.iam.gserviceaccount.com"
 scripts/secrets-keychain.sh set FIREBASE_PRIVATE_KEY "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 scripts/secrets-keychain.sh set FIREBASE_PRIVATE_KEY_ID "xxxx"
@@ -99,6 +104,7 @@ Públiques:
 Owner:
 
 - `/login`
+- `/signup`
 - `/dashboard`
 - `/polls/new`
 - `/polls/[pollId]`
@@ -112,4 +118,22 @@ Owner:
 - Pipeline premium:
   - Sense `GEMINI_API_KEY`: STUB
   - Amb `GEMINI_API_KEY`: intent REAL (Gemini); fallback STUB si falla.
-  - El processament de gravacions es posa en cua (response `202`) i la pantalla de reunió s'actualitza automàticament.
+- El processament de gravacions es posa en cua (response `202`) i la pantalla de reunió s'actualitza automàticament.
+- Monitorització d'errors:
+  - `instrumentation.ts` captura errors de servidor no controlats.
+  - `/api/public/error-report` rep errors de navegador.
+  - Les alertes s'envien a Telegram amb missatge humà que comença per `Summa-Board`.
+
+## Proves de producció recomanades
+
+1. Validar permisos Firebase (client públic sense escriptura):
+
+```bash
+npm run test:permissions
+```
+
+2. Validar canal Telegram:
+
+```bash
+npm run test:telegram
+```

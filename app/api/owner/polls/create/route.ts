@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createPollForOrg } from "@/src/lib/db/repo";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { ca } from "@/src/i18n/ca";
+import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 
 export const runtime = "nodejs";
 
@@ -37,6 +38,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(created);
   } catch (error) {
+    await reportApiUnexpectedError({
+      route: "/api/owner/polls/create",
+      action: "intentàvem crear una votació",
+      error,
+    });
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : ca.poll.createPollError },
       { status: 400 }

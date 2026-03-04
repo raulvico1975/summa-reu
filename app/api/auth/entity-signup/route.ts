@@ -4,6 +4,7 @@ import { adminAuth } from "@/src/lib/firebase/admin";
 import { createOrgForOwner } from "@/src/lib/db/repo";
 import { consumeRateLimit } from "@/src/lib/rate-limit";
 import { ca } from "@/src/i18n/ca";
+import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 
 export const runtime = "nodejs";
 
@@ -57,9 +58,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (error instanceof Error) {
+      await reportApiUnexpectedError({
+        route: "/api/auth/entity-signup",
+        action: "intentàvem donar d'alta una entitat",
+        error,
+      });
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    await reportApiUnexpectedError({
+      route: "/api/auth/entity-signup",
+      action: "intentàvem donar d'alta una entitat",
+      error,
+    });
     return NextResponse.json({ error: ca.errors.createOrgError }, { status: 400 });
   }
 }
