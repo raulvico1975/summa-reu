@@ -345,7 +345,7 @@ export function NewPollForm() {
                       onClick={() => toggleSlot(dayOffset, time)}
                       className={`rounded-md border px-2 py-1.5 text-xs font-medium transition-colors ${
                         active
-                          ? "border-sky-300 bg-sky-50 text-sky-700"
+                          ? "border-sky-600 bg-sky-600 text-white shadow-sm"
                           : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                       }`}
                     >
