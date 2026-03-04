@@ -5,13 +5,19 @@ import { SESSION_COOKIE_NAME } from "@/src/lib/firebase/auth";
 import { getOwnerOrgByUid } from "@/src/lib/db/repo";
 import { ca } from "@/src/i18n/ca";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
+import { isTrustedSameOrigin } from "@/src/lib/security/request";
+import type { NextRequest } from "next/server";
 
 const bodySchema = z.object({
   idToken: z.string().min(1),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    if (!isTrustedSameOrigin(request)) {
+      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
+    }
+
     const body = bodySchema.parse(await request.json());
     const expiresIn = 5 * 24 * 60 * 60 * 1000;
     const decoded = await adminAuth.verifyIdToken(body.idToken);
@@ -26,11 +32,12 @@ export async function POST(request: Request) {
     });
 
     const response = NextResponse.json({ ok: true });
+    response.headers.set("Cache-Control", "no-store");
     response.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: expiresIn / 1000,
-      sameSite: "lax",
+      sameSite: "strict",
       path: "/",
     });
 
@@ -42,9 +49,6 @@ export async function POST(request: Request) {
       error,
     });
 
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : ca.errors.unauthorized },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: ca.errors.unauthorized }, { status: 401 });
   }
 }

@@ -44,6 +44,11 @@ export async function processRecordingTask(input: {
     transcriptText = recording.rawText.trim();
   } else if (hasKey && recording.storagePath) {
     try {
+      const expectedPrefix = `meetings/${input.meetingId}/recordings/`;
+      if (!recording.storagePath.startsWith(expectedPrefix) || recording.storagePath.includes("..")) {
+        throw new Error("INVALID_RECORDING_PATH");
+      }
+
       const [bytes] = await adminStorage.bucket().file(recording.storagePath).download();
       const mimeType = recording.mimeType ?? "audio/mpeg";
       transcriptText = await transcribeWithGemini({

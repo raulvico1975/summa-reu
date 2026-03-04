@@ -14,6 +14,7 @@ import {
   reportApiUnexpectedError,
   reportServerUnexpectedError,
 } from "@/src/lib/monitoring/report";
+import { isTrustedSameOrigin } from "@/src/lib/security/request";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,10 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isTrustedSameOrigin(request)) {
+      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
+    }
+
     const body = bodySchema.parse(await request.json());
     const owner = await getOwnerFromRequest(request);
     if (!owner) {
@@ -105,7 +110,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : ca.errors.invalidPayload },
+      { error: ca.errors.invalidPayload },
       { status: 400 }
     );
   }

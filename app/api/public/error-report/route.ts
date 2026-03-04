@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { consumeRateLimit } from "@/src/lib/rate-limit";
+import { consumeRateLimitServer } from "@/src/lib/rate-limit-server";
 import { reportClientRuntimeError } from "@/src/lib/monitoring/report";
+import { getClientIp, isTrustedSameOrigin } from "@/src/lib/security/request";
 
 export const runtime = "nodejs";
 
@@ -13,8 +14,12 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-    if (!consumeRateLimit(`client-error:${ip}`, 12, 10 * 60_000)) {
+    if (!isTrustedSameOrigin(request)) {
+      return NextResponse.json({ ok: true });
+    }
+
+    const ip = getClientIp(request);
+    if (!(await consumeRateLimitServer(`client-error:${ip}`, 12, 10 * 60_000))) {
       return NextResponse.json({ ok: true });
     }
 

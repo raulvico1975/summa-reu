@@ -22,7 +22,7 @@ Variables importants:
 - `GEMINI_MODEL=` (opcional override)
 - `TELEGRAM_BOT_TOKEN=` (obligatori per alertes)
 - `TELEGRAM_CHAT_ID=68198321`
-- `FORCE_CANONICAL_REDIRECT=false` (posa `true` quan el DNS de `summareu.app` ja estigui actiu)
+- `FORCE_CANONICAL_REDIRECT=true` (posa `false` només si necessites desactivar redirecció canònica temporalment)
 
 ## Execució local
 

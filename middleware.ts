@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const CANONICAL_HOST = process.env.CANONICAL_HOST ?? "summareu.app";
-const FORCE_CANONICAL_REDIRECT = process.env.FORCE_CANONICAL_REDIRECT === "true";
+const FORCE_CANONICAL_REDIRECT = process.env.FORCE_CANONICAL_REDIRECT !== "false";
 
 function isLocalHost(host: string): boolean {
   return host.startsWith("127.0.0.1") || host.startsWith("localhost");

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { adminAuth } from "@/src/lib/firebase/admin";
 import { createOrgForOwner } from "@/src/lib/db/repo";
-import { consumeRateLimit } from "@/src/lib/rate-limit";
+import { consumeRateLimitServer } from "@/src/lib/rate-limit-server";
 import { ca } from "@/src/i18n/ca";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
+import { getClientIp, isTrustedSameOrigin } from "@/src/lib/security/request";
 
 export const runtime = "nodejs";
 
@@ -19,8 +20,12 @@ export async function POST(request: NextRequest) {
   let createdUid: string | null = null;
 
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
-    if (!consumeRateLimit(`signup:${ip}`, 10, 10 * 60_000)) {
+    if (!isTrustedSameOrigin(request)) {
+      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
+    }
+
+    const ip = getClientIp(request);
+    if (!(await consumeRateLimitServer(`signup:${ip}`, 10, 10 * 60_000))) {
       return NextResponse.json({ error: ca.errors.rateLimited }, { status: 429 });
     }
 
@@ -63,7 +68,7 @@ export async function POST(request: NextRequest) {
         action: "intentàvem donar d'alta una entitat",
         error,
       });
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ error: ca.errors.createOrgError }, { status: 400 });
     }
 
     await reportApiUnexpectedError({

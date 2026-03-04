@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getPollBySlug, upsertVoteByVoterId } from "@/src/lib/db/repo";
-import { consumeRateLimit } from "@/src/lib/rate-limit";
+import { consumeRateLimitServer } from "@/src/lib/rate-limit-server";
 import {
   generateVoterToken,
   hashVoterToken,
@@ -9,6 +9,7 @@ import {
 } from "@/src/lib/security";
 import { ca } from "@/src/i18n/ca";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
+import { getClientIp, isTrustedSameOrigin } from "@/src/lib/security/request";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,10 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isTrustedSameOrigin(request)) {
+      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
+    }
+
     const body = bodySchema.parse(await request.json());
     const poll = await getPollBySlug(body.slug);
 
@@ -32,9 +37,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: ca.errors.pollClosed }, { status: 400 });
     }
 
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
+    const ip = getClientIp(request);
     const rateKey = `${poll.id}:${ip}`;
-    if (!consumeRateLimit(rateKey, 40, 10 * 60_000)) {
+    if (!(await consumeRateLimitServer(rateKey, 40, 10 * 60_000))) {
       return NextResponse.json({ error: ca.errors.rateLimited }, { status: 429 });
     }
 
@@ -67,9 +72,6 @@ export async function POST(request: NextRequest) {
       error,
     });
 
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : ca.errors.invalidPayload },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: ca.errors.invalidPayload }, { status: 400 });
   }
 }
