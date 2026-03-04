@@ -10,10 +10,10 @@ import { defaultTimezone } from "@/src/lib/firebase/env";
 const DAY_OPTIONS = [5, 7, 10] as const;
 
 const WINDOW_PRESETS = [
-  { id: "workday", label: "Dia laboral (09:00 - 19:00)", start: "09:00", end: "19:00" },
-  { id: "morning", label: "Matí (09:00 - 13:00)", start: "09:00", end: "13:00" },
-  { id: "afternoon", label: "Tarda (15:00 - 19:00)", start: "15:00", end: "19:00" },
-  { id: "evening", label: "Vespre (18:00 - 21:00)", start: "18:00", end: "21:00" },
+  { id: "workday", i18nKey: "windowWorkday", start: "09:00", end: "19:00" },
+  { id: "morning", i18nKey: "windowMorning", start: "09:00", end: "13:00" },
+  { id: "afternoon", i18nKey: "windowAfternoon", start: "15:00", end: "19:00" },
+  { id: "evening", i18nKey: "windowEvening", start: "18:00", end: "21:00" },
 ] as const;
 
 type WindowPresetId = (typeof WINDOW_PRESETS)[number]["id"];
@@ -240,7 +240,7 @@ export function NewPollForm() {
             >
               {WINDOW_PRESETS.map((preset) => (
                 <option key={preset.id} value={preset.id}>
-                  {preset.label}
+                  {ca.poll[preset.i18nKey]}
                 </option>
               ))}
             </select>
