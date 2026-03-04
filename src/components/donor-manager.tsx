@@ -508,7 +508,7 @@ export function DonorManager() {
   // Comptadors per estat
   const statusCounts = React.useMemo(() => {
     if (!donors) return { active: 0, inactive: 0, total: 0 };
-    const active = donors.filter(d => !d.status || d.status === 'active').length;
+    const active = donors.filter(d => d.status !== 'inactive').length;
     const inactive = donors.filter(d => d.status === 'inactive').length;
     return { active, inactive, total: donors.length };
   }, [donors]);
@@ -522,7 +522,8 @@ export function DonorManager() {
 
     // Filtre per estat
     if (statusFilter === 'active') {
-      result = result.filter(donor => !donor.status || donor.status === 'active');
+      // "Actius" inclou també pending_return: devolució pendent no és baixa.
+      result = result.filter(donor => donor.status !== 'inactive');
     } else if (statusFilter === 'inactive') {
       result = result.filter(donor => donor.status === 'inactive');
     }
