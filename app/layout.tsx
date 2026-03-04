@@ -17,8 +17,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const owner = await getOwnerFromServerCookies();
 
   return (
-    <html lang="ca">
-      <body className={`${inter.variable} bg-slate-50 text-slate-900 antialiased`}>
+    <html lang="ca" suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className={`${inter.variable} bg-slate-50 text-slate-900 antialiased`}
+      >
         <header className="border-b border-slate-200 bg-white">
           <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-3">
             <Link href="/" className="text-lg font-semibold text-sky-600">
