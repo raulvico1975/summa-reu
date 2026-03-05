@@ -145,12 +145,16 @@ export function MembersUserPermissionsDialog({
     onOpenChange(true);
   }, [closeDialog, onOpenChange]);
 
-  const handleProjectCapabilityChange = React.useCallback((value: 'manage' | 'expenseInput') => {
+  const handleProjectCapabilityChange = React.useCallback((value: 'manage' | 'expenseInput' | 'none') => {
     setDenied((prev) => {
       const next = new Set(prev);
-      if (value === 'manage') {
-        next.delete('projectes.manage');
+      if (value === 'none') {
+        next.add('sections.projectes');
+        next.add('projectes.manage');
         next.add('projectes.expenseInput');
+      } else if (value === 'manage') {
+        next.delete('projectes.manage');
+        next.delete('projectes.expenseInput');
       } else {
         next.add('projectes.manage');
         next.delete('projectes.expenseInput');
@@ -160,10 +164,10 @@ export function MembersUserPermissionsDialog({
 
     setGrants((prev) => {
       const next = new Set(prev);
-      if (value === 'manage') {
-        next.delete('projectes.expenseInput');
-      } else {
+      if (value === 'expenseInput') {
         next.add('projectes.expenseInput');
+      } else {
+        next.delete('projectes.expenseInput');
       }
       return next;
     });
@@ -238,13 +242,14 @@ export function MembersUserPermissionsDialog({
     return tr(translationKey, tr('permissionsDialog.unknownPermission', 'Permis desconegut'));
   };
 
-  const projectCapabilityValue = projectCapability === 'expenseInput' ? 'expenseInput' : 'manage';
+  const projectCapabilityValue = projectCapability;
+  const isProjectsSectionLocked = projectCapabilityValue === 'none';
   const canRestoreDefaults = denied.size > 0 || grants.size > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
-        className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"
+        className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           const previous = lastFocusedElementRef.current;
@@ -261,16 +266,17 @@ export function MembersUserPermissionsDialog({
           <p className="text-xs text-muted-foreground">{userPermissionsStatusLabel}</p>
         </DialogHeader>
 
-        <div className="space-y-6 py-2">
-          <div className="space-y-3">
+        <div className="space-y-5 py-2">
+          <div className="space-y-2">
             <h3 className="text-sm font-semibold">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               {SECTION_TOGGLES.map((section) => (
-                <div key={section} className="flex items-center justify-between rounded-md border p-3">
-                  <Label htmlFor={`section-${section}`} className="cursor-pointer">{permissionLabel(section, 'section')}</Label>
+                <div key={section} className="flex min-h-12 items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
+                  <Label htmlFor={`section-${section}`} className="cursor-pointer text-sm leading-tight">{permissionLabel(section, 'section')}</Label>
                   <Switch
                     id={`section-${section}`}
                     checked={effectivePermissions[section]}
+                    disabled={isProjectsSectionLocked && section === 'sections.projectes'}
                     onCheckedChange={(checked) => togglePermission(section, checked === true)}
                   />
                 </div>
@@ -280,12 +286,12 @@ export function MembersUserPermissionsDialog({
 
           <Separator />
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <h3 className="text-sm font-semibold">{tr('permissionsDialog.actionsTitle', 'Accions critiques')}</h3>
-            <div className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               {CRITICAL_ACTION_TOGGLES.map((action) => (
-                <div key={action} className="flex items-center justify-between rounded-md border p-3">
-                  <Label htmlFor={`action-${action}`} className="cursor-pointer text-xs">{permissionLabel(action, 'action')}</Label>
+                <div key={action} className="flex min-h-12 items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
+                  <Label htmlFor={`action-${action}`} className="cursor-pointer text-sm leading-tight">{permissionLabel(action, 'action')}</Label>
                   <Switch
                     id={`action-${action}`}
                     checked={effectivePermissions[action]}
@@ -298,20 +304,24 @@ export function MembersUserPermissionsDialog({
 
           <Separator />
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <h3 className="text-sm font-semibold">{tr('permissionsDialog.projectsTitle', 'Projectes')}</h3>
             <RadioGroup
               value={projectCapabilityValue}
-              onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput')}
-              className="space-y-2"
+              onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput' | 'none')}
+              className="grid gap-2 sm:grid-cols-2"
             >
-              <div className="flex items-center gap-2 rounded-md border p-3">
+              <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
                 <RadioGroupItem value="manage" id="projects-manage" />
-                <Label htmlFor="projects-manage" className="cursor-pointer">{tr('permissionsDialog.projects.manage', 'Gestio de projectes')}</Label>
+                <Label htmlFor="projects-manage" className="cursor-pointer text-sm leading-tight">{tr('permissionsDialog.projects.manage', 'Gestio de projectes')}</Label>
               </div>
-              <div className="flex items-center gap-2 rounded-md border p-3">
+              <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
                 <RadioGroupItem value="expenseInput" id="projects-expense-input" />
-                <Label htmlFor="projects-expense-input" className="cursor-pointer">{tr('permissionsDialog.projects.expenseInput', 'Entrada de despeses')}</Label>
+                <Label htmlFor="projects-expense-input" className="cursor-pointer text-sm leading-tight">{tr('permissionsDialog.projects.expenseInput', 'Entrada de despeses')}</Label>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg border bg-background p-3 sm:col-span-2">
+                <RadioGroupItem value="none" id="projects-none" />
+                <Label htmlFor="projects-none" className="cursor-pointer text-sm leading-tight">{tr('permissionsDialog.projects.none', 'Sense accés a projectes')}</Label>
               </div>
             </RadioGroup>
           </div>

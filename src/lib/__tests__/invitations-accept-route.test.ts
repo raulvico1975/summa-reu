@@ -138,6 +138,40 @@ test('POST /api/invitations/accept keeps legacy behavior when invitation has no 
   assert.deepEqual(member?.userGrants, undefined);
 });
 
+test('POST /api/invitations/accept canonicalizes project none and removes project capabilities', async () => {
+  const store = new Map<string, DocData>();
+  store.set('invitations/inv-none', {
+    organizationId: 'org-none',
+    email: 'none.user@test.com',
+    role: 'user',
+    userOverrides: { deny: ['projectes.manage', 'projectes.expenseInput'] },
+  });
+
+  const response = await handleInvitationAccept(
+    createRequest({
+      invitationId: 'inv-none',
+      organizationId: 'org-none',
+      displayName: 'None User',
+      email: 'none.user@test.com',
+      role: 'user',
+    }),
+    {
+      verifyIdTokenFn: async () => ({ uid: 'uid-none', email: 'none.user@test.com' }),
+      getAdminDbFn: () => new FakeDb(store) as any,
+      nowIsoFn: () => '2026-03-05T12:00:00.000Z',
+    }
+  );
+
+  assert.equal(response.status, 200);
+  const member = store.get('organizations/org-none/members/uid-none');
+  assert.ok(member);
+  assert.deepEqual(member?.userOverrides, { deny: ['projectes.expenseInput', 'projectes.manage', 'sections.projectes'] });
+  assert.equal((member?.capabilities as Record<string, boolean>)['projectes.manage'], undefined);
+  assert.equal((member?.capabilities as Record<string, boolean>)['projectes.expenseInput'], undefined);
+  assert.equal((member?.capabilities as Record<string, boolean>)['sections.projectes'], undefined);
+  assert.ok(store.get('invitations/inv-none')?.usedAt);
+});
+
 test('POST /api/invitations/accept rejects invalid granular payload and does not consume invitation', async () => {
   const store = new Map<string, DocData>();
   store.set('invitations/inv-3', {

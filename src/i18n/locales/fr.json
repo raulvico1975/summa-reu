@@ -3674,6 +3674,7 @@
   "permissionsDialog.description": "Configure les sections, actions critiques et la capacité Projets pour",
   "permissionsDialog.projects.expenseInput": "Saisie des dépenses",
   "permissionsDialog.projects.manage": "Gestion des projets",
+  "permissionsDialog.projects.none": "Sans accès aux projets",
   "permissionsDialog.projectsTitle": "Projets",
   "permissionsDialog.save": "Enregistrer les permissions",
   "permissionsDialog.saveError": "Impossible d'enregistrer les permissions.",

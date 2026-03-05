@@ -14,6 +14,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
+import { usePermissions } from '@/hooks/use-permissions';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
@@ -359,6 +360,7 @@ function TopCategoriesTable({
 export default function DashboardPage() {
   const { firestore, user } = useFirebase();
   const { organizationId, organization, userRole, member, isLoading: isOrganizationLoading } = useCurrentOrganization();
+  const { canAccessProjectsArea } = usePermissions();
   const { t, tr, language } = useTranslations();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   // Helper local per interpolació de placeholders {key} en claus JSON
@@ -1296,7 +1298,12 @@ ${tr("dashboard.generatedWith")}`;
   const hasActiveProjects = (projects?.length ?? 0) > 0;
   const totalExpensesAbs = Math.abs(totalExpenses);
   const assignedExpensesRatio = totalExpensesAbs > 0 ? totalAssignedProjectExpenses / totalExpensesAbs : 0;
-  const shouldShowProjectExpenses = hasProjectModule && hasActiveProjects && totalAssignedProjectExpenses > 0 && assignedExpensesRatio > 0.05;
+  const shouldShowProjectExpenses =
+    canAccessProjectsArea &&
+    hasProjectModule &&
+    hasActiveProjects &&
+    totalAssignedProjectExpenses > 0 &&
+    assignedExpensesRatio > 0.05;
 
   // Càlcul d'alertes
   const alerts = React.useMemo(() => {

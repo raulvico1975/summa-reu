@@ -2,9 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   applyOverrides,
+  canAccessProjectsArea,
   canAccessMovimentsRoute,
   canReadBankInProjectes,
+  canUseProjectModule,
   getRoleDefaults,
+  getProjectCapability,
   isUserPermissionsCustomized,
   permissionsToCapabilities,
   resolveEffectivePermissions,
@@ -119,6 +122,18 @@ test('permissionsToCapabilities honors expenseInput mode', () => {
 
   assert.equal(capabilities['projectes.manage'], undefined);
   assert.equal(capabilities['projectes.expenseInput'], true);
+});
+
+test('none mode disables projects area access', () => {
+  const effective = resolveEffectivePermissions({
+    role: 'user',
+    userOverrides: { deny: ['sections.projectes', 'projectes.manage', 'projectes.expenseInput'] },
+  });
+
+  assert.equal(getProjectCapability(effective), 'none');
+  assert.equal(canUseProjectModule(effective), false);
+  assert.equal(canAccessProjectsArea(effective), false);
+  assert.equal(canReadBankInProjectes(effective), false);
 });
 
 test('permissionsToCapabilities never includes unknown keys', () => {

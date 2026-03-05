@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import {
   can,
+  canAccessProjectsArea,
   canAccessMovimentsRoute,
   canReadBankInProjectes,
   canUseProjectModule,
@@ -41,5 +42,6 @@ export function usePermissions() {
     canAccessMovimentsRoute: canAccessMovimentsRoute(permissions),
     canReadBankInProjectes: canReadBankInProjectes(permissions),
     canUseProjectModule: canUseProjectModule(permissions),
+    canAccessProjectsArea: canAccessProjectsArea(permissions),
   };
 }

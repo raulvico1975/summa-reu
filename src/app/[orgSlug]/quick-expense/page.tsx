@@ -13,12 +13,12 @@ import { usePermissions } from '@/hooks/use-permissions';
 export default function QuickExpensePage() {
   const { organizationId, userRole } = useCurrentOrganization();
   const { t } = useTranslations();
-  const { canUseProjectModule } = usePermissions();
+  const { canAccessProjectsArea } = usePermissions();
 
   const q = t.projectModule?.quickExpense;
 
   // Bloquejar usuaris sense capacitat de projectes
-  if (userRole === 'viewer' || !canUseProjectModule) {
+  if (userRole === 'viewer' || !canAccessProjectsArea) {
     return (
       <div className="flex h-[100dvh] items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4 text-center max-w-sm">

@@ -24,7 +24,7 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
   const router = useRouter();
-  const { can, canUseProjectModule } = usePermissions();
+  const { canAccessProjectsArea } = usePermissions();
   const [isActivating, setIsActivating] = React.useState(false);
 
   // Feature flag: Mòdul Projectes
@@ -62,14 +62,14 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
     }
   };
 
-  if (!can('sections.projectes')) {
+  if (!canAccessProjectsArea) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center p-4">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>Acces restringit</CardTitle>
             <CardDescription>
-              Aquesta seccio esta desactivada per aquest usuari.
+              No tens permisos per operar al modul de Projectes.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -130,21 +130,6 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
               Anar a Configuració
             </Button>
           </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!canUseProjectModule) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center p-4">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Acces restringit</CardTitle>
-            <CardDescription>
-              No tens permisos per operar al modul de Projectes.
-            </CardDescription>
-          </CardHeader>
         </Card>
       </div>
     );

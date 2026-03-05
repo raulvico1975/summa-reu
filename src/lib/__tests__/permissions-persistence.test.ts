@@ -52,6 +52,44 @@ test('persistència: write overrides + reload mantenen effectivePermissions', ()
   assert.equal(canReadBankInProjectes(reloaded), false);
 });
 
+test('validació d escriptura: mode none canònic força denies de projectes i secció', () => {
+  const result = validateAndCanonicalizeUserPermissionWrite({
+    deny: ['projectes.manage', 'projectes.expenseInput'],
+    grants: ['projectes.expenseInput'],
+  });
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value.projectCapability, 'none');
+  assert.deepEqual(result.value.deny, ['projectes.expenseInput', 'projectes.manage', 'sections.projectes']);
+  assert.deepEqual(result.value.grants, []);
+});
+
+test('validació d escriptura: combinació legacy expenseInput es manté', () => {
+  const result = validateAndCanonicalizeUserPermissionWrite({
+    deny: ['projectes.manage'],
+    grants: ['projectes.expenseInput'],
+  });
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value.projectCapability, 'expenseInput');
+  assert.equal(result.value.deny.includes('projectes.manage'), true);
+  assert.equal(result.value.deny.includes('projectes.expenseInput'), false);
+  assert.equal(result.value.grants.includes('projectes.expenseInput'), true);
+});
+
+test('validació d escriptura: mode manage per defecte es manté', () => {
+  const result = validateAndCanonicalizeUserPermissionWrite({
+    deny: [],
+    grants: [],
+  });
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value.projectCapability, 'manage');
+});
+
 test('multi-org: mateix uid té overrides independents per organització', () => {
   const uid = 'uid-shared';
   const store = new Map<string, { userOverrides: { deny: string[] } | null; userGrants: string[] | null }>();

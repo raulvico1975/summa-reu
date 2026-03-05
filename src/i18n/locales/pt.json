@@ -3804,6 +3804,7 @@
   "permissionsDialog.description": "Configura secções, ações críticas e capacidade de Projetos para",
   "permissionsDialog.projects.expenseInput": "Entrada de despesas",
   "permissionsDialog.projects.manage": "Gestão de projetos",
+  "permissionsDialog.projects.none": "Sem acesso a projetos",
   "permissionsDialog.projectsTitle": "Projetos",
   "permissionsDialog.save": "Guardar permissões",
   "permissionsDialog.saveError": "Não foi possível guardar as permissões.",

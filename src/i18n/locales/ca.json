@@ -3673,6 +3673,7 @@
   "permissionsDialog.description": "Configura seccions, accions crítiques i capacitat de Projectes per a",
   "permissionsDialog.projects.expenseInput": "Entrada de despeses",
   "permissionsDialog.projects.manage": "Gestió de projectes",
+  "permissionsDialog.projects.none": "Sense accés a projectes",
   "permissionsDialog.projectsTitle": "Projectes",
   "permissionsDialog.save": "Desar permisos",
   "permissionsDialog.saveError": "No s'han pogut desar els permisos.",

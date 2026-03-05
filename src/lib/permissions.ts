@@ -196,6 +196,10 @@ export function canUseProjectModule(permissions: PermissionMap): boolean {
   return permissions['projectes.manage'] || permissions['projectes.expenseInput'];
 }
 
+export function canAccessProjectsArea(permissions: PermissionMap): boolean {
+  return permissions['sections.projectes'] && canUseProjectModule(permissions);
+}
+
 export function can(permission: PermissionKey, permissions: PermissionMap): boolean {
   return permissions[permission] === true;
 }

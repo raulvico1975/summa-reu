@@ -175,12 +175,16 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
     });
   }, []);
 
-  const handleProjectCapabilityChange = React.useCallback((value: 'manage' | 'expenseInput') => {
+  const handleProjectCapabilityChange = React.useCallback((value: 'manage' | 'expenseInput' | 'none') => {
     setDenied((prev) => {
       const next = new Set(prev);
-      if (value === 'manage') {
-        next.delete('projectes.manage');
+      if (value === 'none') {
+        next.add('sections.projectes');
+        next.add('projectes.manage');
         next.add('projectes.expenseInput');
+      } else if (value === 'manage') {
+        next.delete('projectes.manage');
+        next.delete('projectes.expenseInput');
       } else {
         next.add('projectes.manage');
         next.delete('projectes.expenseInput');
@@ -190,10 +194,10 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
 
     setGrants((prev) => {
       const next = new Set(prev);
-      if (value === 'manage') {
-        next.delete('projectes.expenseInput');
-      } else {
+      if (value === 'expenseInput') {
         next.add('projectes.expenseInput');
+      } else {
+        next.delete('projectes.expenseInput');
       }
       return next;
     });
@@ -333,7 +337,8 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
     return tr(translationKey, tr('permissionsDialog.unknownPermission', 'Permís desconegut'));
   };
 
-  const projectCapabilityValue = projectCapability === 'expenseInput' ? 'expenseInput' : 'manage';
+  const projectCapabilityValue = projectCapability;
+  const isProjectsSectionLocked = projectCapabilityValue === 'none';
   const isUserCustomized = isUserPermissionsCustomized(
     { deny: Array.from(denied) },
     Array.from(grants)
@@ -342,7 +347,7 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -358,7 +363,7 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
 
         {createdInviteUrl ? (
           // Pantalla d'èxit amb l'enllaç
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-2 sm:py-3">
             <Alert>
               <Mail className="h-4 w-4" />
               <AlertDescription>
@@ -436,11 +441,19 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
             </div>
 
             {role === 'user' && (
-              <div className="space-y-4 rounded-md border p-3">
-                <div>
-                  <p className="text-sm font-medium">
-                    {tr('permissionsDialog.title', 'Permisos d usuari')}
-                  </p>
+              <div className="space-y-5 rounded-lg border bg-muted/20 p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold">
+                      {tr('permissionsDialog.title', 'Permisos d usuari')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {tr(
+                        'permissionsDialog.inviteHint',
+                        'Defineix permisos inicials perquè el membre entri amb accés coherent des del primer login.'
+                      )}
+                    </p>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {isUserCustomized
                       ? t.members.roleUserCustomized
@@ -449,16 +462,17 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs font-medium">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</p>
-                  <div className="grid gap-2">
+                  <p className="text-sm font-semibold">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
                     {SECTION_TOGGLES.map((section) => (
-                      <div key={section} className="flex items-center justify-between rounded-md border p-2">
-                        <Label htmlFor={`invite-section-${section}`} className="cursor-pointer text-xs">
+                      <div key={section} className="flex min-h-12 items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
+                        <Label htmlFor={`invite-section-${section}`} className="cursor-pointer text-sm leading-tight">
                           {permissionLabel(section, 'section')}
                         </Label>
                         <Switch
                           id={`invite-section-${section}`}
                           checked={effectivePermissions[section]}
+                          disabled={isProjectsSectionLocked && section === 'sections.projectes'}
                           onCheckedChange={(checked) => togglePermission(section, checked === true)}
                         />
                       </div>
@@ -469,11 +483,11 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
                 <Separator />
 
                 <div className="space-y-2">
-                  <p className="text-xs font-medium">{tr('permissionsDialog.actionsTitle', 'Accions crítiques')}</p>
-                  <div className="grid gap-2">
+                  <p className="text-sm font-semibold">{tr('permissionsDialog.actionsTitle', 'Accions crítiques')}</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
                     {CRITICAL_ACTION_TOGGLES.map((action) => (
-                      <div key={action} className="flex items-center justify-between rounded-md border p-2">
-                        <Label htmlFor={`invite-action-${action}`} className="cursor-pointer text-xs">
+                      <div key={action} className="flex min-h-12 items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
+                        <Label htmlFor={`invite-action-${action}`} className="cursor-pointer text-sm leading-tight">
                           {permissionLabel(action, 'action')}
                         </Label>
                         <Switch
@@ -489,22 +503,28 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
                 <Separator />
 
                 <div className="space-y-2">
-                  <p className="text-xs font-medium">{tr('permissionsDialog.projectsTitle', 'Projectes')}</p>
+                  <p className="text-sm font-semibold">{tr('permissionsDialog.projectsTitle', 'Projectes')}</p>
                   <RadioGroup
                     value={projectCapabilityValue}
-                    onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput')}
-                    className="space-y-2"
+                    onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput' | 'none')}
+                    className="grid gap-2 sm:grid-cols-2"
                   >
-                    <div className="flex items-center gap-2 rounded-md border p-2">
+                    <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
                       <RadioGroupItem value="manage" id="invite-projects-manage" />
-                      <Label htmlFor="invite-projects-manage" className="cursor-pointer text-xs">
+                      <Label htmlFor="invite-projects-manage" className="cursor-pointer text-sm leading-tight">
                         {tr('permissionsDialog.projects.manage', 'Gestió de projectes')}
                       </Label>
                     </div>
-                    <div className="flex items-center gap-2 rounded-md border p-2">
+                    <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
                       <RadioGroupItem value="expenseInput" id="invite-projects-expense-input" />
-                      <Label htmlFor="invite-projects-expense-input" className="cursor-pointer text-xs">
+                      <Label htmlFor="invite-projects-expense-input" className="cursor-pointer text-sm leading-tight">
                         {tr('permissionsDialog.projects.expenseInput', 'Entrada de despeses')}
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-lg border bg-background p-3 sm:col-span-2">
+                      <RadioGroupItem value="none" id="invite-projects-none" />
+                      <Label htmlFor="invite-projects-none" className="cursor-pointer text-sm leading-tight">
+                        {tr('permissionsDialog.projects.none', 'Sense accés a projectes')}
                       </Label>
                     </div>
                   </RadioGroup>
@@ -515,7 +535,7 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
                   variant="ghost"
                   onClick={handleRestoreDefaults}
                   disabled={!canRestoreDefaults}
-                  className="h-8 justify-start px-0 text-xs"
+                  className="h-8 justify-start px-0 text-sm"
                 >
                   {tr('permissionsDialog.restoreDefaults', 'Restaurar per defecte')}
                 </Button>

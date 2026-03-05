@@ -54,7 +54,7 @@ export function DashboardSidebarContent() {
   const { t } = useTranslations();
   const { toast } = useToast();
   const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
-  const { can, canUseProjectModule } = usePermissions();
+  const { can, canAccessProjectsArea } = usePermissions();
 
   // Obtenir dades de l'organització i el helper per construir URLs
   const { userProfile, firebaseUser, organization, orgSlug } = useCurrentOrganization();
@@ -108,7 +108,7 @@ export function DashboardSidebarContent() {
 
   // Items del submenú Projectes (Mòdul)
   const projectModuleItems = React.useMemo(() => {
-    if (!isProjectModuleEnabled || !canUseProjectModule || !can('sections.projectes')) return [];
+    if (!isProjectModuleEnabled || !canAccessProjectsArea) return [];
 
     const items = [];
     if (can('projectes.manage')) {
@@ -128,7 +128,7 @@ export function DashboardSidebarContent() {
       ...item,
       href: buildUrl(item.path),
     }));
-  }, [t, isProjectModuleEnabled, canUseProjectModule, can, buildUrl]);
+  }, [t, isProjectModuleEnabled, canAccessProjectsArea, can, buildUrl]);
 
   // Comprovar si estem en una ruta del mòdul projectes
   const isProjectModuleActive = React.useMemo(() => {
@@ -214,6 +214,9 @@ export function DashboardSidebarContent() {
     };
 
     const visibleItems = baseItems.filter(item => {
+      if (item.path === '/dashboard/projectes') {
+        return canAccessProjectsArea;
+      }
       const requiredSection = sectionByPath[item.path];
       if (!requiredSection) return true;
       return can(requiredSection);
@@ -224,7 +227,7 @@ export function DashboardSidebarContent() {
       ...item,
       href: buildUrl(item.path),
     }));
-  }, [t, isSuperAdmin, can, buildUrl]);
+  }, [t, isSuperAdmin, can, canAccessProjectsArea, buildUrl]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Helper per comprovar si una ruta està activa
@@ -314,7 +317,7 @@ export function DashboardSidebarContent() {
             if (item.path === '/dashboard/configuracion' && projectModuleItems.length > 0) {
               // Quan sidebar col·lapsada: link directe (no collapsible)
               // Quan sidebar expandida: submenú desplegable
-              const projectModuleMainHref = buildUrl('/dashboard/project-module/projects');
+              const projectModuleMainHref = projectModuleItems[0]?.href ?? buildUrl('/dashboard/project-module/expenses');
 
               return (
                 <React.Fragment key={item.href}>

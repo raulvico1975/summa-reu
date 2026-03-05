@@ -13,7 +13,7 @@ export interface UserPermissionWriteInput {
 export interface CanonicalUserPermissionWrite {
   deny: PermissionKey[];
   grants: PermissionKey[];
-  projectCapability: 'manage' | 'expenseInput';
+  projectCapability: 'manage' | 'expenseInput' | 'none';
 }
 
 export interface PermissionWriteValidationError {
@@ -100,17 +100,25 @@ export function validateAndCanonicalizeUserPermissionWrite(
   const denySet = new Set<PermissionKey>(deny);
   const grantSet = new Set<PermissionKey>(grants);
 
-  // Exclusió mútua persistida a dades: mode explícit manage vs expenseInput.
+  // Precedència canònica: none > expenseInput > manage.
+  const noneMode =
+    denySet.has('projectes.manage') && denySet.has('projectes.expenseInput');
   const expenseInputMode =
-    grantSet.has('projectes.expenseInput') || denySet.has('projectes.manage');
+    !noneMode && (grantSet.has('projectes.expenseInput') || denySet.has('projectes.manage'));
 
-  if (expenseInputMode) {
+  if (noneMode) {
+    denySet.add('sections.projectes');
+    denySet.add('projectes.manage');
+    denySet.add('projectes.expenseInput');
+    grantSet.delete('projectes.expenseInput');
+  } else if (expenseInputMode) {
     grantSet.add('projectes.expenseInput');
     denySet.add('projectes.manage');
     denySet.delete('projectes.expenseInput');
   } else {
     grantSet.delete('projectes.expenseInput');
     denySet.delete('projectes.manage');
+    denySet.delete('projectes.expenseInput');
   }
 
   return {
@@ -118,7 +126,7 @@ export function validateAndCanonicalizeUserPermissionWrite(
     value: {
       deny: Array.from(denySet).sort(),
       grants: Array.from(grantSet).sort(),
-      projectCapability: expenseInputMode ? 'expenseInput' : 'manage',
+      projectCapability: noneMode ? 'none' : (expenseInputMode ? 'expenseInput' : 'manage'),
     },
   };
 }
