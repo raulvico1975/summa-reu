@@ -7,7 +7,7 @@ import {
   hashVoterToken,
   voterIdFromTokenHash,
 } from "@/src/lib/security";
-import { ca } from "@/src/i18n/ca";
+import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 import { getClientIp, isTrustedSameOrigin } from "@/src/lib/security/request";
 
@@ -21,26 +21,27 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const { i18n } = getRequestI18nFromNextRequest(request);
   try {
     if (!isTrustedSameOrigin(request)) {
-      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
+      return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
     }
 
     const body = bodySchema.parse(await request.json());
     const poll = await getPollBySlug(body.slug);
 
     if (!poll) {
-      return NextResponse.json({ error: ca.errors.pollNotFound }, { status: 404 });
+      return NextResponse.json({ error: i18n.errors.pollNotFound }, { status: 404 });
     }
 
     if (poll.status !== "open") {
-      return NextResponse.json({ error: ca.errors.pollClosed }, { status: 400 });
+      return NextResponse.json({ error: i18n.errors.pollClosed }, { status: 400 });
     }
 
     const ip = getClientIp(request);
     const rateKey = `${poll.id}:${ip}`;
     if (!(await consumeRateLimitServer(rateKey, 40, 10 * 60_000))) {
-      return NextResponse.json({ error: ca.errors.rateLimited }, { status: 429 });
+      return NextResponse.json({ error: i18n.errors.rateLimited }, { status: 429 });
     }
 
     const optionIds = new Set(poll.options.map((option) => option.id));
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
       payloadOptionIds.length > 0 && payloadOptionIds.every((optionId) => optionIds.has(optionId));
 
     if (!hasOnlyKnownOptions) {
-      return NextResponse.json({ error: ca.errors.optionInvalid }, { status: 400 });
+      return NextResponse.json({ error: i18n.errors.optionInvalid }, { status: 400 });
     }
 
     const voterToken = body.voterToken ?? generateVoterToken();
@@ -72,6 +73,6 @@ export async function POST(request: NextRequest) {
       error,
     });
 
-    return NextResponse.json({ error: ca.errors.invalidPayload }, { status: 400 });
+    return NextResponse.json({ error: i18n.errors.invalidPayload }, { status: 400 });
   }
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createPollForOrg } from "@/src/lib/db/repo";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
-import { ca } from "@/src/i18n/ca";
+import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 import { isTrustedSameOrigin } from "@/src/lib/security/request";
 
@@ -16,21 +16,22 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const { i18n } = getRequestI18nFromNextRequest(request);
   try {
     if (!isTrustedSameOrigin(request)) {
-      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
+      return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
     }
 
     const owner = await getOwnerFromRequest(request);
     if (!owner) {
-      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 401 });
+      return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 401 });
     }
 
     const body = bodySchema.parse(await request.json());
     const validDates = body.optionsIso.filter((value) => !Number.isNaN(new Date(value).getTime()));
 
     if (validDates.length === 0) {
-      return NextResponse.json({ error: ca.errors.invalidOptionDates }, { status: 400 });
+      return NextResponse.json({ error: i18n.errors.invalidOptionDates }, { status: 400 });
     }
 
     const created = await createPollForOrg({
@@ -49,6 +50,6 @@ export async function POST(request: NextRequest) {
       error,
     });
 
-    return NextResponse.json({ error: ca.poll.createPollError }, { status: 400 });
+    return NextResponse.json({ error: i18n.poll.createPollError }, { status: 400 });
   }
 }

@@ -1,10 +1,18 @@
 import { Table, TableWrap } from "@/src/components/ui/table";
-import { ca } from "@/src/i18n/ca";
+import type { I18nCa } from "@/src/i18n/ca";
 
 type Option = { id: string; label: string };
 type VoteRow = { voterId: string; voterName: string; availabilityByOptionId: Record<string, boolean> };
 
-export function ResultsTable({ options, rows }: { options: Option[]; rows: VoteRow[] }) {
+export function ResultsTable({
+  options,
+  rows,
+  i18n,
+}: {
+  options: Option[];
+  rows: VoteRow[];
+  i18n: I18nCa;
+}) {
   const totals = Object.fromEntries(options.map((option) => [option.id, 0]));
 
   rows.forEach((row) => {
@@ -18,7 +26,7 @@ export function ResultsTable({ options, rows }: { options: Option[]; rows: VoteR
   return (
     <div className="space-y-3">
       <div className="space-y-3 md:hidden">
-        {rows.length === 0 ? <p className="text-sm text-slate-600">{ca.poll.noVotesYet}</p> : null}
+        {rows.length === 0 ? <p className="text-sm text-slate-600">{i18n.poll.noVotesYet}</p> : null}
         {rows.map((row) => (
           <article key={row.voterId} className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
             <p className="break-words text-sm font-semibold text-slate-900">{row.voterName}</p>
@@ -36,7 +44,7 @@ export function ResultsTable({ options, rows }: { options: Option[]; rows: VoteR
         ))}
 
         <article className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <p className="text-sm font-semibold text-slate-900">{ca.poll.totals}</p>
+          <p className="text-sm font-semibold text-slate-900">{i18n.poll.totals}</p>
           <ul className="space-y-1.5">
             {options.map((option) => (
               <li key={option.id} className="flex items-start justify-between gap-3 text-xs text-slate-700">
@@ -52,7 +60,7 @@ export function ResultsTable({ options, rows }: { options: Option[]; rows: VoteR
         <Table>
           <thead className="bg-slate-50">
             <tr>
-              <th className="border-b border-slate-200 px-3 py-2 text-left font-medium">{ca.poll.participant}</th>
+              <th className="border-b border-slate-200 px-3 py-2 text-left font-medium">{i18n.poll.participant}</th>
               {options.map((option) => (
                 <th key={option.id} className="border-b border-slate-200 px-3 py-2 text-left font-medium">
                   <span className="break-words">{option.label}</span>
@@ -74,7 +82,7 @@ export function ResultsTable({ options, rows }: { options: Option[]; rows: VoteR
           </tbody>
           <tfoot className="bg-slate-50">
             <tr>
-              <td className="px-3 py-2 font-medium">{ca.poll.totals}</td>
+              <td className="px-3 py-2 font-medium">{i18n.poll.totals}</td>
               {options.map((option) => (
                 <td key={option.id} className="px-3 py-2 font-medium">
                   {totals[option.id]}

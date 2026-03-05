@@ -3,7 +3,7 @@ import { z } from "zod";
 import { adminAuth } from "@/src/lib/firebase/admin";
 import { createOrgForOwner } from "@/src/lib/db/repo";
 import { consumeRateLimitServer } from "@/src/lib/rate-limit-server";
-import { ca } from "@/src/i18n/ca";
+import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 import { getClientIp, isTrustedSameOrigin } from "@/src/lib/security/request";
 
@@ -17,16 +17,17 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const { i18n } = getRequestI18nFromNextRequest(request);
   let createdUid: string | null = null;
 
   try {
     if (!isTrustedSameOrigin(request)) {
-      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
+      return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
     }
 
     const ip = getClientIp(request);
     if (!(await consumeRateLimitServer(`signup:${ip}`, 10, 10 * 60_000))) {
-      return NextResponse.json({ error: ca.errors.rateLimited }, { status: 429 });
+      return NextResponse.json({ error: i18n.errors.rateLimited }, { status: 429 });
     }
 
     const body = bodySchema.parse(await request.json());
@@ -55,11 +56,11 @@ export async function POST(request: NextRequest) {
         : undefined;
 
     if (code === "auth/email-already-exists") {
-      return NextResponse.json({ error: ca.errors.emailAlreadyExists }, { status: 409 });
+      return NextResponse.json({ error: i18n.errors.emailAlreadyExists }, { status: 409 });
     }
 
     if (code === "auth/weak-password" || code === "auth/invalid-password") {
-      return NextResponse.json({ error: ca.errors.weakPassword }, { status: 400 });
+      return NextResponse.json({ error: i18n.errors.weakPassword }, { status: 400 });
     }
 
     if (error instanceof Error) {
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
         action: "intentàvem donar d'alta una entitat",
         error,
       });
-      return NextResponse.json({ error: ca.errors.createOrgError }, { status: 400 });
+      return NextResponse.json({ error: i18n.errors.createOrgError }, { status: 400 });
     }
 
     await reportApiUnexpectedError({
@@ -76,6 +77,6 @@ export async function POST(request: NextRequest) {
       action: "intentàvem donar d'alta una entitat",
       error,
     });
-    return NextResponse.json({ error: ca.errors.createOrgError }, { status: 400 });
+    return NextResponse.json({ error: i18n.errors.createOrgError }, { status: 400 });
   }
 }

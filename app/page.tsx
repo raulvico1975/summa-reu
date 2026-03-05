@@ -1,62 +1,69 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
-import { ca } from "@/src/i18n/ca";
+import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
+import { getRequestI18n } from "@/src/i18n/server";
+import { withLocalePath } from "@/src/i18n/routing";
+import { localizedPublicMetadata } from "@/src/lib/seo";
 
-export default function HomePage() {
+export async function generateMetadata(): Promise<Metadata> {
+  const { locale, i18n } = await getRequestI18n();
+  return localizedPublicMetadata({
+    locale,
+    path: "/",
+    title: i18n.home.title,
+    description: i18n.home.subtitle,
+  });
+}
+
+export default async function HomePage() {
+  const { locale, i18n } = await getRequestI18n();
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="space-y-2">
-          <span className="inline-flex w-fit rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
-            {ca.home.badge}
-          </span>
-          <h1 className="break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            {ca.home.title}
-          </h1>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <p className="break-words text-base text-slate-700">{ca.home.subtitle}</p>
-          <p className="break-words text-sm text-slate-600">{ca.home.description}</p>
-          <div className="grid gap-2 sm:flex sm:flex-wrap">
-            <Link href="/login">
-              <Button className="w-full sm:w-auto">{ca.home.ctaAccess}</Button>
-            </Link>
-            <Link href="/signup">
-              <Button variant="secondary" className="w-full sm:w-auto">
-                {ca.home.ctaSignup}
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-8 sm:space-y-10">
+      <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-5 sm:p-7">
+        <p className="inline-flex w-fit rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+          {i18n.home.badge}
+        </p>
+        <h1 className="break-words text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+          {i18n.home.title}
+        </h1>
+        <p className="break-words text-base text-slate-700">{i18n.home.subtitle}</p>
+        <p className="break-words text-sm text-slate-600">{i18n.home.description}</p>
+        <div className="grid gap-2 sm:flex sm:flex-wrap">
+          <Link href={withLocalePath(locale, "/signup")}>
+            <Button className="w-full sm:w-auto">{i18n.home.ctaSignup}</Button>
+          </Link>
+        </div>
+        <p className="text-xs text-slate-500">{i18n.home.paymentHint}</p>
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-3">
         <Card>
           <CardHeader>
-            <h2 className="break-words text-base font-semibold">{ca.home.featurePollsTitle}</h2>
+            <h2 className="break-words text-base font-semibold">{i18n.home.featurePollsTitle}</h2>
           </CardHeader>
           <CardContent>
-            <p className="break-words text-sm text-slate-600">{ca.home.featurePollsBody}</p>
+            <p className="break-words text-sm text-slate-600">{i18n.home.featurePollsBody}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <h2 className="break-words text-base font-semibold">{ca.home.featureMinutesTitle}</h2>
+            <h2 className="break-words text-base font-semibold">{i18n.home.featureMinutesTitle}</h2>
           </CardHeader>
           <CardContent>
-            <p className="break-words text-sm text-slate-600">{ca.home.featureMinutesBody}</p>
+            <p className="break-words text-sm text-slate-600">{i18n.home.featureMinutesBody}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <h2 className="break-words text-base font-semibold">{ca.home.featurePrivacyTitle}</h2>
+            <h2 className="break-words text-base font-semibold">{i18n.home.featurePrivacyTitle}</h2>
           </CardHeader>
           <CardContent>
-            <p className="break-words text-sm text-slate-600">{ca.home.featurePrivacyBody}</p>
+            <p className="break-words text-sm text-slate-600">{i18n.home.featurePrivacyBody}</p>
           </CardContent>
         </Card>
-      </div>
+      </section>
     </div>
   );
 }

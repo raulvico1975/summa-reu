@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Textarea } from "@/src/components/ui/field";
-import { ca } from "@/src/i18n/ca";
+import { useI18n } from "@/src/i18n/client";
 
 export function MinutesEditor({
   meetingId,
@@ -14,6 +14,7 @@ export function MinutesEditor({
   minutesId: string;
   initialMarkdown: string;
 }) {
+  const { i18n } = useI18n();
   const [value, setValue] = useState(initialMarkdown);
   const [state, setState] = useState<{ loading: boolean; message?: string; error?: string }>({
     loading: false,
@@ -30,14 +31,14 @@ export function MinutesEditor({
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? ca.meeting.saveMinutesError);
+        throw new Error(data.error ?? i18n.meeting.saveMinutesError);
       }
 
-      setState({ loading: false, message: ca.meeting.minutesSaved });
+      setState({ loading: false, message: i18n.meeting.minutesSaved });
     } catch (error) {
       setState({
         loading: false,
-        error: error instanceof Error ? error.message : ca.poll.unexpectedError,
+        error: error instanceof Error ? error.message : i18n.poll.unexpectedError,
       });
     }
   }
@@ -48,7 +49,7 @@ export function MinutesEditor({
       {state.error ? <p className="break-words text-sm text-red-600">{state.error}</p> : null}
       {state.message ? <p className="break-words text-sm text-emerald-700">{state.message}</p> : null}
       <Button type="button" onClick={onSave} disabled={state.loading} className="w-full sm:w-auto">
-        {state.loading ? ca.meeting.savingMinutes : ca.meeting.saveMinutes}
+        {state.loading ? i18n.meeting.savingMinutes : i18n.meeting.saveMinutes}
       </Button>
     </div>
   );

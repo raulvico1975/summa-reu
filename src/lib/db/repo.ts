@@ -19,7 +19,6 @@ import type {
   TranscriptDoc,
 } from "@/src/lib/db/types";
 import { defaultTimezone } from "@/src/lib/firebase/env";
-import { ca } from "@/src/i18n/ca";
 
 export type PollOption = PollOptionDoc & { id: string };
 
@@ -161,7 +160,10 @@ export async function getPollById(pollId: string): Promise<PollWithOptions | nul
   };
 }
 
-export async function getPollVoteRows(pollId: string): Promise<VoteMatrixRow[]> {
+export async function getPollVoteRows(
+  pollId: string,
+  unknownParticipantLabel = "Participant"
+): Promise<VoteMatrixRow[]> {
   const votersSnap = await pollsCol.doc(pollId).collection("voters").get();
   const votesSnap = await pollsCol.doc(pollId).collection("votes").get();
 
@@ -173,7 +175,7 @@ export async function getPollVoteRows(pollId: string): Promise<VoteMatrixRow[]> 
     const voter = voterMap.get(doc.id);
     return {
       voterId: doc.id,
-      voterName: voter?.name ?? ca.poll.participant,
+      voterName: voter?.name ?? unknownParticipantLabel,
       availabilityByOptionId: vote.availabilityByOptionId ?? {},
     };
   });

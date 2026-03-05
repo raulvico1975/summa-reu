@@ -3,7 +3,7 @@ import { z } from "zod";
 import { adminAuth } from "@/src/lib/firebase/admin";
 import { SESSION_COOKIE_NAME } from "@/src/lib/firebase/auth";
 import { getOwnerOrgByUid } from "@/src/lib/db/repo";
-import { ca } from "@/src/i18n/ca";
+import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 import { isTrustedSameOrigin } from "@/src/lib/security/request";
 import type { NextRequest } from "next/server";
@@ -13,9 +13,10 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const { i18n } = getRequestI18nFromNextRequest(request);
   try {
     if (!isTrustedSameOrigin(request)) {
-      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
+      return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
     }
 
     const body = bodySchema.parse(await request.json());
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     const ownerOrg = await getOwnerOrgByUid(decoded.uid);
 
     if (!ownerOrg) {
-      return NextResponse.json({ error: ca.errors.unauthorized }, { status: 403 });
+      return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
     }
 
     const sessionCookie = await adminAuth.createSessionCookie(body.idToken, {
@@ -49,6 +50,6 @@ export async function POST(request: NextRequest) {
       error,
     });
 
-    return NextResponse.json({ error: ca.errors.unauthorized }, { status: 401 });
+    return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 401 });
   }
 }

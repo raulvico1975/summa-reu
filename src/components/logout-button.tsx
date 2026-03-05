@@ -1,25 +1,17 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { clientAuth } from "@/src/lib/firebase/client";
 import { Button } from "@/src/components/ui/button";
-import { ca } from "@/src/i18n/ca";
 import { cn } from "@/src/lib/cn";
 
-export function LogoutButton({ className }: { className?: string }) {
-  const router = useRouter();
+type LogoutButtonProps = {
+  className?: string;
+  label: string;
+};
 
-  async function onLogout() {
-    await fetch("/api/auth/session-logout", { method: "POST" });
-    await signOut(clientAuth).catch(() => undefined);
-    router.push("/");
-    router.refresh();
-  }
-
+export function LogoutButton({ className, label }: LogoutButtonProps) {
   return (
-    <Button variant="secondary" onClick={onLogout} className={cn("w-full sm:w-auto", className)}>
-      {ca.nav.logout}
-    </Button>
+    <form method="post" action="/api/auth/session-logout" className={cn("w-full sm:w-auto", className)}>
+      <Button type="submit" variant="secondary" className="w-full sm:w-auto">
+        {label}
+      </Button>
+    </form>
   );
 }

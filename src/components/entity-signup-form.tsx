@@ -7,7 +7,8 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { clientAuth } from "@/src/lib/firebase/client";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/field";
-import { ca } from "@/src/i18n/ca";
+import { useI18n } from "@/src/i18n/client";
+import { withLocalePath } from "@/src/i18n/routing";
 
 type State = {
   loading: boolean;
@@ -15,6 +16,7 @@ type State = {
 };
 
 export function EntitySignupForm() {
+  const { locale, i18n } = useI18n();
   const router = useRouter();
   const [orgName, setOrgName] = useState("");
   const [contactName, setContactName] = useState("");
@@ -40,7 +42,7 @@ export function EntitySignupForm() {
 
       const signupData = (await signupRes.json()) as { ok?: boolean; error?: string };
       if (!signupRes.ok || !signupData.ok) {
-        throw new Error(signupData.error ?? ca.signup.error);
+        throw new Error(signupData.error ?? i18n.signup.error);
       }
 
       const credential = await signInWithEmailAndPassword(clientAuth, email, password);
@@ -53,15 +55,15 @@ export function EntitySignupForm() {
       });
 
       if (!sessionRes.ok) {
-        throw new Error(ca.errors.unauthorized);
+        throw new Error(i18n.errors.unauthorized);
       }
 
-      router.push("/dashboard");
+      router.push(withLocalePath(locale, "/dashboard"));
       router.refresh();
     } catch (error) {
       setState({
         loading: false,
-        error: error instanceof Error ? error.message : ca.signup.error,
+        error: error instanceof Error ? error.message : i18n.signup.error,
       });
     }
   }
@@ -69,33 +71,36 @@ export function EntitySignupForm() {
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.signup.orgName}</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.signup.orgName}</label>
         <Input required value={orgName} onChange={(event) => setOrgName(event.target.value)} />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.signup.contactName}</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.signup.contactName}</label>
         <Input required value={contactName} onChange={(event) => setContactName(event.target.value)} />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.signup.email}</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.signup.email}</label>
         <Input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.signup.password}</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.signup.password}</label>
         <Input type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} />
       </div>
 
       {state.error ? <p className="break-words text-sm text-red-600">{state.error}</p> : null}
 
       <Button type="submit" disabled={state.loading} className="w-full">
-        {state.loading ? ca.signup.loading : ca.signup.submit}
+        {state.loading ? i18n.signup.loading : i18n.signup.submit}
       </Button>
 
-      <Link href="/login" className="block break-words text-sm font-medium text-sky-700 hover:underline">
-        {ca.signup.toLogin}
+      <Link
+        href={withLocalePath(locale, "/login")}
+        className="block break-words text-sm font-medium text-sky-700 hover:underline"
+      >
+        {i18n.signup.toLogin}
       </Link>
     </form>
   );

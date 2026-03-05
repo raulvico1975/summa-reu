@@ -1,68 +1,40 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { clientAuth } from "@/src/lib/firebase/client";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/field";
-import { ca } from "@/src/i18n/ca";
+import type { I18nLocale } from "@/src/i18n/config";
+import { withLocalePath } from "@/src/i18n/routing";
+import type { getI18n } from "@/src/i18n";
 
-export function OwnerLoginForm() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+type OwnerLoginFormProps = {
+  locale: I18nLocale;
+  i18n: ReturnType<typeof getI18n>;
+  errorMessage?: string;
+};
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const credential = await signInWithEmailAndPassword(clientAuth, email, password);
-      const idToken = await credential.user.getIdToken();
-
-      const sessionRes = await fetch("/api/auth/session-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (!sessionRes.ok) {
-        throw new Error(ca.errors.unauthorized);
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : ca.login.error);
-      setLoading(false);
-    }
-  }
-
+export function OwnerLoginForm({ locale, i18n, errorMessage }: OwnerLoginFormProps) {
   return (
-    <form className="space-y-4" onSubmit={onSubmit}>
+    <form className="space-y-4" method="post" action="/api/auth/password-login">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.login.email}</label>
-        <Input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} />
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.login.email}</label>
+        <Input type="email" name="email" autoComplete="email" required />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.login.password}</label>
-        <Input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} />
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.login.password}</label>
+        <Input type="password" name="password" autoComplete="current-password" required />
       </div>
 
-      {error ? <p className="break-words text-sm text-red-600">{error}</p> : null}
+      {errorMessage ? <p className="break-words text-sm text-red-600">{errorMessage}</p> : null}
 
-      <Button type="submit" disabled={loading} className="w-full">
-        {loading ? ca.login.loading : ca.login.submit}
+      <Button type="submit" className="w-full">
+        {i18n.login.submit}
       </Button>
 
-      <Link href="/signup" className="block break-words text-sm font-medium text-sky-700 hover:underline">
-        {ca.login.signupCta}
+      <Link
+        href={withLocalePath(locale, "/signup")}
+        className="block break-words text-sm font-medium text-sky-700 hover:underline"
+      >
+        {i18n.login.signupCta}
       </Link>
     </form>
   );

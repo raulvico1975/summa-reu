@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ca } from "@/src/i18n/ca";
+import { useI18n } from "@/src/i18n/client";
 
 export function MeetingLiveRefresh({
   enabled,
@@ -11,6 +11,7 @@ export function MeetingLiveRefresh({
   enabled: boolean;
   intervalMs?: number;
 }) {
+  const { i18n } = useI18n();
   const router = useRouter();
 
   useEffect(() => {
@@ -31,5 +32,5 @@ export function MeetingLiveRefresh({
     return null;
   }
 
-  return <p className="break-words text-xs text-slate-500">{ca.meeting.autoRefreshActive}</p>;
+  return <p className="break-words text-xs text-slate-500">{i18n.meeting.autoRefreshActive}</p>;
 }

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
-import { ca } from "@/src/i18n/ca";
+import { useI18n } from "@/src/i18n/client";
+import { withLocalePath } from "@/src/i18n/routing";
 
 type Option = {
   id: string;
@@ -11,6 +12,7 @@ type Option = {
 };
 
 export function ClosePollForm({ pollId, options }: { pollId: string; options: Option[] }) {
+  const { locale, i18n } = useI18n();
   const router = useRouter();
   const [winningOptionId, setWinningOptionId] = useState(options[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
@@ -30,13 +32,13 @@ export function ClosePollForm({ pollId, options }: { pollId: string; options: Op
 
       const data = (await res.json()) as { meetingId?: string; error?: string };
       if (!res.ok || !data.meetingId) {
-        throw new Error(data.error ?? ca.poll.closePollError);
+        throw new Error(data.error ?? i18n.poll.closePollError);
       }
 
-      router.push(`/meetings/${data.meetingId}`);
+      router.push(withLocalePath(locale, `/meetings/${data.meetingId}`));
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : ca.poll.unexpectedError);
+      setError(err instanceof Error ? err.message : i18n.poll.unexpectedError);
       setLoading(false);
     }
   }
@@ -58,7 +60,7 @@ export function ClosePollForm({ pollId, options }: { pollId: string; options: Op
       {error ? <p className="break-words text-sm text-red-600">{error}</p> : null}
 
       <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-        {loading ? ca.poll.loadingClosing : ca.poll.closePoll}
+        {loading ? i18n.poll.loadingClosing : i18n.poll.closePoll}
       </Button>
     </form>
   );

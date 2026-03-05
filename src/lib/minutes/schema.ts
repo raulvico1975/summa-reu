@@ -17,7 +17,7 @@ export const minutesTaskSchema = z.object({
 });
 
 export const minutesJsonSchema = z.object({
-  language: z.literal("ca"),
+  language: z.enum(["ca", "es"]),
   summary: z.string().min(1),
   attendees: z.array(z.string()),
   agenda: z.array(z.string()),

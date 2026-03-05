@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { Input, Textarea } from "@/src/components/ui/field";
-import { ca } from "@/src/i18n/ca";
+import { useI18n } from "@/src/i18n/client";
+import { withLocalePath } from "@/src/i18n/routing";
+import { toIntlLocale } from "@/src/i18n/config";
 import { defaultTimezone } from "@/src/lib/firebase/env";
 
 const DAY_OPTIONS = [5, 7, 10] as const;
@@ -56,12 +58,12 @@ function buildTimes(start: string, end: string): string[] {
   return times;
 }
 
-function getDayLabel(dayOffset: number): string {
+function getDayLabel(dayOffset: number, locale: string): string {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
   date.setDate(date.getDate() + dayOffset);
 
-  return new Intl.DateTimeFormat("ca-ES", {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "short",
     day: "2-digit",
     month: "short",
@@ -84,9 +86,9 @@ function slotKeyToIso(slotKey: string): string {
   return date.toISOString();
 }
 
-function formatIsoOption(iso: string, timezone: string): string {
+function formatIsoOption(iso: string, timezone: string, locale: string): string {
   try {
-    return new Intl.DateTimeFormat("ca-ES", {
+    return new Intl.DateTimeFormat(locale, {
       weekday: "short",
       day: "2-digit",
       month: "short",
@@ -100,6 +102,8 @@ function formatIsoOption(iso: string, timezone: string): string {
 }
 
 export function NewPollForm() {
+  const { locale, i18n } = useI18n();
+  const intlLocale = toIntlLocale(locale);
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -144,10 +148,10 @@ export function NewPollForm() {
   );
 
   const optionPreview = useMemo(
-    () => optionsIso.map((iso) => formatIsoOption(iso, timezone)),
-    [optionsIso, timezone]
+    () => optionsIso.map((iso) => formatIsoOption(iso, timezone, intlLocale)),
+    [intlLocale, optionsIso, timezone]
   );
-  const maxOptionsMessage = ca.poll.maxOptionsReached.replace("{max}", String(MAX_OPTIONS));
+  const maxOptionsMessage = i18n.poll.maxOptionsReached.replace("{max}", String(MAX_OPTIONS));
 
   function toggleSlot(dayOffset: number, time: string) {
     const key = `${dayOffset}|${time}`;
@@ -206,13 +210,13 @@ export function NewPollForm() {
     setError(null);
 
     if (visibleTimes.length === 0) {
-      setError(ca.poll.invalidWindow);
+      setError(i18n.poll.invalidWindow);
       setLoading(false);
       return;
     }
 
     if (optionsIso.length === 0) {
-      setError(ca.poll.selectAtLeastOne);
+      setError(i18n.poll.selectAtLeastOne);
       setLoading(false);
       return;
     }
@@ -231,13 +235,13 @@ export function NewPollForm() {
 
       const data = (await res.json()) as { pollId?: string; error?: string };
       if (!res.ok || !data.pollId) {
-        throw new Error(data.error ?? ca.poll.createPollError);
+        throw new Error(data.error ?? i18n.poll.createPollError);
       }
 
-      router.push(`/polls/${data.pollId}?created=1`);
+      router.push(withLocalePath(locale, `/polls/${data.pollId}?created=1`));
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : ca.poll.unexpectedError);
+      setError(err instanceof Error ? err.message : i18n.poll.unexpectedError);
       setLoading(false);
     }
   }
@@ -245,25 +249,25 @@ export function NewPollForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.poll.title}</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.poll.title}</label>
         <Input required value={title} onChange={(event) => setTitle(event.target.value)} />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.poll.description}</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.poll.description}</label>
         <Textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={3} />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.poll.timezone}</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.poll.timezone}</label>
         <Input required value={timezone} onChange={(event) => setTimezone(event.target.value)} />
       </div>
 
       <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-800">{ca.poll.options}</p>
-            <p className="break-words text-xs text-slate-500">{ca.poll.optionsHint}</p>
+            <p className="text-sm font-semibold text-slate-800">{i18n.poll.options}</p>
+            <p className="break-words text-xs text-slate-500">{i18n.poll.optionsHint}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -278,7 +282,7 @@ export function NewPollForm() {
                     : "border border-slate-300 bg-white text-slate-700"
                 }`}
               >
-                {days} {ca.poll.days}
+                {days} {i18n.poll.days}
               </button>
             ))}
           </div>
@@ -286,7 +290,9 @@ export function NewPollForm() {
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">{ca.poll.windowStartLabel}</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-700">
+              {i18n.poll.windowStartLabel}
+            </label>
             <select
               value={windowStart}
               onChange={(event) => setWindowStart(event.target.value)}
@@ -301,7 +307,7 @@ export function NewPollForm() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">{ca.poll.windowEndLabel}</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-700">{i18n.poll.windowEndLabel}</label>
             <select
               value={windowEnd}
               onChange={(event) => setWindowEnd(event.target.value)}
@@ -320,7 +326,7 @@ export function NewPollForm() {
             onClick={selectAllVisibleSlots}
             className="rounded-md border border-slate-300 bg-white px-3 py-2 text-center text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 md:self-end"
           >
-            {ca.poll.selectVisible}
+            {i18n.poll.selectVisible}
           </button>
 
           <button
@@ -331,12 +337,12 @@ export function NewPollForm() {
             }}
             className="rounded-md border border-slate-300 bg-white px-3 py-2 text-center text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 md:self-end"
           >
-            {ca.poll.clearSelection}
+            {i18n.poll.clearSelection}
           </button>
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-700">{ca.poll.windowQuickPresets}</p>
+          <p className="text-xs font-semibold text-slate-700">{i18n.poll.windowQuickPresets}</p>
           <div className="grid gap-2 sm:flex sm:flex-wrap">
             {WINDOW_PRESETS.map((preset) => (
               <button
@@ -349,20 +355,22 @@ export function NewPollForm() {
                     : "border-slate-300 bg-white text-slate-700"
                 }`}
               >
-                {ca.poll[preset.i18nKey]}
+                {i18n.poll[preset.i18nKey]}
               </button>
             ))}
           </div>
         </div>
 
         {visibleTimes.length === 0 ? (
-          <p className="text-xs text-red-600">{ca.poll.invalidWindow}</p>
+          <p className="text-xs text-red-600">{i18n.poll.invalidWindow}</p>
         ) : null}
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {dayOffsets.map((dayOffset) => (
             <div key={dayOffset} className="rounded-md border border-slate-200 bg-white p-3">
-              <p className="mb-2 text-xs font-semibold capitalize text-slate-700">{getDayLabel(dayOffset)}</p>
+              <p className="mb-2 text-xs font-semibold capitalize text-slate-700">
+                {getDayLabel(dayOffset, intlLocale)}
+              </p>
               <div className="grid grid-cols-3 gap-2">
                 {visibleTimes.map((time) => {
                   const slotKey = `${dayOffset}|${time}`;
@@ -392,10 +400,10 @@ export function NewPollForm() {
 
         <div className="rounded-md border border-slate-200 bg-white p-3">
           <p className="text-xs font-semibold text-slate-700">
-            {ca.poll.optionsSelected} ({optionsIso.length}/{MAX_OPTIONS})
+            {i18n.poll.optionsSelected} ({optionsIso.length}/{MAX_OPTIONS})
           </p>
           {optionPreview.length === 0 ? (
-            <p className="mt-1 text-xs text-slate-500">{ca.poll.optionsNone}</p>
+            <p className="mt-1 text-xs text-slate-500">{i18n.poll.optionsNone}</p>
           ) : (
             <ul className="mt-2 space-y-1 text-xs text-slate-600">
               {optionPreview.slice(0, 14).map((label, index) => (
@@ -403,7 +411,7 @@ export function NewPollForm() {
               ))}
               {optionPreview.length > 14 ? (
                 <li className="text-slate-500">
-                  {ca.poll.moreSlots.replace("{count}", String(optionPreview.length - 14))}
+                  {i18n.poll.moreSlots.replace("{count}", String(optionPreview.length - 14))}
                 </li>
               ) : null}
             </ul>
@@ -413,7 +421,7 @@ export function NewPollForm() {
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-        {loading ? ca.poll.loadingCreating : ca.poll.create}
+        {loading ? i18n.poll.loadingCreating : i18n.poll.create}
       </Button>
     </form>
   );

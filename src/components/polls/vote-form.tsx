@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/field";
-import { ca } from "@/src/i18n/ca";
+import { useI18n } from "@/src/i18n/client";
+import { withLocalePath } from "@/src/i18n/routing";
 
 type Option = {
   id: string;
@@ -34,6 +35,7 @@ function readStoredTokensByName(key: string): Record<string, string> {
 }
 
 export function VoteForm({ slug, options, disabled }: { slug: string; options: Option[]; disabled?: boolean }) {
+  const { locale, i18n } = useI18n();
   const tokensByNameKey = useMemo(() => `summareu:voterTokensByName:${slug}`, [slug]);
   const legacyTokenKey = useMemo(() => `summareu:voterToken:${slug}`, [slug]);
 
@@ -67,7 +69,7 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
 
       const data = (await res.json()) as { voterToken?: string; error?: string };
       if (!res.ok) {
-        throw new Error(data.error ?? ca.errors.generic);
+        throw new Error(data.error ?? i18n.errors.generic);
       }
 
       if (data.voterToken) {
@@ -76,11 +78,11 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
         window.localStorage.removeItem(legacyTokenKey);
       }
 
-      setState({ loading: false, message: ca.poll.savedVote });
+      setState({ loading: false, message: i18n.poll.savedVote });
     } catch (error) {
       setState({
         loading: false,
-        error: error instanceof Error ? error.message : ca.errors.generic,
+        error: error instanceof Error ? error.message : i18n.errors.generic,
       });
     }
   }
@@ -89,7 +91,7 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700" htmlFor="voterName">
-          {ca.poll.voterName}
+          {i18n.poll.voterName}
         </label>
         <Input
           id="voterName"
@@ -101,7 +103,7 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium text-slate-700">{ca.poll.availability}</p>
+        <p className="text-sm font-medium text-slate-700">{i18n.poll.availability}</p>
         {options.map((option) => (
           <label
             key={option.id}
@@ -129,16 +131,16 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3">
           <p className="break-words text-sm font-medium leading-relaxed text-emerald-900">{state.message}</p>
           <Link
-            href={`/p/${slug}/results`}
+            href={withLocalePath(locale, `/p/${slug}/results`)}
             className="mt-2 inline-flex rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
           >
-            {ca.poll.viewResults}
+            {i18n.poll.viewResults}
           </Link>
         </div>
       ) : null}
 
       <Button type="submit" disabled={state.loading || disabled} className="w-full sm:w-auto">
-        {state.loading ? ca.poll.loadingSaving : ca.poll.submitVote}
+        {state.loading ? i18n.poll.loadingSaving : i18n.poll.submitVote}
       </Button>
     </form>
   );

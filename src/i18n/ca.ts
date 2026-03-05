@@ -20,7 +20,7 @@ export const ca = {
     badge: "Productivitat real per a entitats",
     title: "Reunions millor decidides, actes tancades i menys hores de coordinació",
     subtitle:
-      "Summa Board et permet convocar, votar i tancar reunions amb un flux únic perquè l'equip avanci sense friccions.",
+      "Summa Reu et permet convocar, votar i tancar reunions amb un flux únic perquè l'equip avanci sense friccions.",
     description:
       "Centralitza votacions d'horaris, convocatòries i actes en un únic espai. Menys missatges dispersos, més decisions tancades i traçabilitat per a junta.",
     featurePollsTitle: "Tanca dates en hores, no en setmanes",
@@ -31,7 +31,7 @@ export const ca = {
     featurePrivacyTitle: "Control de gestió per entitat",
     featurePrivacyBody: "Accés intern segur i participació pública acotada a cada votació.",
     ctaAccess: "Accés entitat",
-    ctaSignup: "Donar d'alta entitat",
+    ctaSignup: "Vull organitzar una reunió ara",
     paymentHint: "L'alta d'entitat inclou pagament previ per activar l'espai.",
   },
   login: {
@@ -47,7 +47,7 @@ export const ca = {
   signup: {
     title: "Activació d'entitat",
     subtitle: "Per començar a fer servir l'app, primer activarem la teva subscripció.",
-    planTitle: "Pla d'activació Summa Board",
+    planTitle: "Pla d'activació Summa Reu",
     planBody:
       "Un únic pas de pagament per habilitar el teu espai de treball i començar a coordinar reunions des d'avui.",
     benefitOne: "Votacions públiques il·limitades per a la teva entitat.",
@@ -204,3 +204,9 @@ type WidenLiterals<T> = T extends string
       : T;
 
 export type I18nCa = WidenLiterals<typeof ca>;
+
+export type DeepPartial<T> = T extends readonly (infer U)[]
+  ? DeepPartial<U>[]
+  : T extends object
+    ? { [K in keyof T]?: DeepPartial<T[K]> }
+    : T;

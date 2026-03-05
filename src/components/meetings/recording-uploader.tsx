@@ -6,9 +6,10 @@ import { ref, uploadBytes } from "firebase/storage";
 import { clientAuth, clientStorage } from "@/src/lib/firebase/client";
 import { Button } from "@/src/components/ui/button";
 import { Textarea } from "@/src/components/ui/field";
-import { ca } from "@/src/i18n/ca";
+import { useI18n } from "@/src/i18n/client";
 
 export function RecordingUploader({ meetingId }: { meetingId: string }) {
+  const { i18n } = useI18n();
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [rawText, setRawText] = useState("");
@@ -28,7 +29,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
       if (file) {
         const currentUser = clientAuth.currentUser;
         if (!currentUser) {
-          throw new Error(ca.meeting.clientSessionMissing);
+          throw new Error(i18n.meeting.clientSessionMissing);
         }
 
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -54,7 +55,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
 
       const registerData = (await registerRes.json()) as { recordingId?: string; error?: string };
       if (!registerRes.ok || !registerData.recordingId) {
-        throw new Error(registerData.error ?? ca.meeting.registerRecordingError);
+        throw new Error(registerData.error ?? i18n.meeting.registerRecordingError);
       }
 
       const processRes = await fetch("/api/owner/process-recording", {
@@ -74,16 +75,16 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
         status?: "processing" | "done" | "error";
       };
       if (!processRes.ok) {
-        throw new Error(processData.error ?? ca.meeting.processRecordingError);
+        throw new Error(processData.error ?? i18n.meeting.processRecordingError);
       }
 
-      let message: string = ca.meeting.processingQueued;
+      let message: string = i18n.meeting.processingQueued;
       if (processData.queued === false && processData.status === "processing") {
-        message = ca.meeting.processingInProgress;
+        message = i18n.meeting.processingInProgress;
       } else if (processData.queued === false && processData.status === "done") {
-        message = ca.meeting.processingAlreadyDone;
+        message = i18n.meeting.processingAlreadyDone;
       } else if (processData.model) {
-        message = `${ca.meeting.processingQueued} (${processData.mode ?? "stub"} · ${processData.model})`;
+        message = `${i18n.meeting.processingQueued} (${processData.mode ?? "stub"} · ${processData.model})`;
       }
 
       setState({
@@ -96,7 +97,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
     } catch (error) {
       setState({
         loading: false,
-        error: error instanceof Error ? error.message : ca.poll.unexpectedError,
+        error: error instanceof Error ? error.message : i18n.poll.unexpectedError,
       });
     }
   }
@@ -104,7 +105,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
   return (
     <form className="space-y-3" onSubmit={onSubmit}>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.meeting.recordingFileLabel}</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.meeting.recordingFileLabel}</label>
         <input
           type="file"
           accept="audio/*,video/*"
@@ -114,7 +115,9 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700">{ca.meeting.recordingNotesLabel}</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700">
+          {i18n.meeting.recordingNotesLabel}
+        </label>
         <Textarea rows={5} value={rawText} onChange={(event) => setRawText(event.target.value)} />
       </div>
 
@@ -126,7 +129,7 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
         disabled={state.loading || (!file && rawText.trim().length === 0)}
         className="w-full sm:w-auto"
       >
-        {state.loading ? ca.meeting.processingNowLabel : ca.meeting.uploadAndProcess}
+        {state.loading ? i18n.meeting.processingNowLabel : i18n.meeting.uploadAndProcess}
       </Button>
     </form>
   );

@@ -1,5 +1,5 @@
 import { Badge } from "@/src/components/ui/badge";
-import { ca } from "@/src/i18n/ca";
+import type { I18nCa } from "@/src/i18n/ca";
 
 type Status = "open" | "closed" | "uploaded" | "processing" | "done" | "error" | "pending";
 
@@ -13,6 +13,12 @@ const styleByStatus: Record<Status, string> = {
   pending: "border-slate-300 bg-slate-100 text-slate-700",
 };
 
-export function StatusBadge({ status }: { status: Status }) {
-  return <Badge className={styleByStatus[status]}>{ca.status[status]}</Badge>;
+export function StatusBadge({
+  status,
+  labels,
+}: {
+  status: Status;
+  labels: I18nCa["status"];
+}) {
+  return <Badge className={styleByStatus[status]}>{labels[status]}</Badge>;
 }

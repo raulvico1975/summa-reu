@@ -1,13 +1,34 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
 import { StatusBadge } from "@/src/components/ui/status-badge";
-import { ca } from "@/src/i18n/ca";
 import { getPollBySlug, getPollVoteRows } from "@/src/lib/db/repo";
 import { formatDateTime } from "@/src/lib/dates";
 import { getOwnerFromServerCookies } from "@/src/lib/firebase/auth";
+import { getRequestI18n } from "@/src/i18n/server";
+import { withLocalePath } from "@/src/i18n/routing";
+import { localizedPublicMetadata } from "@/src/lib/seo";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { locale, i18n } = await getRequestI18n();
+  const { slug } = await params;
+  const poll = await getPollBySlug(slug);
+
+  return localizedPublicMetadata({
+    locale,
+    path: `/p/${slug}/results`,
+    title: poll ? `${i18n.poll.resultsTitlePrefix}: ${poll.title}` : i18n.poll.resultsTitlePrefix,
+    description: i18n.poll.rankedOptions,
+  });
+}
 
 export default async function PublicPollResultsPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { locale, i18n } = await getRequestI18n();
   const { slug } = await params;
   const [poll, owner] = await Promise.all([getPollBySlug(slug), getOwnerFromServerCookies()]);
 
@@ -15,8 +36,11 @@ export default async function PublicPollResultsPage({ params }: { params: Promis
     notFound();
   }
 
-  const rows = await getPollVoteRows(poll.id);
-  const options = poll.options.map((option) => ({ id: option.id, label: formatDateTime(option.startsAt) }));
+  const rows = await getPollVoteRows(poll.id, i18n.poll.participant);
+  const options = poll.options.map((option) => ({
+    id: option.id,
+    label: formatDateTime(option.startsAt, locale),
+  }));
 
   const totals = options.map((option) => ({
     ...option,
@@ -38,14 +62,14 @@ export default async function PublicPollResultsPage({ params }: { params: Promis
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <h1 className="break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-          {ca.poll.resultsTitlePrefix}: {poll.title}
+          {i18n.poll.resultsTitlePrefix}: {poll.title}
         </h1>
-        <StatusBadge status={poll.status} />
+        <StatusBadge status={poll.status} labels={i18n.status} />
       </div>
 
       <Card>
         <CardHeader>
-          <h2 className="text-base font-semibold">{ca.poll.rankedOptions}</h2>
+          <h2 className="text-base font-semibold">{i18n.poll.rankedOptions}</h2>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           {ranked.map((item) => (
@@ -57,31 +81,34 @@ export default async function PublicPollResultsPage({ params }: { params: Promis
             >
               <span className="break-words">{item.label}</span>
               <span className="font-medium">
-                {item.count} {ca.poll.availableCountSuffix}
+                {item.count} {i18n.poll.availableCountSuffix}
               </span>
             </div>
           ))}
 
-          {!hasVotes ? <p className="pt-2 text-sm text-slate-600">{ca.poll.noVotesYet}</p> : null}
+          {!hasVotes ? <p className="pt-2 text-sm text-slate-600">{i18n.poll.noVotesYet}</p> : null}
           {hasVotes && isTie ? (
             <p className="break-words pt-2 text-sm text-sky-700">
-              {ca.poll.bestOptionsTie}: {topOptions.map((item) => item.label).join(" · ")}
+              {i18n.poll.bestOptionsTie}: {topOptions.map((item) => item.label).join(" · ")}
             </p>
           ) : null}
           {hasVotes && !isTie ? (
             <p className="break-words pt-2 text-sm text-sky-700">
-              {ca.poll.bestOption}: {topOptions[0].label}
+              {i18n.poll.bestOption}: {topOptions[0].label}
             </p>
           ) : null}
           {hasVotes ? (
             <p className="pt-1 text-xs text-slate-500">
-              {ca.poll.votesReceived}: {rows.length}
+              {i18n.poll.votesReceived}: {rows.length}
             </p>
           ) : null}
 
           {isOwner && poll.status === "open" ? (
-            <Link href={`/polls/${poll.id}`} className="inline-block pt-2 text-sm font-medium text-sky-700 hover:underline">
-              {ca.poll.closePollLink}
+            <Link
+              href={withLocalePath(locale, `/polls/${poll.id}`)}
+              className="inline-block pt-2 text-sm font-medium text-sky-700 hover:underline"
+            >
+              {i18n.poll.closePollLink}
             </Link>
           ) : null}
         </CardContent>

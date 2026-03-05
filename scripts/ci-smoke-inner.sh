@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+npm run i18n:check-es
+
 next dev --hostname 127.0.0.1 --port 3000 >/tmp/summa-next-dev.log 2>&1 &
 NEXT_PID=$!
 

@@ -81,7 +81,7 @@ export type MinutesTask = {
 };
 
 export type MinutesJson = {
-  language: "ca";
+  language: "ca" | "es";
   summary: string;
   attendees: string[];
   agenda: string[];

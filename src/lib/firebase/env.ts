@@ -26,7 +26,6 @@ export const serverEnv = {
   telegramAlertsEnabled: process.env.TELEGRAM_ALERTS_ENABLED ?? "true",
 };
 
-export const useEmulators =
-  process.env.NEXT_PUBLIC_USE_EMULATORS === "true" || process.env.NODE_ENV !== "production";
+export const useEmulators = process.env.NEXT_PUBLIC_USE_EMULATORS === "true";
 
 export const defaultTimezone = "Europe/Madrid";
