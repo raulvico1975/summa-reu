@@ -6,6 +6,7 @@ import {
   canReadBankInProjectes,
   getRoleDefaults,
   isUserPermissionsCustomized,
+  permissionsToCapabilities,
   resolveEffectivePermissions,
 } from '@/lib/permissions';
 
@@ -87,4 +88,47 @@ test('isUserPermissionsCustomized returns true with one valid grant', () => {
 
 test('isUserPermissionsCustomized returns false when deny/grants sanitize to empty', () => {
   assert.equal(isUserPermissionsCustomized({ deny: ['not.a.real.permission'] }, ['configuracio.manage']), false);
+});
+
+test('permissionsToCapabilities maps effective role user permissions (granular path)', () => {
+  const effective = resolveEffectivePermissions({ role: 'user' });
+  const capabilities = permissionsToCapabilities(effective);
+
+  assert.equal(capabilities['moviments.read'], true);
+  assert.equal(capabilities['projectes.manage'], true);
+  assert.equal(capabilities['fiscal.model182.generar'], true);
+});
+
+test('permissionsToCapabilities removes denied permissions', () => {
+  const effective = resolveEffectivePermissions({
+    role: 'user',
+    userOverrides: { deny: ['moviments.read'] },
+  });
+  const capabilities = permissionsToCapabilities(effective);
+
+  assert.equal(capabilities['moviments.read'], undefined);
+});
+
+test('permissionsToCapabilities honors expenseInput mode', () => {
+  const effective = resolveEffectivePermissions({
+    role: 'user',
+    userOverrides: { deny: ['projectes.manage'] },
+    userGrants: ['projectes.expenseInput'],
+  });
+  const capabilities = permissionsToCapabilities(effective);
+
+  assert.equal(capabilities['projectes.manage'], undefined);
+  assert.equal(capabilities['projectes.expenseInput'], true);
+});
+
+test('permissionsToCapabilities never includes unknown keys', () => {
+  const effective = resolveEffectivePermissions({
+    role: 'user',
+    userOverrides: { deny: ['not.a.real.permission'] },
+    userGrants: ['also.not.real'],
+  });
+  const capabilities = permissionsToCapabilities(effective);
+
+  assert.equal((capabilities as Record<string, boolean>)['not.a.real.permission'], undefined);
+  assert.equal((capabilities as Record<string, boolean>)['also.not.real'], undefined);
 });

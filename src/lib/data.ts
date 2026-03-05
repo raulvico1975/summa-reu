@@ -648,6 +648,10 @@ export type Invitation = {
   organizationId: string;
   organizationName: string;
   role: OrganizationRole;
+  userOverrides?: {
+    deny?: string[];
+  };
+  userGrants?: string[];
   createdAt: string;
   expiresAt: string;
   createdBy: string;

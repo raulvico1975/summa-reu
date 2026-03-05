@@ -12,6 +12,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -27,6 +30,14 @@ import { useTranslations } from '@/i18n';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import { Loader2, Mail, Copy, Check, UserPlus } from 'lucide-react';
 import type { Invitation, OrganizationRole } from '@/lib/data';
+import {
+  applyOverrides,
+  getProjectCapability,
+  getRoleDefaults,
+  isUserPermissionsCustomized,
+  type PermissionKey,
+} from '@/lib/permissions';
+import { validateAndCanonicalizeUserPermissionWrite } from '@/lib/permissions-write';
 
 interface InviteMemberDialogProps {
   open: boolean;
@@ -44,15 +55,57 @@ const generateToken = (): string => {
   return token;
 };
 
+const SECTION_TOGGLES: PermissionKey[] = [
+  'sections.moviments',
+  'sections.projectes',
+  'sections.informes',
+  'sections.donants',
+  'sections.proveidors',
+  'sections.treballadors',
+  'sections.configuracio',
+];
+
+const CRITICAL_ACTION_TOGGLES: PermissionKey[] = [
+  'moviments.read',
+  'moviments.importarExtractes',
+  'moviments.editar',
+  'informes.exportar',
+  'fiscal.model182.generar',
+  'fiscal.model347.generar',
+  'fiscal.certificats.generar',
+];
+
+const SECTION_LABEL_KEYS: Partial<Record<PermissionKey, string>> = {
+  'sections.moviments': 'sidebar.movements',
+  'sections.projectes': 'sidebar.projects',
+  'sections.informes': 'sidebar.reports',
+  'sections.donants': 'sidebar.donors',
+  'sections.proveidors': 'sidebar.suppliers',
+  'sections.treballadors': 'sidebar.employees',
+  'sections.configuracio': 'sidebar.settings',
+};
+
+const ACTION_LABEL_KEYS: Partial<Record<PermissionKey, string>> = {
+  'moviments.read': 'permissionsDialog.actions.movimentsRead',
+  'moviments.importarExtractes': 'permissionsDialog.actions.movimentsImportarExtractes',
+  'moviments.editar': 'permissionsDialog.actions.movimentsEditar',
+  'informes.exportar': 'permissionsDialog.actions.informesExportar',
+  'fiscal.model182.generar': 'permissionsDialog.actions.fiscalModel182Generar',
+  'fiscal.model347.generar': 'permissionsDialog.actions.fiscalModel347Generar',
+  'fiscal.certificats.generar': 'permissionsDialog.actions.fiscalCertificatsGenerar',
+};
+
 export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: InviteMemberDialogProps) {
   const { firestore, user } = useFirebase();
   const { organization, organizationId } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Formulari
   const [email, setEmail] = React.useState('');
   const [role, setRole] = React.useState<OrganizationRole>('user');
+  const [denied, setDenied] = React.useState<Set<PermissionKey>>(new Set());
+  const [grants, setGrants] = React.useState<Set<PermissionKey>>(new Set());
 
   // Estat
   const [isCreating, setIsCreating] = React.useState(false);
@@ -80,6 +133,8 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
     if (!open) {
       setEmail('');
       setRole('user');
+      setDenied(new Set());
+      setGrants(new Set());
       setError('');
       setCreatedInviteUrl(null);
       setCopied(false);
@@ -95,6 +150,59 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
       }, 100);
     }
   }, [createdInviteUrl]);
+
+  const roleDefaults = React.useMemo(() => getRoleDefaults('user'), []);
+
+  const effectivePermissions = React.useMemo(
+    () => applyOverrides(roleDefaults, { deny: Array.from(denied) }, Array.from(grants)),
+    [denied, grants, roleDefaults]
+  );
+
+  const projectCapability = React.useMemo(
+    () => getProjectCapability(effectivePermissions),
+    [effectivePermissions]
+  );
+
+  const togglePermission = React.useCallback((permission: PermissionKey, enabled: boolean) => {
+    setDenied((prev) => {
+      const next = new Set(prev);
+      if (enabled) {
+        next.delete(permission);
+      } else {
+        next.add(permission);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleProjectCapabilityChange = React.useCallback((value: 'manage' | 'expenseInput') => {
+    setDenied((prev) => {
+      const next = new Set(prev);
+      if (value === 'manage') {
+        next.delete('projectes.manage');
+        next.add('projectes.expenseInput');
+      } else {
+        next.add('projectes.manage');
+        next.delete('projectes.expenseInput');
+      }
+      return next;
+    });
+
+    setGrants((prev) => {
+      const next = new Set(prev);
+      if (value === 'manage') {
+        next.delete('projectes.expenseInput');
+      } else {
+        next.add('projectes.expenseInput');
+      }
+      return next;
+    });
+  }, []);
+
+  const handleRestoreDefaults = React.useCallback(() => {
+    setDenied(new Set());
+    setGrants(new Set());
+  }, []);
 
   const handleCreate = async () => {
     // Validacions
@@ -124,6 +232,24 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // Expira en 7 dies
 
+      let canonicalDeny: PermissionKey[] = [];
+      let canonicalGrants: PermissionKey[] = [];
+
+      if (role === 'user') {
+        const validation = validateAndCanonicalizeUserPermissionWrite({
+          deny: Array.from(denied),
+          grants: Array.from(grants),
+        });
+
+        if (!validation.ok) {
+          setError(t.members.errorCreatingInvitation);
+          return;
+        }
+
+        canonicalDeny = validation.value.deny;
+        canonicalGrants = validation.value.grants;
+      }
+
       const invitationData: Omit<Invitation, 'id'> = {
         token,
         organizationId: organizationId,
@@ -133,6 +259,8 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
         createdAt: now,
         expiresAt: expiresAt.toISOString(),
         createdBy: user!.uid,
+        ...(role === 'user' && canonicalDeny.length > 0 ? { userOverrides: { deny: canonicalDeny } } : {}),
+        ...(role === 'user' && canonicalGrants.length > 0 ? { userGrants: canonicalGrants } : {}),
       };
 
       await setDoc(invitationRef, { ...invitationData, id: invitationRef.id });
@@ -192,6 +320,25 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
       default: return '';
     }
   };
+
+  const permissionLabel = (permission: PermissionKey, group: 'section' | 'action'): string => {
+    const translationKey =
+      group === 'section'
+        ? SECTION_LABEL_KEYS[permission]
+        : ACTION_LABEL_KEYS[permission];
+
+    if (!translationKey) {
+      return tr('permissionsDialog.unknownPermission', 'Permís desconegut');
+    }
+    return tr(translationKey, tr('permissionsDialog.unknownPermission', 'Permís desconegut'));
+  };
+
+  const projectCapabilityValue = projectCapability === 'expenseInput' ? 'expenseInput' : 'manage';
+  const isUserCustomized = isUserPermissionsCustomized(
+    { deny: Array.from(denied) },
+    Array.from(grants)
+  );
+  const canRestoreDefaults = denied.size > 0 || grants.size > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -287,6 +434,93 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
                 {getRoleDescription(role)}
               </p>
             </div>
+
+            {role === 'user' && (
+              <div className="space-y-4 rounded-md border p-3">
+                <div>
+                  <p className="text-sm font-medium">
+                    {tr('permissionsDialog.title', 'Permisos d usuari')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isUserCustomized
+                      ? t.members.roleUserCustomized
+                      : t.members.roleUserDefault}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-medium">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</p>
+                  <div className="grid gap-2">
+                    {SECTION_TOGGLES.map((section) => (
+                      <div key={section} className="flex items-center justify-between rounded-md border p-2">
+                        <Label htmlFor={`invite-section-${section}`} className="cursor-pointer text-xs">
+                          {permissionLabel(section, 'section')}
+                        </Label>
+                        <Switch
+                          id={`invite-section-${section}`}
+                          checked={effectivePermissions[section]}
+                          onCheckedChange={(checked) => togglePermission(section, checked === true)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <p className="text-xs font-medium">{tr('permissionsDialog.actionsTitle', 'Accions crítiques')}</p>
+                  <div className="grid gap-2">
+                    {CRITICAL_ACTION_TOGGLES.map((action) => (
+                      <div key={action} className="flex items-center justify-between rounded-md border p-2">
+                        <Label htmlFor={`invite-action-${action}`} className="cursor-pointer text-xs">
+                          {permissionLabel(action, 'action')}
+                        </Label>
+                        <Switch
+                          id={`invite-action-${action}`}
+                          checked={effectivePermissions[action]}
+                          onCheckedChange={(checked) => togglePermission(action, checked === true)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <p className="text-xs font-medium">{tr('permissionsDialog.projectsTitle', 'Projectes')}</p>
+                  <RadioGroup
+                    value={projectCapabilityValue}
+                    onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput')}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center gap-2 rounded-md border p-2">
+                      <RadioGroupItem value="manage" id="invite-projects-manage" />
+                      <Label htmlFor="invite-projects-manage" className="cursor-pointer text-xs">
+                        {tr('permissionsDialog.projects.manage', 'Gestió de projectes')}
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-md border p-2">
+                      <RadioGroupItem value="expenseInput" id="invite-projects-expense-input" />
+                      <Label htmlFor="invite-projects-expense-input" className="cursor-pointer text-xs">
+                        {tr('permissionsDialog.projects.expenseInput', 'Entrada de despeses')}
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleRestoreDefaults}
+                  disabled={!canRestoreDefaults}
+                  className="h-8 justify-start px-0 text-xs"
+                >
+                  {tr('permissionsDialog.restoreDefaults', 'Restaurar per defecte')}
+                </Button>
+              </div>
+            )}
 
             {error && (
               <Alert variant="destructive">
