@@ -200,6 +200,16 @@ export function can(permission: PermissionKey, permissions: PermissionMap): bool
   return permissions[permission] === true;
 }
 
+export function permissionsToCapabilities(permissions: PermissionMap): Record<string, boolean> {
+  const capabilities: Record<string, boolean> = {};
+  for (const key of PERMISSION_KEYS) {
+    if (permissions[key] === true) {
+      capabilities[key] = true;
+    }
+  }
+  return capabilities;
+}
+
 /**
  * Capabilities per defecte que s'escriuen al document Firestore del membre
  * quan es crea o actualitza el seu rol.
