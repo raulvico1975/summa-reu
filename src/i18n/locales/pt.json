@@ -3802,6 +3802,7 @@
   "permissionsDialog.actionsTitle": "Ações críticas",
   "permissionsDialog.cancel": "Cancelar",
   "permissionsDialog.description": "Configura secções, ações críticas e capacidade de Projetos para",
+  "permissionsDialog.inviteHint": "Define permissões iniciais para que o membro entre com acesso coerente desde o primeiro login.",
   "permissionsDialog.projects.expenseInput": "Entrada de despesas",
   "permissionsDialog.projects.manage": "Gestão de projetos",
   "permissionsDialog.projects.none": "Sem acesso a projetos",
