@@ -51,8 +51,13 @@ extract_repo_host() {
 
 required_env SOURCE_REPO_SSH
 required_env SOURCE_SSH_KEY
-required_env GITHUB_TOKEN
 required_env GITHUB_REPOSITORY
+
+PUSH_TOKEN="${TARGET_PUSH_TOKEN:-${GITHUB_TOKEN:-}}"
+if [[ -z "$PUSH_TOKEN" ]]; then
+  echo "Missing required environment variable: TARGET_PUSH_TOKEN (or legacy GITHUB_TOKEN)" >&2
+  exit 1
+fi
 
 SOURCE_BRANCH="${SOURCE_BRANCH:-main}"
 TARGET_BRANCH="${TARGET_BRANCH:-mirror/prod}"
@@ -89,7 +94,7 @@ git checkout --quiet -B "$TARGET_BRANCH" FETCH_HEAD
 git config user.name "prod-mirror-bot"
 git config user.email "prod-mirror-bot@users.noreply.github.com"
 
-DESTINATION_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+DESTINATION_URL="https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 git push --force "$DESTINATION_URL" "HEAD:${TARGET_BRANCH}"
 
 echo "Mirror sync completed: ${SOURCE_REPO_SSH}#${SOURCE_BRANCH} -> ${GITHUB_REPOSITORY}#${TARGET_BRANCH}"

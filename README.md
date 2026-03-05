@@ -82,6 +82,7 @@ Configuració necessària:
 1. Secrets del repo mirror:
    - `PROD_SOURCE_REPO_SSH`: URL SSH del repo de prod (`git@github.com:org/repo-prod.git`).
    - `PROD_SOURCE_READONLY_SSH_KEY`: clau privada SSH del bot amb accés **read-only** al repo de prod.
+   - `PROD_MIRROR_PUSH_TOKEN`: PAT o token d'app per fer push al repo mirror amb permís de contingut i `workflow` (necessari si el mirror actualitza `.github/workflows/*`).
    - `MIRROR_TELEGRAM_BOT_TOKEN` (opcional): token del bot de Telegram per alertes de mirror.
    - `MIRROR_TELEGRAM_CHAT_ID` (opcional): chat on enviar alertes de mirror.
 2. Variables opcionals del repo mirror:
@@ -103,6 +104,7 @@ Setup assistit amb GitHub CLI (opcional):
 ```bash
 export PROD_SOURCE_REPO_SSH="git@github.com:org/repo-prod.git"
 export PROD_SOURCE_READONLY_SSH_KEY="$(cat ~/.ssh/summa_mirror_prod_ro)"
+export PROD_MIRROR_PUSH_TOKEN="ghp_xxx_o_token_d_app_amb_workflow_write"
 export PROD_SOURCE_BRANCH="main"
 export PROD_MIRROR_TARGET_BRANCH="mirror/prod"
 export MIRROR_NOTIFY_SUCCESS="false"

@@ -30,6 +30,7 @@ jobs:
         env:
           SOURCE_REPO_SSH: ${{ secrets.PROD_SOURCE_REPO_SSH }}
           SOURCE_SSH_KEY: ${{ secrets.PROD_SOURCE_READONLY_SSH_KEY }}
+          PUSH_TOKEN: ${{ secrets.PROD_MIRROR_PUSH_TOKEN }}
         run: |
           if [ -z "$SOURCE_REPO_SSH" ]; then
             echo "Missing secret PROD_SOURCE_REPO_SSH"
@@ -39,6 +40,10 @@ jobs:
             echo "Missing secret PROD_SOURCE_READONLY_SSH_KEY"
             exit 1
           fi
+          if [ -z "$PUSH_TOKEN" ]; then
+            echo "Missing secret PROD_MIRROR_PUSH_TOKEN (PAT/App token with workflows:write)"
+            exit 1
+          fi
 
       - name: Sync prod branch into mirror branch
         env:
@@ -46,7 +51,7 @@ jobs:
           SOURCE_SSH_KEY: ${{ secrets.PROD_SOURCE_READONLY_SSH_KEY }}
           SOURCE_BRANCH: ${{ vars.PROD_SOURCE_BRANCH }}
           TARGET_BRANCH: ${{ vars.PROD_MIRROR_TARGET_BRANCH }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_PUSH_TOKEN: ${{ secrets.PROD_MIRROR_PUSH_TOKEN }}
         run: ./scripts/sync-prod-mirror.sh
 
       - name: Notify Telegram on failure

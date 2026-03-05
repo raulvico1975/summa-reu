@@ -25,6 +25,7 @@ fi
 
 required_env PROD_SOURCE_REPO_SSH
 required_env PROD_SOURCE_READONLY_SSH_KEY
+required_env PROD_MIRROR_PUSH_TOKEN
 
 TARGET_REPO="${TARGET_REPO:-}"
 if [[ -z "$TARGET_REPO" ]]; then
@@ -39,6 +40,7 @@ echo "Configuring mirror secrets/variables in ${TARGET_REPO}..."
 
 gh secret set PROD_SOURCE_REPO_SSH --repo "$TARGET_REPO" --body "$PROD_SOURCE_REPO_SSH"
 gh secret set PROD_SOURCE_READONLY_SSH_KEY --repo "$TARGET_REPO" --body "$PROD_SOURCE_READONLY_SSH_KEY"
+gh secret set PROD_MIRROR_PUSH_TOKEN --repo "$TARGET_REPO" --body "$PROD_MIRROR_PUSH_TOKEN"
 gh variable set PROD_SOURCE_BRANCH --repo "$TARGET_REPO" --body "$PROD_SOURCE_BRANCH"
 gh variable set PROD_MIRROR_TARGET_BRANCH --repo "$TARGET_REPO" --body "$PROD_MIRROR_TARGET_BRANCH"
 gh variable set MIRROR_NOTIFY_SUCCESS --repo "$TARGET_REPO" --body "$MIRROR_NOTIFY_SUCCESS"
