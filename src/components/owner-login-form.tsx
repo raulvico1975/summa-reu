@@ -55,13 +55,13 @@ export function OwnerLoginForm() {
         <Input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} />
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="break-words text-sm text-red-600">{error}</p> : null}
 
       <Button type="submit" disabled={loading} className="w-full">
         {loading ? ca.login.loading : ca.login.submit}
       </Button>
 
-      <Link href="/signup" className="inline-block text-sm font-medium text-sky-700 hover:underline">
+      <Link href="/signup" className="block break-words text-sm font-medium text-sky-700 hover:underline">
         {ca.login.signupCta}
       </Link>
     </form>

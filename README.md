@@ -56,12 +56,77 @@ npm run test:smoke
 npm run monitor:login
 ```
 
-## Deploy (SSR a Firebase Hosting)
+## CI/CD (professional)
+
+El repo inclou dos workflows de GitHub Actions:
+
+- `CI` (`.github/workflows/ci.yml`): `lint` + `smoke` amb emuladors (obligatori per PR i per `main`).
+- `Deploy Manual Emergency` (`.github/workflows/deploy.yml`): torna a executar `lint` + `smoke` i desplega a Firebase Hosting només quan es llança manualment.
+
+El deploy automàtic de producció es fa des de Firebase App Hosting (backend connectat al repositori GitHub) quan entra codi a `main`.
+
+### Secrets necessaris a GitHub
+
+- `FIREBASE_SERVICE_ACCOUNT_SUMMA_BOARD`: JSON complet del service account amb permisos de deploy al projecte `summa-board`.
+
+### Mirror automàtic de prod (segur i separat)
+
+S'ha afegit el workflow `.github/workflows/prod-mirror-sync.yml` per mantenir un mirror unidireccional:
+
+- Origen: repo de prod (només lectura).
+- Destí: aquest repo, per defecte a la branca `mirror/prod`.
+- Freqüència: cada hora + execució manual (`workflow_dispatch`).
+
+Configuració necessària:
+
+1. Secrets del repo mirror:
+   - `PROD_SOURCE_REPO_SSH`: URL SSH del repo de prod (`git@github.com:org/repo-prod.git`).
+   - `PROD_SOURCE_READONLY_SSH_KEY`: clau privada SSH del bot amb accés **read-only** al repo de prod.
+   - `MIRROR_TELEGRAM_BOT_TOKEN` (opcional): token del bot de Telegram per alertes de mirror.
+   - `MIRROR_TELEGRAM_CHAT_ID` (opcional): chat on enviar alertes de mirror.
+2. Variables opcionals del repo mirror:
+   - `PROD_SOURCE_BRANCH` (default: `main`).
+   - `PROD_MIRROR_TARGET_BRANCH` (default: `mirror/prod`).
+   - `MIRROR_NOTIFY_SUCCESS` (default: buit/false): si és `true`, envia avís d'OK en execució manual.
+
+Mesures de seguretat aplicades:
+
+- No s'utilitza cap credencial de prod.
+- El bot només llegeix prod; no hi ha cap push cap a prod.
+- El script bloqueja fer mirror a `main` si no s'activa explícitament `ALLOW_TARGET_MAIN=true`.
+- Es valida `known_hosts` via `ssh-keyscan` i `StrictHostKeyChecking=yes`.
+- Es bloqueja la sincronització si origen i destí són el mateix repo.
+- Les alertes Telegram del mirror van amb secrets dedicats `MIRROR_*` (aïllament respecte monitorització de producció).
+
+Setup assistit amb GitHub CLI (opcional):
+
+```bash
+export PROD_SOURCE_REPO_SSH="git@github.com:org/repo-prod.git"
+export PROD_SOURCE_READONLY_SSH_KEY="$(cat ~/.ssh/summa_mirror_prod_ro)"
+export PROD_SOURCE_BRANCH="main"
+export PROD_MIRROR_TARGET_BRANCH="mirror/prod"
+export MIRROR_NOTIFY_SUCCESS="false"
+# opcionals per Telegram
+export MIRROR_TELEGRAM_BOT_TOKEN="..."
+export MIRROR_TELEGRAM_CHAT_ID="..."
+
+./scripts/setup-mirror-github-secrets.sh
+```
+
+### Política recomanada de branca
+
+Configura `main` a GitHub amb:
+
+1. PR obligatori (sense pushes directes).
+2. Required checks: `CI / lint` i `CI / smoke`.
+3. Environment `production` amb aprovació manual (required reviewers) per al workflow d'emergència.
+
+## Deploy manual (només emergència)
 
 La configuració usa framework backend per Next.js (regió `europe-west1`).
 
 ```bash
-firebase deploy --only hosting
+firebase deploy --only hosting --project summa-board
 ```
 
 ## Credencials demo seed

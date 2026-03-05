@@ -36,8 +36,8 @@ export default async function PublicPollResultsPage({ params }: { params: Promis
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <h1 className="break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
           {ca.poll.resultsTitlePrefix}: {poll.title}
         </h1>
         <StatusBadge status={poll.status} />
@@ -51,11 +51,11 @@ export default async function PublicPollResultsPage({ params }: { params: Promis
           {ranked.map((item) => (
             <div
               key={item.id}
-              className={`flex items-center justify-between rounded-md border px-3 py-2 ${
+              className={`flex flex-col items-start gap-1 rounded-md border px-3 py-2 sm:flex-row sm:items-center sm:justify-between ${
                 highlightedOptionIds.has(item.id) ? "border-sky-200 bg-sky-50" : "border-slate-200"
               }`}
             >
-              <span>{item.label}</span>
+              <span className="break-words">{item.label}</span>
               <span className="font-medium">
                 {item.count} {ca.poll.availableCountSuffix}
               </span>
@@ -64,12 +64,12 @@ export default async function PublicPollResultsPage({ params }: { params: Promis
 
           {!hasVotes ? <p className="pt-2 text-sm text-slate-600">{ca.poll.noVotesYet}</p> : null}
           {hasVotes && isTie ? (
-            <p className="pt-2 text-sm text-sky-700">
+            <p className="break-words pt-2 text-sm text-sky-700">
               {ca.poll.bestOptionsTie}: {topOptions.map((item) => item.label).join(" · ")}
             </p>
           ) : null}
           {hasVotes && !isTie ? (
-            <p className="pt-2 text-sm text-sky-700">
+            <p className="break-words pt-2 text-sm text-sky-700">
               {ca.poll.bestOption}: {topOptions[0].label}
             </p>
           ) : null}

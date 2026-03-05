@@ -23,12 +23,16 @@ export function CopyVoteLinkButton({ slug, className }: { slug: string; classNam
   }
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Button type="button" variant="secondary" onClick={handleCopy}>
+    <div className={cn("flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center", className)}>
+      <Button type="button" variant="secondary" onClick={handleCopy} className="w-full sm:w-auto">
         {ca.poll.copyVoteLink}
       </Button>
-      {state === "copied" ? <span className="text-xs text-emerald-700">{ca.poll.voteLinkCopied}</span> : null}
-      {state === "error" ? <span className="text-xs text-red-700">{ca.poll.voteLinkCopyError}</span> : null}
+      {state === "copied" ? (
+        <span className="break-words text-xs text-emerald-700">{ca.poll.voteLinkCopied}</span>
+      ) : null}
+      {state === "error" ? (
+        <span className="break-words text-xs text-red-700">{ca.poll.voteLinkCopyError}</span>
+      ) : null}
     </div>
   );
 }

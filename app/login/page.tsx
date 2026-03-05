@@ -15,7 +15,7 @@ export default async function LoginPage() {
       <Card>
         <CardHeader className="space-y-1">
           <h1 className="text-xl font-semibold">{ca.login.title}</h1>
-          <p className="text-sm text-slate-600">{ca.login.subtitle}</p>
+          <p className="break-words text-sm text-slate-600">{ca.login.subtitle}</p>
         </CardHeader>
         <CardContent>
           <OwnerLoginForm />

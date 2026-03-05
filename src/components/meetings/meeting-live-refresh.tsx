@@ -31,5 +31,5 @@ export function MeetingLiveRefresh({
     return null;
   }
 
-  return <p className="text-xs text-slate-500">{ca.meeting.autoRefreshActive}</p>;
+  return <p className="break-words text-xs text-slate-500">{ca.meeting.autoRefreshActive}</p>;
 }

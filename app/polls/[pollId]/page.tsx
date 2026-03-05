@@ -36,10 +36,12 @@ export default async function PollManagePage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{poll.title}</h1>
-          <p className="text-sm text-slate-600">/{poll.slug}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {poll.title}
+          </h1>
+          <p className="mt-1 break-all text-sm text-slate-600">/{poll.slug}</p>
         </div>
         <StatusBadge status={poll.status} />
       </div>
@@ -62,14 +64,20 @@ export default async function PollManagePage({
               {ca.poll.votesReceived}: {rows.length}
             </span>
             {meetingId ? (
-              <Link className="rounded-md border border-slate-300 px-3 py-1.5" href={`/meetings/${meetingId}`}>
+              <Link
+                className="rounded-md border border-slate-300 px-3 py-2 text-center font-medium transition-colors hover:bg-slate-50"
+                href={`/meetings/${meetingId}`}
+              >
                 {ca.poll.openMeeting}
               </Link>
             ) : null}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid gap-2 sm:flex sm:flex-wrap">
             <CopyVoteLinkButton slug={poll.slug} />
-            <Link className="rounded-md bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600" href={`/p/${poll.slug}/results`}>
+            <Link
+              className="rounded-md bg-sky-500 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-sky-600"
+              href={`/p/${poll.slug}/results`}
+            >
               {ca.poll.openPublicResults}
             </Link>
           </div>
@@ -82,9 +90,12 @@ export default async function PollManagePage({
         </CardHeader>
         <CardContent className="space-y-4">
           <ResultsTable options={options} rows={rows} />
-          <div className="flex flex-wrap gap-2 text-sm">
+          <div className="grid gap-2 text-sm sm:flex sm:flex-wrap">
             <CopyVoteLinkButton slug={poll.slug} />
-            <Link className="rounded-md border border-slate-300 px-3 py-2 font-medium hover:bg-slate-100" href={`/p/${poll.slug}/results`}>
+            <Link
+              className="rounded-md border border-slate-300 px-3 py-2 text-center font-medium transition-colors hover:bg-slate-100"
+              href={`/p/${poll.slug}/results`}
+            >
               {ca.poll.openPublicResults}
             </Link>
           </div>

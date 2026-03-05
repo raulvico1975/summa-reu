@@ -8,7 +8,9 @@ export default async function NewPollPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">{ca.nav.newPoll}</h1>
+      <h1 className="break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+        {ca.nav.newPoll}
+      </h1>
       <Card>
         <CardHeader>
           <h2 className="text-base font-semibold">{ca.meeting.sectionCall}</h2>

@@ -118,10 +118,14 @@ export function RecordingUploader({ meetingId }: { meetingId: string }) {
         <Textarea rows={5} value={rawText} onChange={(event) => setRawText(event.target.value)} />
       </div>
 
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
-      {state.message ? <p className="text-sm text-emerald-700">{state.message}</p> : null}
+      {state.error ? <p className="break-words text-sm text-red-600">{state.error}</p> : null}
+      {state.message ? <p className="break-words text-sm text-emerald-700">{state.message}</p> : null}
 
-      <Button type="submit" disabled={state.loading || (!file && rawText.trim().length === 0)}>
+      <Button
+        type="submit"
+        disabled={state.loading || (!file && rawText.trim().length === 0)}
+        className="w-full sm:w-auto"
+      >
         {state.loading ? ca.meeting.processingNowLabel : ca.meeting.uploadAndProcess}
       </Button>
     </form>

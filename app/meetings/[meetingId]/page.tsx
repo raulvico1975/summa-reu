@@ -27,8 +27,8 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">{ca.meeting.title}</h1>
-        <p className="text-sm text-slate-600">{meeting.poll.title}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{ca.meeting.title}</h1>
+        <p className="mt-1 break-words text-sm text-slate-600">{meeting.poll.title}</p>
       </div>
 
       <Card>
@@ -39,16 +39,16 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
           <p>
             {ca.meeting.meetingDateLabel}: {formatDateTime(meeting.scheduledAt)}
           </p>
-          <div className="flex flex-wrap gap-3">
+          <div className="grid gap-2 sm:flex sm:flex-wrap">
             <a
               href={`/api/public/ics?meetingId=${meeting.id}`}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+              className="rounded-md border border-slate-300 px-3 py-2 text-center text-sm font-medium transition-colors hover:bg-slate-50"
             >
               {ca.meeting.exportIcs}
             </a>
             <a
               href={`/api/owner/minutes/export?meetingId=${meeting.id}`}
-              className="rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+              className="rounded-md border border-slate-300 px-3 py-2 text-center text-sm font-medium transition-colors hover:bg-slate-50"
             >
               {ca.meeting.exportMinutesMd}
             </a>
@@ -71,10 +71,10 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
               meeting.recordings.map((recording) => (
                 <div
                   key={recording.id}
-                  className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  className="flex flex-col gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
-                    <p>{recording.originalName ?? recording.id}</p>
+                  <div className="min-w-0">
+                    <p className="break-all">{recording.originalName ?? recording.id}</p>
                     <p className="text-xs text-slate-500">{formatDateTime(recording.createdAt)}</p>
                   </div>
                   <StatusBadge status={recording.status} />
@@ -91,7 +91,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
         </CardHeader>
         <CardContent>
           {latestTranscript?.text ? (
-            <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
+            <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
               {latestTranscript.text}
             </pre>
           ) : (

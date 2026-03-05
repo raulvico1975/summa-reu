@@ -260,19 +260,19 @@ export function NewPollForm() {
       </div>
 
       <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-800">{ca.poll.options}</p>
-            <p className="text-xs text-slate-500">{ca.poll.optionsHint}</p>
+            <p className="break-words text-xs text-slate-500">{ca.poll.optionsHint}</p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             {DAY_OPTIONS.map((days) => (
               <button
                 key={days}
                 type="button"
                 onClick={() => setDaysToShow(days)}
-                className={`rounded-md px-2.5 py-1.5 font-medium ${
+                className={`rounded-md px-2.5 py-1.5 text-xs font-medium ${
                   daysToShow === days
                     ? "bg-sky-500 text-white"
                     : "border border-slate-300 bg-white text-slate-700"
@@ -318,7 +318,7 @@ export function NewPollForm() {
           <button
             type="button"
             onClick={selectAllVisibleSlots}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 md:self-end"
+            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-center text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 md:self-end"
           >
             {ca.poll.selectVisible}
           </button>
@@ -329,7 +329,7 @@ export function NewPollForm() {
               setSelectedSlots([]);
               setError(null);
             }}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 md:self-end"
+            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-center text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 md:self-end"
           >
             {ca.poll.clearSelection}
           </button>
@@ -337,13 +337,13 @@ export function NewPollForm() {
 
         <div className="space-y-2">
           <p className="text-xs font-semibold text-slate-700">{ca.poll.windowQuickPresets}</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid gap-2 sm:flex sm:flex-wrap">
             {WINDOW_PRESETS.map((preset) => (
               <button
                 key={preset.id}
                 type="button"
                 onClick={() => applyPreset(preset.start, preset.end)}
-                className={`rounded-md border px-3 py-1.5 text-xs font-medium ${
+                className={`rounded-md border px-3 py-2 text-left text-xs font-medium leading-tight ${
                   windowStart === preset.start && windowEnd === preset.end
                     ? "border-sky-300 bg-sky-50 text-sky-700"
                     : "border-slate-300 bg-white text-slate-700"
@@ -412,7 +412,7 @@ export function NewPollForm() {
       </div>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <Button type="submit" disabled={loading}>
+      <Button type="submit" disabled={loading} className="w-full sm:w-auto">
         {loading ? ca.poll.loadingCreating : ca.poll.create}
       </Button>
     </form>

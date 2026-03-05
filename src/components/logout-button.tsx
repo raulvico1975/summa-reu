@@ -5,8 +5,9 @@ import { signOut } from "firebase/auth";
 import { clientAuth } from "@/src/lib/firebase/client";
 import { Button } from "@/src/components/ui/button";
 import { ca } from "@/src/i18n/ca";
+import { cn } from "@/src/lib/cn";
 
-export function LogoutButton() {
+export function LogoutButton({ className }: { className?: string }) {
   const router = useRouter();
 
   async function onLogout() {
@@ -17,7 +18,7 @@ export function LogoutButton() {
   }
 
   return (
-    <Button variant="secondary" onClick={onLogout}>
+    <Button variant="secondary" onClick={onLogout} className={cn("w-full sm:w-auto", className)}>
       {ca.nav.logout}
     </Button>
   );

@@ -11,12 +11,14 @@ import { BrandLogo } from "@/src/components/brand-logo";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Summa Reu",
-  description: "Votacions i actes per entitats socials",
+  title: "Summa Social Board",
+  description: "Votacions, convocatòries i actes per a entitats socials",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const owner = await getOwnerFromServerCookies();
+  const navLinkClasses =
+    "rounded-md px-3 py-2 text-center text-sm leading-tight transition-colors hover:bg-slate-100";
 
   return (
     <html lang="ca" suppressHydrationWarning>
@@ -25,28 +27,39 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         className={`${inter.variable} bg-slate-50 text-slate-900 antialiased`}
       >
         <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-3">
-            <Link href="/" className="text-lg font-semibold text-sky-600">
-              <BrandLogo />
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-4">
+            <Link href="/" className="w-fit shrink-0 text-lg font-semibold text-sky-600">
+              <span className="sm:hidden">
+                <BrandLogo compact />
+              </span>
+              <span className="hidden sm:inline-flex">
+                <BrandLogo />
+              </span>
             </Link>
 
-            <nav className="flex items-center gap-2 text-sm">
+            <nav className="flex w-full flex-wrap items-center gap-2 text-sm sm:w-auto sm:justify-end">
               {owner ? (
                 <>
-                  <Link className="rounded-md px-3 py-1.5 hover:bg-slate-100" href="/dashboard">
+                  <Link className={`${navLinkClasses} flex-1 sm:flex-none`} href="/dashboard">
                     {ca.nav.dashboard}
                   </Link>
-                  <Link className="rounded-md px-3 py-1.5 hover:bg-slate-100" href="/polls/new">
+                  <Link className={`${navLinkClasses} flex-1 sm:flex-none`} href="/polls/new">
                     {ca.nav.newPoll}
                   </Link>
-                  <LogoutButton />
+                  <LogoutButton className="w-full sm:w-auto" />
                 </>
               ) : (
                 <>
-                  <Link className="rounded-md bg-sky-600 px-3 py-1.5 font-medium text-white hover:bg-sky-700" href="/login">
+                  <Link
+                    className="flex-1 rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-medium leading-tight text-white transition-colors hover:bg-sky-700 sm:flex-none"
+                    href="/login"
+                  >
                     {ca.nav.login}
                   </Link>
-                  <Link className="rounded-md border border-slate-300 px-3 py-1.5 hover:bg-slate-100" href="/signup">
+                  <Link
+                    className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-center text-sm leading-tight transition-colors hover:bg-slate-100 sm:flex-none"
+                    href="/signup"
+                  >
                     {ca.nav.signup}
                   </Link>
                 </>
@@ -54,7 +67,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
             </nav>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-4xl px-4 py-8">{children}</main>
+        <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:py-8">{children}</main>
         <ErrorMonitor />
       </body>
     </html>

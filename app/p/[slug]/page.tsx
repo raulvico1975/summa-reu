@@ -19,10 +19,12 @@ export default async function PublicPollPage({ params }: { params: Promise<{ slu
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold">{poll.title}</h1>
-          <p className="text-sm text-slate-600">{poll.description}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {poll.title}
+          </h1>
+          <p className="mt-1 break-words text-sm text-slate-600">{poll.description}</p>
         </div>
         <StatusBadge status={poll.status} />
       </div>

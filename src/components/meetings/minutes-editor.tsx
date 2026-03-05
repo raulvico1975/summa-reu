@@ -45,9 +45,9 @@ export function MinutesEditor({
   return (
     <div className="space-y-3">
       <Textarea rows={14} value={value} onChange={(event) => setValue(event.target.value)} />
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
-      {state.message ? <p className="text-sm text-emerald-700">{state.message}</p> : null}
-      <Button type="button" onClick={onSave} disabled={state.loading}>
+      {state.error ? <p className="break-words text-sm text-red-600">{state.error}</p> : null}
+      {state.message ? <p className="break-words text-sm text-emerald-700">{state.message}</p> : null}
+      <Button type="button" onClick={onSave} disabled={state.loading} className="w-full sm:w-auto">
         {state.loading ? ca.meeting.savingMinutes : ca.meeting.saveMinutes}
       </Button>
     </div>

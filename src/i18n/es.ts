@@ -33,6 +33,7 @@ export const es: I18nCa = {
     featurePrivacyBody: "Gestión solo para entidad autenticada, votos públicos siempre vía endpoint seguro.",
     ctaAccess: "Acceso entidad",
     ctaSignup: "Dar de alta entidad",
+    paymentHint: "El alta de entidad incluye pago previo para activar el espacio.",
   },
   login: {
     title: "Acceso entidad",
@@ -45,8 +46,16 @@ export const es: I18nCa = {
     signupCta: "¿No tienes entidad registrada? Dala de alta",
   },
   signup: {
-    title: "Alta de entidad",
-    subtitle: "Crea tu espacio de gestión y empieza a coordinar reuniones.",
+    title: "Activación de entidad",
+    subtitle: "Para empezar a usar la app, primero activaremos tu suscripción.",
+    planTitle: "Plan de activación Summa Board",
+    planBody:
+      "Un único paso de pago para habilitar tu espacio de trabajo y empezar a coordinar reuniones desde hoy.",
+    benefitOne: "Votaciones públicas ilimitadas para tu entidad.",
+    benefitTwo: "Gestión de convocatorias y actas desde un único panel.",
+    benefitThree: "Soporte prioritario durante el onboarding inicial.",
+    paymentCta: "Continuar al pago (mañana)",
+    paymentNote: "Pasarela de pago en preparación. Mañana conectamos la funcionalidad final.",
     orgName: "Nombre de la entidad",
     contactName: "Persona responsable",
     email: "Correo de acceso",

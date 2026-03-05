@@ -11,8 +11,31 @@ type Option = {
   label: string;
 };
 
+function normalizeVoterName(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function readStoredTokensByName(key: string): Record<string, string> {
+  const raw = window.localStorage.getItem(key);
+  if (!raw) return {};
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        (entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string"
+      )
+    );
+  } catch {
+    return {};
+  }
+}
+
 export function VoteForm({ slug, options, disabled }: { slug: string; options: Option[]; disabled?: boolean }) {
-  const tokenKey = useMemo(() => `summareu:voterToken:${slug}`, [slug]);
+  const tokensByNameKey = useMemo(() => `summareu:voterTokensByName:${slug}`, [slug]);
+  const legacyTokenKey = useMemo(() => `summareu:voterToken:${slug}`, [slug]);
 
   const [voterName, setVoterName] = useState("");
   const [availability, setAvailability] = useState<Record<string, boolean>>(
@@ -27,7 +50,9 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
     setState({ loading: true });
 
     try {
-      const voterToken = window.localStorage.getItem(tokenKey) ?? undefined;
+      const normalizedVoterName = normalizeVoterName(voterName);
+      const storedTokensByName = readStoredTokensByName(tokensByNameKey);
+      const voterToken = storedTokensByName[normalizedVoterName];
 
       const res = await fetch("/api/public/vote", {
         method: "POST",
@@ -46,7 +71,9 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
       }
 
       if (data.voterToken) {
-        window.localStorage.setItem(tokenKey, data.voterToken);
+        storedTokensByName[normalizedVoterName] = data.voterToken;
+        window.localStorage.setItem(tokensByNameKey, JSON.stringify(storedTokensByName));
+        window.localStorage.removeItem(legacyTokenKey);
       }
 
       setState({ loading: false, message: ca.poll.savedVote });
@@ -76,11 +103,15 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
       <div className="space-y-2">
         <p className="text-sm font-medium text-slate-700">{ca.poll.availability}</p>
         {options.map((option) => (
-          <label key={option.id} className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2">
-            <span className="text-sm text-slate-700">{option.label}</span>
+          <label
+            key={option.id}
+            className="flex items-start justify-between gap-3 rounded-md border border-slate-200 px-3 py-2"
+          >
+            <span className="min-w-0 break-words text-sm text-slate-700">{option.label}</span>
             <input
               type="checkbox"
               disabled={disabled}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-sky-600"
               checked={Boolean(availability[option.id])}
               onChange={(event) =>
                 setAvailability((current) => ({
@@ -96,7 +127,7 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
       {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
       {state.message ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3">
-          <p className="text-sm font-medium leading-relaxed text-emerald-900">{state.message}</p>
+          <p className="break-words text-sm font-medium leading-relaxed text-emerald-900">{state.message}</p>
           <Link
             href={`/p/${slug}/results`}
             className="mt-2 inline-flex rounded-md bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
@@ -106,7 +137,7 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
         </div>
       ) : null}
 
-      <Button type="submit" disabled={state.loading || disabled}>
+      <Button type="submit" disabled={state.loading || disabled} className="w-full sm:w-auto">
         {state.loading ? ca.poll.loadingSaving : ca.poll.submitVote}
       </Button>
     </form>

@@ -55,9 +55,9 @@ export function ClosePollForm({ pollId, options }: { pollId: string; options: Op
         ))}
       </select>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="break-words text-sm text-red-600">{error}</p> : null}
 
-      <Button type="submit" disabled={loading}>
+      <Button type="submit" disabled={loading} className="w-full sm:w-auto">
         {loading ? ca.poll.loadingClosing : ca.poll.closePoll}
       </Button>
     </form>

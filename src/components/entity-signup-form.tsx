@@ -88,13 +88,13 @@ export function EntitySignupForm() {
         <Input type="password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} />
       </div>
 
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
+      {state.error ? <p className="break-words text-sm text-red-600">{state.error}</p> : null}
 
       <Button type="submit" disabled={state.loading} className="w-full">
         {state.loading ? ca.signup.loading : ca.signup.submit}
       </Button>
 
-      <Link href="/login" className="inline-block text-sm font-medium text-sky-700 hover:underline">
+      <Link href="/login" className="block break-words text-sm font-medium text-sky-700 hover:underline">
         {ca.signup.toLogin}
       </Link>
     </form>

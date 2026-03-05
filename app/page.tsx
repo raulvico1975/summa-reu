@@ -11,17 +11,21 @@ export default function HomePage() {
           <span className="inline-flex w-fit rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
             {ca.home.badge}
           </span>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{ca.home.title}</h1>
+          <h1 className="break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
+            {ca.home.title}
+          </h1>
         </CardHeader>
         <CardContent className="space-y-5">
-          <p className="text-base text-slate-700">{ca.home.subtitle}</p>
-          <p className="text-sm text-slate-600">{ca.home.description}</p>
-          <div className="flex flex-wrap gap-3">
+          <p className="break-words text-base text-slate-700">{ca.home.subtitle}</p>
+          <p className="break-words text-sm text-slate-600">{ca.home.description}</p>
+          <div className="grid gap-2 sm:flex sm:flex-wrap">
             <Link href="/login">
-              <Button>{ca.home.ctaAccess}</Button>
+              <Button className="w-full sm:w-auto">{ca.home.ctaAccess}</Button>
             </Link>
             <Link href="/signup">
-              <Button variant="secondary">{ca.home.ctaSignup}</Button>
+              <Button variant="secondary" className="w-full sm:w-auto">
+                {ca.home.ctaSignup}
+              </Button>
             </Link>
           </div>
         </CardContent>
@@ -30,26 +34,26 @@ export default function HomePage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <h2 className="text-base font-semibold">{ca.home.featurePollsTitle}</h2>
+            <h2 className="break-words text-base font-semibold">{ca.home.featurePollsTitle}</h2>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600">{ca.home.featurePollsBody}</p>
+            <p className="break-words text-sm text-slate-600">{ca.home.featurePollsBody}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <h2 className="text-base font-semibold">{ca.home.featureMinutesTitle}</h2>
+            <h2 className="break-words text-base font-semibold">{ca.home.featureMinutesTitle}</h2>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600">{ca.home.featureMinutesBody}</p>
+            <p className="break-words text-sm text-slate-600">{ca.home.featureMinutesBody}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <h2 className="text-base font-semibold">{ca.home.featurePrivacyTitle}</h2>
+            <h2 className="break-words text-base font-semibold">{ca.home.featurePrivacyTitle}</h2>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600">{ca.home.featurePrivacyBody}</p>
+            <p className="break-words text-sm text-slate-600">{ca.home.featurePrivacyBody}</p>
           </CardContent>
         </Card>
       </div>
