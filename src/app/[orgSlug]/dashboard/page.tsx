@@ -20,11 +20,13 @@ import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { findSystemCategoryId } from '@/lib/constants';
+import { canViewFinancialDashboard } from '@/lib/can-view-financial-dashboard';
 import {
   aggregateIncomeByCategory,
   aggregateMissionTransfersByContact,
   aggregateOperationalExpensesByProject,
   buildNarrativesFromAggregates,
+  type AggregateResult,
   type AggregateRow,
   type NarrativeDraft,
 } from '@/lib/exports/economic-report';
@@ -39,6 +41,7 @@ import { OnboardingWizardModal } from '@/components/onboarding/OnboardingWizard'
 import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
 import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
 import { FISCAL_PENDING_REVIEW_ALERT_TYPE, toDateFromFirestoreValue } from '@/lib/admin/admin-alerts';
+import { FinancialRestrictedPlaceholder } from '@/components/dashboard/financial-restricted-placeholder';
 
 interface TaxObligation {
   id: string;
@@ -54,6 +57,7 @@ const TAX_OBLIGATIONS: TaxObligation[] = [
 ];
 
 const NARRATIVE_ORDER: (keyof NarrativeDraft)[] = ['summary', 'income', 'expenses', 'transfers'];
+const EMPTY_AGGREGATE: AggregateResult = { aggregated: [], complete: [], total: 0 };
 
 interface Celebration {
   id: string;
@@ -360,7 +364,10 @@ function TopCategoriesTable({
 export default function DashboardPage() {
   const { firestore, user } = useFirebase();
   const { organizationId, organization, userRole, member, isLoading: isOrganizationLoading } = useCurrentOrganization();
-  const { canAccessProjectsArea } = usePermissions();
+  const { permissions, canAccessProjectsArea } = usePermissions();
+  // SECURITY GUARD: users without moviments permissions must never see economic data
+  // (amounts, totals, balances or derived financial metrics).
+  const canViewFinancial = canViewFinancialDashboard(permissions);
   const { t, tr, language } = useTranslations();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   // Helper local per interpolació de placeholders {key} en claus JSON
@@ -544,8 +551,8 @@ export default function DashboardPage() {
   };
 
   const transactionsQuery = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
-    [firestore, organizationId]
+    () => canViewFinancial && organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
+    [canViewFinancial, firestore, organizationId]
   );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
@@ -556,18 +563,19 @@ export default function DashboardPage() {
   const { data: contacts } = useCollection<Contact>(contactsQuery);
 
   const projectsQuery = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'projects') : null,
-    [firestore, organizationId]
+    () => canViewFinancial && organizationId ? collection(firestore, 'organizations', organizationId, 'projects') : null,
+    [canViewFinancial, firestore, organizationId]
   );
   const { data: projects } = useCollection<Project>(projectsQuery);
 
   const categoriesQuery = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
-    [firestore, organizationId]
+    () => canViewFinancial && organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [canViewFinancial, firestore, organizationId]
   );
   const { data: categories } = useCollection<Category>(categoriesQuery);
   const [isMarkingFiscalAlertRead, setIsMarkingFiscalAlertRead] = React.useState(false);
-  const canReadFiscalAlerts = !isOrganizationLoading
+  const canReadFiscalAlerts = canViewFinancial
+    && !isOrganizationLoading
     && !!organizationId
     && userRole === 'admin'
     && member?.role === 'admin';
@@ -615,6 +623,7 @@ export default function DashboardPage() {
   // KPIs econòmics: només transaccions que representen el ledger bancari real
   // (per Ingressos, Despeses, Balance)
   const filteredTransactions = React.useMemo(() => {
+    if (!canViewFinancial) return [];
     if (baseTransactions.length === 0) return [];
     const ledgerTxs = baseTransactions.filter(isBankLedgerTx);
 
@@ -632,16 +641,17 @@ export default function DashboardPage() {
     }
 
     return ledgerTxs;
-  }, [baseTransactions, isBankLedgerTx]);
+  }, [baseTransactions, canViewFinancial, isBankLedgerTx]);
 
   // Detectar categories legacy (docIds en lloc de nameKeys) - només log a consola
   React.useEffect(() => {
+    if (!canViewFinancial) return;
     if (!filteredTransactions || filteredTransactions.length === 0 || !organizationId) return;
     const legacyTxs = detectLegacyCategoryTransactions(filteredTransactions);
     if (legacyTxs.length > 0) {
       logLegacyCategorySummary(organizationId, legacyTxs);
     }
-  }, [filteredTransactions, organizationId]);
+  }, [canViewFinancial, filteredTransactions, organizationId]);
 
   // KPIs socials: transaccions amb contacte (incloent fills de remesa)
   // (per Donants actius, Socis actius, Quotes)
@@ -670,42 +680,55 @@ export default function DashboardPage() {
   }, [baseTransactions]);
 
   const missionTransferCategoryId = React.useMemo(
-    () => categories ? findSystemCategoryId(categories, 'missionTransfers') : null,
-    [categories]
+    () => (canViewFinancial && categories ? findSystemCategoryId(categories, 'missionTransfers') : null),
+    [canViewFinancial, categories]
   );
   const incomeAggregates = React.useMemo(
-    () =>
+    () => {
+      if (!canViewFinancial) return EMPTY_AGGREGATE;
+      return (
       aggregateIncomeByCategory({
         transactions: filteredTransactions,
         categories,
         topN: 3,
         labels: shareModalTexts.labels,
-      }),
-    [filteredTransactions, categories, shareModalTexts]
+      })
+      );
+    },
+    [canViewFinancial, filteredTransactions, categories, shareModalTexts]
   );
   const expenseAggregates = React.useMemo(
-    () =>
+    () => {
+      if (!canViewFinancial) return EMPTY_AGGREGATE;
+      return (
       aggregateOperationalExpensesByProject({
         transactions: filteredTransactions,
         projects,
         topN: 3,
         missionKey: missionTransferCategoryId ?? '',
         labels: shareModalTexts.labels,
-      }),
-    [filteredTransactions, projects, shareModalTexts, missionTransferCategoryId]
+      })
+      );
+    },
+    [canViewFinancial, filteredTransactions, projects, shareModalTexts, missionTransferCategoryId]
   );
   const transferAggregates = React.useMemo(
-    () =>
+    () => {
+      if (!canViewFinancial) return EMPTY_AGGREGATE;
+      return (
       aggregateMissionTransfersByContact({
         transactions: filteredTransactions,
         contacts,
         topN: 3,
         missionKey: missionTransferCategoryId ?? '',
         labels: shareModalTexts.labels,
-      }),
-    [filteredTransactions, contacts, shareModalTexts, missionTransferCategoryId]
+      })
+      );
+    },
+    [canViewFinancial, filteredTransactions, contacts, shareModalTexts, missionTransferCategoryId]
   );
   const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
+    if (!canViewFinancial) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
     if (!filteredTransactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
     return filteredTransactions.reduce((acc, tx) => {
       if (tx.amount > 0) {
@@ -717,14 +740,14 @@ export default function DashboardPage() {
       }
       return acc;
     }, { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 });
-  }, [filteredTransactions, missionTransferCategoryId]);
+  }, [canViewFinancial, filteredTransactions, missionTransferCategoryId]);
 
   const expenseTransactions = React.useMemo(
-    () => filteredTransactions?.filter((tx) => tx.amount < 0 && tx.category !== missionTransferCategoryId) || [],
-    [filteredTransactions, missionTransferCategoryId]
+    () => (canViewFinancial ? filteredTransactions?.filter((tx) => tx.amount < 0 && tx.category !== missionTransferCategoryId) || [] : []),
+    [canViewFinancial, filteredTransactions, missionTransferCategoryId]
   );
   // Saldo = Ingressos + Despeses + Terreny (tots tres ja amb signe: despeses i terreny són negatius)
-  const netBalance = totalIncome + totalExpenses + totalMissionTransfers;
+  const netBalance = canViewFinancial ? totalIncome + totalExpenses + totalMissionTransfers : 0;
   // Estat per compartir resum
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
   const [summaryText, setSummaryText] = React.useState('');
@@ -842,6 +865,11 @@ export default function DashboardPage() {
       setEditingField(null);
     }
   }, [shareDialogOpen]);
+  React.useEffect(() => {
+    if (!canViewFinancial && shareDialogOpen) {
+      setShareDialogOpen(false);
+    }
+  }, [canViewFinancial, shareDialogOpen]);
 
   // Funció per formatejar el període del filtre
   const formatPeriodLabel = (filter: DateFilterValue): string => {
@@ -945,6 +973,7 @@ ${tr("dashboard.generatedWith")}`;
 
   // Funció per obrir el diàleg
   const handleShareClick = () => {
+    if (!canViewFinancial) return;
     const text = generateSummaryText();
     const periodLabel = formatPeriodLabel(dateFilter);
     const baseNarratives = buildNarrativesFromAggregates({
@@ -1018,6 +1047,7 @@ ${tr("dashboard.generatedWith")}`;
   };
 
   const handleExportEconomicExcel = () => {
+    if (!canViewFinancial) return;
     const workbook = XLSX.utils.book_new();
     const periodLabel = formatPeriodLabel(dateFilter);
     const summarySheetTexts = shareModalExports.summarySheet;
@@ -1089,6 +1119,7 @@ ${tr("dashboard.generatedWith")}`;
   };
 
   const handleExportEconomicCsv = () => {
+    if (!canViewFinancial) return;
     const dateStamp = new Date().toISOString().split('T')[0];
     const organizationSlug = organization?.slug || 'org';
     const csvFiles = shareModalExports.csvFileNames;
@@ -1188,10 +1219,37 @@ ${tr("dashboard.generatedWith")}`;
     memberFees: prevMemberFees,
     activeMembers: prevActiveMembers
   } = previousMetrics;
+  const relationalSupportersMetrics = React.useMemo(() => {
+    if (!contacts) return { activeMembers: 0, activeDonors: 0 };
+
+    let activeMembersCount = 0;
+    let activeDonorsCount = 0;
+
+    contacts.forEach((contact) => {
+      if (contact.type !== 'donor') return;
+      if (contact.archivedAt) return;
+
+      const donor = contact as Donor;
+      if (donor.status === 'inactive') return;
+
+      if (donor.membershipType === 'recurring') {
+        activeMembersCount += 1;
+        return;
+      }
+
+      activeDonorsCount += 1;
+    });
+
+    return {
+      activeMembers: activeMembersCount,
+      activeDonors: activeDonorsCount,
+    };
+  }, [contacts]);
 
   // Càlcul d'"Altres ingressos" (residual per reconciliar dashboard amb extracte)
   // = Ingressos totals - Quotes - Donacions puntuals
   const otherIncomeEUR = React.useMemo(() => {
+    if (!canViewFinancial) return 0;
     const residual = totalIncome - memberFees - totalDonations;
     // DEV-only: validar que la reconciliació quadra
     if (process.env.NODE_ENV === 'development') {
@@ -1201,10 +1259,11 @@ ${tr("dashboard.generatedWith")}`;
       }
     }
     return Math.max(0, residual);
-  }, [totalIncome, memberFees, totalDonations]);
+  }, [canViewFinancial, totalIncome, memberFees, totalDonations]);
 
   // Càlcul de despeses per projecte
   const expensesByProject = React.useMemo(() => {
+    if (!canViewFinancial) return [];
     if (!filteredTransactions) return [];
 
     // Crear mapa de projectes per ID
@@ -1248,7 +1307,7 @@ ${tr("dashboard.generatedWith")}`;
       // La resta ordenats per import descendent
       return b.totalExpense - a.totalExpense;
     });
-  }, [filteredTransactions, projects, tr]);
+  }, [canViewFinancial, filteredTransactions, projects, tr]);
 
   const totalProjectExpenses = React.useMemo(() => {
     return expensesByProject.reduce((sum, p) => sum + p.totalExpense, 0);
@@ -1263,6 +1322,7 @@ ${tr("dashboard.generatedWith")}`;
 
   // Top 5 projectes assignats + "Altres" (només projectes reals, sense "Sense assignar")
   const topAssignedProjects = React.useMemo(() => {
+    if (!canViewFinancial) return [];
     // Filtrar només projectes assignats (excloure projectId === null)
     const assigned = expensesByProject.filter(p => p.projectId !== null);
     if (assigned.length === 0 || totalAssignedProjectExpenses === 0) return [];
@@ -1291,7 +1351,7 @@ ${tr("dashboard.generatedWith")}`;
     }
 
     return result;
-  }, [expensesByProject, totalAssignedProjectExpenses, tr]);
+  }, [canViewFinancial, expensesByProject, totalAssignedProjectExpenses, tr]);
 
   // Condicions per mostrar el bloc de "Despesa per Eix"
   const hasProjectModule = organization?.features?.projectModule === true;
@@ -1299,6 +1359,7 @@ ${tr("dashboard.generatedWith")}`;
   const totalExpensesAbs = Math.abs(totalExpenses);
   const assignedExpensesRatio = totalExpensesAbs > 0 ? totalAssignedProjectExpenses / totalExpensesAbs : 0;
   const shouldShowProjectExpenses =
+    canViewFinancial &&
     canAccessProjectsArea &&
     hasProjectModule &&
     hasActiveProjects &&
@@ -1361,6 +1422,7 @@ ${tr("dashboard.generatedWith")}`;
 
   // Càlcul d'obligacions fiscals
   const taxObligations = React.useMemo(() => {
+    if (!canViewFinancial) return [];
     const today = new Date();
     const currentYear = today.getFullYear();
 
@@ -1389,7 +1451,7 @@ ${tr("dashboard.generatedWith")}`;
         status
       };
     }).sort((a, b) => a.daysRemaining - b.daysRemaining);
-  }, []);
+  }, [canViewFinancial]);
 
   // Càlcul de celebracions
   const celebrations = React.useMemo(() => {
@@ -1504,10 +1566,12 @@ ${tr("dashboard.generatedWith")}`;
 
       <div className="flex items-center justify-between gap-4">
         <DateFilter value={dateFilter} onChange={setDateFilter} />
-        <Button variant="outline" onClick={handleShareClick}>
-          <Share2 className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">{tr("dashboard.shareSummary")}</span>
-        </Button>
+        {canViewFinancial && (
+          <Button variant="outline" onClick={handleShareClick}>
+            <Share2 className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">{tr("dashboard.shareSummary")}</span>
+          </Button>
+        )}
       </div>
 
       {userRole === 'admin' && activeFiscalPendingAlert && (
@@ -1573,50 +1637,54 @@ ${tr("dashboard.generatedWith")}`;
           BLOC A — DINERS (veritat bancària, ledger)
           Dataset: filteredTransactions (només apunts del banc)
           ═══════════════════════════════════════════════════════════════════════════════ */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-muted-foreground" />
-            {tr("dashboard.moneyBlock")}
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">{tr("dashboard.moneyBlockDescription")}</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Link
-              href={createMovementsLink('income')}
-              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
-            >
-              <p className="text-sm text-muted-foreground">{tr("dashboard.totalIncome")}</p>
-              <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalIncome)}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.totalIncomeDescription")}</p>
-            </Link>
-            <Link
-              href={createMovementsLink('operatingExpenses')}
-              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
-            >
-              <p className="text-sm text-muted-foreground">{tr("dashboard.operatingExpenses")}</p>
-              <p className="text-2xl font-bold text-rose-600">{formatCurrencyEU(totalExpenses)}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.operatingExpensesDescription")}</p>
-            </Link>
-            <Link
-              href={createMovementsLink('missionTransfers')}
-              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
-            >
-              <p className="text-sm text-muted-foreground">{tr("dashboard.missionTransfers")}</p>
-              <p className="text-2xl font-bold text-blue-600">{formatCurrencyEU(totalMissionTransfers)}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.missionTransfersDescription")}</p>
-            </Link>
-            <div className="rounded-lg border p-4 bg-muted/20">
-              <p className="text-sm text-muted-foreground">{tr("dashboard.operatingBalance")}</p>
-              <p className={`text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {formatCurrencyEU(netBalance)}
-              </p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.operatingBalanceDescription")}</p>
+      {canViewFinancial ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-muted-foreground" />
+              {tr("dashboard.moneyBlock")}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">{tr("dashboard.moneyBlockDescription")}</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Link
+                href={createMovementsLink('income')}
+                className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+              >
+                <p className="text-sm text-muted-foreground">{tr("dashboard.totalIncome")}</p>
+                <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalIncome)}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.totalIncomeDescription")}</p>
+              </Link>
+              <Link
+                href={createMovementsLink('operatingExpenses')}
+                className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+              >
+                <p className="text-sm text-muted-foreground">{tr("dashboard.operatingExpenses")}</p>
+                <p className="text-2xl font-bold text-rose-600">{formatCurrencyEU(totalExpenses)}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.operatingExpensesDescription")}</p>
+              </Link>
+              <Link
+                href={createMovementsLink('missionTransfers')}
+                className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+              >
+                <p className="text-sm text-muted-foreground">{tr("dashboard.missionTransfers")}</p>
+                <p className="text-2xl font-bold text-blue-600">{formatCurrencyEU(totalMissionTransfers)}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.missionTransfersDescription")}</p>
+              </Link>
+              <div className="rounded-lg border p-4 bg-muted/20">
+                <p className="text-sm text-muted-foreground">{tr("dashboard.operatingBalance")}</p>
+                <p className={`text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {formatCurrencyEU(netBalance)}
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.operatingBalanceDescription")}</p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        <FinancialRestrictedPlaceholder />
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════════════════
           BLOC B — QUI ENS SOSTÉ (veritat relacional, per contacte)
@@ -1631,225 +1699,248 @@ ${tr("dashboard.generatedWith")}`;
           <p className="text-xs text-muted-foreground">{tr("dashboard.supportersBlockDescription")}</p>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Link
-              href={createMovementsLink('memberFees')}
-              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
-            >
-              <p className="text-sm text-muted-foreground">{tr("dashboard.memberFees")}</p>
-              <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(memberFees)}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.memberFeesDescription")}</p>
-              {canShowComparison && (
-                <ComparisonBadge
-                  current={memberFees}
-                  previous={prevMemberFees}
-                  previousYear={previousYear}
-                  isCurrency
-                  formatFn={formatCurrencyEU}
-                  texts={{
-                    equal: (p) => tri("dashboard.comparison.equal", p),
-                    delta: (p) => tri("dashboard.comparison.delta", p),
-                  }}
-                />
-              )}
-            </Link>
-            <Link
-              href={createMovementsLink('donations')}
-              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
-            >
-              <p className="text-sm text-muted-foreground">{tr("dashboard.oneTimeDonations")}</p>
-              <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalDonations)}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.oneTimeDonationsDescription")}</p>
-              {canShowComparison && (
-                <ComparisonBadge
-                  current={totalDonations}
-                  previous={prevTotalDonations}
-                  previousYear={previousYear}
-                  isCurrency
-                  formatFn={formatCurrencyEU}
-                  texts={{
-                    equal: (p) => tri("dashboard.comparison.equal", p),
-                    delta: (p) => tri("dashboard.comparison.delta", p),
-                  }}
-                />
-              )}
-            </Link>
-            {otherIncomeEUR > 0 && (
+          {canViewFinancial ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Link
-                href={createMovementsLink('income')}
+                href={createMovementsLink('memberFees')}
+                className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+              >
+                <p className="text-sm text-muted-foreground">{tr("dashboard.memberFees")}</p>
+                <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(memberFees)}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.memberFeesDescription")}</p>
+                {canShowComparison && (
+                  <ComparisonBadge
+                    current={memberFees}
+                    previous={prevMemberFees}
+                    previousYear={previousYear}
+                    isCurrency
+                    formatFn={formatCurrencyEU}
+                    texts={{
+                      equal: (p) => tri("dashboard.comparison.equal", p),
+                      delta: (p) => tri("dashboard.comparison.delta", p),
+                    }}
+                  />
+                )}
+              </Link>
+              <Link
+                href={createMovementsLink('donations')}
+                className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+              >
+                <p className="text-sm text-muted-foreground">{tr("dashboard.oneTimeDonations")}</p>
+                <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalDonations)}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.oneTimeDonationsDescription")}</p>
+                {canShowComparison && (
+                  <ComparisonBadge
+                    current={totalDonations}
+                    previous={prevTotalDonations}
+                    previousYear={previousYear}
+                    isCurrency
+                    formatFn={formatCurrencyEU}
+                    texts={{
+                      equal: (p) => tri("dashboard.comparison.equal", p),
+                      delta: (p) => tri("dashboard.comparison.delta", p),
+                    }}
+                  />
+                )}
+              </Link>
+              {otherIncomeEUR > 0 && (
+                <Link
+                  href={createMovementsLink('income')}
+                  className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <p className="text-sm text-muted-foreground">{tr("dashboard.otherIncome")}</p>
+                    <Tooltip>
+                      <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-xs">{tr("dashboard.otherIncomeTooltip")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(otherIncomeEUR)}</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.otherIncomeDescription")}</p>
+                </Link>
+              )}
+              <Link
+                href={createDonorsLink({ membershipType: 'recurring', viewActive: true })}
                 className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
               >
                 <div className="flex items-center gap-1">
-                  <p className="text-sm text-muted-foreground">{tr("dashboard.otherIncome")}</p>
+                  <p className="text-sm text-muted-foreground">{tr("dashboard.activeMembers")}</p>
                   <Tooltip>
                     <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
                       <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs">
-                      <p className="text-xs">{tr("dashboard.otherIncomeTooltip")}</p>
+                      <p className="text-xs">{tr("dashboard.activeMembersTooltip")}</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(otherIncomeEUR)}</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.otherIncomeDescription")}</p>
+                <p className="text-2xl font-bold">{activeMembers}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.activeMembersDescription")}</p>
+                {canShowComparison && (
+                  <ComparisonBadge
+                    current={activeMembers}
+                    previous={prevActiveMembers}
+                    previousYear={previousYear}
+                    texts={{
+                      equal: (p) => tri("dashboard.comparison.equal", p),
+                      delta: (p) => tri("dashboard.comparison.delta", p),
+                    }}
+                  />
+                )}
               </Link>
-            )}
-            <Link
-              href={createDonorsLink({ membershipType: 'recurring', viewActive: true })}
-              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
-            >
-              <div className="flex items-center gap-1">
+              <Link
+                href={createDonorsLink({ membershipType: 'one-time', viewActive: true })}
+                className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-1">
+                  <p className="text-sm text-muted-foreground">{tr("dashboard.activeDonors")}</p>
+                  <Tooltip>
+                    <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p className="text-xs">{tr("dashboard.activeDonorsTooltip")}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <p className="text-2xl font-bold">{uniqueDonors}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.activeDonorsDescription")}</p>
+                {canShowComparison && (
+                  <ComparisonBadge
+                    current={uniqueDonors}
+                    previous={prevUniqueDonors}
+                    previousYear={previousYear}
+                    texts={{
+                      equal: (p) => tri("dashboard.comparison.equal", p),
+                      delta: (p) => tri("dashboard.comparison.delta", p),
+                    }}
+                  />
+                )}
+              </Link>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-lg border p-4">
                 <p className="text-sm text-muted-foreground">{tr("dashboard.activeMembers")}</p>
-                <Tooltip>
-                  <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                    <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <p className="text-xs">{tr("dashboard.activeMembersTooltip")}</p>
-                  </TooltipContent>
-                </Tooltip>
+                <p className="text-2xl font-bold">{relationalSupportersMetrics.activeMembers}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.activeMembersDescription")}</p>
               </div>
-              <p className="text-2xl font-bold">{activeMembers}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.activeMembersDescription")}</p>
-              {canShowComparison && (
-                <ComparisonBadge
-                  current={activeMembers}
-                  previous={prevActiveMembers}
-                  previousYear={previousYear}
-                  texts={{
-                    equal: (p) => tri("dashboard.comparison.equal", p),
-                    delta: (p) => tri("dashboard.comparison.delta", p),
-                  }}
-                />
-              )}
-            </Link>
-            <Link
-              href={createDonorsLink({ membershipType: 'one-time', viewActive: true })}
-              className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
-            >
-              <div className="flex items-center gap-1">
+              <div className="rounded-lg border p-4">
                 <p className="text-sm text-muted-foreground">{tr("dashboard.activeDonors")}</p>
-                <Tooltip>
-                  <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-                    <Info className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <p className="text-xs">{tr("dashboard.activeDonorsTooltip")}</p>
-                  </TooltipContent>
-                </Tooltip>
+                <p className="text-2xl font-bold">{relationalSupportersMetrics.activeDonors}</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.activeDonorsDescription")}</p>
               </div>
-              <p className="text-2xl font-bold">{uniqueDonors}</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.activeDonorsDescription")}</p>
-              {canShowComparison && (
-                <ComparisonBadge
-                  current={uniqueDonors}
-                  previous={prevUniqueDonors}
-                  previousYear={previousYear}
-                  texts={{
-                    equal: (p) => tri("dashboard.comparison.equal", p),
-                    delta: (p) => tri("dashboard.comparison.delta", p),
-                  }}
-                />
-              )}
-            </Link>
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {shouldShowProjectExpenses && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2">
-              <FolderKanban className="h-5 w-5 text-muted-foreground" />
-              {tr("dashboard.assignedExpensesByProject")}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {tr("dashboard.assignedExpensesDescription")}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {topAssignedProjects.map((project) => (
-                <div key={project.projectId} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      {project.projectName}
-                    </span>
-                    <span className="text-sm font-semibold tabular-nums">
-                      {formatCurrencyEU(project.totalExpense)}
-                      <span className="ml-2 text-xs text-muted-foreground font-normal">
-                        ({Math.round(project.percentage)}%)
+      {canViewFinancial ? (
+        shouldShowProjectExpenses && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <FolderKanban className="h-5 w-5 text-muted-foreground" />
+                {tr("dashboard.assignedExpensesByProject")}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {tr("dashboard.assignedExpensesDescription")}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {topAssignedProjects.map((project) => (
+                  <div key={project.projectId} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">
+                        {project.projectName}
                       </span>
-                    </span>
-                  </div>
-                  <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all bg-blue-500"
-                      style={{ width: `${project.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-              <div className="pt-4 mt-4 border-t space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold">{tr("dashboard.totalAssigned")}</span>
-                  <span className="text-sm font-bold tabular-nums">{formatCurrencyEU(totalAssignedProjectExpenses)}</span>
-                </div>
-                <Link href={buildUrl('/dashboard/project-module/projects')}>
-                  <Button variant="outline" size="sm" className="w-full">
-                    {tr("dashboard.viewProjectDetails")}
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-muted-foreground" />
-            {tr("dashboard.taxObligations")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-3">
-            {taxObligations.map((obligation) => {
-              // Mapping segons Design Contract: >60 dies = neutral, 30-60 = ambre, <30 = vermell
-              const badgeClass = obligation.status === 'destructive'
-                ? 'bg-rose-100 text-rose-700 border-rose-200'
-                : obligation.status === 'warning'
-                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                : 'bg-muted/50 text-muted-foreground border-border';
-
-              return (
-                <div
-                  key={obligation.id}
-                  className="flex items-center justify-between p-3 rounded-lg border"
-                >
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className={badgeClass}>
-                      {obligation.daysRemaining}d
-                    </Badge>
-                    <div>
-                      <p className="font-medium text-sm">{tr(`dashboard.${obligation.nameKey}`)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {obligation.daysRemaining} {tr("dashboard.daysRemaining")}
-                      </p>
+                      <span className="text-sm font-semibold tabular-nums">
+                        {formatCurrencyEU(project.totalExpense)}
+                        <span className="ml-2 text-xs text-muted-foreground font-normal">
+                          ({Math.round(project.percentage)}%)
+                        </span>
+                      </span>
+                    </div>
+                    <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all bg-blue-500"
+                        style={{ width: `${project.percentage}%` }}
+                      />
                     </div>
                   </div>
-                  <Link href={buildUrl(obligation.reportPath)}>
-                    <Button variant="outline" size="sm">
-                      {tr("dashboard.prepare")}
+                ))}
+                <div className="pt-4 mt-4 border-t space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold">{tr("dashboard.totalAssigned")}</span>
+                    <span className="text-sm font-bold tabular-nums">{formatCurrencyEU(totalAssignedProjectExpenses)}</span>
+                  </div>
+                  <Link href={buildUrl('/dashboard/project-module/projects')}>
+                    <Button variant="outline" size="sm" className="w-full">
+                      {tr("dashboard.viewProjectDetails")}
                     </Button>
                   </Link>
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      ) : (
+        <FinancialRestrictedPlaceholder />
+      )}
+
+      {canViewFinancial ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-muted-foreground" />
+              {tr("dashboard.taxObligations")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              {taxObligations.map((obligation) => {
+                // Mapping segons Design Contract: >60 dies = neutral, 30-60 = ambre, <30 = vermell
+                const badgeClass = obligation.status === 'destructive'
+                  ? 'bg-rose-100 text-rose-700 border-rose-200'
+                  : obligation.status === 'warning'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-muted/50 text-muted-foreground border-border';
+
+                return (
+                  <div
+                    key={obligation.id}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className={badgeClass}>
+                        {obligation.daysRemaining}d
+                      </Badge>
+                      <div>
+                        <p className="font-medium text-sm">{tr(`dashboard.${obligation.nameKey}`)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {obligation.daysRemaining} {tr("dashboard.daysRemaining")}
+                        </p>
+                      </div>
+                    </div>
+                    <Link href={buildUrl(obligation.reportPath)}>
+                      <Button variant="outline" size="sm">
+                        {tr("dashboard.prepare")}
+                      </Button>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <FinancialRestrictedPlaceholder />
+      )}
 
       {/* BLOC ALERTES COMENTAT TEMPORALMENT
       <Card>
@@ -1896,118 +1987,124 @@ ${tr("dashboard.generatedWith")}`;
       </Card>
       */}
 
-      <TopCategoriesTable
-        transactions={expenseTransactions}
-        categories={categories}
-        categoryTranslations={t.categories as Record<string, string>}
-        texts={{
-          title: tr("dashboard.topCategoriesTitle"),
-          category: tr("dashboard.topCategoriesCategory"),
-          amount: tr("dashboard.topCategoriesAmount"),
-          percent: tr("dashboard.topCategoriesPercent"),
-          delta: tr("dashboard.topCategoriesDelta"),
-          viewExpenses: tr("dashboard.topCategoriesViewExpenses"),
-          others: tr("dashboard.topCategoriesOthers"),
-          noData: tr("dashboard.noExpenseData"),
-          uncategorized: tr("common.uncategorized"),
-        }}
-        buildUrl={buildUrl}
-      />
+      {canViewFinancial ? (
+        <TopCategoriesTable
+          transactions={expenseTransactions}
+          categories={categories}
+          categoryTranslations={t.categories as Record<string, string>}
+          texts={{
+            title: tr("dashboard.topCategoriesTitle"),
+            category: tr("dashboard.topCategoriesCategory"),
+            amount: tr("dashboard.topCategoriesAmount"),
+            percent: tr("dashboard.topCategoriesPercent"),
+            delta: tr("dashboard.topCategoriesDelta"),
+            viewExpenses: tr("dashboard.topCategoriesViewExpenses"),
+            others: tr("dashboard.topCategoriesOthers"),
+            noData: tr("dashboard.noExpenseData"),
+            uncategorized: tr("common.uncategorized"),
+          }}
+          buildUrl={buildUrl}
+        />
+      ) : (
+        <FinancialRestrictedPlaceholder />
+      )}
 
-      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-        <DialogContent className="max-w-5xl w-full max-h-[85vh] overflow-hidden">
-          <div className="flex h-full flex-col">
-            <DialogHeader>
-              <DialogTitle>{tr("dashboard.shareSummary")}</DialogTitle>
-              <DialogDescription>{tr("dashboard.shareSummaryDescription")}</DialogDescription>
-            </DialogHeader>
+      {canViewFinancial && (
+        <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+          <DialogContent className="max-w-5xl w-full max-h-[85vh] overflow-hidden">
+            <div className="flex h-full flex-col">
+              <DialogHeader>
+                <DialogTitle>{tr("dashboard.shareSummary")}</DialogTitle>
+                <DialogDescription>{tr("dashboard.shareSummaryDescription")}</DialogDescription>
+              </DialogHeader>
 
-            <div className="flex flex-1 flex-col gap-6 overflow-y-auto md:flex-row">
-              <div className="space-y-4 md:w-3/5">
-                <div className="space-y-3 rounded-lg border bg-background/80 p-4 shadow-sm">
-                  <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.summaryBlockTitle}</p>
-                    <p className="text-sm font-semibold">{summaryOrgPeriodText}</p>
+              <div className="flex flex-1 flex-col gap-6 overflow-y-auto md:flex-row">
+                <div className="space-y-4 md:w-3/5">
+                  <div className="space-y-3 rounded-lg border bg-background/80 p-4 shadow-sm">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.summaryBlockTitle}</p>
+                      <p className="text-sm font-semibold">{summaryOrgPeriodText}</p>
+                    </div>
+                    <Textarea
+                      value={summaryText}
+                      onChange={(e) => setSummaryText(e.target.value)}
+                      className="font-mono text-sm min-h-[280px]"
+                    />
                   </div>
-                  <Textarea
-                    value={summaryText}
-                    onChange={(e) => setSummaryText(e.target.value)}
-                    className="font-mono text-sm min-h-[280px]"
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" onClick={handleCopy}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      {copySuccess ? tr("dashboard.copied") : tr("dashboard.copy")}
+                    </Button>
+                    <Button variant="outline" onClick={handleResetNarratives} disabled={!defaultNarratives}>
+                      <RefreshCcw className="h-4 w-4 mr-2" />
+                      {shareModalTexts.actions.reset}
+                    </Button>
+                    <Button variant="secondary" onClick={handleExportEconomicExcel}>
+                      <FileSpreadsheet className="h-4 w-4 mr-2" />
+                      {shareModalTexts.actions.exportExcel}
+                    </Button>
+                    <Button variant="secondary" onClick={handleExportEconomicCsv}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      {shareModalTexts.actions.exportCsv}
+                    </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" onClick={handleCopy}>
-                    <Copy className="h-4 w-4 mr-2" />
-                    {copySuccess ? tr("dashboard.copied") : tr("dashboard.copy")}
-                  </Button>
-                  <Button variant="outline" onClick={handleResetNarratives} disabled={!defaultNarratives}>
-                    <RefreshCcw className="h-4 w-4 mr-2" />
-                    {shareModalTexts.actions.reset}
-                  </Button>
-                  <Button variant="secondary" onClick={handleExportEconomicExcel}>
-                    <FileSpreadsheet className="h-4 w-4 mr-2" />
-                    {shareModalTexts.actions.exportExcel}
-                  </Button>
-                  <Button variant="secondary" onClick={handleExportEconomicCsv}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    {shareModalTexts.actions.exportCsv}
-                  </Button>
                 </div>
+
+                {narratives && (
+                  <div className="md:w-2/5 space-y-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.narrativesHeading}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {shareModalTexts.narrativesDescription}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {NARRATIVE_ORDER.map((field) => (
+                        <div key={field} className="flex h-full flex-col rounded-lg border border-dashed bg-muted/30 p-3 shadow-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              {shareModalTexts.cards[field].title}
+                            </p>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <button
+                                onClick={() => handleCopyNarrative(field)}
+                                className="text-xs hover:text-foreground"
+                                aria-label={shareModalTexts.actions.copy}
+                              >
+                                📋
+                              </button>
+                              <button
+                                onClick={() => openNarrativeEditor(field)}
+                                className="text-xs hover:text-foreground"
+                                aria-label={shareModalTexts.actions.edit}
+                              >
+                                ✏️
+                              </button>
+                            </div>
+                          </div>
+                          <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                            {narratives[field]}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {narratives && (
-                <div className="md:w-2/5 space-y-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.narrativesHeading}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {shareModalTexts.narrativesDescription}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    {NARRATIVE_ORDER.map((field) => (
-                      <div key={field} className="flex h-full flex-col rounded-lg border border-dashed bg-muted/30 p-3 shadow-sm">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            {shareModalTexts.cards[field].title}
-                          </p>
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <button
-                              onClick={() => handleCopyNarrative(field)}
-                              className="text-xs hover:text-foreground"
-                              aria-label={shareModalTexts.actions.copy}
-                            >
-                              📋
-                            </button>
-                            <button
-                              onClick={() => openNarrativeEditor(field)}
-                              className="text-xs hover:text-foreground"
-                              aria-label={shareModalTexts.actions.edit}
-                            >
-                              ✏️
-                            </button>
-                          </div>
-                        </div>
-                        <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                          {narratives[field]}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <DialogFooter className="mt-4">
+                <Button variant="default" onClick={handleEmailShare}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  {tr("dashboard.sendByEmail")}
+                </Button>
+              </DialogFooter>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
-            <DialogFooter className="mt-4">
-              <Button variant="default" onClick={handleEmailShare}>
-                <Mail className="h-4 w-4 mr-2" />
-                {tr("dashboard.sendByEmail")}
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {editingField && (
+      {canViewFinancial && editingField && (
         isMobile ? (
           <Sheet open={isNarrativeEditorOpen} onOpenChange={(open) => (open ? setNarrativeEditorOpen(true) : handleNarrativeCancel())}>
             <SheetContent side="bottom" className="h-[85vh] w-full overflow-y-auto">
