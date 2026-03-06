@@ -34,7 +34,6 @@ import {
   UserCog,
   ClipboardList,
   ChevronRight,
-  Lightbulb,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
@@ -219,14 +218,6 @@ export function DashboardSidebarContent() {
       },
     ];
 
-    // Afegir guies
-    baseItems.push({
-      path: '/dashboard/guides',
-      label: t.sidebar.guides ?? 'Guies',
-      icon: Lightbulb,
-      className: 'text-amber-500',
-    });
-
     // Afegir configuració
     baseItems.push({
       path: '/dashboard/configuracion',
@@ -252,7 +243,6 @@ export function DashboardSidebarContent() {
       '/dashboard/treballadors': 'sections.treballadors',
       '/dashboard/informes': 'sections.informes',
       '/dashboard/configuracion': 'sections.configuracio',
-      '/dashboard/guides': 'sections.guides',
     };
 
     const visibleItems = baseItems.filter(item => {

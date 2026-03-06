@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
-import { HelpCircle, BookOpen, Link2, MessageSquare, ExternalLink, Play, AlertTriangle, CheckCircle2, XCircle, ClipboardCheck, RotateCcw, Layers, UserRound, Tag, FileText, Landmark, Sparkles, ListChecks, Upload, Filter, BadgeCheck, Lightbulb, Workflow } from 'lucide-react';
+import { HelpCircle, BookOpen, Link2, MessageSquare, ExternalLink, Play, AlertTriangle, CheckCircle2, XCircle, ClipboardCheck, RotateCcw, Layers, UserRound, Tag, FileText, Landmark, Sparkles, ListChecks, Upload, Filter, BadgeCheck, Workflow } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -237,7 +237,6 @@ export function HelpSheet() {
   // UI strings
   const ui = {
     searchPlaceholder: tr('help.ui.searchPlaceholder'),
-    viewGuide: tr('help.ui.viewGuide'),
     viewManual: tr('help.ui.viewManual'),
     copyLink: tr('help.ui.copyLink'),
     suggest: tr('help.ui.suggest'),
@@ -257,7 +256,6 @@ export function HelpSheet() {
   const manualAnchor = getManualAnchorForRoute(routeKeyPath);
   const manualBase = orgSlug ? `/${orgSlug}/dashboard/manual` : '/dashboard/manual';
   const manualUrl = manualAnchor ? `${manualBase}#${manualAnchor}` : manualBase;
-  const guidesUrl = orgSlug ? `/${orgSlug}/dashboard/guides` : '/dashboard/guides';
   const extraManualHref = MANUAL_HREFS[routeKey];
 
   // Check if we have help content
@@ -332,17 +330,6 @@ export function HelpSheet() {
       openSourceRef.current = 'button';
     }
     setOpen(newOpen);
-  };
-
-  // Handle guides link click - close sheet first, then navigate
-  const handleGuidesClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    trackUX('help.guides.click', {
-      routeKey: routeKeyPath,
-      locale: language,
-    });
-    setOpen(false);
-    router.push(guidesUrl);
   };
 
   // Handle manual link click - close sheet first, then navigate
@@ -447,10 +434,6 @@ export function HelpSheet() {
 
           {/* Action buttons */}
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button size="sm" onClick={handleGuidesClick}>
-              <Lightbulb className="h-4 w-4 mr-2" />
-              {ui.viewGuide}
-            </Button>
             <Button variant="outline" size="sm" onClick={(e) => handleManualClick(e, manualUrl)}>
               <BookOpen className="h-4 w-4 mr-2" />
               {ui.viewManual}
