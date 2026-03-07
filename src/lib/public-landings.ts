@@ -406,6 +406,122 @@ const MODEL_182_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   },
 };
 
+const DONATION_CERTIFICATES_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
+  ca: {
+    title: 'Certificats de donacio per a ONG | Software de gestio per entitats | Summa Social',
+    description:
+      'Genera i envia els certificats de donacio sense plantilles manuals, sense errors i sense perdre hores cada any.',
+  },
+  es: {
+    title: 'Certificados de donacion | Summa Social',
+    description: 'Landing en preparacion para certificados de donacion de entidades sin animo de lucro.',
+  },
+  fr: {
+    title: 'Certificats de don | Summa Social',
+    description: 'Landing en preparation pour les certificats de don des associations.',
+  },
+  pt: {
+    title: 'Certificados de doacao | Summa Social',
+    description: 'Landing em preparacao para certificados de doacao de entidades sem fins lucrativos.',
+  },
+};
+
+const DONATION_CERTIFICATES_CONTENT_CA: PublicLandingContent = {
+  hero: {
+    title: 'Certificats de donacio per a ONG i associacions',
+    subtitle: 'Genera i envia els certificats de donacio sense plantilles manuals, sense errors i sense perdre hores cada any.',
+    introParagraphs: [
+      'Per a moltes entitats, l emissio dels certificats de donacio continua sent una tasca lenta i repetitiva. Cal revisar que ha donat cada persona, comprovar si hi ha devolucions, generar el document correcte i fer arribar el certificat al donant.',
+      'Quan aquest proces es fa amb fulls de calcul, plantilles i correus manuals, es facil que apareguin errors, duplicitats o simplement massa feina acumulada en pocs dies.',
+      'Summa Social simplifica aquest proces.',
+      'Es una aplicacio pensada especificament per a entitats socials que permet generar els certificats de donacio a partir de les dades reals de l any i enviar-los de manera ordenada des d un unic lloc.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/landings/certificats-donacio/animations/anima-certificats.webm',
+      mp4FallbackSrc: '/visuals/landings/certificats-donacio/animations/anima-certificats.mp4',
+      poster: '/visuals/landings/certificats-donacio/optimized/anima-certificats-poster.webp',
+      alt: 'Animacio del proces de certificats de donacio a Summa Social',
+    },
+  },
+  problem: {
+    title: 'El problema real dels certificats de donacio',
+    intro: 'Quan arriba el moment d emetre certificats, moltes entitats es troben amb situacions com aquestes:',
+    points: [
+      'cal revisar manualment que ha aportat cada donant',
+      's han de restar devolucions o rebuts retornats',
+      'hi ha dades fiscals incompletes',
+      'els documents es generen un per un',
+      'els correus s han d enviar manualment',
+    ],
+    outroParagraphs: [
+      'El resultat acostuma a ser el mateix: hores de feina administrativa per completar una tasca que hauria de ser molt mes simple.',
+    ],
+  },
+  solution: {
+    title: 'Com ho resol Summa Social',
+    intro: 'Summa Social genera els certificats a partir de la mateixa informacio economica que l entitat ja treballa durant l any. Aixo permet que el proces sigui molt mes clar i molt mes fiable.',
+    steps: [
+      {
+        title: 'El sistema calcula l import correcte',
+        body: 'Cada certificat es genera a partir de les donacions reals registrades al sistema.',
+      },
+      {
+        title: 'Les devolucions queden reflectides',
+        body: 'Si hi ha rebuts retornats o ajustos, el certificat recull l import net real del donant.',
+      },
+      {
+        title: 'El certificat es genera automaticament',
+        body: 'No cal preparar plantilles manuals ni copiar dades d un lloc a un altre.',
+      },
+      {
+        title: 'Es pot enviar des de la mateixa aplicacio',
+        body: 'L entitat pot gestionar l enviament dels certificats sense sortir del sistema.',
+      },
+      {
+        title: 'Tambe es pot treballar en bloc',
+        body: 'Quan cal emetre molts certificats, el proces continua sent ordenat i assumible.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Que permet gestionar Summa Social',
+    intro: 'Amb Summa Social, l entitat pot:',
+    items: [
+      'generar certificats individuals per a un donant concret',
+      'preparar certificats anuals a partir de l activitat real del donant',
+      'gestionar l emissio de certificats de forma massiva',
+      'mantenir coherencia entre certificats, donacions i devolucions',
+      'centralitzar el proces dins de la mateixa aplicacio',
+    ],
+    outroParagraphs: [
+      'Aixo evita haver de repartir la feina entre Excel, PDFs solts i correus enviats manualment.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficis operatius per a l entitat',
+    items: [
+      'Menys temps administratiu: els certificats es generen a partir de dades que ja estan treballades al sistema.',
+      'Menys risc d errors: l import del certificat no depen de calculs manuals d ultima hora.',
+      'Proces mes ordenat: la generacio i l enviament es fan des d un unic entorn.',
+      'Mes tranquil litat per a l equip: quan arriba el moment d emetre certificats, la feina ja no comenca de zero.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensat per a entitats petites i mitjanes',
+    paragraphs: [
+      'Summa Social esta dissenyat per a organitzacions que necessiten complir amb les seves obligacions fiscals sense afegir complexitat innecessaria. Es especialment util per entitats que gestionen socis o donants recurrents, han d emetre certificats cada any, volen evitar processos manuals amb fulls de calcul i necessiten una manera clara de controlar donacions i devolucions.',
+      'No es una eina pensada per fer mes gran la burocracia. Es una eina pensada per reduir-la. El millor es no esperar al moment d emetre els certificats: si durant l any les donacions i les devolucions ja queden ben registrades, el proces final es simplifica molt.',
+    ],
+  },
+  finalCta: {
+    title: 'Vols veure com funciona?',
+    text: 'Si cada any la generacio dels certificats de donacio et porta massa hores o massa revisions manuals, potser val la pena veure com funciona Summa Social. L emissio de certificats pot passar de ser una tasca pesada i repetitiva a ser simplement un proces mes dins del sistema.',
+    linkLabel: 'Demana una demostracio per la teva entitat.',
+    href: '/ca/contact',
+  },
+};
+
 const MODEL_182_CONTENT_CA: PublicLandingContent = {
   hero: {
     title: 'Model 182 per a ONGs i associacions',
@@ -514,7 +630,16 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
       pt: buildPendingContent('pt', LANDING_NAMES['model-182'].pt),
     },
   },
-  buildPendingLanding('certificats-donacio'),
+  {
+    slug: 'certificats-donacio',
+    metadata: DONATION_CERTIFICATES_METADATA,
+    content: {
+      ca: DONATION_CERTIFICATES_CONTENT_CA,
+      es: buildPendingContent('es', LANDING_NAMES['certificats-donacio'].es),
+      fr: buildPendingContent('fr', LANDING_NAMES['certificats-donacio'].fr),
+      pt: buildPendingContent('pt', LANDING_NAMES['certificats-donacio'].pt),
+    },
+  },
   buildPendingLanding('remeses-sepa'),
   buildPendingLanding('importar-extracte-bancari'),
   buildPendingLanding('gestio-donants'),
