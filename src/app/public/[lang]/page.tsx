@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Upload, Settings, FileCheck } from 'lucide-react';
@@ -157,6 +158,8 @@ export default async function HomePage({ params }: PageProps) {
                   <Link href={`/${locale}/contact`}>{t.common.contact}</Link>
                 </Button>
               </div>
+
+              <PublicDirectContact locale={locale} className="pt-2" />
             </div>
 
             {/* Columna dreta: Imatge (només desktop) */}
@@ -497,6 +500,9 @@ export default async function HomePage({ params }: PageProps) {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
+          <div className="flex justify-center">
+            <PublicDirectContact locale={locale} className="rounded-xl bg-background/95 p-5 text-left shadow-sm" />
+          </div>
         </div>
       </section>
 

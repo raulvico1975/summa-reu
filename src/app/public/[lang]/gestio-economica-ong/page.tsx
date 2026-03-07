@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { Button } from '@/components/ui/button';
 import {
   generatePublicPageMetadata,
@@ -139,6 +140,8 @@ export default async function GestioEconomicaOngHubPage({ params }: PageProps) {
               <Link href="/ca/funcionalitats">Veure funcionalitats generals</Link>
             </Button>
           </div>
+
+          <PublicDirectContact locale="ca" />
         </header>
 
         <div className="space-y-12">
@@ -168,9 +171,12 @@ export default async function GestioEconomicaOngHubPage({ params }: PageProps) {
               Si avui la gestió econòmica encara depèn d&apos;extractes, Excels i revisions manuals, aquest
               clúster et mostra les peces que Summa Social ordena dins d&apos;un únic sistema.
             </p>
-            <Link href="/ca/contact" className="inline-flex items-center text-primary font-medium hover:underline">
-              Demana una demostració per a la teva entitat.
-            </Link>
+            <div className="space-y-6">
+              <Button asChild size="lg">
+                <Link href="/ca/contact">Demana una demostració per a la teva entitat.</Link>
+              </Button>
+              <PublicDirectContact locale="ca" />
+            </div>
           </section>
         </div>
       </article>

@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { Button } from '@/components/ui/button';
 import { RelatedLandings } from '@/components/public/RelatedLandings';
 import type { PublicLocale } from '@/lib/public-locale';
@@ -146,6 +147,7 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
             <Button asChild size="lg">
               <Link href={content.finalCta.href}>{content.finalCta.linkLabel}</Link>
             </Button>
+            <PublicDirectContact locale={locale} className="mt-6" />
           </section>
         </div>
       </article>
