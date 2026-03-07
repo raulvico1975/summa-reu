@@ -39,10 +39,14 @@ export type EngineCard = KBCard & {
 export type OrchestratorMeta = {
   intentType: IntentType
   retrievalConfidence?: RetrievalConfidence
+  confidenceBand?: RetrievalConfidence
   bestCardId?: string
   bestScore?: number
   secondCardId?: string
   secondScore?: number
+  decisionReason?: string
+  specificCaseDetected?: boolean
+  questionDomain?: string
   selectedCardId: string
   usedClarification: boolean
   trustedOperationalCard: boolean

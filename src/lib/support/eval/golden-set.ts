@@ -97,8 +97,8 @@ function dedupeCases(cases: GoldenCase[]): GoldenCase[] {
   return Array.from(byKey.values())
 }
 
-const derivedCa = buildDerivedCases(toExpectedRows(expectedCaRaw), 'ca', 45)
-const derivedEs = buildDerivedCases(toExpectedRows(expectedEsRaw), 'es', 45)
+const derivedCa = buildDerivedCases(toExpectedRows(expectedCaRaw), 'ca', 80)
+const derivedEs = buildDerivedCases(toExpectedRows(expectedEsRaw), 'es', 80)
 
 export const GOLDEN_SET: GoldenCase[] = dedupeCases([
   ...CRITICAL_CASES,

@@ -164,9 +164,9 @@ No cal cap flag manual per integrar.
 
 ### Autorització
 
-- **Trigger d'inici:** el CEO escriu `"Comença"`, `"Inicia"` o `"Implementa"` → Claude executa `npm run inicia` o `npm run implementa` (mateix efecte)
-- **Trigger de tancament:** el CEO escriu `"Acabat"` → Claude executa `npm run acabat`
-- **Trigger de publicació:** el CEO escriu `"Autoritzo deploy"` → Claude executa `npm run publica`
+- **Trigger d'inici:** el CEO escriu `"Comença"`, `"Inicia"` o `"Implementa"` → Codex executa `npm run inicia` o `npm run implementa` (mateix efecte)
+- **Trigger de tancament:** el CEO escriu `"Acabat"` → Codex executa `npm run acabat`
+- **Trigger de publicació:** el CEO escriu `"Autoritzo deploy"` → Codex executa `npm run publica`
 - El script detecta el nivell de risc automàticament
 - El script s'atura si les verificacions fallen
 - `Inicia` i `Implementa` serveixen igual.
@@ -184,9 +184,9 @@ No cal cap flag manual per integrar.
   - Es faran comprovacions automàtiques abans i després.
   - Si alguna comprovació falla, no es publica.
   - L'entitat podria notar canvis immediatament després de publicar.
-- Quan el CEO respon `Autoritzo deploy`, Claude executa publicació en silenci.
+- Quan el CEO respon `Autoritzo deploy`, Codex executa publicació en silenci.
 - Si tot va bé, la resposta final és només: `Ja a producció.`
-- Si alguna verificació falla, no es publica i Claude explica el bloqueig en una frase clara.
+- Si alguna verificació falla, no es publica i Codex explica el bloqueig en una frase clara.
 
 ### Pràctiques operatives automàtiques (sense passos manuals del CEO)
 
@@ -206,7 +206,7 @@ No cal cap flag manual per integrar.
 
 ### Estat operatiu (frases obligatòries)
 
-Claude només pot reportar un d'aquests tres estats:
+Codex només pot reportar un d'aquests tres estats:
 - `No en producció`
 - `Preparat per producció`
 - `A producció`
@@ -221,7 +221,7 @@ Claude només pot reportar un d'aquests tres estats:
 - Mode estricte opcional: `DEPLOY_REQUIRE_MANUAL_CONFIRMATION_ON_RESIDUAL_ALT=1` (amb aquest mode, risc ALT residual sí bloqueja).
 - Els avisos guiats es registren al deploy log.
 
-### Restriccions Claude Code
+### Restriccions Codex
 
 - **NO pot** decidir quan desplegar
 - **NO pot** fer canvis fora del ritual establert

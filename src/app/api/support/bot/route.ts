@@ -12,7 +12,7 @@ import { verifyIdToken, getAdminDb, validateUserMembership, isSuperAdmin } from 
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { loadKbCards } from '@/lib/support/load-kb-runtime'
-import { logBotQuestion } from '@/lib/support/bot-question-log'
+import { incrementBotQuestionCounters, logBotQuestion, normalizeForHash } from '@/lib/support/bot-question-log'
 import { detectSmallTalkResponse, type KbLang } from '@/lib/support/bot-retrieval'
 import { orchestrator } from '@/lib/support/engine/orchestrator'
 import { buildEmergencyFallback } from '@/lib/support/engine/renderer'
@@ -92,6 +92,14 @@ type IntentCandidate = {
   id: string
   title: string
   hints: string
+}
+
+type PreviousBotContext = {
+  previousQuestion?: string
+  previousCardId?: string
+  previousMode?: 'card' | 'fallback'
+  previousClarifyOptionIds?: string[]
+  previousWasClarify?: boolean
 }
 
 const BotInputSchema = z.object({
@@ -356,6 +364,53 @@ function filterCardsForSupportAccess(cards: KBCard[], isSuperAdminUser: boolean)
   })
 }
 
+function normalizePreviousBotContext(body: Record<string, unknown>): PreviousBotContext {
+  const previousQuestion = typeof body.previousQuestion === 'string' ? body.previousQuestion.trim() : undefined
+  const previousCardId = typeof body.previousCardId === 'string' ? body.previousCardId.trim() : undefined
+  const previousMode = body.previousMode === 'card' ? 'card' : body.previousMode === 'fallback' ? 'fallback' : undefined
+  const previousClarifyOptionIds = parseClarifyOptionIds(body.previousClarifyOptionIds)
+  const previousWasClarify = body.previousWasClarify === true
+
+  return {
+    previousQuestion: previousQuestion || undefined,
+    previousCardId: previousCardId || undefined,
+    previousMode,
+    previousClarifyOptionIds,
+    previousWasClarify,
+  }
+}
+
+function isClarifySelectionMessage(message: string, previousClarifyOptionIds: string[]): boolean {
+  const normalized = message.trim()
+  if (!['1', '2', '3'].includes(normalized)) return false
+  return previousClarifyOptionIds.length >= 2
+}
+
+function tokenizeForSimilarity(message: string): string[] {
+  return normalizeForHash(message)
+    .split(' ')
+    .map(token => token.trim())
+    .filter(token => token.length >= 3)
+}
+
+function areQueriesSimilar(previousQuestion: string, nextQuestion: string): boolean {
+  const previousNormalized = normalizeForHash(previousQuestion)
+  const nextNormalized = normalizeForHash(nextQuestion)
+  if (!previousNormalized || !nextNormalized || previousNormalized === nextNormalized) return false
+
+  const previousTokens = new Set(tokenizeForSimilarity(previousQuestion))
+  const nextTokens = new Set(tokenizeForSimilarity(nextQuestion))
+  if (!previousTokens.size || !nextTokens.size) return false
+
+  let overlap = 0
+  for (const token of previousTokens) {
+    if (nextTokens.has(token)) overlap += 1
+  }
+
+  const minSize = Math.min(previousTokens.size, nextTokens.size)
+  return overlap >= Math.max(1, Math.ceil(minSize / 2))
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   let kbLang: KbLang = 'ca'
   let inputLang: InputLang = 'ca'
@@ -372,7 +427,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       message?: string
       lang?: string
       clarifyOptionIds?: unknown
-    }
+    } & Record<string, unknown>
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ ok: false, code: 'INVALID_INPUT', message: 'message obligatori' }, { status: 400 })
@@ -382,6 +437,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     inputLang = parsedLang.inputLang
     kbLang = parsedLang.kbLang
     const clarifyOptionIds = parseClarifyOptionIds(rawClarifyOptionIds)
+    const previousContext = normalizePreviousBotContext(body)
 
     const db = getAdminDb()
     const userDoc = await db.doc(`users/${authResult.uid}`).get()
@@ -400,9 +456,30 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     const smallTalk = detectSmallTalkResponse(message, kbLang)
     if (smallTalk) {
+      const observabilityWrites: Promise<void>[] = []
+      if (previousContext.previousQuestion && previousContext.previousWasClarify && !isClarifySelectionMessage(message, previousContext.previousClarifyOptionIds ?? [])) {
+        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
+          clarifyAbandonedCount: 1,
+          reformulatedAfterClarifyCount: 1,
+        }))
+      } else if (
+        previousContext.previousQuestion &&
+        previousContext.previousMode === 'fallback' &&
+        areQueriesSimilar(previousContext.previousQuestion, message)
+      ) {
+        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
+          reformulatedAfterFallbackCount: 1,
+        }))
+      }
+
       void logBotQuestion(db, orgId, message, inputLang, 'fallback', smallTalk.cardId, {
         retrievalConfidence: 'high',
+        confidenceBand: 'high',
+        decisionReason: 'smalltalk_response',
+        intent: 'informational',
+        specificCaseDetected: false,
       }).catch(e => console.error('[bot] log error:', e))
+      void Promise.all(observabilityWrites).catch(e => console.error('[bot] observability error:', e))
 
       return NextResponse.json({
         ok: true,
@@ -470,11 +547,39 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       },
     })
 
+    const observabilityWrites: Promise<void>[] = []
+    if (result.response.cardId === 'clarify-disambiguation') {
+      observabilityWrites.push(incrementBotQuestionCounters(db, orgId, message, inputLang, {
+        clarifyShownCount: 1,
+      }))
+    }
+
+    if (previousContext.previousQuestion && previousContext.previousWasClarify) {
+      if (isClarifySelectionMessage(message, previousContext.previousClarifyOptionIds ?? [])) {
+        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
+          clarifySelectedCount: 1,
+        }))
+      } else {
+        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
+          clarifyAbandonedCount: 1,
+          reformulatedAfterClarifyCount: 1,
+        }))
+      }
+    } else if (
+      previousContext.previousQuestion &&
+      previousContext.previousMode === 'fallback' &&
+      areQueriesSimilar(previousContext.previousQuestion, message)
+    ) {
+      observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
+        reformulatedAfterFallbackCount: 1,
+      }))
+    }
+
     // Formal guardrail signal for observability.
     if (result.meta.intentType === 'operational' && result.response.mode !== 'card') {
       console.info('[bot] operational query answered without card (guardrail-safe)', {
         selectedCardId: result.response.cardId,
-        confidence: result.meta.retrievalConfidence ?? 'low',
+        confidence: result.meta.confidenceBand ?? result.meta.retrievalConfidence ?? 'low',
       })
     }
 
@@ -484,7 +589,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       secondCardId: result.meta.secondCardId,
       secondScore: result.meta.secondScore,
       retrievalConfidence: result.meta.retrievalConfidence,
+      confidenceBand: result.meta.confidenceBand ?? result.meta.retrievalConfidence,
+      decisionReason: result.meta.decisionReason,
+      intent: result.meta.intentType,
+      specificCaseDetected: result.meta.specificCaseDetected,
     }).catch(e => console.error('[bot] log error:', e))
+    void Promise.all(observabilityWrites).catch(e => console.error('[bot] observability error:', e))
 
     return NextResponse.json(result.response)
   } catch (error: unknown) {

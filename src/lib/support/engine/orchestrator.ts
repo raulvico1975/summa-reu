@@ -2,7 +2,7 @@ import type { KBCard } from '../load-kb'
 import type { KbLang } from '../bot-retrieval'
 import { buildClarifyAnswer, buildClarifyOptionsPayload } from './disambiguation'
 import { isOperationalIntent, normalizeUiPathsAgainstCatalog, SAFE_FALLBACK_PATHS } from './policy'
-import { isConfidenceSufficient, pickTopDisambiguationOptions, resolveRetrieval, type IntentClassifier } from './retrieval'
+import { pickTopDisambiguationOptions, resolveRetrieval, type IntentClassifier } from './retrieval'
 import { buildEmergencyFallback, renderAnswer } from './renderer'
 import type { AssistantTone, OrchestratorResult } from './types'
 
@@ -10,6 +10,20 @@ function findFallbackCard(cards: KBCard[]): KBCard | null {
   return cards.find(card => card.id === 'fallback-no-answer')
     ?? cards.find(card => card.type === 'fallback')
     ?? null
+}
+
+function isSensitiveDomain(questionDomain: string | undefined, message: string): boolean {
+  if (['fiscal', 'sepa', 'remittances', 'returns', 'permissions'].includes(questionDomain ?? '')) {
+    return true
+  }
+
+  return /\b(devoluc|devolucion|return|retorn|permis|permiso|permisos|acces|acceso|accessos)\b/i.test(message)
+}
+
+function buildSpecificCaseFallbackAnswer(lang: KbLang): string {
+  return lang === 'es'
+    ? 'Esto parece un caso concreto de tus datos.\n\nTe puedo orientar con el procedimiento general desde la guía correcta, pero no diagnosticar este caso concreto desde aquí.\n\nSi sigue sin cuadrar después de revisar el procedimiento general, habrá que revisar el caso concreto.'
+    : 'Això sembla un cas concret de les teves dades.\n\nEt puc orientar amb el procediment general des de la guia correcta, però no diagnosticar aquest cas concret des d’aquí.\n\nSi continua sense quadrar després de revisar el procediment general, caldrà revisar el cas concret.'
 }
 
 export async function orchestrator(input: {
@@ -49,6 +63,10 @@ export async function orchestrator(input: {
       response: emergency,
       meta: {
         intentType: 'informational',
+        confidenceBand: 'low',
+        decisionReason: 'no_cards_available',
+        questionDomain: 'general',
+        specificCaseDetected: false,
         selectedCardId: emergency.cardId,
         usedClarification: false,
         trustedOperationalCard: false,
@@ -83,6 +101,7 @@ export async function orchestrator(input: {
     const clarifyUiPaths = normalizeUiPathsAgainstCatalog(
       options.flatMap(option => option.uiPaths ?? [])
     )
+    const sensitiveClarify = intentType === 'operational' && isSensitiveDomain(retrievalResult.questionDomain, message)
     return {
       response: {
         ok: true,
@@ -96,10 +115,16 @@ export async function orchestrator(input: {
       meta: {
         intentType,
         retrievalConfidence: retrievalResult.confidence,
+        confidenceBand: retrievalResult.confidenceBand ?? retrievalResult.confidence,
         bestCardId: retrievalResult.bestCardId,
         bestScore: retrievalResult.bestScore,
         secondCardId: retrievalResult.secondCardId,
         secondScore: retrievalResult.secondScore,
+        decisionReason: sensitiveClarify
+          ? 'sensitive_domain_guardrail'
+          : retrievalResult.decisionReason ?? 'medium_confidence_disambiguation',
+        specificCaseDetected: retrievalResult.specificCaseDetected ?? false,
+        questionDomain: retrievalResult.questionDomain,
         selectedCardId: 'clarify-disambiguation',
         usedClarification: true,
         trustedOperationalCard: false,
@@ -119,11 +144,47 @@ export async function orchestrator(input: {
       meta: {
         intentType,
         retrievalConfidence: retrievalResult?.confidence,
+        confidenceBand: retrievalResult?.confidenceBand ?? retrievalResult?.confidence,
         bestCardId: retrievalResult?.bestCardId,
         bestScore: retrievalResult?.bestScore,
         secondCardId: retrievalResult?.secondCardId,
         secondScore: retrievalResult?.secondScore,
+        decisionReason: retrievalResult?.decisionReason ?? 'no_selected_card',
+        specificCaseDetected: retrievalResult?.specificCaseDetected ?? false,
+        questionDomain: retrievalResult?.questionDomain,
         selectedCardId: emergency.cardId,
+        usedClarification: false,
+        trustedOperationalCard: false,
+      },
+      selectedCard: null,
+      kbLang,
+    }
+  }
+
+  if (retrievalResult?.specificCaseDetected) {
+    const specificFallback = findFallbackCard(cards)
+    const cardId = specificFallback?.id ?? 'fallback-no-answer'
+    return {
+      response: {
+        ok: true,
+        mode: 'fallback',
+        cardId,
+        answer: buildSpecificCaseFallbackAnswer(kbLang),
+        guideId: null,
+        uiPaths: specificFallback?.uiPaths?.length ? normalizeUiPathsAgainstCatalog(specificFallback.uiPaths) : SAFE_FALLBACK_PATHS[kbLang],
+      },
+      meta: {
+        intentType,
+        retrievalConfidence: retrievalResult?.confidence,
+        confidenceBand: retrievalResult?.confidenceBand ?? retrievalResult?.confidence,
+        bestCardId: retrievalResult?.bestCardId,
+        bestScore: retrievalResult?.bestScore,
+        secondCardId: retrievalResult?.secondCardId,
+        secondScore: retrievalResult?.secondScore,
+        decisionReason: 'specific_case_guardrail',
+        specificCaseDetected: true,
+        questionDomain: retrievalResult?.questionDomain,
+        selectedCardId: cardId,
         usedClarification: false,
         trustedOperationalCard: false,
       },
@@ -134,9 +195,12 @@ export async function orchestrator(input: {
 
   // P0 strict guardrail:
   // If intent is operational and confidence is not sufficient, only guided disambiguation or safe fallback.
-  if (intentType === 'operational' && !isConfidenceSufficient(retrievalResult?.confidence)) {
+  const confidenceBand = retrievalResult?.confidenceBand ?? retrievalResult?.confidence ?? 'low'
+  const sensitiveQuery = isSensitiveDomain(retrievalResult?.questionDomain, message)
+
+  if (intentType === 'operational' && confidenceBand !== 'high') {
     const options = pickTopDisambiguationOptions(cards, retrievalResult)
-    if (options.length >= 2) {
+    if (confidenceBand === 'medium' && options.length >= 2) {
       const clarifyUiPaths = normalizeUiPathsAgainstCatalog(
         options.flatMap(option => option.uiPaths ?? [])
       )
@@ -153,10 +217,16 @@ export async function orchestrator(input: {
         meta: {
           intentType,
           retrievalConfidence: retrievalResult?.confidence,
+          confidenceBand,
           bestCardId: retrievalResult?.bestCardId,
           bestScore: retrievalResult?.bestScore,
           secondCardId: retrievalResult?.secondCardId,
           secondScore: retrievalResult?.secondScore,
+          decisionReason: sensitiveQuery
+            ? 'sensitive_domain_guardrail'
+            : 'operational_medium_disambiguation',
+          specificCaseDetected: retrievalResult?.specificCaseDetected ?? false,
+          questionDomain: retrievalResult?.questionDomain,
           selectedCardId: 'clarify-disambiguation',
           usedClarification: true,
           trustedOperationalCard: false,
@@ -164,6 +234,42 @@ export async function orchestrator(input: {
         selectedCard: null,
         kbLang,
       }
+    }
+
+    const fallbackCard = findFallbackCard(cards)
+    const fallbackCardId = fallbackCard?.id ?? 'fallback-no-answer'
+    return {
+      response: {
+        ok: true,
+        mode: 'fallback',
+        cardId: fallbackCardId,
+        answer: fallbackCard
+          ? (fallbackCard.answer?.[kbLang] ?? fallbackCard.answer?.ca ?? fallbackCard.answer?.es ?? buildEmergencyFallback(kbLang).answer)
+          : buildEmergencyFallback(kbLang).answer,
+        guideId: null,
+        uiPaths: fallbackCard?.uiPaths?.length ? normalizeUiPathsAgainstCatalog(fallbackCard.uiPaths) : SAFE_FALLBACK_PATHS[kbLang],
+      },
+      meta: {
+        intentType,
+        retrievalConfidence: retrievalResult?.confidence,
+        confidenceBand,
+        bestCardId: retrievalResult?.bestCardId,
+        bestScore: retrievalResult?.bestScore,
+        secondCardId: retrievalResult?.secondCardId,
+        secondScore: retrievalResult?.secondScore,
+        decisionReason: sensitiveQuery
+          ? 'sensitive_domain_guardrail'
+          : confidenceBand === 'medium'
+            ? 'operational_medium_fallback'
+            : 'operational_low_fallback',
+        specificCaseDetected: retrievalResult?.specificCaseDetected ?? false,
+        questionDomain: retrievalResult?.questionDomain,
+        selectedCardId: fallbackCardId,
+        usedClarification: false,
+        trustedOperationalCard: false,
+      },
+      selectedCard: null,
+      kbLang,
     }
   }
 
@@ -192,10 +298,14 @@ export async function orchestrator(input: {
     meta: {
       intentType,
       retrievalConfidence: retrievalResult?.confidence,
+      confidenceBand,
       bestCardId: retrievalResult?.bestCardId,
       bestScore: retrievalResult?.bestScore,
       secondCardId: retrievalResult?.secondCardId,
       secondScore: retrievalResult?.secondScore,
+      decisionReason: retrievalResult?.decisionReason ?? 'high_confidence_match',
+      specificCaseDetected: retrievalResult?.specificCaseDetected ?? false,
+      questionDomain: retrievalResult?.questionDomain,
       selectedCardId: rendered.card.id,
       usedClarification: selectedByClarify,
       trustedOperationalCard: rendered.trustedOperationalCard,

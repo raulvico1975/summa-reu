@@ -71,6 +71,45 @@ export interface BotQuestionLogMeta {
   secondCardId?: string
   secondScore?: number
   retrievalConfidence?: 'high' | 'medium' | 'low'
+  confidenceBand?: 'high' | 'medium' | 'low'
+  decisionReason?: string
+  intent?: 'operational' | 'informational'
+  specificCaseDetected?: boolean
+  clarifyShownCount?: number
+  clarifySelectedCount?: number
+  clarifyAbandonedCount?: number
+  reformulatedAfterFallbackCount?: number
+  reformulatedAfterClarifyCount?: number
+}
+
+export type BotQuestionCounterIncrements = Pick<
+  BotQuestionLogMeta,
+  | 'clarifyShownCount'
+  | 'clarifySelectedCount'
+  | 'clarifyAbandonedCount'
+  | 'reformulatedAfterFallbackCount'
+  | 'reformulatedAfterClarifyCount'
+>
+
+function buildCounterIncrementPayload(meta: BotQuestionLogMeta | BotQuestionCounterIncrements): Record<string, FieldValue> {
+  const payload: Record<string, FieldValue> = {}
+
+  const counters: Array<keyof BotQuestionCounterIncrements> = [
+    'clarifyShownCount',
+    'clarifySelectedCount',
+    'clarifyAbandonedCount',
+    'reformulatedAfterFallbackCount',
+    'reformulatedAfterClarifyCount',
+  ]
+
+  for (const key of counters) {
+    const value = meta[key]
+    if (typeof value === 'number' && value !== 0) {
+      payload[key] = FieldValue.increment(value)
+    }
+  }
+
+  return payload
 }
 
 // =============================================================================
@@ -122,10 +161,43 @@ export async function logBotQuestion(
       bestScore: meta?.bestScore ?? null,
       secondCardId: meta?.secondCardId ?? null,
       secondScore: meta?.secondScore ?? null,
-      retrievalConfidence: meta?.retrievalConfidence ?? null,
+      retrievalConfidence: meta?.retrievalConfidence ?? meta?.confidenceBand ?? null,
+      confidenceBand: meta?.confidenceBand ?? meta?.retrievalConfidence ?? null,
+      decisionReason: meta?.decisionReason ?? null,
+      intent: meta?.intent ?? null,
+      specificCaseDetected: meta?.specificCaseDetected ?? null,
       count: FieldValue.increment(1),
       lastSeenAt: FieldValue.serverTimestamp(),
       createdAt: FieldValue.serverTimestamp(),
+      ...buildCounterIncrementPayload(meta ?? {}),
+    },
+    { merge: true }
+  )
+}
+
+export async function incrementBotQuestionCounters(
+  db: Firestore,
+  orgId: string,
+  message: string,
+  lang: string,
+  counters: BotQuestionCounterIncrements
+): Promise<void> {
+  const normalized = normalizeForHash(message)
+  const hash = createQuestionHash(lang, normalized)
+  const masked = maskPII(message)
+
+  const docRef = db
+    .collection('organizations')
+    .doc(orgId)
+    .collection('supportBotQuestions')
+    .doc(hash)
+
+  await docRef.set(
+    {
+      lang,
+      messageRaw: masked,
+      messageNormalized: normalized,
+      ...buildCounterIncrementPayload(counters),
     },
     { merge: true }
   )

@@ -1890,18 +1890,19 @@ Si un donant va fer donacions el 2021 i ho tens registrat, pots generar-li el ce
 
 ### 78. Com envio els certificats als donants? Els puc enviar per email des de Summa Social?
 
-**Actualment, l'enviament dels certificats és manual.** Summa Social genera els PDFs, però ets tu qui els envia.
+**Sí.** Els pots enviar directament per email des de Summa Social.
 
-**Com fer-ho:**
-1. Genera els certificats (individuals o massius en un ZIP)
-2. Descarrega'ls
-3. Obre el teu client de correu habitual (Gmail, Outlook...)
-4. Envia'ls als donants amb un missatge d'agraïment
+**Com fer-ho (ràpid):**
+1. Ves a **Informes > Certificats**
+2. Selecciona l'any fiscal
+3. Tria si vols enviament **individual** (per donant) o **massiu** (seleccionats)
+4. Confirma l'enviament
 
-**Consell:** Si tens molts donants, pots:
-- Usar eines de mailing massiu (Mailchimp, Sendinblue...)
-- Demanar ajuda a voluntaris per a l'enviament
-- Preparar una plantilla de correu per anar ràpid
+**Important:**
+- Només s'envien als donants que tenen email informat
+- Si un donant no té email, Summa el deixa fora de l'enviament i t'ho indica
+- Necessites permisos de fiscalitat per fer l'enviament de certificats
+- Si prefereixes, també pots continuar descarregant PDF/ZIP i enviar-los manualment
 
 ---
 

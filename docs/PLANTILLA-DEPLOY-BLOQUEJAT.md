@@ -1,6 +1,6 @@
 # Plantilla — Quan el deploy es bloqueja o avisa
 
-Si el script de deploy s'atura amb un avís, copia i enganxa això aquí (o a Claude Code) omplint els buits:
+Si el script de deploy s'atura amb un avís, copia i enganxa això aquí (o a Codex) omplint els buits:
 
 ---
 

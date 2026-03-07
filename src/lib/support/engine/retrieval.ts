@@ -34,6 +34,10 @@ export async function resolveRetrieval(input: {
       bestCardId: selectedCard.id,
       bestScore: 100,
       confidence: 'high',
+      confidenceBand: 'high',
+      decisionReason: 'clarify_selection',
+      specificCaseDetected: false,
+      questionDomain: 'general',
     }
     selectedByClarify = true
   } else {
@@ -57,6 +61,10 @@ export async function resolveRetrieval(input: {
           secondCardId: result?.bestCardId,
           secondScore: result?.bestScore ?? 0,
           confidence: aiIntent.confidence,
+          confidenceBand: aiIntent.confidence,
+          decisionReason: aiIntent.confidence === 'high' ? 'ai_intent_high_confidence' : 'ai_intent_medium_confidence',
+          specificCaseDetected: result?.specificCaseDetected ?? false,
+          questionDomain: result?.questionDomain,
         }
       }
     } catch (error) {

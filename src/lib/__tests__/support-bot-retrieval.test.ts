@@ -1,9 +1,33 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { loadAllCards } from '../support/load-kb'
-import { detectSmallTalkResponse, inferQuestionDomain, retrieveCard, suggestKeywordsFromMessage } from '../support/bot-retrieval'
+import { loadAllCards, type KBCard } from '../support/load-kb'
+import { detectSmallTalkResponse, detectSpecificCase, inferQuestionDomain, retrieveCard, suggestKeywordsFromMessage } from '../support/bot-retrieval'
 
 const cards = loadAllCards()
+
+function buildCard(overrides: Partial<KBCard> & Pick<KBCard, 'id'>): KBCard {
+  return {
+    id: overrides.id,
+    type: overrides.type ?? 'howto',
+    domain: overrides.domain ?? 'general',
+    risk: overrides.risk ?? 'safe',
+    guardrail: overrides.guardrail ?? 'none',
+    answerMode: overrides.answerMode ?? 'full',
+    title: overrides.title ?? { ca: overrides.id, es: overrides.id },
+    intents: overrides.intents ?? { ca: [overrides.id], es: [overrides.id] },
+    guideId: overrides.guideId ?? null,
+    answer: overrides.answer ?? {
+      ca: '1. Pas verificat.\n2. Segon pas.',
+      es: '1. Paso verificado.\n2. Segundo paso.',
+    },
+    uiPaths: overrides.uiPaths ?? ['Moviments > Remeses'],
+    needsSnapshot: overrides.needsSnapshot ?? false,
+    keywords: overrides.keywords ?? [],
+    related: overrides.related ?? [],
+    error_key: overrides.error_key ?? null,
+    symptom: overrides.symptom ?? { ca: null, es: null },
+  }
+}
 
 test('retrieveCard understands donation certificate phrasing variants', () => {
   const result = retrieveCard('com faig arribar el certificat de donatius a un soci?', 'ca', cards)
@@ -134,6 +158,51 @@ test('inferQuestionDomain detects fiscal and remittances', () => {
   assert.equal(inferQuestionDomain('Com envio certificat de donació model 182?'), 'fiscal')
   assert.equal(inferQuestionDomain('Puc desfer una remesa de rebuts?'), 'remittances')
   assert.equal(inferQuestionDomain('tinc error amb la remessa de quotes'), 'remittances')
+})
+
+test('detectSpecificCase detects concrete data phrasing in ca and es', () => {
+  assert.equal(detectSpecificCase('aquesta remesa no em quadra'), true)
+  assert.equal(detectSpecificCase('esta factura no me cuadra'), true)
+  assert.equal(detectSpecificCase('com genero el model 182'), false)
+})
+
+test('retrieveCard does not answer directly on medium-confidence operational ambiguity', () => {
+  const fallbackCard = cards.find(card => card.id === 'fallback-no-answer')
+  assert.ok(fallbackCard, 'fallback-no-answer card must exist')
+
+  const localCards: KBCard[] = [
+    buildCard({
+      id: 'kb-remittance-process-test',
+      domain: 'remittances',
+      risk: 'guarded',
+      guardrail: 'b1_remittances',
+      title: { ca: 'Gestionar remesa', es: 'Gestionar remesa' },
+      intents: {
+        ca: ['com gestionar una remesa'],
+        es: ['como gestionar una remesa'],
+      },
+      keywords: ['remesa', 'gestionar'],
+    }),
+    buildCard({
+      id: 'kb-remittance-undo-test',
+      domain: 'remittances',
+      risk: 'guarded',
+      guardrail: 'b1_remittances',
+      title: { ca: 'Gestionar remesa', es: 'Gestionar remesa' },
+      intents: {
+        ca: ['com gestionar una remesa'],
+        es: ['como gestionar una remesa'],
+      },
+      keywords: ['remesa', 'gestionar'],
+    }),
+    fallbackCard,
+  ]
+
+  const result = retrieveCard('com gestionar una remesa', 'ca', localCards)
+  assert.equal(result.mode, 'fallback')
+  assert.equal(result.confidenceBand, 'medium')
+  assert.equal(result.decisionReason, 'medium_confidence_disambiguation')
+  assert.equal(result.clarifyOptions?.length, 2)
 })
 
 test('suggestKeywordsFromMessage returns meaningful canonical keywords', () => {

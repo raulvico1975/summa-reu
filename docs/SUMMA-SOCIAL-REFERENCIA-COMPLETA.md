@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.45 - 25 Febrer 2026
+# Última actualització: 7 Març 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -33,7 +33,7 @@ Defineix:
 ```
 /docs
 ├── SUMMA-SOCIAL-REFERENCIA-COMPLETA.md   # Aquest document (mestre)
-├── DEV-SOLO-MANUAL.md                     # Manual operatiu pel mantenidor (NOU v1.20)
+├── DEV-SOLO-MANUAL.md                     # Manual operatiu pel mantenidor
 ├── CHANGELOG.md                           # Historial de canvis detallat
 ├── manual-usuari-summa-social.md          # Per a usuaris finals
 └── CATALEG-FUNCIONALITATS.md              # Referència ràpida de funcionalitats
@@ -68,56 +68,72 @@ Eina centralitzada amb:
 - Auto-assignació de contactes als moviments
 - Generació automàtica d'informes fiscals (Excel per gestoria)
 - Certificats de donació PDF amb firma digitalitzada
+- Enviament de certificats de donació per email des de l'app (individual i massiu)
+- Export oficial AEAT per als models fiscals (182 i 347)
 - Dashboard amb mètriques en temps real
 - Multi-organització amb sistema de rols
 - Divisor de remeses amb matching intel·ligent
-- **Importador de devolucions del banc (NOU v1.8)**
-- **Importador de donacions Stripe (NOU v1.9)**
-- **Multicomptes bancaris amb filtre i traçabilitat (NOU v1.12)**
+- Documents pendents amb pujada, revisió i relació amb moviments
+- Adjunció de factures i comprovants amb drag & drop
+- Liquidacions de despeses de viatge amb tiquets, quilometratge i PDF
+- Mòdul de projectes amb pressupost, partides i assignació de despeses
+- Captura i gestió de despeses de terreny, també en moneda local
+- Justificació econòmica per subvencions i finançadors
+- Exportació de justificació amb Excel i ZIP de factures/comprovants, ordenats cronològicament o per partides, llestos per enviar al finançador
+- Importador de devolucions del banc
+- Importador de donacions Stripe
+- Multicomptes bancaris amb filtre i traçabilitat
 
 ## 1.4 URLs i Recursos
 
 | Recurs | URL |
 |--------|-----|
 | **Producció** | https://summasocial.app |
-| **Hosting Firebase** | https://studio--summa-social.us-central1.hosted.app |
+| **Firebase App Hosting** | https://studio--summa-social.us-central1.hosted.app |
 | **Repositori** | https://github.com/raulvico1975/summa-social |
-| **Entorn desenvolupament** | VS Code + Claude Code |
+| **Entorn desenvolupament** | VS Code + Codex |
 
 ## 1.5 Stack Tecnològic
 
-| Component | Tecnologia | Versió |
-|-----------|------------|--------|
-| Frontend | Next.js (App Router) | 15.x |
-| Llenguatge | TypeScript | 5.x |
-| UI Components | shadcn/ui | - |
-| Estils | Tailwind CSS | 3.x |
-| Base de dades | Firebase Firestore | - |
-| Autenticació | Firebase Auth | - |
-| Emmagatzematge | Firebase Storage | - |
-| IA | Genkit + Google Gemini | - |
-| Idiomes | Català, Espanyol, Francès i Portuguès | i18n |
-| Excel/CSV | SheetJS (xlsx) | - |
-| PDF | jsPDF | - |
+| Component | Tecnologia / servei |
+|-----------|----------------------|
+| Frontend | Next.js (App Router) + React |
+| Llenguatge | TypeScript |
+| UI Components | shadcn/ui + Radix UI + Lucide |
+| Estils | Tailwind CSS |
+| Formularis i validació | React Hook Form + Zod |
+| Gràfics i mètriques | Recharts |
+| Base de dades | Firebase Firestore |
+| Autenticació | Firebase Auth |
+| Emmagatzematge de fitxers | Firebase Storage |
+| Backend d'API | Next.js Route Handlers + Firebase Admin SDK |
+| Processos backend | Firebase Cloud Functions |
+| Hosting | Firebase App Hosting |
+| IA | Genkit + Google Gemini |
+| Email transaccional | Resend |
+| Idiomes | Català, Espanyol, Francès i Portuguès |
+| Excel/CSV | SheetJS + PapaParse |
+| PDF | jsPDF + jsPDF AutoTable |
+| ZIP i paquets documentals | JSZip + Archiver |
 
 ## 1.6 Sobre l'Usuari Desenvolupador
 
 - **Nom**: Raul
 - **Perfil**: NO programador - Assessor d'entitats que porta els comptes de diverses organitzacions
-- **Entorn**: VS Code + Claude Code
+- **Entorn**: VS Code + Codex
 - **Necessitats**: Codi COMPLET (mai fragments), passos verificables, respostes en CATALÀ
 
 ## 1.7 Prioritats Estratègiques 2025-2026
 
-Per a les properes versions, Summa Social se centra en **dos blocs principals**:
+Per a les properes línies de producte, Summa Social se centra en **tres blocs principals**:
 
 ### Bloc 1: Conciliació Bancària Real
 
 | Funcionalitat | Descripció | Estat |
 |---------------|------------|-------|
-| **Multicomptes bancaris** | Suport per múltiples comptes amb filtre i traçabilitat | ✅ Implementat v1.12 |
-| **Regles deterministes** | Categorització automàtica per patrons de text (loteria, voluntariat) | ✅ Implementat v1.12 |
-| **Gestió de devolucions** | Importador de fitxers del banc, remeses parcials | ✅ Implementat v1.8 |
+| **Multicomptes bancaris** | Suport per múltiples comptes amb filtre i traçabilitat | ✅ Implementat |
+| **Regles deterministes** | Categorització automàtica per patrons de text (loteria, voluntariat) | ✅ Implementat |
+| **Gestió de devolucions** | Importador de fitxers del banc, remeses parcials | ✅ Implementat |
 
 #### Invariant de comptes bancaris
 
@@ -135,8 +151,18 @@ Per a les properes versions, Summa Social se centra en **dos blocs principals**:
 |---------------|------------|-------|
 | **Dades mínimes obligatòries** | CP i adreça per Model 182 | ✅ Implementat |
 | **Consolidació anual** | Import total per donant/proveïdor amb devolucions aplicades | ✅ Implementat |
-| **Excel net per gestoria** | Format estàndard Model 182 amb recurrència | ✅ Implementat v1.7 |
-| **Importador Stripe** | Dividir remeses Stripe amb traçabilitat completa (donacions + comissions) | ✅ Implementat v1.9 |
+| **Excel net per gestoria** | Format estàndard Model 182 amb recurrència | ✅ Implementat |
+| **Importador Stripe** | Dividir remeses Stripe amb traçabilitat completa (donacions + comissions) | ✅ Implementat |
+
+### Bloc 3: Projectes, Documents i Justificació Econòmica
+
+| Funcionalitat | Descripció | Estat |
+|---------------|------------|-------|
+| **Documents pendents** | Pujada, revisió i relació amb moviments | ✅ Implementat |
+| **Liquidacions** | Tiquets, quilometratge i PDF de liquidació | ✅ Implementat |
+| **Despeses de terreny** | Captura ràpida, comprovants i revisió posterior | ✅ Implementat |
+| **Projectes i partides** | Pressupost, assignació de despeses i seguiment econòmic | ✅ Implementat |
+| **Export per al finançador** | Excel i ZIP de factures/comprovants per partida o ordre cronològic | ✅ Implementat |
 
 ### Invariants Fiscals (A1-A3)
 
@@ -169,7 +195,7 @@ El sistema garanteix les següents invariants per assegurar la integritat de les
 
 L'estat del donant (`inactive`, `pending_return`, `archived`, `deleted`) **NO bloqueja** la imputació fiscal si existeix `contactId`. L'estat només afecta l'operativa interna, no el dret fiscal.
 
-#### A4: Coherència source ↔ bankAccountId (NOU v1.34)
+#### A4: Coherència source ↔ bankAccountId
 
 | source | bankAccountId | Camps bloquejats (date, amount, description) |
 |--------|---------------|----------------------------------------------|
@@ -237,7 +263,7 @@ A més dels dos blocs prioritaris, Summa Social incorpora un conjunt de **millor
 - Simplificació d'interfícies o formularis sense alterar funcionalitats
 - Clarificació de textos, etiquetes i missatges
 - Reducció de passos innecessaris en fluxos d'ús actuals
-- **Regla 10s** (NOU v1.11): qualsevol acció de captura mòbil ha de completar-se en menys de 10 segons
+- **Regla 10s**: qualsevol acció de captura mòbil ha de completar-se en menys de 10 segons
 
 ### 1.8.5 Millores de Mantenibilitat
 - Refactors orientats a reduir complexitat o duplicació
@@ -339,7 +365,7 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
         /donantes                → Gestió de donants
         /proveedores             → Gestió de proveïdors
         /trabajadores            → Gestió de treballadors
-        /ejes-de-actuacion       → Gestió de projectes/eixos
+        /ejes-de-actuacion       → Gestió d'eixos i classificació bàsica
         /informes                → Informes fiscals (182, 347)
           /certificats           → Certificats de donació
         /configuracion           → Configuració de l'organització
@@ -353,15 +379,15 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
     /registre                    → Pàgina de registre
   /components                    → Components React reutilitzables
     /ui                          → Components shadcn/ui
-    /return-importer             → Importador de devolucions (NOU v1.8)
+    /return-importer             → Importador de devolucions
       useReturnImporter.ts       → Hook amb lògica de matching
       ReturnImporter.tsx         → Modal UI de l'importador
       index.ts                   → Exports
-    /stripe-importer             → Importador de donacions Stripe (NOU v1.9)
+    /stripe-importer             → Importador de donacions Stripe
       useStripeImporter.ts       → Hook amb lògica de parsing i matching
       StripeImporter.tsx         → Modal UI de l'importador
       index.ts                   → Exports
-    /onboarding                  → Components d'onboarding (ACTUALITZAT v1.20)
+    /onboarding                  → Components d'onboarding
       WelcomeOnboardingModal.tsx → Modal de benvinguda per primer admin
       OnboardingWizard.tsx       → Wizard de configuració inicial
     /admin                       → Components del panell admin
@@ -653,7 +679,7 @@ El SuperAdmin **no és un rol d'organització**. Es gestiona globalment:
 - **redirect-to-org**: Pàgina que determina l'organització de l'usuari i redirigeix a `/{slug}/dashboard`
 - Ordre de cerca: 1) `organizationId` al perfil, 2) query `collectionGroup('members')` pel uid
 - Si no té accés a cap org: mostra estat "no-org" amb opció de logout
-- Query optimitzada O(1) amb `collectionGroup` + `documentId()` (implementat v1.16)
+- Query optimitzada O(1) amb `collectionGroup` + `documentId()`
 
 ## 2.4 Multi-Organització
 
@@ -663,7 +689,7 @@ El SuperAdmin **no és un rol d'organització**. Es gestiona globalment:
 - Un usuari pot tenir rols diferents a cada organització
 - Sistema centralitzat de slugs per evitar duplicats
 
-## 2.5 Tests Unitaris (NOU v1.8)
+## 2.5 Tests Unitaris
 
 Tests unitaris per funcions pures a `src/lib/__tests__/`:
 
@@ -684,7 +710,7 @@ Tests unitaris per funcions pures a `src/lib/__tests__/`:
 # 3. FUNCIONALITATS DETALLADES
 # ═══════════════════════════════════════════════════════════════════════════════
 
-## 3.1 DASHBOARD (ACTUALITZAT v1.30)
+## 3.1 DASHBOARD
 
 ### 3.1.1 Bloc "Diners" (veritat bancària)
 
@@ -697,7 +723,7 @@ Dataset: `filteredTransactions` — només apunts bancaris reals (ledger).
 | **Terreny (Transferències)** | Suma `category === 'missionTransfers'` |
 | **Saldo operatiu** | Ingressos + Despeses + Terreny |
 
-### 3.1.2 Bloc "Qui ens sosté" (veritat relacional) — ACTUALITZAT v1.30
+### 3.1.2 Bloc "Qui ens sosté" (veritat relacional)
 
 Dataset: `socialMetricsTxs` — transaccions amb `contactId`, inclou fills de remesa.
 
@@ -709,7 +735,7 @@ Dataset: `socialMetricsTxs` — transaccions amb `contactId`, inclou fills de re
 | **Socis actius** | Contactes recurring amb moviments al període | vs any anterior |
 | **Donants actius** | Contactes one-time amb moviments al període | vs any anterior |
 
-**Nota reconciliació (v1.30):**
+**Nota de reconciliació:**
 - El KPI "Altres ingressos" només es mostra si el valor és > 0.
 - Inclou: subvencions, loteria, reintegraments, interessos, ingressos sense contacte.
 - Objectiu: el gestor pot reconciliar mentalment Dashboard amb extracte bancari.
@@ -721,13 +747,13 @@ Dataset: `socialMetricsTxs` — transaccions amb `contactId`, inclou fills de re
 | Model 182 | 31 gener | Botó "Preparar" |
 | Model 347 | 28 febrer | Botó "Preparar" |
 
-### 3.1.4 Bloc Categories Principals (ACTUALITZAT v1.20)
+### 3.1.4 Bloc Categories Principals
 
 Mostra les categories amb més volum de despesa, excloent:
 - Comissions bancàries (`transactionType === 'fee'` o `'return_fee'`)
 - Moviments sense categoria (mostrats com a peu de taula neutral "Sense categoria")
 
-### 3.1.5 Bloc Despesa per Projecte (ACTUALITZAT v1.20)
+### 3.1.5 Bloc Despesa per Projecte
 
 **Condicions de visibilitat:**
 - Mòdul Projectes activat (`featureFlags.projectModule`)
@@ -746,7 +772,7 @@ Mostra les categories amb més volum de despesa, excloent:
 - Personalitzat
 - Tot
 
-### 3.1.7 Modal de Benvinguda (NOU v1.20)
+### 3.1.7 Modal de Benvinguda
 
 El Dashboard gestiona la modal de benvinguda per al primer admin:
 - Comprova `shouldShowWelcomeModal()` al carregar
@@ -755,7 +781,7 @@ El Dashboard gestiona la modal de benvinguda per al primer admin:
 
 ### 3.1.8 Blocs Desactivats
 
-Els següents blocs estan **desactivats** (comentats al codi) a partir de v1.20:
+Els següents blocs estan **desactivats** (comentats al codi):
 - **Celebracions**: Missatges de fites positives (massa soroll, poc valor)
 - **Alertes**: Avisos de moviments pendents (trasllat a altres pantalles)
 
@@ -777,7 +803,7 @@ Els següents blocs estan **desactivats** (comentats al codi) a partir de v1.20:
 4. Detecció de duplicats
 5. Importació amb auto-assignació
 
-**NOU v1.44 · Dedupe fort per saldo (conservador i no destructiu):**
+**Dedupe fort per saldo (conservador i no destructiu):**
 - Nous camps a `Transaction`: `balanceAfter?: number`, `operationDate?: string` (`YYYY-MM-DD`), `duplicateReason?: string`.
 - `operationDate` (`F. ejecución` / `Fecha operación`) és **obligatori** a import bancari.
 - Si falta o és invàlid: `OPERATION_DATE_REQUIRED` i abort de la importació.
@@ -813,7 +839,7 @@ Els següents blocs estan **desactivats** (comentats al codi) a partir de v1.20:
 **Aplicació de Categoria per Defecte:**
 - Si contacte té defaultCategoryId → s'aplica automàticament
 
-**Detecció Forçada de Categories (NOU v1.12):**
+**Detecció Forçada de Categories:**
 - Loteria: patrons "loteria", "sorteig" → categoria "Loteries i sorteigs"
 - Voluntariat: patrons "voluntari", "voluntariat" → categoria "Ingressos voluntariat"
 - S'aplica a ingressos positius automàticament durant la importació
@@ -837,11 +863,11 @@ Els següents blocs estan **desactivats** (comentats al codi) a partir de v1.20:
 - Per categoria
 - Per contacte
 - Per projecte
-- Per compte bancari (NOU v1.12)
-- Per origen: bank, remittance, manual, stripe (NOU v1.12)
+- Per compte bancari
+- Per origen: bank, remittance, manual, stripe
 - Sense categoritzar
 - Sense contacte
-- **Devolucions pendents** (NOU v1.8)
+- **Devolucions pendents**
 
 ### 3.2.4.1 Invariant UI de visibilitat (P0)
 
@@ -860,7 +886,7 @@ La visibilitat de Moviments (ledger) té **ordre tancat de precedència** i s'im
 - Reutilització obligatòria a llistats/totals/exports de Moviments on existeixi filtre de visibilitat
 - Prohibit filtrar visibilitat de Moviments manualment dins components
 
-### 3.2.5 Selecció Múltiple i Accions en Bloc (NOU v1.13)
+### 3.2.5 Selecció Múltiple i Accions en Bloc
 
 Permet seleccionar múltiples moviments i aplicar accions massives.
 
@@ -889,7 +915,7 @@ Permet seleccionar múltiples moviments i aplicar accions massives.
 
 **Traduccions:** `movements.table.bulkSelection` (CA/ES/FR)
 
-### 3.2.6 Banner de Devolucions Pendents (NOU v1.8)
+### 3.2.6 Banner de Devolucions Pendents
 
 Quan hi ha devolucions sense assignar, apareix un banner vermell:
 
@@ -897,7 +923,7 @@ Quan hi ha devolucions sense assignar, apareix un banner vermell:
 
 El botó "Revisar" filtra la taula per mostrar només devolucions pendents.
 
-### 3.2.7 Reorganització UX de la Pàgina de Moviments (NOU v1.14)
+### 3.2.7 Reorganització UX de la Pàgina de Moviments
 
 Nova estructura visual en 3 franges horitzontals:
 
@@ -922,18 +948,18 @@ Nova estructura visual en 3 franges horitzontals:
 - El botó "Filtres" obre un Sheet lateral des de la dreta
 - Els filtres aplicats apareixen com a "pills" sota el header
 
-### 3.2.8 Drag & Drop de Documents (ACTUALITZAT v1.42)
+### 3.2.8 Drag & Drop de Documents
 
 Permet adjuntar documents arrossegant fitxers directament sobre una fila de moviment, o clicant la icona de document.
 
 **Funcionament:**
 - Arrossegar un fitxer sobre qualsevol fila activa el mode "drop"
 - La fila mostra un overlay amb "Deixa anar per adjuntar"
-- En deixar anar (o clicar la icona), es mostra un **AlertDialog amb suggeriment de renom** (v1.42)
+- En deixar anar (o clicar la icona), es mostra un **AlertDialog amb suggeriment de renom**
 - L'usuari pot acceptar el nom suggerit o mantenir l'original
 - El fitxer es puja a Storage i s'assigna al moviment
 
-**Renom suggerit en adjuntar (NOU v1.42):**
+**Renom suggerit en adjuntar:**
 
 Format: `YYYY.MM.DD_contacte.ext` (ex: `2026.02.10_Vodafone.pdf`)
 
@@ -953,11 +979,11 @@ Prioritat per construir el nom:
 |-----------|--------|------------|
 | `RowDropTarget` | `src/components/files/row-drop-target.tsx` | Wrapper que afegeix drag & drop a files de taula |
 | `attachDocumentToTransaction` | `src/lib/files/attach-document.ts` | Helper per pujar fitxer a Storage i actualitzar Firestore |
-| `transactions-table.tsx` | `src/components/transactions-table.tsx` | AlertDialog de renom (v1.42) |
+| `transactions-table.tsx` | `src/components/transactions-table.tsx` | AlertDialog de renom |
 
 **Traduccions:** `movements.table.dropToAttach`, `movements.table.renameBeforeAttach.*` (CA/ES/FR)
 
-### 3.2.8.1 Documents Pendents - Drag & Drop (NOU v1.28)
+### 3.2.8.1 Documents Pendents - Drag & Drop
 
 La pàgina de Documents Pendents (`/movimientos/pendents`) accepta drag & drop com a punt d'entrada equivalent al botó "Pujar".
 
@@ -973,7 +999,7 @@ La pàgina de Documents Pendents (`/movimientos/pendents`) accepta drag & drop c
 
 **Traduccions:** `pendingDocs.upload.dropHere`, `invalidFiles`, `invalidFilesDesc` (CA/ES/FR/PT)
 
-### 3.2.8.2 Documents Pendents — Robustesa i Relink (NOU v1.33)
+### 3.2.8.2 Documents Pendents — Robustesa i Relink
 
 Millores de robustesa al mòdul de documents pendents:
 
@@ -995,7 +1021,7 @@ Millores de robustesa al mòdul de documents pendents:
 - `src/components/pending-documents/pending-document-row.tsx`
 - `src/components/pending-documents/reconciliation-modal.tsx`
 
-### 3.2.8.3 Documents Pendents — Renom suggerit post-extracció (NOU v1.42)
+### 3.2.8.3 Documents Pendents — Renom suggerit post-extracció
 
 Quan un document pendent té data de factura i proveïdor extrets per IA, el sistema suggereix renombrar el fitxer amb un format estandarditzat.
 
@@ -1018,7 +1044,7 @@ Quan un document pendent té data de factura i proveïdor extrets per IA, el sis
 
 **Traduccions:** `pendingDocs.rename.*` (CA/ES/FR)
 
-### 3.2.9 Indicadors Visuals de Remeses Processades (NOU v1.14)
+### 3.2.9 Indicadors Visuals de Remeses Processades
 
 Les remeses de donacions processades es mostren amb un estil visual distintiu per evitar confusió.
 
@@ -1110,7 +1136,7 @@ createdAt: string
 updatedAt: string
 ```
 
-### 3.3.5b Flux de Vida d'una Remesa IN (NOU v1.31)
+### 3.3.5b Flux de Vida d'una Remesa IN
 
 El flux correcte per gestionar remeses IN és:
 
@@ -1131,7 +1157,7 @@ El flux correcte per gestionar remeses IN és:
 - Reprocessar parteix de zero (filles noves)
 - Les filles arxivades no compten per Model 182 ni certificats
 
-### 3.3.5c Guardrails del Sistema (NOU v1.31)
+### 3.3.5c Guardrails del Sistema
 
 **Client (UI):**
 - Bloqueja si `isRemittance === true`
@@ -1174,7 +1200,7 @@ El flux correcte per gestionar remeses IN és:
 ### 3.3.6 Guardar Configuració
 Es pot guardar el mapejat per banc (Triodos, La Caixa, Santander, etc.)
 
-### 3.3.7 Modal de Revisió Redissenyat (NOU v1.14)
+### 3.3.7 Modal de Revisió Redissenyat
 
 El modal de revisió de remeses ("Revisió de la Remesa") s'ha redissenyat per millorar la usabilitat amb taules denses.
 
@@ -1211,11 +1237,11 @@ Els 4 blocs de resum (Total, Trobats, Nous amb DNI, Nous sense DNI) ara són bad
 - Taula: `flex-1 min-h-0 overflow-auto`
 - Header taula: `sticky top-0 bg-background z-10`
 
-### 3.3.8 Matching de Remeses: Criteris, Exclusions i Traçabilitat (NOU v1.28)
+### 3.3.8 Matching de Remeses: Criteris, Exclusions i Traçabilitat
 
 #### Problema resolt
 
-Abans de v1.28, el motor de matching de remeses tenia tres problemes:
+Abans dels ajustos actuals, el motor de matching de remeses tenia tres problemes:
 
 1. **Donants fantasma**: Contactes arxivats o eliminats apareixien com a match i es recreaven
 2. **Falsos positius numèrics**: Referències bancàries (ex: "123456") feien match per nom amb donants que tenien números al nom
@@ -1323,7 +1349,7 @@ Colors del badge:
 4. **El filtratge és centralitzat** (un sol helper per a tota l'app)
 
 
-## 3.3.9 SEPA DOMICILIACIONS (pain.008) — REMESES DE COBRAMENT (NOU v1.31)
+## 3.3.9 SEPA DOMICILIACIONS (pain.008) — REMESES DE COBRAMENT
 
 ### 3.3.9.1 Visió i límits (contracte)
 
@@ -1400,7 +1426,7 @@ Si hi ha socis sense IBAN:
 | SEPA Domiciliacions | Pre-banc | Generar cobrament | **pain.008** |
 | Divisor de remesa IN | Post-banc | Desagregar ingrés cobrat | cap (es processa CSV/XLSX del banc) |
 
-### 3.3.9.7 Wizard SEPA pain.008 (ACTUALITZAT v1.42)
+### 3.3.9.7 Wizard SEPA pain.008
 
 **Accés:** Donants → Remeses de cobrament
 
@@ -1412,7 +1438,7 @@ Si hi ha socis sense IBAN:
 | 2 | Selecció | Triar socis a incloure (pre-selecció automàtica, bulk, cerca, filtre) |
 | 3 | Revisió | Validar i descarregar XML |
 
-**Periodicitat de quota (NOU v1.32):**
+**Periodicitat de quota:**
 
 Camp `periodicityQuota` al contacte:
 
@@ -1427,14 +1453,14 @@ Camp `periodicityQuota` al contacte:
 
 **Filtre per periodicitat:** El wizard permet filtrar socis per periodicitat per generar remeses segmentades.
 
-**Pre-selecció automàtica per periodicitat (ACTUALITZAT v1.42):**
+**Pre-selecció automàtica per periodicitat:**
 
 Quan l'usuari selecciona una periodicitat al Pas 1, el sistema pre-marca automàticament els socis que "toca cobrar" al Pas 2, basant-se en:
 
 1. **Camp `sepaPain008LastRunAt`:** Data de l'últim cobrament SEPA de cada donant (substitut de l'antic `lastSepaRunDate`)
 2. **Periodicitat del soci:** Només es pre-seleccionen els socis que tenen la periodicitat corresponent al filtre
 
-**Lògica d'intervals (v1.42):**
+**Lògica d'intervals:**
 
 - **Mensual:** Comparació a nivell de mes natural. Si `YYYY-MM(lastRunAt) == YYYY-MM(collectionDate)` → ja cobrat, no toca. Altrament → toca cobrar.
 - **Trimestral / Semestral / Anual:** Interval des de l'últim cobrament. `nextDue = addMonths(lastRunAt, N)` on N = 3 / 6 / 12. Toca cobrar si `YYYY-MM(collectionDate) >= YYYY-MM(nextDue)`.
@@ -1457,14 +1483,14 @@ Quan l'usuari selecciona una periodicitat al Pas 1, el sistema pre-marca automà
 
 **Lògica:** `src/lib/sepa/pain008/donor-collection-status.ts` — mòdul `isDueForCollection()` que calcula si un donant toca cobrar.
 
-**Selecció forçada amb revisió (NOU v1.42):**
+**Selecció forçada amb revisió:**
 
 - Els donants marcats com **"No toca encara"** (badge gris) es poden seleccionar manualment
 - En fer-ho, apareix un **AlertDialog de confirmació** amb el recompte de donants forçats
 - Els donants forçats es marquen amb **`needsReview: true`** al XML generat
 - Permet cobrar excepcions (nou soci, canvi de periodicitat) sense perdre la traçabilitat
 
-**UI del Pas 2 — Selecció (ACTUALITZAT v1.42):**
+**UI del Pas 2 — Selecció:**
 
 | Columna | Contingut | Notes |
 |---------|-----------|-------|
@@ -1502,7 +1528,7 @@ Cada execució del wizard crea un document amb:
 - `src/lib/sepa/pain008/sequence-type.ts` — Lògica SeqTp (FRST/RCUR/OOFF/FNAL)
 - `src/lib/sepa/pain008/iban-length.ts` — Validació longitud IBAN per país
 
-### 3.3.9.8 Dialecte Santander — pain.008 (NOU v1.36)
+### 3.3.9.8 Dialecte Santander — pain.008
 
 Documentació del comportament real del Santander al processar fitxers pain.008.
 Coneixement acumulat per proves reals (febrer 2026).
@@ -1569,7 +1595,7 @@ El helper `ensureMax35()` a `generate-pain008.ts` neteja i retalla qualsevol ide
 | "Formato de fecha incorrecto" | `CreDtTm` amb mil·lisegons (`2026-02-04T13:15:29.046+01:00`) | Eliminar mil·lisegons del timestamp |
 
 
-## 3.4 GESTIÓ DE DEVOLUCIONS (NOU v1.8)
+## 3.4 GESTIÓ DE DEVOLUCIONS
 
 ### 3.4.1 Visió general
 
@@ -1621,7 +1647,7 @@ Les devolucions bancàries (rebuts retornats) es gestionen sense modificar el mo
 | Triodos | CSV/XLS | Data per línia, agrupa per dia |
 | Altres | CSV/XLSX | Detecció automàtica columnes |
 
-#### Flux d'importació amb fitxer del banc (v1.12)
+#### Flux d'importació amb fitxer del banc
 
 **Pas 1: Parseig i normalització**
 ```
@@ -1639,7 +1665,7 @@ El sistema fa matching determinista amb els moviments bancaris:
 | 2 | Data | ±5 dies |
 | 3 | IBAN (si disponible) | Exacte |
 
-**Regles de desempat (NOU v1.12):**
+**Regles de desempat:**
 - Si hi ha 1 candidat clar → s'assigna automàticament
 - Si hi ha múltiples candidats → desempat automàtic per **data més propera**
 - Només es marca com ambigu si l'empat és real (mateixa data i import)
@@ -1698,7 +1724,7 @@ Fitxer detall:     10€ + 20€ + 15€ + 10€ = 55€
 2. Es creen transaccions filles per cada devolució identificada
 3. El pare manté `amount`, `date`, `description` intactes
 
-#### Estats de remesa (v1.12)
+#### Estats de remesa
 
 | Estat | Significat | Implicació fiscal |
 |-------|------------|-------------------|
@@ -1764,7 +1790,7 @@ Si algunes devolucions no es poden identificar:
 - Les filles SÍ tenen `contactId` → Es compten com devolucions
 - Si total ≤ 0 → Donant no apareix al Model 182
 
-> **Regla clau (v1.12):** Les devolucions resten al Model 182 quan existeixen filles amb `contactId`, independentment de l'estat global de la remesa (`partial` o `complete`).
+> **Regla clau:** Les devolucions resten al Model 182 quan existeixen filles amb `contactId`, independentment de l'estat global de la remesa (`partial` o `complete`).
 
 ### 3.4.8 UI de devolucions
 
@@ -1779,7 +1805,7 @@ Si algunes devolucions no es poden identificar:
 | "Assignar donant" (vermell) | Diàleg assignació manual |
 | 📄 (icona) | Obre importador fitxer |
 
-#### Criteri del botó "Assignar donant" (v1.12)
+#### Criteri del botó "Assignar donant"
 
 El botó "Assignar donant" **només es mostra** si:
 1. La transacció és una devolució individual (`transactionType === 'return'`)
@@ -1802,7 +1828,7 @@ El botó "Assignar donant" **només es mostra** si:
 | 🔵 **Agrupada** | Part d'una remesa |
 | 🟠 **Pendent** | Donant no identificat |
 
-### 3.4.9 Mode SuperAdmin: recreació de devolucions (NOU v1.12)
+### 3.4.9 Mode SuperAdmin: recreació de devolucions
 
 Eina **excepcional** per a migracions o correcció de dades històriques.
 
@@ -1835,7 +1861,7 @@ Eina **excepcional** per a migracions o correcció de dades històriques.
 | Remeses parcials | Forçar remesa completa |
 | Crear donant nou | Inventar dades |
 
-### 3.4.11 Guardrail per Remeses de Devolucions (OUT) (NOU v1.31)
+### 3.4.11 Guardrail per Remeses de Devolucions (OUT)
 
 Les remeses de devolucions (OUT) tenen **impacte fiscal directe** perquè redueixen el total de donacions declarades al Model 182.
 
@@ -1888,7 +1914,7 @@ Les remeses de devolucions (OUT) tenen **impacte fiscal directe** perquè reduei
 4. ☐ Si un donant té total ≤ 0, confirma que no apareix al Model 182
 
 
-## 3.5 REMESES OUT / PAGAMENTS (NOU v1.17)
+## 3.5 REMESES OUT / PAGAMENTS
 
 ### 3.5.1 Visió general
 
@@ -2094,7 +2120,7 @@ Acció disponible al menú ⋮ del moviment pare si `isRemittance === true`.
 - **Edició**: Es pot canviar l'estat des del formulari d'edició
 - **Importador**: Detecta columna "Estado/Estat" automàticament
 
-### 3.6.3b Filtres al Dashboard de Donants (NOU v1.41)
+### 3.6.3b Filtres al Dashboard de Donants
 
 El dashboard de donants disposa de filtres combinables amb lògica AND:
 
@@ -2116,7 +2142,7 @@ El dashboard de donants disposa de filtres combinables amb lògica AND:
 
 **Fitxer:** `src/components/donor-manager.tsx`
 
-### 3.6.3c Persona de Contacte per Empreses (NOU v1.41)
+### 3.6.3c Persona de Contacte per Empreses
 
 Camp opcional `contactPersonName` visible només quan `donorType === 'company'`. Purament informatiu, no afecta càlculs fiscals ni remeses.
 
@@ -2124,7 +2150,7 @@ Camp opcional `contactPersonName` visible només quan `donorType === 'company'`.
 - Import/Export: columna "Persona de contacte" a la plantilla Excel
 - Fitxer tipus: `src/lib/data.ts` (Donor interface)
 
-### 3.6.3d Quota amb Sufix de Periodicitat (NOU v1.41)
+### 3.6.3d Quota amb Sufix de Periodicitat
 
 La quota ara mostra el sufix de periodicitat al llistat i al detall:
 
@@ -2139,7 +2165,7 @@ La quota ara mostra el sufix de periodicitat al llistat i al detall:
 
 La plantilla d'importació ara usa el header "Quota" (abans "Quota mensual").
 
-### 3.6.4 Importador de Donants (ACTUALITZAT v1.28)
+### 3.6.4 Importador de Donants
 
 **Plantilla oficial única:**
 - Descarregable dins l'importador ("Descarregar plantilla")
@@ -2190,7 +2216,7 @@ La plantilla d'importació ara usa el header "Quota" (abans "Quota mensual").
 | Adreça | ❌ | ❌ |
 | IBAN | ❌ | ❌ |
 
-### 3.6.5.1 Importador de Proveïdors (ACTUALITZAT v1.28)
+### 3.6.5.1 Importador de Proveïdors
 
 **Plantilla oficial única:**
 - Descarregable dins l'importador ("Descarregar plantilla")
@@ -2212,17 +2238,17 @@ La plantilla d'importació ara usa el header "Quota" (abans "Quota mensual").
 | IBAN | iban | ❌ |
 | Categoria | defaultCategoryId | ❌ |
 
-**Categoria per defecte (agnòstica v1.28):**
+**Categoria per defecte:**
 - Matching amb TOTES les categories (income + expense), no només expense
 - Si una categoria existeix amb el mateix nom com income i expense → warning "ambigua"
 - L'usuari ha de revisar manualment les files amb warning
 - Matching normalitzat (sense accents, case-insensitive)
 
-**Deduplicació (v1.28):**
+**Deduplicació:**
 - Ignora proveïdors amb `deletedAt` o `archivedAt` en la detecció de duplicats
 - Un proveïdor eliminat i reimportat es crea com a nou
 
-### 3.6.6 Exportació de Donants a Excel (NOU v1.16)
+### 3.6.6 Exportació de Donants a Excel
 
 Botó "Exportar" a la llista de donants per descarregar un fitxer Excel.
 
@@ -2251,17 +2277,17 @@ Botó "Exportar" a la llista de donants per descarregar un fitxer Excel.
 Panel lateral que s'obre clicant el nom d'un donant:
 - Informació completa del donant
 - Historial de donacions (paginat)
-- **Historial de devolucions** (NOU v1.8)
+- **Historial de devolucions**
 - Resum per any
 - Generació de certificats
 
-### 3.6.8 Dinàmica de Donants (ACTUALITZAT v1.40)
+### 3.6.8 Dinàmica de Donants
 
 Panell d'anàlisi que mostra l'evolució dels donants segons el període seleccionat.
 
 **Accés:** Donants → Bloc "Dinàmica de donants" (part inferior de la pantalla)
 
-**Redisseny v1.40:** 5 blocs uniformes amb separació Persones Físiques (PF) / Persones Jurídiques (PJ):
+**Disseny actual:** 5 blocs uniformes amb separació Persones Físiques (PF) / Persones Jurídiques (PJ):
 
 **Categories d'anàlisi:**
 
@@ -2273,7 +2299,7 @@ Panell d'anàlisi que mostra l'evolució dels donants segons el període selecci
 | **Aportació a la baixa** | Import al període actual < import al període anterior | Per delta negatiu (asc) |
 | **Top 15** | 15 donants amb major aportació al període, amb split PF / PJ | Per import total (desc) |
 
-**Distincions PF / PJ (NOU v1.40):**
+**Distincions PF / PJ:**
 - **Persona Física (PF):** `contactType === 'individual'` o NIF comença per dígit / X / Y / Z
 - **Persona Jurídica (PJ):** `contactType === 'company'` o resta de patrons NIF
 - Top 15 mostra dues llistes separades quan hi ha ambdós tipus
@@ -2299,7 +2325,20 @@ Panell d'anàlisi que mostra l'evolució dels donants segons el període selecci
 - `src/components/donor-manager.tsx` — UI del panell
 
 
-## 3.7 PROJECTES / EIXOS D'ACTUACIÓ
+## 3.7 PROJECTES I EIXOS D'ACTUACIÓ
+
+Aquesta capa cobreix la classificació bàsica de moviments per projecte, eix o línia d'activitat.
+
+**Quan s'utilitza aquesta capa bàsica:**
+- Per assignar moviments a un projecte o eix
+- Per obtenir balanç i seguiment simple per projecte
+- Per tenir segmentació operativa sense pressupost detallat
+
+**Quan cal anar al Mòdul Projectes (`3.11`):**
+- Si el projecte té pressupost o partides
+- Si cal justificació econòmica per a un finançador
+- Si hi ha despeses de terreny o fora de banc
+- Si cal exportar Excel i ZIP de factures/comprovants
 
 | Camp | Obligatori |
 |------|------------|
@@ -2312,6 +2351,10 @@ Estadístiques per projecte:
 - Total ingressos
 - Total despeses
 - Balanç
+
+**Relació amb el mòdul de projectes:**
+- Els eixos o projectes bàsics resolen classificació i lectura simple
+- El Mòdul Projectes amplia això amb pressupost, partides, justificació i export per al finançador
 
 
 ## 3.8 INFORMES FISCALS
@@ -2372,7 +2415,7 @@ Format simplificat amb 7 columnes per enviar directament a la gestoria. **No sub
 - `2` → valor1 === 0 AND valor2 === 0
 - Buit → només un dels dos anys té import > 0
 
-#### Export AEAT (fitxer oficial) — NOU v1.32
+#### Export AEAT (fitxer oficial)
 
 Format de longitud fixa per a "Presentació mitjançant fitxer" a la Seu Electrònica de l'AEAT. **No substitueix els altres exports** — és un tercer botó addicional.
 
@@ -2529,6 +2572,26 @@ Evita errors AEAT 20701 per separacions artificials en denominacions socials.
 - Import = Σ donacions - Σ devolucions
 - Si import ≤ 0 → No es genera certificat
 
+**Enviament per email des de l'app (operatiu):**
+- Endpoint: `POST /api/certificates/send-email`
+- Auth: Bearer ID token + validació de membership
+- Permís obligatori: `fiscal.certificats.generar`
+- Proveïdor de correu: Resend (`https://api.resend.com/emails`)
+- Adjunt: PDF del certificat en base64 (individual o lot)
+- `from`: `certifica@summasocial.app` amb `reply_to` de l'organització (si existeix)
+
+**Guardrails de l'endpoint:**
+- Màxim 20 destinataris per request
+- Quota diària per organització: 500 enviaments
+- Timeout per destinatari: 12s
+- Concurrència d'enviament: 3
+- Si falta `RESEND_API_KEY` retorna `EMAIL_SERVICE_NOT_CONFIGURED` (500)
+
+**Traçabilitat i quota:**
+- Quota: `organizations/{orgId}/certificateEmailQuota/{YYYY-MM-DD}`
+- Log d'enviament: `organizations/{orgId}/certificateEmailLogs/{requestId}`
+- Resposta API amb totals: `sent`, `failed`, `skippedNoEmail` i estat de quota diària
+
 
 ## 3.9 CONFIGURACIÓ
 
@@ -2541,7 +2604,7 @@ Firma digitalitzada, nom signant, càrrec
 ### 3.9.3 Preferències
 Llindar alertes contacte: 0€, 50€, 100€, 500€
 
-### 3.9.4 Categories Comptables (ACTUALITZAT v1.28)
+### 3.9.4 Categories Comptables
 
 Categories d'ingressos i despeses personalitzables.
 
@@ -2677,13 +2740,13 @@ Exemple de report:
 | `src/i18n/json-runtime.ts` | Loader Storage/local, cache, `trFactory` |
 | `src/i18n/locales/*.json` | Bundles JSON (fallback local) |
 | `src/i18n/ca.ts`, `es.ts`, `fr.ts` | Traduccions TS legacy |
-| `src/i18n/public.ts` | Traduccions pàgines públiques (NOU v1.25) |
+| `src/i18n/public.ts` | Traduccions pàgines públiques |
 | `scripts/i18n/export-all.ts` | Export TS → JSON |
 
 Per a més detall operatiu, veure `docs/i18n.md`.
 
 
-### 3.9.8 i18n per a Rutes Públiques (NOU v1.25)
+### 3.9.8 i18n per a Rutes Públiques
 
 #### Context i problema resolt
 
@@ -2873,7 +2936,7 @@ On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
 | **SSG** | No (dinàmic) | Sí (`generateStaticParams`) |
 
 
-## 3.10 IMPORTADOR STRIPE (NOU v1.9)
+## 3.10 IMPORTADOR STRIPE
 
 ### 3.10.1 Visió general
 
@@ -3109,9 +3172,9 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 **Punt de connexió:** `transaction-table.tsx` → menú ⋮ si `canSplitStripeRemittance(tx)`
 
 
-## 3.11 MÒDUL PROJECTES — JUSTIFICACIÓ ASSISTIDA (NOU v1.10)
+## 3.11 MÒDUL PROJECTES — JUSTIFICACIÓ ECONÒMICA
 
-### 3.11.0 Navegació del Mòdul Projectes (NOU v1.14)
+### 3.11.0 Navegació del Mòdul Projectes
 
 El mòdul Projectes té una entrada única al sidebar amb un submenu col·lapsable.
 
@@ -3182,7 +3245,7 @@ const budgeted = budgetLinesData?.hasLines
   : (project.budgetEUR ?? 0);
 ```
 
-#### Importador de pressupost (ACTUALITZAT v1.32)
+#### Importador de pressupost
 
 Wizard d'importació de partides des d'Excel (.xlsx) amb 5 passos:
 
@@ -3201,7 +3264,7 @@ Wizard d'importació de partides des d'Excel (.xlsx) amb 5 passos:
 - Mode "Agrupar" suma subpartides al seu pare (evita duplicitats)
 - Substitueix completament el pressupost existent (batch delete + batch create)
 
-**Extracció de codi del text (NOU v1.32):**
+**Extracció de codi del text:**
 
 Opció toggle "Extreure codi del text" que detecta patrons de codi al nom de la partida:
 
@@ -3219,7 +3282,7 @@ Quan "Extreure codi del text" està activat:
 - Les subpartides s'agrupen automàticament sota el seu pare segons nivell de codi
 - Mode `useContextGrouping`: consolida files intel·ligentment per jerarquia
 
-**Pantalla de pressupost (millores v1.32):**
+**Pantalla de pressupost:**
 
 | Estat | Vista |
 |-------|-------|
@@ -3237,7 +3300,7 @@ Quan "Extreure codi del text" està activat:
 
 ### 3.11.4 Mode "Quadrar justificació del projecte"
 
-- Vista assistida superposada (modal)
+- Vista de suport superposada (modal)
 - L'usuari continua veient el seguiment econòmic
 - Organització per **partida**, no per despesa
 - Dos modes segons desviació:
@@ -3263,9 +3326,9 @@ L'usuari pot:
 
 **Les suggerències són heurístiques, mai bloquegen, mai escriuen dades.**
 
-> ⚠️ **Bloqueig FX (v1.33):** Les despeses off-bank amb `pendingConversion: true` (moneda local sense TC disponible) no es poden assignar. L'usuari ha de registrar un TC (manual a la despesa, o via fxTransfers del projecte) abans de poder incloure-les a cap partida.
+> ⚠️ **Bloqueig FX:** Les despeses off-bank amb `pendingConversion: true` (moneda local sense TC disponible) no es poden assignar. L'usuari ha de registrar un TC (manual a la despesa, o via fxTransfers del projecte) abans de poder incloure-les a cap partida.
 
-#### Algorisme de scoring (v1.12)
+#### Algorisme de scoring
 
 | Factor | Punts | Descripció |
 |--------|-------|------------|
@@ -3287,7 +3350,7 @@ L'usuari pot:
 | Categoria pendent | Categoria "Revisar" o buida | Badge taronja amb icona |
 | Sense contrapart | `counterpartyName` buit | Badge gris |
 
-> ⚠️ **Canvi v1.12:** "Sense document" i "sense contrapart" ja no penalitzen el scoring. Són etiquetes informatives que l'usuari veu però que no condicionen l'ordre de les suggerències.
+> ⚠️ "Sense document" i "sense contrapart" no penalitzen el scoring. Són etiquetes informatives que l'usuari veu però que no condicionen l'ordre de les suggerències.
 
 #### Famílies semàntiques
 
@@ -3331,7 +3394,7 @@ La part treta queda:
 | Visualització | Execució abans / després, efecte per partida |
 | Aplicar | Usa els hooks existents (`useSaveExpenseLink`) |
 
-### 3.11.8 Tipus de canvi i justificació (ACTUALITZAT v1.33)
+### 3.11.8 Tipus de canvi i justificació
 
 #### Sistema FX: conversió de moneda estrangera
 
@@ -3357,7 +3420,7 @@ amountEUR = originalAmount × fxRate
 ```
 On `fxRate` = EUR per 1 unitat de moneda local.
 
-#### Sub-col·lecció fxTransfers (NOU v1.33)
+#### Sub-col·lecció fxTransfers
 
 Registre de transferències bancàries EUR → moneda local associades a un projecte.
 
@@ -3382,7 +3445,7 @@ interface FxTransfer {
 
 La UI de fxTransfers es mostra a la pantalla de pressupost del projecte (`budget/page.tsx`) amb CRUD complet (afegir, editar, eliminar transferències).
 
-#### Conversió EUR en assignació (NOU v1.33)
+#### Conversió EUR en assignació
 
 Quan s'assigna una despesa off-bank en moneda local a una partida:
 - El sistema calcula `amountEUR` en el moment de l'assignació usant el TC disponible
@@ -3414,14 +3477,14 @@ Quan s'assigna una despesa off-bank en moneda local a una partida:
 
 ```
 /src/app/[orgSlug]/
-  ├── quick-expense/                    # Landing fora de dashboard (NOU v1.22)
+  ├── quick-expense/                    # Landing fora de dashboard
   │   ├── layout.tsx                    # Layout mínim (OrganizationProvider)
   │   └── page.tsx                      # Pàgina landing
   └── dashboard/project-module/
       ├── expenses/
       │   ├── page.tsx                  # Llistat de despeses elegibles
       │   ├── [txId]/page.tsx           # Detall d'una despesa
-      │   └── capture/page.tsx          # Captura ràpida de terreny (NOU v1.11)
+      │   └── capture/page.tsx          # Captura ràpida de terreny
       ├── projects/
       │   ├── page.tsx                  # Llista de projectes
       │   └── [projectId]/
@@ -3434,18 +3497,18 @@ Quan s'assigna una despesa off-bank en moneda local a una partida:
   └── page.tsx                          # Shortcut global → detecta org → landing
 
 /src/components/project-module/
-  ├── add-off-bank-expense-modal.tsx    # Modal creació/edició despesa off-bank (FX integrat v1.33)
-  ├── assignment-editor.tsx             # Editor d'assignació amb FX split (v1.33)
+  ├── add-off-bank-expense-modal.tsx    # Modal creació/edició despesa off-bank amb FX integrat
+  ├── assignment-editor.tsx             # Editor d'assignació amb split FX
   ├── balance-project-modal.tsx         # Modal "Quadrar justificació"
   ├── quick-expense-screen.tsx          # Component UI de captura ràpida
   └── ...
 
 /src/lib/
   ├── project-module-types.ts           # Tipus del mòdul
-  └── project-module-suggestions.ts     # Scoring i combinacions (NOU v1.10)
+  └── project-module-suggestions.ts     # Scoring i combinacions
 ```
 
-### 3.11.11 Drag & Drop de documents a Assignació de despeses (NOU v1.16)
+### 3.11.11 Drag & Drop de documents a Assignació de despeses
 
 Permet pujar documents arrossegant-los directament sobre cada fila de despesa a la safata d'assignació (`/project-module/expenses`).
 
@@ -3471,7 +3534,7 @@ Permet pujar documents arrossegant-los directament sobre cada fila de despesa a 
 - Edició inline del nom (sense extensió)
 - Enter per guardar, Escape per cancel·lar
 
-### 3.11.12 Captura de despeses de terreny (NOU v1.11)
+### 3.11.12 Captura de despeses de terreny
 
 | Element | Descripció |
 |---------|------------|
@@ -3501,23 +3564,23 @@ Permet pujar documents arrossegant-los directament sobre cada fila de despesa a 
 - `uploadedBy: string` — UID de qui ha pujat
 - `quickMode: boolean` — indica pujada ràpida (sense camps opcionals)
 
-**Noms estandarditzats de fitxers (NOU v1.12):**
+**Noms estandarditzats de fitxers:**
 - Format: `{projectCode}_{date}_{concept}_{amount}{ext}`
 - Exemple: `PROJ001_2025-01-15_Material_oficina_125.50.pdf`
 - S'aplica a despeses off-bank i documents adjunts a transaccions
 
-### 3.11.13 Model de dades (ACTUALITZAT v1.33)
+### 3.11.13 Model de dades
 
 **Veure Annex C.3** per l'estructura Firestore completa del mòdul projectes.
 
-Camps afegits v1.10:
+Camps principals del mòdul:
 
 | Col·lecció | Camp | Tipus | Descripció |
 |------------|------|-------|------------|
 | `projects` | `budgetEUR` | `number \| null` | Pressupost global (fallback si no hi ha partides) |
 | `budgetLines` | `budgetedAmountEUR` | `number` | Import pressupostat de la partida |
 
-Camps FX afegits v1.33:
+Camps FX del mòdul:
 
 | Col·lecció | Camp | Tipus | Descripció |
 |------------|------|-------|------------|
@@ -3529,7 +3592,7 @@ Camps FX afegits v1.33:
 | `offBankExpenses` | `fxDate` | `string \| null` | Data del TC (opcional) |
 | `expenseLinks.assignments[]` | `localPct` | `number` | Percentatge assignat (0-100) per FX split |
 
-Sub-col·lecció afegida v1.33:
+Sub-col·lecció del mòdul:
 
 | Sub-col·lecció | Path | Descripció |
 |----------------|------|------------|
@@ -3541,7 +3604,7 @@ Flag a `UnifiedExpense`:
 |------|-------|------------|
 | `pendingConversion` | `boolean` | `true` si `originalAmount` existeix però no hi ha TC disponible |
 
-### 3.11.14 Quick Expense Landing (NOU v1.22)
+### 3.11.14 Entrada ràpida de despeses
 
 Pantalla dedicada per a l'entrada ràpida de despeses des del mòbil, **sense layout de dashboard** (sense sidebar, header ni breadcrumbs).
 
@@ -3551,7 +3614,7 @@ Pantalla dedicada per a l'entrada ràpida de despeses des del mòbil, **sense la
 |------|--------|-------|
 | `/{orgSlug}/quick-expense` | Landing canònica | Pàgina amb layout mínim |
 | `/quick` | Shortcut global | Redirecció a landing (detecta org de l'usuari) |
-| `/{orgSlug}/dashboard/project-module/quick-expense` | Ruta antiga | Redirect 307 per backward-compatibility |
+| `/{orgSlug}/dashboard/project-module/quick-expense` | Ruta antiga | Redirect 307 per compatibilitat amb enllaços existents |
 
 **Decisions arquitectòniques:**
 
@@ -3571,7 +3634,7 @@ Pantalla dedicada per a l'entrada ràpida de despeses des del mòbil, **sense la
 | `user` | ✅ |
 | `viewer` | ❌ (redirigit a dashboard) |
 
-**Flux d'accés (ACTUALITZAT v1.24):**
+**Flux d'accés:**
 
 ```
 /quick → (si no user) → /login?next=/quick
@@ -3584,7 +3647,7 @@ Pantalla dedicada per a l'entrada ràpida de despeses des del mòbil, **sense la
                       Botó "Tornar" → /{orgSlug}/dashboard/project-module/expenses
 ```
 
-**Middleware Routing (ACTUALITZAT v1.24):**
+**Middleware Routing:**
 
 El middleware (`src/middleware.ts`) protegeix certes rutes per evitar loops de redirecció:
 
@@ -3611,7 +3674,7 @@ const PROTECTED_ROUTES = [
 | `src/app/[orgSlug]/quick-expense/layout.tsx` | Layout mínim (OrganizationProvider) |
 | `src/app/[orgSlug]/quick-expense/page.tsx` | Pàgina landing |
 | `src/app/quick/page.tsx` | Shortcut global (delega a redirect-to-org) |
-| `src/app/[orgSlug]/dashboard/project-module/quick-expense/page.tsx` | Redirect 307 legacy |
+| `src/app/[orgSlug]/dashboard/project-module/quick-expense/page.tsx` | Redirect 307 de compatibilitat |
 | `src/components/project-module/quick-expense-screen.tsx` | Component UI compartit |
 
 **Connexió amb expenses:**
@@ -3624,7 +3687,7 @@ El botó càmera a la safata de despeses (`/dashboard/project-module/expenses`) 
 </Link>
 ```
 
-### 3.11.15 Sistema d'Ajuda: HelpSheet + Manual + Hub de Guies + Bot (NOU v1.23, ampliat v1.43)
+### 3.11.15 Sistema d'Ajuda: panell contextual + manual + hub de guies + bot
 
 El sistema d'ajuda actual no és una sola peça: són quatre capes connectades entre si.
 
@@ -3701,11 +3764,11 @@ Centre d'ajuda navegable amb guies pas-a-pas per a les operacions més freqüent
 | `splitRemittance` | Dividir remesa | Split manual |
 | `stripeDonations` | Donacions Stripe | Importador Stripe |
 | `travelReceipts` | Tiquets de viatge | Captura ràpida |
-| `travelExpenseReport` | Liquidació de despeses | Flux de liquidació (NOU v1.27) |
-| `mileageTravel` | Quilometratge de viatge | Registre de km (NOU v1.27) |
+| `travelExpenseReport` | Liquidació de despeses | Flux de liquidació |
+| `mileageTravel` | Quilometratge de viatge | Registre de km |
 | `donors` | Gestió de donants | CRUD donants |
 | `reports` | Informes fiscals | 182, 347, certificats |
-| `projects` | Mòdul projectes | Justificació assistida |
+| `projects` | Mòdul projectes | Justificació econòmica |
 | `monthlyFlow` | Flux mensual | Operativa recurrent |
 | `yearEndFiscal` | Tancament fiscal | Fi d'any |
 | `accessSecurity` | Accés i seguretat | Multi-usuari |
@@ -3798,7 +3861,7 @@ Bot autenticat, integrat al layout del dashboard, amb recuperació determinista 
 - Matching per intents, keywords, domini, `uiPaths`, `symptom`, `error_key`
 - Suporta small talk separat (salutacions, gràcies, tancament, "qui ets")
 
-**Millores v1.43:**
+**Millores actuals:**
 - Recuperació semàntica reforçada per entendre millor preguntes naturals (ca/es) i variants habituals
 - Desambiguació en 2 opcions quan la consulta és ambigua
 - Fallback guiat amb preguntes suggerides quan no hi ha match exacte
@@ -3899,20 +3962,28 @@ El coneixement editable del bot té cicle `draft -> precheck -> publish`.
   3. dataset d'emergència
 
 
-### 3.11.16 Exportació Excel de justificació per finançadors (NOU v1.37)
+### 3.11.16 Exportació de justificació per al finançador
 
-Excel amb totes les despeses assignades a un projecte, pensat per entregar al finançador.
+La pantalla de pressupost del projecte permet baixar la justificació econòmica llesta per compartir amb el finançador.
 
-**Punt d'entrada:** Pantalla de pressupost del projecte → botó descàrrega o menú ⋮ → "Exportar justificació (Excel)"
+**Sortides disponibles:**
+- Excel amb totes les despeses assignades al projecte
+- ZIP amb factures i comprovants de les despeses justificades
 
-**Diàleg de selecció d'ordre:**
+**Punts d'entrada:** Pantalla de pressupost del projecte → botó de descàrrega o menú ⋮
 
-Abans de generar l'Excel, l'usuari escull com ordenar les files:
+**Ordre de la justificació:**
+
+Abans de generar l'Excel, l'usuari escull com ordenar les files. El ZIP de comprovants es genera amb les dues ordenacions perquè es pugui entregar segons el criteri que demani el finançador:
 
 | Mode | Valor intern | Comportament |
 |------|-------------|--------------|
 | Per partida i data | `budgetLineThenChronological` | Agrupa per `budgetLineId`, dins de cada partida ordena per data. Per defecte. |
 | Cronològic | `chronological` | Ordena totes les files per `dateExpense` ascendent, sense agrupació. |
+
+**Excel de justificació:**
+
+Genera un full amb les despeses justificades, preparat per revisar o enviar.
 
 **Columnes (A-L):**
 
@@ -3935,12 +4006,21 @@ Abans de generar l'Excel, l'usuari escull com ordenar les files:
 
 **Capçaleres traduïdes:** Les etiquetes de columna es passen via `FundingColumnLabels` i es resolen amb `tr()` → surten en l'idioma de l'usuari (ca/es/fr/pt).
 
+**ZIP de factures i comprovants:**
+
+- Inclou els documents associats a les despeses justificades
+- Crea `01_per_partida` amb els documents agrupats per partida
+- Crea `02_cronologic` amb els documents en ordre cronològic
+- Afegeix `manifest.csv` amb la traçabilitat de cada document, incloent si falta o si hi ha hagut error de descàrrega
+- Serveix per entregar al finançador un paquet complet sense haver de reordenar fitxers manualment
+
 **Fitxers:**
 
 | Fitxer | Funció |
 |--------|--------|
 | `src/lib/project-justification-export.ts` | `buildProjectJustificationFundingXlsx()` — generació de l'Excel |
-| `src/lib/project-justification-rows.ts` | `buildJustificationRows()` — base de files (compartida amb ZIP) |
+| `src/lib/project-justification-rows.ts` | `buildJustificationRows()` — base de files compartida per Excel i ZIP |
+| `src/lib/project-justification-attachments-zip.ts` | `exportProjectJustificationZip()` — generació del ZIP de comprovants |
 | `src/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page.tsx` | UI del diàleg + invocació |
 
 **Tipus rellevants:**
@@ -3956,7 +4036,7 @@ interface FundingColumnLabels {
 }
 ```
 
-## 3.12 LIQUIDACIONS DE DESPESES (NOU v1.27)
+## 3.12 LIQUIDACIONS DE DESPESES
 
 Sistema per gestionar liquidacions de despeses de viatge i desplaçaments amb tiquets, quilometratge i generació de PDF.
 
@@ -4066,14 +4146,14 @@ Component `<TicketsInbox>` per gestionar tiquets (PendingDocument amb `type: 're
 - Arxivar tiquets
 - Selecció múltiple per assignar a liquidació
 - Upload de nous tiquets
-- **Drag & drop (v1.28):** Arrossegar fitxers dins la card de tiquets per afegir-los directament
+- **Drag & drop:** Arrossegar fitxers dins la card de tiquets per afegir-los directament
 
 **Integració amb PendingDocuments:**
 - Els tickets són `PendingDocument` amb `type: 'receipt'`
 - Es vinculen a la liquidació via `receiptDocIds[]`
 - En arxivar liquidació, es poden arxivar els tickets associats
 
-**Drag & Drop de Tiquets (NOU v1.28):**
+**Drag & Drop de Tiquets:**
 - La card de tiquets accepta drag & drop extern de fitxers
 - Formats admesos: PDF, XML, JPG, JPEG, PNG
 - Validació al drop handler: si cap fitxer és vàlid → toast d'error (no s'obre modal buit)
@@ -4081,9 +4161,9 @@ Component `<TicketsInbox>` per gestionar tiquets (PendingDocument amb `type: 're
 
 ### 3.12.6 Quilometratge Multilínia
 
-**Evolució:**
-- **v1.26 i anteriors:** Camp `mileage` amb una sola línia
-- **v1.27+:** Array `mileageItems[]` amb múltiples línies
+**Evolució funcional:**
+- Model antic: camp `mileage` amb una sola línia
+- Model actual: array `mileageItems[]` amb múltiples línies
 
 **Compatibilitat:**
 - Si existeix `mileageItems[]`, té prioritat
@@ -4167,7 +4247,7 @@ El tab de quilometratge suporta deep linking amb scroll automàtic:
 | `expenseReports.banners.*` | Banners informatius |
 
 
-## 3.13 PANELL SUPERADMIN GLOBAL (NOU v1.20)
+## 3.13 PANELL SUPERADMIN GLOBAL
 
 Panell de control exclusiu per al SuperAdmin del sistema, accessible des de `/admin`.
 
@@ -4181,7 +4261,7 @@ Panell de control exclusiu per al SuperAdmin del sistema, accessible des de `/ad
 
 ### 3.13.2 Funcionalitats
 
-**Redisseny Torre de Control (NOU v1.43):**
+**Redisseny Torre de Control:**
 
 | Bloc | Descripció |
 |------|------------|
@@ -4195,7 +4275,7 @@ Panell de control exclusiu per al SuperAdmin del sistema, accessible des de `/ad
 
 **Origen del resum executiu:** endpoint `GET /api/admin/control-tower/summary`.
 
-### 3.13.3 Reset de Contrasenya (NOU v1.20)
+### 3.13.3 Reset de Contrasenya
 
 Secció per enviar correus de restabliment de contrasenya:
 
@@ -4205,7 +4285,7 @@ Secció per enviar correus de restabliment de contrasenya:
 | **Acció** | `sendPasswordResetEmail()` de Firebase Auth |
 | **Seguretat** | Missatge genèric sempre ("Si l'adreça existeix...") per no revelar si l'email existeix |
 
-### 3.13.4 Secció Diagnòstic (NOU v1.20)
+### 3.13.4 Secció Diagnòstic
 
 Enllaços ràpids per a manteniment i diagnòstic:
 
@@ -4215,7 +4295,7 @@ Enllaços ràpids per a manteniment i diagnòstic:
 | **Cloud Logging** | `console.cloud.google.com/logs/query?project=summa-social` |
 | **DEV-SOLO-MANUAL.md** | Path copiable al porta-retalls |
 
-### 3.13.5 Salut del Sistema - Sentinelles (NOU v1.23)
+### 3.13.5 Salut del Sistema - Sentinelles
 
 Sistema automàtic de detecció d'incidències accessible només des de `/admin`.
 
@@ -4233,9 +4313,9 @@ Sistema automàtic de detecció d'incidències accessible només des de `/admin`
 | S6 | Encallaments | CONSULTA | Transaccions sense classificar > 30 dies |
 | S7 | Fiscal 182 | CONSULTA | Donants sense dades fiscals |
 | S8 | Activitat | CONSULTA | Organitzacions inactives > 60 dies |
-| S9 | Storage | CRITICAL | Errors `storage/unauthorized` (v1.28) |
+| S9 | Storage | CRITICAL | Errors `storage/unauthorized` |
 
-**Storage Unauthorized (NOU v1.28):**
+**Storage Unauthorized:**
 - Detecta errors de permisos de Firebase Storage
 - Afecta: upload de pendingDocuments, generació PDF liquidacions
 - Report automàtic com a incident CRITICAL si passa a ruta core (/pendents, /liquidacions)
@@ -4269,14 +4349,14 @@ Errors ignorats automàticament (no creen incidents):
 - `src/components/admin/system-health.tsx` — UI sentinelles + botó "Copiar prompt"
 - `functions/src/alerts/sendIncidentAlert.ts` — Cloud Function alertes email
 
-**Alertes email (v1.1):**
+**Alertes email:**
 - Cloud Function `sendIncidentAlert` envia email via Resend (proveïdor ja existent)
 - Criteris d'enviament:
   - `severity === CRITICAL`
   - `status === OPEN` (mai si ACK o RESOLVED)
   - `count >= 2` O ruta core (movimientos, fiscalitat, project-module...)
   - Cooldown 24h per incident (un email per finestra)
-- Email inclou prompt de reparació per Claude Code
+- Email inclou prompt de reparació per Codex
 - Flag `ALERTS_ENABLED` (per defecte `false` en dev)
 - Sense dependències noves: usa Resend API directament
 
@@ -4284,7 +4364,7 @@ Errors ignorats automàticament (no creen incidents):
 - Només visible per SuperAdmin a `/admin`
 - S6–S8 requereixen implementació de consultes específiques
 
-### 3.13.5b Integritat de Dades - Diagnòstic P0 (NOU v1.33)
+### 3.13.5b Integritat de Dades - Diagnòstic P0
 
 Panell de diagnòstic d'integritat de dades accessible per administradors d'organització al Dashboard.
 
@@ -4310,16 +4390,16 @@ Panell de diagnòstic d'integritat de dades accessible per administradors d'orga
 - `src/lib/category-health.ts` — Checks i funció `runHealthCheck()`
 - `src/app/[orgSlug]/dashboard/page.tsx` — UI Card + Dialog
 
-### 3.13.5c Guardrails d'Integritat: Categories i Eixos (NOU v1.35)
+### 3.13.5c Guardrails d'Integritat: Categories i Projectes Bàsics
 
-Guardrails per evitar inconsistències referenciàries quan s'arxiven categories o eixos d'actuació.
+Guardrails per evitar inconsistències referenciàries quan s'arxiven categories o projectes/eixos de classificació bàsica.
 
 **Invariants:**
 
 | ID | Descripció | Enforce |
 |----|------------|---------|
 | I1 | Prohibit delete físic de categories | `allow delete: if false` (Firestore Rules) |
-| I2 | Prohibit delete físic de projects (eixos) | `allow delete: if false` (Firestore Rules) |
+| I2 | Prohibit delete físic de projectes bàsics | `allow delete: if false` (Firestore Rules) |
 | I3 | Client no pot escriure archivedAt/ByUid/FromAction | Rules bloquegen modificació de camps arxivat |
 | I4 | Arxivat requereix 0 referències actives | API `/api/categories/archive` i `/api/projects/archive` |
 | I5 | Traça obligatòria | `archivedByUid` + `archivedFromAction` sempre presents |
@@ -4346,12 +4426,12 @@ archivedFromAction?: string | null; // 'archive-category-api' | 'archive-project
 | Endpoint | Funció |
 |----------|--------|
 | `POST /api/categories/archive` | Arxiva categoria amb reassignació opcional |
-| `POST /api/projects/archive` | Arxiva eix amb reassignació opcional |
+| `POST /api/projects/archive` | Arxiva projecte o eix bàsic amb reassignació opcional |
 
 **Validacions de les APIs:**
 - Auth: token vàlid requerit
 - orgId: derivat de membership (no del body)
-- Rol: admin per categories, admin/user per projects
+- Rol: admin per categories, admin/user per projectes bàsics
 - fromId: ha d'existir i no estar ja arxivat (idempotent si ja ho està)
 - toId (si present): ha d'existir, no arxivat, diferent de fromId
 - Count actiu: query real `where('category/projectId', '==', fromId) AND archivedAt == null`
@@ -4361,19 +4441,19 @@ archivedFromAction?: string | null; // 'archive-category-api' | 'archive-project
 
 Nous blocs al diagnòstic P0:
 - **F) Categories òrfenes**: `tx.category` apunta a doc inexistent
-- **G) Projects orfes**: `tx.projectId` apunta a doc inexistent
+- **G) Projectes orfes**: `tx.projectId` apunta a doc inexistent
 
 Nota: Una categoria/eix arxivat NO és orfe (el doc existeix). Orfe = el document no existeix.
 
 **Fitxers:**
 - `src/app/api/categories/archive/route.ts` — API arxivar categories
-- `src/app/api/projects/archive/route.ts` — API arxivar eixos
+- `src/app/api/projects/archive/route.ts` — API arxivar projectes o eixos bàsics
 - `src/components/reassign-modal.tsx` — Modal reassignació
 - `src/components/category-manager.tsx` — UI categories (flux arxivat)
-- `src/components/project-manager.tsx` — UI eixos (flux arxivat)
+- `src/components/project-manager.tsx` — UI projectes/eixos bàsics (flux arxivat)
 - `firestore.rules` — Rules actualitzades
 
-### 3.13.5d Guardrails d'Integritat: Comptes Bancaris (NOU v1.36 - FASE 2A)
+### 3.13.5d Guardrails d'Integritat: Comptes Bancaris
 
 Guardrails per evitar desactivar comptes bancaris que tenen moviments associats.
 
@@ -4400,7 +4480,7 @@ Guardrails per evitar desactivar comptes bancaris que tenen moviments associats.
 
 **Health Check:** Bloc H detecta transaccions amb `bankAccountId` que no existeix a la col·lecció bankAccounts.
 
-### 3.13.5e Guardrails d'Integritat: Contactes (NOU v1.36 - FASE 2B)
+### 3.13.5e Guardrails d'Integritat: Contactes
 
 Guardrails per evitar arxivar contactes (donants/proveïdors/treballadors) amb moviments actius.
 
@@ -4429,7 +4509,7 @@ Guardrails per evitar arxivar contactes (donants/proveïdors/treballadors) amb m
 
 **Health Check:** Bloc I detecta transaccions amb `contactId` que no existeix a la col·lecció contacts.
 
-**Updates de contactes via Admin API (v1.36+):**
+**Updates de contactes via Admin API:**
 
 Les Firestore Rules exigeixen immutabilitat de `archivedAt`/`archivedByUid`/`archivedFromAction` en updates. Amb `setDoc(merge: true)` client-side, un camp absent s'interpreta com `null` ≠ valor existent → `permission-denied`.
 
@@ -4447,11 +4527,11 @@ Fitxers: `src/app/api/contacts/import/route.ts`, `src/services/contacts.ts`.
 
 Migrat: `donor-manager.tsx` (commits `d9c7ae0`, `9c3be85`). Pendent: `supplier-manager.tsx`, `employee-manager.tsx`.
 
-**Fix Firestore Rules `.get()` per camps archived (v1.41):**
+**Fix Firestore Rules `.get()` per camps archived:**
 
 Les regles d'update accedien directament a `resource.data.archived`, que llançava error si el camp no existia al document (documents creats abans del sistema d'arxivat). Ara s'utilitza `resource.data.get('archived', null)` per defecte segur. Afecta totes les regles d'update que comprovaven el camp `archived`.
 
-### 3.13.5f Guardrails d'Integritat: Liquidacions (NOU v1.36 - FASE 2C)
+### 3.13.5f Guardrails d'Integritat: Liquidacions
 
 Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pendents.
 
@@ -4497,7 +4577,7 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 - `src/app/[orgSlug]/dashboard/movimientos/liquidacions/page.tsx` — UI liquidacions
 - `src/lib/category-health.ts` — checkOrphanTickets()
 
-### 3.13.5g Resum Complet de Guardrails d'Integritat (ACTUALITZAT v1.40)
+### 3.13.5g Resum Complet de Guardrails d'Integritat
 
 **Taula resum de totes les entitats protegides:**
 
@@ -4521,9 +4601,9 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 | K | Remeses òrfenes (fills amb `parentTransactionId` inexistent) | Warning |
 | L | ExpenseLinks orfes (`txId` inexistent a transactions) | Warning |
 
-**Nota v1.40:** Blocs K i L afegits. K integrat al dashboard de health; L exportat com a funció independent (`checkOrphanExpenseLinks()`) però no integrat al dashboard general perquè `expenseLinks` no es carreguen a la vista principal.
+**Nota:** Els blocs K i L existeixen, però no tenen el mateix nivell d'integració a la vista principal del dashboard de health.
 
-### 3.13.5h Admin SDK Compartit (NOU v1.40)
+### 3.13.5h Admin SDK Compartit
 
 Centralització de la inicialització de Firebase Admin SDK en un únic helper, eliminant ~500 línies de codi duplicat a les rutes API.
 
@@ -4539,7 +4619,7 @@ Centralització de la inicialització de Firebase Admin SDK en un únic helper, 
 | `verifyIdToken(token)` | Verifica i retorna el decoded token |
 | `validateUserMembership(orgId, uid, roles?)` | Valida que l'usuari pertany a l'org amb rol adequat |
 | `BATCH_SIZE` | Constant = 50 (màxim ops per batch Firestore) |
-| `requireOperationalAccess(req)` | Valida accés admin/user + superadmin bypass (NOU v1.41) |
+| `requireOperationalAccess(req)` | Valida accés admin/user + superadmin bypass |
 
 **INVARIANT:** `BATCH_SIZE = 50` — Firestore limita a 500 ops per batch, però per seguretat s'usa 50. No negociable.
 
@@ -4552,10 +4632,10 @@ Centralització de la inicialització de Firebase Admin SDK en un únic helper, 
 - `POST /api/expense-reports/archive`
 - `POST /api/contacts/archive`
 - `POST /api/contacts/import`
-- `POST /api/invitations/resolve` (NOU v1.40)
-- `POST /api/invitations/accept` (NOU v1.40)
+- `POST /api/invitations/resolve`
+- `POST /api/invitations/accept`
 
-### 3.13.5h2 Accés Operatiu Unificat (NOU v1.41)
+### 3.13.5h2 Accés Operatiu Unificat
 
 Helper centralitzat que valida accés operatiu (admin + user) amb bypass per superadmin, eliminant codi duplicat a les rutes API d'arxivat.
 
@@ -4578,7 +4658,7 @@ Helper centralitzat que valida accés operatiu (admin + user) amb bypass per sup
 - `POST /api/contacts/archive`
 - `POST /api/contacts/import`
 
-### 3.13.5i Registre i Invitacions via Admin API (NOU v1.40)
+### 3.13.5i Registre i Invitacions via Admin API
 
 El flux de registre d'usuaris convidats ha estat migrat a Admin SDK per resoldre problemes amb les Firestore Rules que bloquejaven l'escriptura client.
 
@@ -4609,11 +4689,11 @@ El flux de registre d'usuaris convidats ha estat migrat a Admin SDK per resoldre
 | `src/app/admin/page.tsx` | Pàgina del panell SuperAdmin |
 | `src/components/admin/create-organization-dialog.tsx` | Modal crear organització |
 | `src/lib/data.ts` | Constant `SUPER_ADMIN_UID` |
-| `src/lib/api/admin-sdk.ts` | Helper centralitzat Admin SDK (NOU v1.40) |
-| `src/lib/api/require-operational-access.ts` | Validació accés operatiu unificat (NOU v1.41) |
-| `src/lib/donors/periodicity-suffix.ts` | Sufix periodicitat quota (NOU v1.41) |
+| `src/lib/api/admin-sdk.ts` | Helper centralitzat Admin SDK |
+| `src/lib/api/require-operational-access.ts` | Validació accés operatiu unificat |
+| `src/lib/donors/periodicity-suffix.ts` | Sufix periodicitat quota |
 
-### 3.13.7 Backup Local d'Organitzacions (NOU v1.28)
+### 3.13.7 Backup Local d'Organitzacions
 
 Funcionalitat per descarregar un backup complet d'una organització en format JSON.
 
@@ -4866,12 +4946,12 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 
 **Columnes detectades (base):** Data, Concepte/Descripció, Import/Quantitat
 
-**Contracte vigent (NOU v1.45):**
+**Contracte vigent:**
 - `Saldo` / `Balance` → `balanceAfter` (només si és número finit)
 - `F. ejecución` / `Fecha operación` → `operationDate` (**obligatori**, data vàlida `YYYY-MM-DD`)
 - Si falta o és invàlid: `OPERATION_DATE_REQUIRED` i abort de la importació.
 
-**Regla de duplicate fort (NOU v1.44):**
+**Regla de duplicate fort:**
 - Només s'activa si l'entrada porta `balanceAfter` i `operationDate`.
 - Clau: `bankAccountId + balanceAfter + amount + operationDate`.
 - Sense fallback a `date` dins la regla forta.
@@ -4901,7 +4981,7 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 | CSV | .csv, .txt |
 | Excel | .xlsx, .xls |
 
-## 4.5 Importador de Devolucions (NOU v1.8)
+## 4.5 Importador de Devolucions
 
 | Format | Extensions | Banc |
 |--------|------------|------|
@@ -4911,7 +4991,7 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 
 **Columnes detectades automàticament:** IBAN, Import, Data, DNI, Nom, Motiu
 
-## 4.6 Importador Stripe (NOU v1.9)
+## 4.6 Importador Stripe
 
 | Format | Extensions | Font |
 |--------|------------|------|
@@ -5022,12 +5102,12 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 ## 7.3 Autenticació
 - Session persistence (caduca en tancar navegador)
 
-## 7.4 Modals Radix UI (NOU v1.8)
+## 7.4 Modals Radix UI
 - Fix bloqueig `aria-hidden` en tancar modals
 - DropdownMenu controlat per evitar conflictes
 - `setTimeout` + `blur()` abans d'obrir modals des de menús
 
-## 7.5 Convencions UI/UX (NOU v1.17)
+## 7.5 Convencions UI/UX
 
 ### 7.5.1 Contracte Cromàtic
 
@@ -5160,7 +5240,7 @@ Quan una acció usa IA, el tooltip ha de ser descriptiu i no implicar confirmaci
 ```
 - Components com `DonorSearchCombobox` reescrits sense `cmdk` per evitar problemes de portals niuats
 
-### 7.5.9 Dashboard Layout i Overflow (NOU v1.27)
+### 7.5.9 Dashboard Layout i Overflow
 
 **Problema resolt:**
 Contingut ample (com `TransactionsTable` amb `min-w-[600px]`) pot expandir el contenidor principal i empènyer elements fora del viewport, fent desaparèixer icones del header.
@@ -5209,7 +5289,7 @@ Contingut ample (com `TransactionsTable` amb `min-w-[600px]`) pot expandir el co
 - El bloc dreta (`shrink-0`) mai es comprimeix ni desapareix
 - Les icones d'ajuda i notificacions són sempre accessibles
 
-### 7.5.10 Adaptació Mòbil (NOU v1.29)
+### 7.5.10 Adaptació Mòbil
 
 **Detecció de dispositiu:**
 ```tsx
@@ -5285,7 +5365,7 @@ const [activeTab, setActiveTab] = useState<string>('tab1');
 **Espai per FAB (Floating Action Button):**
 Quan hi ha un FAB a la pàgina, afegir `pb-24 md:pb-0` al contenidor principal per evitar col·lisions amb el contingut.
 
-**Fitxers principals adaptats (v1.29):**
+**Fitxers principals adaptats:**
 - `src/app/[orgSlug]/dashboard/project-module/expenses/page.tsx`
 - `src/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page.tsx`
 - `src/app/[orgSlug]/dashboard/super-admin/page.tsx`
@@ -5294,7 +5374,7 @@ Quan hi ha un FAB a la pàgina, afegir `pb-24 md:pb-0` al contenidor principal p
 - `src/components/admin/product-updates-section.tsx`
 - `src/components/super-admin/i18n-manager.tsx`
 
-## 7.6 Onboarding / Benvinguda Inicial (ACTUALITZAT v1.20)
+## 7.6 Onboarding / Benvinguda Inicial
 
 ### Objectiu
 Donar la benvinguda al primer admin d'una nova organització amb una única modal simple, sense bloquejar l'ús de l'aplicació.
@@ -5305,7 +5385,7 @@ Donar la benvinguda al primer admin d'una nova organització amb una única moda
 - **Primer admin**: Només el primer admin (per `joinedAt`) veu la modal.
 - **Definitiu**: Un cop vista, `welcomeSeenAt` s'escriu i la modal no torna a aparèixer.
 
-### Flux simplificat (v1.20)
+### Flux simplificat
 
 1. **Primera càrrega del Dashboard**: Si l'usuari és el primer admin i `welcomeSeenAt` no existeix, es mostra la modal de benvinguda.
 2. **Opció "Guia'm"**: Obre el wizard de configuració (dades fiscals, firma, categories).
@@ -5339,9 +5419,9 @@ onboarding?: {
 | `src/components/onboarding/WelcomeOnboardingModal.tsx` | Modal de benvinguda |
 | `src/components/onboarding/OnboardingWizard.tsx` | Wizard de configuració (obert des de modal o Configuració) |
 
-### Canvis respecte v1.18
+### Canvis respecte al model anterior
 
-| v1.18 | v1.20 |
+| Abans | Ara |
 |-------|-------|
 | Checklist persistent al Dashboard | Modal única, apareix una sola vegada |
 | Pàgina `/onboarding` dedicada | Eliminada, wizard s'obre des de modal o Configuració |
@@ -5349,7 +5429,7 @@ onboarding?: {
 | `onboardingSkippedAt` | Substituït per `onboarding.welcomeSeenAt` |
 | Lògica complexa `computeOnboardingStatus()` | Simplificat a `shouldShowWelcomeModal()` |
 
-## 7.7 Perfil de Rendiment (NOU v1.21)
+## 7.7 Perfil de Rendiment
 
 ### Escala objectiu
 Summa Social està optimitzat per a **<100 usuaris concurrents** amb marge operatiu. El límit pràctic depèn del volum de dades per organització (transaccions, contactes).
@@ -5425,7 +5505,7 @@ Indicadors que requeririen intervenció:
 4. Revisar categories
 5. Importar contactes des d'Excel
 6. Assignar categoria per defecte a cada contacte
-7. Crear projectes/eixos
+7. Crear projectes o eixos bàsics
 
 ## 8.2 Dia a Dia
 
@@ -5434,9 +5514,9 @@ Indicadors que requeririen intervenció:
 3. Revisar alertes al Dashboard
 4. Corregir moviments pendents
 5. Dividir remeses si n'hi ha
-6. **Gestionar devolucions pendents** (NOU v1.8)
+6. **Gestionar devolucions pendents**
 
-## 8.3 Gestió de Devolucions (NOU v1.8)
+## 8.3 Gestió de Devolucions
 
 1. Veure banner "Devolucions pendents" a Moviments
 2. Clicar "Revisar"
@@ -5461,28 +5541,28 @@ Indicadors que requeririen intervenció:
 
 ## 9.1 Entorn
 - IDE: VS Code
-- Assistent IA: Claude Code
+- Assistent IA: Codex
 - Control de versions: Git + GitHub
 
 ## 9.2 Flux
 ```
-1. Demanar canvis a Claude Code
-2. Claude Code modifica fitxers
-3. git add . && git commit -m "descripció"
-4. git push
-5. Desplegament automàtic
+1. Iniciar feina amb `npm run inicia` o `npm run implementa`
+2. Codex treballa al worktree de tasca corresponent
+3. Validar i tancar amb `npm run acabat`
+4. Si queda preparat per producció, autoritzar publicació
+5. Publicar amb `npm run publica`
 ```
 
 ## 9.3 URLs
 - Producció: https://summasocial.app
-- Firebase: https://studio--summa-social.us-central1.hosted.app
+- Firebase App Hosting: https://studio--summa-social.us-central1.hosted.app
 
 ## 9.4 Tests
 - Tests unitaris a `src/lib/__tests__/` (7 fitxers)
 - Hook pre-commit amb Husky
 - `npm test` abans de cada commit
 
-## 9.5 Gate i18n pre-commit (NOU v1.40)
+## 9.5 Gate i18n pre-commit
 
 Validació automàtica que bloqueja commits si falten claus `tr()` a `ca.json` (idioma base).
 
@@ -5496,12 +5576,12 @@ Validació automàtica que bloqueja commits si falten claus `tr()` a `ca.json` (
 - Executat a `scripts/verify-local.sh` (verificació local pre-deploy)
 - Comanda: `npm run i18n:check`
 
-**Merge Storage + local (NOU v1.40):**
+**Merge Storage + local:**
 - `src/i18n/json-runtime.ts` fa merge entre traduccions remotes (Firebase Storage, editades per SuperAdmin) i el bundle local
 - Si una clau existeix a Storage, té prioritat; si no, cau al bundle local
 - Correcció: abans el merge podia perdre claus locals noves si Storage no les tenia
 
-## 9.6 SafeSelect — Guard per SelectItem (NOU v1.40)
+## 9.6 SafeSelect — Guard per SelectItem
 
 Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.Item` (Radix UI), que llança error si `value` és buit.
 
@@ -5523,85 +5603,9 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 - ⚠️ **i18n PT**: `guides.importDonors.steps` longitud diferent (base=5, pt=6) + clau extra `.steps.5`
 - ⚠️ **i18n FR**: `help.dashboard.steps` longitud diferent (base=5, fr=4) + `help.dashboard.extra.order.items` (base=4, fr=3)
 
-## Completades v1.43
-- ✅ Hub de Guies/Bot: recuperació semàntica ampliada amb consultes reals (ca/es)
-- ✅ Hub de Guies/Bot: desambiguació guiada (opcions 1/2) en preguntes ambigües
-- ✅ Hub de Guies/Bot: uiPaths com enllaços clicables a pantalla dins del xat
-- ✅ Hub de Guies/Bot: fallback guiat amb suggeriments accionables
-- ✅ SuperAdmin `/admin`: redisseny "Torre de Control" en 5 blocs operatius
-- ✅ Control Tower: correcció parse dates/timestamps per evitar crash en resum
-- ✅ Unificació bypass SuperAdmin en rutes de remeses sensibles
+## Fites i historial
 
-## Completades v1.41
-- ✅ Persona de contacte per empreses (`contactPersonName`): camp, import, export, UI
-- ✅ Filtres dashboard donants: Tipus, Modalitat, Periodicitat (lògica AND, comptadors)
-- ✅ Quota amb sufix de periodicitat (/mes, /trim, /sem, /any)
-- ✅ Accés operatiu unificat (`require-operational-access.ts`), superadmin bypass
-- ✅ Fix Firestore Rules: `.get('archived', null)` per docs sense camp archived
-- ✅ Fix i18n clau botó arxivar categories/projectes
-- ✅ Fix typecheck: ExpenseLink type + guard seqüència SEPA
-
-## Completades v1.40
-- ✅ Pre-selecció automàtica de donants al wizard SEPA pain.008 per periodicitat natural
-- ✅ Dinàmica de donants redissenyada: 5 blocs, separació PF/PJ, Top 15
-- ✅ Admin SDK compartit centralitzat (`admin-sdk.ts`), -500 línies duplicades
-- ✅ Registre/invitacions migrat a Admin API (bypass Firestore Rules)
-- ✅ Health Check blocs K (remeses òrfenes) i L (expenseLinks orfes)
-- ✅ Gate i18n pre-commit: hard block si falten claus `tr()` a ca.json
-- ✅ Dashboard i SEPA 100% traduïbles via `tr()` (PT complet)
-- ✅ Merge Storage + local per i18n amb fallback correcte
-- ✅ SafeSelect guard per evitar crash Radix UI amb valors buits
-- ✅ Periodicitat donants: mostra "sense periodicitat" quan null, persisteix monthly explícitament
-- ✅ Neteja massiva de console.logs en producció
-
-## Completades v1.29
-- ✅ Adaptació mòbil completa: patrons normalitzats per a barres d'accions, navegació i taules
-- ✅ CTA + "Més accions" DropdownMenu per a pantalles mòbils
-- ✅ Tabs → Select per a navegació mòbil
-- ✅ MobileListItem per a taules en mòbil
-- ✅ DangerZone col·lapsable amb Accordion
-- ✅ Fix traduccions de categories al Dashboard (TopCategoriesTable)
-- ✅ Pàgines adaptades: expenses, super-admin, admin, configuracio, product-updates, i18n-manager
-
-## Completades v1.16
-- ✅ Drag & drop de documents a la safata de despeses (per fila)
-- ✅ Auto-naming de documents amb `buildDocumentFilename()` (format YYYY.MM.DD_concepte.ext)
-- ✅ Renomenar documents inline (botó llapis, Enter/Escape)
-- ✅ Exportació Excel de donants (nom, NIF, quota, IBAN, estat)
-
-## Completades v1.10
-- ✅ Mòdul Projectes: justificació assistida per partides
-- ✅ Mode infraexecució: afegir despeses amb suggerències heurístiques
-- ✅ Mode sobreexecució: treure o reduir imputacions (split parcial)
-- ✅ Simulació en memòria fins a "Aplicar"
-- ✅ Pressupost unificat als cards (suma partides vs global)
-- ✅ Scoring per famílies semàntiques (viatges, personal, serveis, etc.)
-
-## Completades v1.9
-- ✅ Importador Stripe (dividir payouts en donacions + comissions)
-- ✅ Matching donants per email exacte
-- ✅ Traçabilitat completa (stripePaymentId, stripeTransferId)
-
-## Completades v1.8
-- ✅ Importador de devolucions del banc (Santander, Triodos)
-- ✅ Detecció automàtica d'agrupacions de devolucions
-- ✅ Remeses parcials de devolucions
-- ✅ Matching per IBAN → DNI → Nom exacte
-- ✅ UX simplificada per devolucions
-- ✅ Tests unitaris (77 tests) + Husky pre-commit
-- ✅ Fixes bloqueig aria-hidden modals Radix
-- ✅ Estat actiu/baixa per donants
-- ✅ Importador actualitza donants existents
-- ✅ Vista agrupada de remeses (1 línia + modal detall)
-- ✅ Detecció i reactivació de socis de baixa a remeses
-- ✅ Link al donant des de modal de remesa
-- ✅ Eina per esborrar última remesa (Zona Perill)
-
-## Completades v1.7
-- ✅ Suport Excel per divisor de remeses
-- ✅ Camps city/province a l'importador de donants
-- ✅ Exportació Excel Model 182 per gestoria (amb recurrència)
-- ✅ Session persistence (seguretat)
+Les fites històriques i els desplegaments anteriors es documenten a `docs/CHANGELOG.md` i al resum cronològic del punt `11. Historial de versions`.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -5616,7 +5620,7 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 | 1.7 | Des 2024 | Excel Model 182 per gestoria, suport Excel remeses, camps city/province, session persistence |
 | 1.8 | Des 2024 | Importador devolucions del banc, remeses parcials, suport multi-banc (Santander/Triodos), tests unitaris, fixes modals Radix, UX simplificada |
 | 1.9 | Des 2025 | Importador Stripe (payouts → donacions + comissions), matching per email, traçabilitat completa |
-| **1.10** | **Des 2025** | **Mòdul Projectes: justificació assistida per partides, suggerències heurístiques, split parcial de despeses, simulació en memòria** |
+| **1.10** | **Des 2025** | **Mòdul Projectes: justificació econòmica per partides, suggerències heurístiques, split parcial de despeses, simulació en memòria** |
 | **1.11** | **Des 2025** | **Captura de despeses de terreny (quickMode, pujada ràpida <10s), i18n Francès complet (fr.ts), selector d'idioma amb 3 opcions** |
 | **1.12** | **Des 2025** | **Multicomptes bancaris (CRUD, filtre per compte, traçabilitat bankAccountId), filtre per origen (source), diàleg crear donant a importador devolucions, mode bulk NET** |
 | **1.13** | **Des 2025** | **Selecció múltiple a Moviments (checkboxes + accions en bloc), assignar/treure categoria massivament, batched writes Firestore (50 ops/batch), traduccions CA/ES/FR** |
@@ -5628,7 +5632,7 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 | **1.19** | **Des 2025** | **Simplificació onboarding a modal de benvinguda única per primer admin, eliminació checklist persistent** |
 | **1.20** | **Des 2025** | **Panell Admin: reset contrasenya + secció diagnòstic (Firebase Console, Cloud Logging, DEV-SOLO-MANUAL.md). Dashboard: neteja blocs Celebracions/Alertes, millora taula categories (exclou comissions), bloc projectes condicional. Nou document docs/DEV-SOLO-MANUAL.md per manteniment.** |
 | **1.21** | **Des 2025** | **i18n pàgina pública (ca/es), SEO tags amb canonical + hreflang, mòdul documents pendents hardened (permisos, guardrails, UI responsive)** |
-| **1.22** | **29 Des 2025** | **Quick Expense Landing: ruta canònica `/{orgSlug}/quick-expense` fora de `/dashboard` (sense sidebar/header), shortcut global `/quick`, redirect 307 per backward-compatibility, arquitectura neta sense hacks de layout** |
+| **1.22** | **29 Des 2025** | **Entrada ràpida de despeses: ruta canònica `/{orgSlug}/quick-expense` fora de `/dashboard` (sense sidebar/header), shortcut global `/quick`, redirect 307 per compatibilitat amb enllaços existents, arquitectura neta sense hacks de layout** |
 | **1.23** | **30 Des 2025** | **System Health Sentinelles (S1–S8): detecció automàtica d'errors amb deduplicació, alertes email per incidents CRITICAL, filtres anti-soroll. Hub de Guies: guies procedimentals amb traduccions CA/ES/FR/PT (changePeriod, selectBankAccount, monthClose), validador i18n.** |
 | **1.24** | **31 Des 2025** | **Routing hardening: simplificació `/quick` (delega a `/redirect-to-org`), middleware amb PROTECTED_ROUTES per evitar loops, preservació de `?next` params.** |
 | **1.25** | **31 Des 2025** | **i18n rutes públiques complet (CA/ES/FR/PT): estructura `[lang]` per login, privacy i contact. Detecció automàtica idioma via Accept-Language. SEO amb canonical + hreflang per 4 idiomes. Redirect stubs per compatibilitat URLs antigues. Nou fitxer `src/i18n/public.ts` amb traduccions separades de l'app privada.** |
@@ -5641,7 +5645,7 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 | **1.32** | **29 Gen 2026** | **Dinàmica de donants: nou panell d'anàlisi per període (altes, baixes, reactivacions, devolucions, aportació decreixent). Wizard SEPA pain.008 complet: 3 passos (config, selecció, revisió), periodicitat de quota (monthly/quarterly/semiannual/annual/manual), memòria d'execució (lastSepaRunDate), bulk selection amb filtre, col·lecció sepaCollectionRuns. Importador pressupost millorat: extracció codi del text amb patrons (A), a.1), a.1.1)), agrupació contextual per jerarquia, capítols destacats (ambre), vista sense/amb partides. Traduccions i18n donorDynamics (CA/ES). Doc GOVERN-DE-CODI-I-DEPLOY v3.0: classificació risc (BAIX/MITJÀ/ALT), ritual deploy per nivell, gate humà únic.** |
 | **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
 | **1.34** | **31 Gen 2026** | **Invariant A4 source↔bankAccountId: `bank`/`stripe` requereixen bankAccountId (P0 error si absent), `remittance` hereta del pare, `manual` no aplica. Health check actualitzat per detectar stripe sense bankAccountId. Camps (date/amount/description) bloquejats si bankAccountId present. Backfill dades legacy Flores (363 transaccions: 340 bank + 23 remittance).** |
-| **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Eixos: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projects orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
+| **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Projectes Bàsics: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projectes orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
 | **1.44** | **17 Feb 2026** | **Importació bancària conservadora: nous camps `balanceAfter` i `operationDate` (sense backfill), regla de deduplicació forta per saldo (`bankAccountId + balanceAfter + amount + operationDate`) amb prioritat després de `bankRef`, i diagnòstic `duplicateReason="balance+amount+date"` en duplicats forts.** |
 | **1.43** | **14 Feb 2026** | **Hub de Guies/Bot: recuperació semàntica reforçada (més intents reals coberts), desambiguació 1/2 en consultes ambigües, fallback guiat i badges de navegació clicables. SuperAdmin `/admin`: redisseny "Torre de Control" en 5 blocs (Estat, Entitats, Coneixement/Bot, Comunicació, Configuració), resum executiu via `/api/admin/control-tower/summary` i fix de robustesa de timestamps.** |
 | **1.41** | **11 Feb 2026** | **Donants: persona de contacte per empreses (contactPersonName), 3 filtres dashboard (Tipus/Modalitat/Periodicitat) amb comptadors i lògica AND, quota amb sufix periodicitat. Accés operatiu unificat (require-operational-access.ts) amb superadmin bypass. Fix Firestore Rules `.get('archived', null)` per docs legacy. Fixes menors i18n i typecheck.** |
@@ -5787,7 +5791,7 @@ const newTxData = {
 
 **Regla general**: Tots els camps opcionals han de ser `string | null`, mai `undefined`.
 
-### Gestió de transaccions consumides (NOU v1.8)
+### Gestió de transaccions consumides
 
 > ⚠️ **CRÍTIC**: NO usar `splice()` per marcar transaccions com a usades.
 
@@ -6144,48 +6148,48 @@ El mòdul de devolucions resol el problema de rebuts retornats pel banc sense id
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ANNEX C — EXPORTS I MÒDULS DESACOBLATS
+# ANNEX C — EXPORTS I INTEGRACIONS DESACOBLADES
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ## C.1 Principi Arquitectònic
 
-Summa Social pot generar **feeds de dades de només lectura** mitjançant Cloud Functions.
+Summa Social pot generar **feeds de dades de només lectura** mitjançant Cloud Functions o processos backend equivalents.
 
-Aquests feeds serveixen perquè mòduls externs consumeixin dades sense afectar el core de l'aplicació. L'objectiu és permetre extensions opcionals mantenint la integritat i simplicitat del producte principal.
+Aquests feeds serveixen per reutilitzar dades del core sense comprometre la integritat de l'aplicació. Poden alimentar exportacions, automatismes interns o integracions externes de lectura.
 
 ## C.2 Patró Oficial
 
 | Responsabilitat | Actor |
 |-----------------|-------|
-| **Escriptura del feed** | Backend de Summa Social (Cloud Functions) |
-| **Lectura del feed** | Aplicacions o mòduls externs |
-| **Escriptura al mòdul extern** | Només el mòdul extern |
+| **Escriptura del feed** | Backend de Summa Social |
+| **Lectura del feed** | UI interna, processos interns o integracions externes de lectura |
+| **Escriptura al mòdul funcional** | UI i APIs internes de Summa Social |
 
-> ⚠️ **Regla fonamental**: Cap mòdul extern pot escriure dins del core de Summa Social.
+> ⚠️ **Regla fonamental**: Qualsevol integració externa és de lectura o passa per APIs controlades per Summa Social. No pot escriure directament al core.
 
-## C.3 Exemple Normatiu: Mòdul de Projectes
+## C.3 Exemple Normatiu: feeds de projectes i justificació
 
 ### Estructura Firestore
 
-**Feed de despeses (escriu Summa, llegeix mòdul extern):**
+**Feed de despeses exportables:**
 
 ```
 /organizations/{orgId}/exports/projectExpenses/items/{txId}
 ```
 
-**Assignacions a projectes (fora de Summa, escriu mòdul extern):**
+**Assignacions internes a projectes:**
 
 ```
 /organizations/{orgId}/projectModule/_/expenseLinks/{txId}
 ```
 
-**Projectes del mòdul:**
+**Projectes del mòdul intern:**
 
 ```
 /organizations/{orgId}/projectModule/_/projects/{projectId}
 ```
 
-**Transferències FX del projecte (NOU v1.33):**
+**Transferències FX del projecte:**
 
 ```
 /organizations/{orgId}/projectModule/_/projects/{projectId}/fxTransfers/{transferId}
@@ -6195,27 +6199,26 @@ Camps: `date`, `eurSent`, `localCurrency`, `localReceived`, `bankTxRef?`, `notes
 
 > Nota: El document `_` és un placeholder tècnic necessari per complir l'estructura de Firestore (segments alterns col·lecció/document).
 
-### Join Client-Side
+### Relació entre feed i mòdul intern
 
-El mòdul extern fa el join entre:
+El sistema pot relacionar:
 - La despesa (del feed `exports/projectExpenses/items`)
 - L'assignació (de `projectModule/_/expenseLinks`)
 
-Summa Social no coneix ni gestiona les assignacions.
+El feed és de reutilització. La gestió de projectes, partides, justificació econòmica i despeses de terreny forma part del core de Summa Social.
 
 ## C.4 Límits Explícits del Producte
 
 Summa Social **NO**:
-- Gestiona projectes (més enllà dels eixos d'actuació existents)
-- Gestiona subvencions
-- Fa justificacions econòmiques
-- Controla pressupostos de projectes
+- Substitueix la gestió legal o narrativa de la subvenció
+- Presenta telemàticament justificacions davant l'administració
+- Obre escriptura directa a tercers sobre les dades del core
 
-Qualsevol funcionalitat en aquesta línia és **externa i opcional**, i s'ha d'implementar fora del core mitjançant el patró d'exports descrit.
+Els exports i feeds són una capa complementària. El mòdul de projectes, pressupost, justificació econòmica i paquet documental per al finançador forma part del producte principal.
 
 ## C.5 Firestore Rules
 
-### CollectionGroup per membres (v1.16)
+### CollectionGroup per membres
 
 Permet a un usuari trobar les seves membresies via `collectionGroup`:
 
@@ -6276,7 +6279,7 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ANNEX D: NOVETATS DEL PRODUCTE (v1.33)
+# ANNEX D: NOVETATS DEL PRODUCTE
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ## D.1 Descripció del Sistema
@@ -6286,7 +6289,7 @@ Sistema unificat per comunicar novetats del producte als usuaris a través de m�
 - **Web públic**: Pàgina `/novetats` per SEO i sharing
 - **Social**: Copy per X i LinkedIn (manual)
 
-### Comportament UX (v1.31)
+### Comportament UX
 
 Les novetats es mostren **només via inbox** (campaneta o FAB), mai amb toast automàtic:
 - L'usuari decideix quan vol veure novetats (pull, no push)
@@ -6369,7 +6372,7 @@ public/novetats-data.json                  # JSON estàtic web
 2. Clicar "Exportar web JSON"
 3. Substituir `public/novetats-data.json` amb el fitxer descarregat
 4. `git add && git commit && git push`
-5. Deploy (Firebase Hosting)
+5. Publicar a Firebase App Hosting
 
 > **Important**: El web NO s'actualitza automàticament. Cal fer commit + deploy.
 
@@ -6461,5 +6464,5 @@ Les següents regles han de ser certes en tot moment. Si es trenca alguna, cal c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: 25 Febrer 2026 - Versió 1.45
+# Última actualització: 7 Març 2026
 # ═══════════════════════════════════════════════════════════════════════════════

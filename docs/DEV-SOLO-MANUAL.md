@@ -52,7 +52,7 @@ No llegeixis tot. Consulta el que necessitis.
 | **Firebase Console** | Veure dades, usuaris, logs | Diagnòstic de producció, veure errors |
 | **Cloud Logging** | Logs detallats de Cloud Functions | Errors de remeses, importacions, emails |
 | **GitHub** | Codi font, PRs, historial | Canvis de codi, revisar versions |
-| **VS Code + Claude Code** | Desenvolupament local | Fer canvis, debugging |
+| **VS Code + Codex** | Desenvolupament local | Fer canvis, debugging |
 | **`/docs`** | Documentació del projecte | Entendre decisions, especificacions |
 | **`/admin`** | Panell SuperAdmin | Gestió d'organitzacions, reset passwords |
 
@@ -433,7 +433,7 @@ Per validar que el sistema funciona:
 
 1. **Obre el link** `/admin` de l'email i localitza l'incident
 2. **Copia el prompt** clicant el botó 📋 o "Copiar prompt de reparació"
-3. **Enganxa a Claude Code** i deixa que proposi el fix mínim + QA
+3. **Enganxa a Codex** i deixa que proposi el fix mínim + QA
 
 **Opcions després de copiar:**
 - Si vas a treballar-hi ara: deixa l'incident OPEN

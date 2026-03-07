@@ -93,3 +93,86 @@ test('renderer keeps all operational steps for trusted project-open card in ES',
   assert.match(rendered.answer, /\n1\.\s+Ve a Dashboard/)
   assert.match(rendered.answer, /\n3\.\s+Haz clic en el proyecto/)
 })
+
+test('orchestrator falls back on specific-case operational queries', async () => {
+  const result = await orchestrator({
+    message: 'aquesta remesa no em quadra',
+    kbLang: 'ca',
+    cards,
+    clarifyOptionIds: [],
+    assistantTone: 'neutral',
+    allowAiIntent: false,
+    allowAiReformat: false,
+  })
+
+  assert.equal(result.response.mode, 'fallback')
+  assert.equal(result.meta.decisionReason, 'specific_case_guardrail')
+  assert.equal(result.meta.specificCaseDetected, true)
+  assert.match(result.response.answer, /cas concret/i)
+})
+
+test('orchestrator blocks medium-confidence operational answers in sensitive domains', async () => {
+  const fallbackCard = cards.find(card => card.id === 'fallback-no-answer')
+  assert.ok(fallbackCard, 'fallback-no-answer card must exist')
+
+  const localCards: KBCard[] = [
+    {
+      id: 'kb-remittance-process-sensitive',
+      type: 'howto',
+      domain: 'remittances',
+      risk: 'guarded',
+      guardrail: 'b1_remittances',
+      answerMode: 'full',
+      title: { ca: 'Gestionar remesa', es: 'Gestionar remesa' },
+      intents: { ca: ['com gestionar una remesa'], es: ['como gestionar una remesa'] },
+      guideId: null,
+      answer: {
+        ca: '1. Ves a Moviments > Remeses.\n2. Processa la remesa.',
+        es: '1. Ve a Movimientos > Remesas.\n2. Procesa la remesa.',
+      },
+      uiPaths: ['Moviments > Remeses'],
+      needsSnapshot: false,
+      keywords: ['remesa', 'gestionar'],
+      related: [],
+      error_key: null,
+      symptom: { ca: null, es: null },
+    },
+    {
+      id: 'kb-remittance-undo-sensitive',
+      type: 'howto',
+      domain: 'remittances',
+      risk: 'guarded',
+      guardrail: 'b1_remittances',
+      answerMode: 'full',
+      title: { ca: 'Gestionar remesa', es: 'Gestionar remesa' },
+      intents: { ca: ['com gestionar una remesa'], es: ['como gestionar una remesa'] },
+      guideId: null,
+      answer: {
+        ca: '1. Ves a Moviments > Remeses.\n2. Desfés la remesa.',
+        es: '1. Ve a Movimientos > Remesas.\n2. Deshaz la remesa.',
+      },
+      uiPaths: ['Moviments > Remeses'],
+      needsSnapshot: false,
+      keywords: ['remesa', 'gestionar'],
+      related: [],
+      error_key: null,
+      symptom: { ca: null, es: null },
+    },
+    fallbackCard,
+  ]
+
+  const result = await orchestrator({
+    message: 'com gestionar una remesa',
+    kbLang: 'ca',
+    cards: localCards,
+    clarifyOptionIds: [],
+    assistantTone: 'neutral',
+    allowAiIntent: false,
+    allowAiReformat: false,
+  })
+
+  assert.equal(result.response.mode, 'fallback')
+  assert.equal(result.response.cardId, 'clarify-disambiguation')
+  assert.equal(result.meta.confidenceBand, 'medium')
+  assert.equal(result.meta.decisionReason, 'sensitive_domain_guardrail')
+})

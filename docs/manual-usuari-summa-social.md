@@ -1673,6 +1673,26 @@ Declaració d'operacions amb tercers que superen **3.005,06€ anuals**.
 3. Clica **"Generar tots"**
 4. Es descarrega un ZIP amb tots els PDFs
 
+### Enviar certificats per email des de Summa Social
+
+També els pots enviar directament des de la mateixa pantalla de **📄 Informes > Certificats**, sense sortir de l'app.
+
+**Enviament individual:**
+1. A la fila del donant, clica la icona de **correu**
+2. Confirma l'enviament
+3. Summa envia el certificat en PDF adjunt automàticament
+
+**Enviament massiu:**
+1. Selecciona diversos donants
+2. Clica **"Enviar seleccionats"**
+3. Revisa el resum de confirmació (quants s'enviaran i quants no tenen email)
+4. Confirma l'enviament
+
+**Abans d'enviar, revisa això:**
+- El donant ha de tenir email informat
+- El teu usuari ha de tenir permís per generar certificats fiscals
+- Si s'arriba al límit diari d'enviaments, el sistema t'avisa i pots continuar l'endemà
+
 > 💡 Si el total d'un donant és ≤ 0 (per devolucions), no es genera certificat.
 
 ---

@@ -3,6 +3,11 @@ import type { KBCard } from './load-kb'
 const DIRECT_MATCH_THRESHOLD = 36
 const CLARIFY_MIN_SCORE = 24
 const CLARIFY_MAX_GAP = 14
+const SPECIFIC_CASE_SCORE_PENALTY = 120
+
+export const HIGH_CONFIDENCE: RetrievalConfidence = 'high'
+export const MEDIUM_CONFIDENCE: RetrievalConfidence = 'medium'
+export const LOW_CONFIDENCE: RetrievalConfidence = 'low'
 
 export type KbLang = 'ca' | 'es'
 export type RetrievalConfidence = 'high' | 'medium' | 'low'
@@ -16,6 +21,10 @@ export type RetrievalResult = {
   secondCardId?: string
   secondScore?: number
   confidence?: RetrievalConfidence
+  confidenceBand?: RetrievalConfidence
+  decisionReason?: string
+  specificCaseDetected?: boolean
+  questionDomain?: QuestionDomain
 }
 
 export type SmallTalkResponse = {
@@ -85,6 +94,31 @@ function normalizePlain(text: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+const SPECIFIC_CASE_PATTERNS = [
+  /aquesta remesa/,
+  /aquesta factura/,
+  /el meu donant/,
+  /no em quadra/,
+  /no quadra/,
+  /a mi em surt/,
+  /no em surt/,
+  /aquesta transaccio/,
+  /esta remesa/,
+  /esta factura/,
+  /mi donante/,
+  /no me cuadra/,
+  /no cuadra/,
+  /a mi me sale/,
+  /no me sale/,
+  /esta transaccion/,
+]
+
+export function detectSpecificCase(query: string): boolean {
+  const normalized = normalizePlain(query)
+  if (!normalized) return false
+  return SPECIFIC_CASE_PATTERNS.some(pattern => pattern.test(normalized))
 }
 
 export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTalkResponse | null {
@@ -332,7 +366,7 @@ function scorePhraseSimilarity(normalizedMessage: string, phrases: string[]): nu
   return Math.round(best * 30)
 }
 
-type QuestionDomain = 'fiscal' | 'sepa' | 'remittances' | 'danger' | 'general'
+type QuestionDomain = 'fiscal' | 'sepa' | 'remittances' | 'returns' | 'permissions' | 'danger' | 'general'
 
 function normalizeCardDomain(domain: string): string {
   const normalized = normalizePlain(domain)
@@ -349,6 +383,8 @@ function scoreDomainAlignment(questionDomain: QuestionDomain, cardDomainRaw: str
     fiscal: ['fiscal'],
     sepa: ['sepa', 'remittances'],
     remittances: ['remittances', 'sepa'],
+    returns: ['remittances', 'sepa'],
+    permissions: ['config'],
     danger: ['danger'],
     general: ['general'],
   }
@@ -362,6 +398,7 @@ function scoreCard(
   tokens: string[],
   normalizedMessage: string,
   questionDomain: QuestionDomain,
+  specificCaseDetected: boolean,
   card: KBCard,
   lang: KbLang
 ): number {
@@ -441,11 +478,14 @@ function scoreCard(
   score += scoreTokenOverlap(tokens, searchPhrases)
   score += scorePhraseSimilarity(normalizedMessage, searchPhrases)
   score += scoreDomainAlignment(questionDomain, card.domain ?? '')
+  if (specificCaseDetected) {
+    score -= SPECIFIC_CASE_SCORE_PENALTY
+  }
 
   return score
 }
 
-export function inferQuestionDomain(message: string): 'fiscal' | 'sepa' | 'remittances' | 'danger' | 'general' {
+export function inferQuestionDomain(message: string): QuestionDomain {
   const tokens = normalize(message)
   const joined = tokens.join(' ')
 
@@ -454,6 +494,12 @@ export function inferQuestionDomain(message: string): 'fiscal' | 'sepa' | 'remit
   }
   if (/sepa|pain|pain008|pain001|domiciliacio|xml|banc|banco/.test(joined)) {
     return 'sepa'
+  }
+  if (/devoluci|devolucion|retorn|retorno|rebutjada|rechazo|devuelto/.test(joined)) {
+    return 'returns'
+  }
+  if (/permis|permiso|permisos|acces|acceso|accessos|seguretat|seguridad|rol|roles/.test(joined)) {
+    return 'permissions'
   }
   if (/remesa|remesas|remessa|dividir|desglossar|desglosar|processar|procesar|desfer|deshacer/.test(joined)) {
     return 'remittances'
@@ -473,6 +519,7 @@ function detectFallbackDomain(tokens: string[]): string {
   const domain = inferQuestionDomain(tokens.join(' '))
   if (domain === 'fiscal') return 'fallback-fiscal-unclear'
   if (domain === 'sepa') return 'fallback-sepa-unclear'
+  if (domain === 'returns') return 'fallback-remittances-unclear'
   if (domain === 'remittances') return 'fallback-remittances-unclear'
   if (domain === 'danger') return 'fallback-danger-unclear'
   return 'fallback-no-answer'
@@ -540,9 +587,9 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
 
 function buildRetrievalConfidence(bestScore = 0, secondScore = 0): RetrievalConfidence {
   const gap = bestScore - secondScore
-  if (bestScore >= 56 && gap >= 14) return 'high'
-  if (bestScore >= DIRECT_MATCH_THRESHOLD && gap >= 6) return 'medium'
-  return 'low'
+  if (bestScore >= 56 && gap >= 14) return HIGH_CONFIDENCE
+  if (bestScore >= DIRECT_MATCH_THRESHOLD) return MEDIUM_CONFIDENCE
+  return LOW_CONFIDENCE
 }
 
 function findGenericFallback(cards: KBCard[]): KBCard | null {
@@ -568,8 +615,9 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
   const tokens = normalize(message)
   const normalizedMessage = normalizePlain(message)
   const questionDomain = inferQuestionDomain(message)
+  const specificCaseDetected = detectSpecificCase(message)
 
-  const directIntent = detectDirectIntentMatch(tokens)
+  const directIntent = specificCaseDetected ? null : detectDirectIntentMatch(tokens)
   if (directIntent) {
     const directCard = cards.find(card => card.id === directIntent.cardId)
     if (directCard) {
@@ -580,7 +628,11 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
         bestScore: directIntent.minScore ?? 999,
         secondCardId: undefined,
         secondScore: 0,
-        confidence: 'high',
+        confidence: HIGH_CONFIDENCE,
+        confidenceBand: HIGH_CONFIDENCE,
+        decisionReason: 'direct_intent_high_confidence',
+        specificCaseDetected,
+        questionDomain,
       }
     }
   }
@@ -589,7 +641,7 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
   const ranked = regularCards
     .map(card => ({
       card,
-      score: scoreCard(tokens, normalizedMessage, questionDomain, card, lang),
+      score: scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang),
     }))
     .sort((a, b) => b.score - a.score)
 
@@ -598,26 +650,38 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
   const bestScore = best?.score ?? 0
   const secondScore = second?.score ?? 0
   const confidence = buildRetrievalConfidence(bestScore, secondScore)
+  const baseMeta = {
+    bestCardId: best?.card.id,
+    bestScore,
+    secondCardId: second?.card.id,
+    secondScore,
+    confidence,
+    confidenceBand: confidence,
+    specificCaseDetected,
+    questionDomain,
+  } satisfies Omit<RetrievalResult, 'card' | 'mode'>
 
   if (
     best &&
+    confidence === HIGH_CONFIDENCE &&
     bestScore >= DIRECT_MATCH_THRESHOLD &&
     hasMinimumEvidenceForDirectMatch(tokens, best.card, lang)
   ) {
     return {
       card: best.card,
       mode: 'card',
+      ...baseMeta,
       bestCardId: best.card.id,
-      bestScore,
-      secondCardId: second?.card.id,
-      secondScore,
-      confidence,
+      decisionReason: specificCaseDetected
+        ? 'specific_case_penalty_but_high_confidence'
+        : 'high_confidence_match',
     }
   }
 
   if (
     best &&
     second &&
+    confidence === MEDIUM_CONFIDENCE &&
     bestScore >= CLARIFY_MIN_SCORE &&
     secondScore >= CLARIFY_MIN_SCORE &&
     bestScore - secondScore <= CLARIFY_MAX_GAP
@@ -628,11 +692,12 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
         card: genericFallback,
         mode: 'fallback',
         clarifyOptions: [best.card, second.card],
+        ...baseMeta,
         bestCardId: best.card.id,
-        bestScore,
         secondCardId: second.card.id,
-        secondScore,
-        confidence,
+        decisionReason: specificCaseDetected
+          ? 'specific_case_disambiguation'
+          : 'medium_confidence_disambiguation',
       }
     }
   }
@@ -643,11 +708,12 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
     return {
       card: fallbackCard,
       mode: 'fallback',
-      bestCardId: best?.card.id,
-      bestScore,
-      secondCardId: second?.card.id,
-      secondScore,
-      confidence,
+      ...baseMeta,
+      decisionReason: specificCaseDetected
+        ? 'specific_case_fallback'
+        : confidence === MEDIUM_CONFIDENCE
+          ? 'medium_confidence_fallback'
+          : 'low_confidence_fallback',
     }
   }
 
@@ -656,11 +722,12 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
     return {
       card: genericFallback,
       mode: 'fallback',
-      bestCardId: best?.card.id,
-      bestScore,
-      secondCardId: second?.card.id,
-      secondScore,
-      confidence,
+      ...baseMeta,
+      decisionReason: specificCaseDetected
+        ? 'specific_case_fallback'
+        : confidence === MEDIUM_CONFIDENCE
+          ? 'medium_confidence_fallback'
+          : 'low_confidence_fallback',
     }
   }
 
@@ -668,11 +735,12 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
     return {
       card: cards[0],
       mode: 'fallback',
-      bestCardId: best?.card.id,
-      bestScore,
-      secondCardId: second?.card.id,
-      secondScore,
-      confidence,
+      ...baseMeta,
+      decisionReason: specificCaseDetected
+        ? 'specific_case_fallback'
+        : confidence === MEDIUM_CONFIDENCE
+          ? 'medium_confidence_fallback'
+          : 'low_confidence_fallback',
     }
   }
 

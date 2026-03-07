@@ -140,6 +140,10 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     const text = rawText.trim();
     if (!text || loading || !user) return;
 
+    const previousBotMessage = [...messages].reverse().find(
+      (msg): msg is BotMessage => msg.role === 'bot'
+    );
+
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text }]);
     setLoading(true);
@@ -160,6 +164,11 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
           message: text,
           lang,
           clarifyOptionIds: pendingClarifyOptionIds.length ? pendingClarifyOptionIds : undefined,
+          previousQuestion: previousBotMessage?.questionText,
+          previousCardId: previousBotMessage?.cardId,
+          previousMode: previousBotMessage?.mode,
+          previousClarifyOptionIds: previousBotMessage?.clarifyOptions?.map(option => option.cardId),
+          previousWasClarify: previousBotMessage?.cardId === 'clarify-disambiguation',
         }),
       });
 
@@ -202,7 +211,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     } finally {
       setLoading(false);
     }
-  }, [loading, user, language, errorGeneric, pendingClarifyOptionIds]);
+  }, [loading, user, language, errorGeneric, messages, pendingClarifyOptionIds]);
 
   const handleSend = React.useCallback(() => {
     void sendMessage(input);
