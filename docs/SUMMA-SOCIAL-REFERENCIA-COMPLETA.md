@@ -3624,9 +3624,54 @@ El botó càmera a la safata de despeses (`/dashboard/project-module/expenses`) 
 </Link>
 ```
 
-### 3.11.15 Hub de Guies Procedimentals (NOU v1.23)
+### 3.11.15 Sistema d'Ajuda: HelpSheet + Manual + Hub de Guies + Bot (NOU v1.23, ampliat v1.43)
 
-Centre d'ajuda contextual amb guies pas-a-pas per a les operacions més freqüents de Summa Social.
+El sistema d'ajuda actual no és una sola peça: són quatre capes connectades entre si.
+
+| Capa | URL / entrada | Funció real |
+|------|---------------|-------------|
+| **Ajuda contextual (`HelpSheet`)** | Icona `?` a qualsevol pantalla del dashboard | Ajuda específica de la pantalla actual (`help.*`), amb passos, tips, seccions extra i enllaç al manual |
+| **Manual de referència** | `/{orgSlug}/dashboard/manual` | Manual llarg en Markdown per entendre el producte de punta a punta |
+| **Hub de Guies** | `/{orgSlug}/dashboard/guides` | Catàleg navegable de guies procedimentals i cercador natural |
+| **Bot d'ajuda** | FAB blau amb icona bot a layout dashboard | Resol preguntes lliures sobre la KB i retorna resposta + ruta dins Summa |
+
+#### 3.11.15.1 Ajuda contextual per pantalla (`HelpSheet`)
+
+Ajuda lateral contextual basada en traduccions `help.{routeKey}.*`.
+
+**Com funciona:**
+- Detecta la pantalla actual a partir del pathname i la converteix a `routeKey`
+- Llegeix `title`, `intro`, `steps[]`, `tips[]` i blocs extra (`order`, `pitfalls`, `checks`, `returns`, etc.)
+- Pot obrir-se manualment o via deep link `?help=1`
+- Ofereix enllaç al manual amb anchor específic de la pantalla
+- Pot copiar URL directa de l'ajuda i generar correu de suggeriment
+- Si l'usuari és SuperAdmin, mostra accés ràpid a l'edició quan falta ajuda publicada
+
+**Fitxers clau:**
+- `src/components/help/HelpSheet.tsx`
+- `src/help/help-manual-links.ts`
+- `src/lib/help/help-audit.ts`
+- `src/components/admin/help-audit-section.tsx`
+
+#### 3.11.15.2 Manual de referència
+
+Manual renderitzat des de fitxers Markdown públics.
+
+**Com funciona:**
+- Carrega `public/docs/manual-usuari-summa-social.{lang}.md`
+- Idiomes amb fitxer actual: `ca`, `es`, `fr`
+- `pt` fa fallback a `ca`
+- El renderer construeix TOC i anchors a partir del Markdown
+- El `HelpSheet` hi apunta amb anchors concrets segons pantalla
+
+**Fitxers clau:**
+- `src/app/[orgSlug]/dashboard/manual/page.tsx`
+- `src/lib/help/manual-toc.ts`
+- `public/docs/manual-usuari-summa-social.{ca,es,fr}.md`
+
+#### 3.11.15.3 Hub de Guies procedimentals
+
+Centre d'ajuda navegable amb guies pas-a-pas per a les operacions més freqüents de Summa Social.
 
 **Ubicació:** `/{orgSlug}/dashboard/guides`
 
@@ -3636,19 +3681,7 @@ Centre d'ajuda contextual amb guies pas-a-pas per a les operacions més freqüen
 - CTAs directes a pantalla + enllaç al manual
 - Indicadors visuals: `lookFirst`, `doNext`, `avoid`, `costlyError`
 - Validador i18n automatitzat (`npm run i18n:validate-guides`)
-
-**Millores de recuperació i navegació (NOU v1.43):**
-- Recuperació semàntica reforçada per entendre millor preguntes naturals (ca/es) i variants habituals
-- Desambiguació en 2 opcions quan la consulta és ambigua (evita portar l'usuari a una guia incorrecta)
-- Fallback guiat amb preguntes suggerides quan no hi ha match exacte
-- Les rutes `uiPaths` es renderitzen com badges clicables (navegació directa)
-- Eliminat el peu de navegació inline dins del text de resposta del bot (menys soroll visual)
-
-**Fitxers clau v1.43:**
-- `src/lib/support/bot-retrieval.ts` — scoring, sinònims, domini i desambiguació
-- `src/app/api/support/bot/route.ts` — format de resposta, fallback guiat i controls de to
-- `src/components/help/BotSheet.tsx` — render de badges clicables i UX de conversa
-- `docs/kb/cards/**/*.json` + `docs/kb/_eval/expected*.json` — cobertura de preguntes reals i validació esperada
+- Resultats d'ajuda ràpida sense suport humà, pensats per ser cercats amb llenguatge natural
 
 **Guies disponibles:**
 
@@ -3712,6 +3745,158 @@ Comprova:
 - Títol i intro/whatIs per cada guia
 - Arrays amb índexos consecutius (sense gaps)
 - Claus extra que no existeixen al base (CA)
+
+#### 3.11.15.4 Bot d'ajuda: arquitectura runtime
+
+Bot autenticat, integrat al layout del dashboard, amb recuperació determinista sobre KB i guardrails estrictes per consultes operatives.
+
+**Entry points UI:**
+- FAB: `src/components/help/BotFab.tsx`
+- Xat lateral: `src/components/help/BotSheet.tsx`
+- Inserció al layout: `src/app/[orgSlug]/dashboard/layout.tsx`
+
+**Flux real de petició:**
+1. `BotSheet` envia `message`, `lang` i opcionalment `clarifyOptionIds` a `POST /api/support/bot`
+2. L'API valida `verifyIdToken()`, obté `organizationId`, comprova membership i exigeix `requireOperationalAccess()`
+3. Es normalitza idioma: recuperació només en `ca/es`; `fr -> ca`, `pt -> es`
+4. Si la consulta és small talk, es respon directament sense retrieval llarg
+5. Es carrega la KB runtime (filesystem + capa generada + Storage publicat) i s'eliminen les targetes marcades com a esborrades
+6. Es filtra contingut sensible per a usuaris normals (`superadmin`, `b1_danger`, alguns fallbacks interns)
+7. `orchestrator()` resol retrieval, desambiguació i render final
+8. La resposta torna amb `mode`, `cardId`, `answer`, `guideId`, `uiPaths` i opcionalment `clarifyOptions`
+9. El client renderitza badges clicables cap a pantalles de Summa i permet vot útil/no útil
+
+**Fonts de coneixement que es fusionen al runtime:**
+
+| Capa | Font | Notes |
+|------|------|-------|
+| **Base KB** | `docs/kb/_fallbacks.json` + `docs/kb/cards/**/*.json` | Cards manuals i fallbacks base |
+| **Capa generada Help+Bot** | `docs/generated/help-bot.json` | Es genera des de `help/topics/*.md` i sobreescriu IDs base si coincideixen |
+| **Versió publicada** | `support-kb/kb.json` a Firebase Storage | Només s'utilitza si `storageVersion === version` |
+| **Draft** | `support-kb/kb-draft.json` | Només per SuperAdmin; no entra al runtime d'usuari |
+
+**Generació de la capa Help+Bot:**
+- Script: `scripts/help/build-bot-kb.ts`
+- Fonts: `help/topics/*.ca.md` + `help/topics/*.es.md`
+- Output: `docs/generated/help-bot.json`
+- El resultat converteix topics operatius en cards amb `title`, `intents`, `answer`, `uiPaths`, `keywords`, `domain`, `risk` i `guardrail`
+
+**Tipus de cards i govern mínim:**
+- Estructura comuna: `id`, `type`, `domain`, `risk`, `guardrail`, `answerMode`, `title`, `intents`, `guideId|answer`, `uiPaths`, `keywords`
+- `guide-*` ha de tenir `guideId` i no pot portar `answer` inline
+- Dominis sensibles (`fiscal`, `sepa`, `remittances`, `superadmin`) exigeixen `risk=guarded` i guardrail explícit
+- Hi ha targetes protegides obligatòries:
+  - Fallbacks: `fallback-no-answer`, `fallback-fiscal-unclear`, `fallback-sepa-unclear`, `fallback-remittances-unclear`, `fallback-danger-unclear`
+  - Crítiques: `project-open`, `guide-projects`, `guide-attach-document`, `manual-member-paid-quotas`
+
+#### 3.11.15.5 Retrieval, desambiguació i guardrails
+
+**Retrieval base (`src/lib/support/bot-retrieval.ts`):**
+- Tokenització amb normalització d'accents
+- Stopwords CA/ES
+- Sinònims i typos comuns
+- Matching per intents, keywords, domini, `uiPaths`, `symptom`, `error_key`
+- Suporta small talk separat (salutacions, gràcies, tancament, "qui ets")
+
+**Millores v1.43:**
+- Recuperació semàntica reforçada per entendre millor preguntes naturals (ca/es) i variants habituals
+- Desambiguació en 2 opcions quan la consulta és ambigua
+- Fallback guiat amb preguntes suggerides quan no hi ha match exacte
+- `uiPaths` renderitzats com badges clicables
+- Eliminat el peu de navegació inline dins del text de resposta del bot
+
+**IA opcional, no obligatòria:**
+- `aiIntentEnabled`: pot rescatar un match quan el retrieval base queda en `fallback` o confiança baixa
+- `aiReformatEnabled`: només reformata respostes informatives, mai guies operatives amb `guideId`
+- Timeouts configurables a `system/supportKb`: `intentTimeoutMs`, `reformatTimeoutMs`
+- Sense API key, el sistema continua funcionant en mode determinista
+
+**Guardrails operatius (P0):**
+- Si la intenció és operativa i la confiança no és suficient:
+  - Prioritza desambiguació 1/2 si hi ha dues opcions plausibles
+  - Si no, retorna fallback segur
+- Només es poden renderitzar passos operatius si la card té passos numerats reals i `uiPaths` vàlids
+- Si una resposta no és fiable, es bloqueja qualsevol text procedural lliure
+- Les consultes sensibles poden anar en `answerMode=limited`
+
+**Fitxers clau de runtime:**
+- `src/app/api/support/bot/route.ts`
+- `src/lib/support/load-kb.ts`
+- `src/lib/support/load-kb-runtime.ts`
+- `src/lib/support/engine/orchestrator.ts`
+- `src/lib/support/engine/retrieval.ts`
+- `src/lib/support/engine/renderer.ts`
+- `src/lib/support/engine/policy.ts`
+- `src/lib/support/engine/normalize.ts`
+
+#### 3.11.15.6 Observabilitat, privacitat i millora contínua
+
+**Log de preguntes:**
+- Firestore: `organizations/{orgId}/supportBotQuestions/{hash}`
+- Hash estable: `sha256(lang + normalizedQuestion)`
+- Guarda:
+  - `messageRaw` emmascarada
+  - `messageNormalized`
+  - `resultMode`
+  - `cardIdOrFallbackId`
+  - `bestCardId`, `bestScore`, `secondCardId`, `secondScore`
+  - `retrievalConfidence`
+  - `count`, `lastSeenAt`, `createdAt`
+- S'emmascaren IBAN, NIF/CIF/DNI/NIE, email i telèfon abans de persistir
+
+**Feedback de resposta:**
+- Ruta: `POST /api/support/bot-feedback`
+- Incrementa `helpfulYes` / `helpfulNo`
+- Guarda `lastFeedbackHelpful` i `lastFeedbackAt`
+
+**UX tracking:**
+- Events principals: `bot.send`, `bot.fallback`, `bot.clarify.select`, `bot.ui_path_click`, `bot.feedback`, `help.open`, `help.search`, `help.copyLink`, `help.manual.click`
+
+#### 3.11.15.7 Govern de la KB i operació SuperAdmin
+
+El coneixement editable del bot té cicle `draft -> precheck -> publish`.
+
+**UI SuperAdmin:**
+- Component: `src/components/super-admin/kb-learning-manager.tsx`
+- Funcions:
+  - veure preguntes que han caigut a fallback
+  - crear o editar targetes
+  - esborrar targetes no protegides
+  - publicar després de quality gate
+
+**APIs principals:**
+
+| Ruta | Funció |
+|------|--------|
+| `GET /api/support/bot-questions/candidates` | Candidats de noves targetes a partir de preguntes reals en fallback |
+| `GET /api/support/kb/cards` | Estat fusionat base/publicat/draft |
+| `POST /api/support/kb/cards/precheck-and-publish` | Upsert/delete + validació + publicació en una sola operació |
+| `POST /api/support/kb/publish` | Publicació legacy amb quality gate |
+| `GET /api/support/kb/diagnostics` | Diagnòstic runtime (Storage, versions, flags IA) |
+
+**Persistència de govern:**
+- Firestore doc: `system/supportKb`
+- Camps operatius rellevants:
+  - `version`
+  - `storageVersion`
+  - `deletedCardIds`
+  - `draftCardCount`
+  - `draftUpdatedAt`, `draftUpdatedBy`
+  - `updatedAt`, `updatedBy`
+  - `aiIntentEnabled`, `aiReformatEnabled`
+  - `assistantTone`
+  - `intentTimeoutMs`, `reformatTimeoutMs`
+
+**Quality gate abans de publicar:**
+- Validació estructural (`validateKbCards`)
+- Presència obligatòria de fallbacks i cards crítiques
+- Eval esperada CA/ES sobre `docs/kb/_eval/expected*.json`
+- Golden set amb llindar mínim per consultes crítiques
+- Verificació que les cards operatives crítiques tenen passos renderitzables
+- Si la KB publicada és corrupta, el runtime cau a:
+  1. filesystem filtrat
+  2. storage filtrat
+  3. dataset d'emergència
 
 
 ### 3.11.16 Exportació Excel de justificació per finançadors (NOU v1.37)

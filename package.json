@@ -53,7 +53,8 @@
     "perf:analyze": "node scripts/performance/analyze-build-size.mjs --out tmp/performance/performance-latest.json",
     "perf:deps-audit": "node scripts/performance/bundle-deps-audit.mjs --out tmp/performance/deps-audit-latest.json",
     "perf:monthly": "node scripts/performance/monthly-performance-check.mjs",
-    "migrate:capabilities": "node scripts/migrations/backfill-member-capabilities.mjs"
+    "migrate:capabilities": "node scripts/migrations/backfill-member-capabilities.mjs",
+    "images:landings:optimize": "node scripts/images/optimize-landing-assets.mjs"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
