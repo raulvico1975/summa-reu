@@ -143,9 +143,9 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
           <section className="border-t pt-10">
             <h2 className="text-2xl font-bold mb-3">{content.finalCta.title}</h2>
             <p className="text-muted-foreground mb-4">{content.finalCta.text}</p>
-            <Link href={content.finalCta.href} className="inline-flex items-center text-primary font-medium hover:underline">
-              {content.finalCta.linkLabel}
-            </Link>
+            <Button asChild size="lg">
+              <Link href={content.finalCta.href}>{content.finalCta.linkLabel}</Link>
+            </Button>
           </section>
         </div>
       </article>
