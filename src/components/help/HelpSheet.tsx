@@ -56,6 +56,7 @@ export const MANUAL_HREFS: Record<string, string> = {
   treballadors: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
   informes: '/dashboard/manual#9-informes-fiscals',
   configuracion: '/dashboard/manual#2-configuracio-inicial',
+  projectes: '/dashboard/manual#10-projectes-i-justificacio-de-subvencions',
   project_expenses: '/dashboard/manual#6-assignacio-de-despeses',
   project_projects: '/dashboard/manual#6-gestio-de-projectes',
 };
