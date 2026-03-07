@@ -16,6 +16,7 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  skipTrailingSlashRedirect: true,
   turbopack: {
     root: path.join(__dirname),
   },
