@@ -70,7 +70,7 @@ const LANDING_NAMES: Record<string, Record<PublicLocale, string>> = {
     pt: 'Modelo 182',
   },
   'certificats-donacio': {
-    ca: 'Certificats de donacio',
+    ca: 'Certificats de donació',
     es: 'Certificados de donacion',
     fr: 'Certificats de don',
     pt: 'Certificados de doacao',
@@ -88,7 +88,7 @@ const LANDING_NAMES: Record<string, Record<PublicLocale, string>> = {
     pt: 'Importar extrato bancario',
   },
   'gestio-donants': {
-    ca: 'Gestio de donants',
+    ca: 'Gestió de donants',
     es: 'Gestion de donantes',
     fr: 'Gestion des donateurs',
     pt: 'Gestao de doadores',
@@ -292,54 +292,54 @@ function buildPendingContent(locale: PublicLocale, landingName: string): PublicL
   return {
     hero: {
       title: landingName,
-      subtitle: 'Contingut en preparacio',
+      subtitle: 'Contingut en preparació',
       introParagraphs: [
-        `Aquesta landing sobre ${landingName} ja te l esquelet tecnic i visual preparat.`,
-        'El contingut final s afegira quan es tanqui el text funcional validat.',
+        `Aquesta landing sobre ${landingName} ja té l'esquelet tècnic i visual preparat.`,
+        "El contingut final s'afegirà quan es tanqui el text funcional validat.",
       ],
     },
     problem: {
       title: 'Problema real',
       intro: 'Apartat pendent de definir amb contingut funcional validat.',
       points: [
-        'Punt pendent de validacio funcional.',
-        'Punt pendent de validacio funcional.',
-        'Punt pendent de validacio funcional.',
+        'Punt pendent de validació funcional.',
+        'Punt pendent de validació funcional.',
+        'Punt pendent de validació funcional.',
       ],
     },
     solution: {
       title: 'Com ho resol Summa Social',
       intro: 'Bloc preparat per documentar el flux real en 5 passos.',
       steps: [
-        { title: 'Pas 1 (pendent)', body: 'Detall pendent de validacio.' },
-        { title: 'Pas 2 (pendent)', body: 'Detall pendent de validacio.' },
-        { title: 'Pas 3 (pendent)', body: 'Detall pendent de validacio.' },
-        { title: 'Pas 4 (pendent)', body: 'Detall pendent de validacio.' },
-        { title: 'Pas 5 (pendent)', body: 'Detall pendent de validacio.' },
+        { title: 'Pas 1 (pendent)', body: 'Detall pendent de validació.' },
+        { title: 'Pas 2 (pendent)', body: 'Detall pendent de validació.' },
+        { title: 'Pas 3 (pendent)', body: 'Detall pendent de validació.' },
+        { title: 'Pas 4 (pendent)', body: 'Detall pendent de validació.' },
+        { title: 'Pas 5 (pendent)', body: 'Detall pendent de validació.' },
       ],
     },
     includes: {
-      title: 'Que inclou / que permet',
-      intro: 'Seccio preparada per llistar l abast funcional real.',
+      title: 'Què inclou / què permet',
+      intro: "Secció preparada per llistar l'abast funcional real.",
       items: [
-        'Element pendent de validacio.',
-        'Element pendent de validacio.',
-        'Element pendent de validacio.',
+        'Element pendent de validació.',
+        'Element pendent de validació.',
+        'Element pendent de validació.',
       ],
     },
     operationalBenefits: {
       title: 'Beneficis operatius',
       items: [
-        'Benefici pendent de validacio.',
-        'Benefici pendent de validacio.',
-        'Benefici pendent de validacio.',
+        'Benefici pendent de validació.',
+        'Benefici pendent de validació.',
+        'Benefici pendent de validació.',
       ],
     },
     forSmallAndMidEntities: {
       title: 'Pensat per a entitats petites i mitjanes',
       paragraphs: [
-        'Text pendent de validacio funcional.',
-        'Text pendent de validacio funcional.',
+        'Text pendent de validació funcional.',
+        'Text pendent de validació funcional.',
       ],
     },
     finalCta: {
@@ -355,7 +355,7 @@ function buildPendingMetadata(name: Record<PublicLocale, string>): Record<Public
   return {
     ca: {
       title: `${name.ca} | Summa Social`,
-      description: `${name.ca} per entitats sense anim de lucre. Contingut complet en preparacio.`,
+      description: `${name.ca} per a entitats sense ànim de lucre. Contingut complet en preparació.`,
     },
     es: {
       title: `${name.es} | Summa Social`,
@@ -388,7 +388,7 @@ function buildPendingLanding(slug: keyof typeof LANDING_NAMES): PublicLandingDef
 
 const MODEL_182_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
-    title: 'Model 182 per a ONG | Software de gestió per entitats | Summa Social',
+    title: 'Model 182 per a ONG | Software de gestió per a entitats | Summa Social',
     description:
       "Com preparar el Model 182 d'una associació sense Excel ni errors. Controla donacions, devolucions i donants amb Summa Social.",
   },
@@ -408,7 +408,7 @@ const MODEL_182_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
 
 const DONATION_CERTIFICATES_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
-    title: 'Certificats de donació per a ONG | Software de gestió per entitats | Summa Social',
+    title: 'Certificats de donació per a ONG | Software de gestió per a entitats | Summa Social',
     description:
       'Genera i envia els certificats de donació sense plantilles manuals, sense errors i sense perdre hores cada any.',
   },
@@ -517,14 +517,14 @@ const DONATION_CERTIFICATES_CONTENT_CA: PublicLandingContent = {
   finalCta: {
     title: 'Vols veure com funciona?',
     text: "Si cada any la generació dels certificats de donació et porta massa hores o massa revisions manuals, potser val la pena veure com funciona Summa Social. L'emissió de certificats pot passar de ser una tasca pesada i repetitiva a ser simplement un procés més dins del sistema.",
-    linkLabel: 'Demana una demostració per la teva entitat.',
+    linkLabel: 'Demana una demostració per a la teva entitat.',
     href: '/ca/contact',
   },
 };
 
 const SEPA_REMITTANCES_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
-    title: 'Remeses SEPA per a quotes de socis | Software de gestió per entitats | Summa Social',
+    title: 'Remeses SEPA per a quotes de socis | Software de gestió per a entitats | Summa Social',
     description:
       'Prepara remeses SEPA de quotes de socis sense fulls de càlcul. Revisa IBAN, imports i genera el fitxer per al banc amb Summa Social.',
   },
@@ -570,7 +570,7 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
     intro: 'Summa Social permet preparar les remeses de cobrament directament des de la informació dels socis. El procés és simple:',
     steps: [
       {
-        title: "Selecciones el compte bancari de l'entitat",
+        title: "Selecciona el compte bancari de l'entitat",
         body: 'El sistema utilitza les dades del compte que cobrarà les quotes.',
       },
       {
@@ -622,14 +622,14 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
   finalCta: {
     title: 'Vols veure com funciona?',
     text: 'Si la teva entitat cobra quotes de socis cada mes o cada trimestre, potser val la pena veure com funciona aquest procés dins de Summa Social. Preparar una remesa pot passar de ser una tasca manual amb Excel a ser simplement un pas més dins del sistema.',
-    linkLabel: 'Demana una demostració per la teva entitat.',
+    linkLabel: 'Demana una demostració per a la teva entitat.',
     href: '/ca/contact',
   },
 };
 
 const BANK_STATEMENT_IMPORT_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
-    title: 'Importar extracte bancari per a entitats | Software de gestió | Summa Social',
+    title: "Importar l'extracte bancari per a entitats | Software de gestió | Summa Social",
     description:
       "Importa l'extracte bancari i centralitza ingressos i despeses en un únic lloc. Classifica moviments i vincula transaccions amb donants o proveïdors.",
   },
@@ -716,14 +716,14 @@ const BANK_STATEMENT_IMPORT_CONTENT_CA: PublicLandingContent = {
   forSmallAndMidEntities: {
     title: 'Pensat per a entitats petites i mitjanes',
     paragraphs: [
-      'Summa Social està pensat per entitats que gestionen els comptes amb extractes bancaris, volen tenir millor control de les despeses i ingressos i necessiten preparar informes fiscals o justificacions.',
+      "Summa Social està pensat per a entitats que gestionen els comptes amb extractes bancaris, volen tenir millor control de les despeses i ingressos i necessiten preparar informes fiscals o justificacions.",
       "No és un sistema comptable complex. És una eina per organitzar la informació econòmica de l'entitat.",
     ],
   },
   finalCta: {
     title: 'Vols veure com funciona?',
     text: 'Si la teva entitat treballa amb extractes bancaris cada mes, potser val la pena veure com funciona aquest procés dins de Summa Social. Importar els moviments pot passar de ser una tasca manual a ser simplement el primer pas de la gestió econòmica.',
-    linkLabel: 'Demana una demostració per la teva entitat.',
+    linkLabel: 'Demana una demostració per a la teva entitat.',
     href: '/ca/contact',
   },
 };
@@ -831,14 +831,14 @@ const DONOR_MANAGEMENT_CONTENT_CA: PublicLandingContent = {
   finalCta: {
     title: 'Vols veure com funciona?',
     text: "Si la base de donants de la teva entitat està repartida entre diversos documents o fulls de càlcul, potser val la pena veure com funciona Summa Social. La gestió dels donants pot passar de ser un conjunt de llistes disperses a ser una base clara vinculada a la realitat econòmica de l'entitat.",
-    linkLabel: 'Demana una demostració per la teva entitat.',
+    linkLabel: 'Demana una demostració per a la teva entitat.',
     href: '/ca/contact',
   },
 };
 
 const MODEL_182_CONTENT_CA: PublicLandingContent = {
   hero: {
-    title: 'Model 182 per a ONGs i associacions',
+    title: 'Model 182 per a ONG i associacions',
     subtitle: 'Genera el Model 182 sense Excel, sense errors i sense patir el gener.',
     introParagraphs: [
       'El Model 182 és una de les obligacions fiscals més delicades per a una entitat. Cada any cal recopilar totes les donacions, verificar les dades dels donants, restar les devolucions i preparar el fitxer per a la gestoria o per a l’AEAT.',
@@ -922,13 +922,13 @@ const MODEL_182_CONTENT_CA: PublicLandingContent = {
     title: 'Pensat per a entitats petites i mitjanes',
     paragraphs: [
       'Summa Social està dissenyat per a organitzacions que porten la gestió econòmica amb fulls de càlcul i necessiten complir amb la fiscalitat sense un sistema complex.',
-      'No és un ERP generalista ni un sistema de comptabilitat avançat. És una eina de gestió econòmica i fiscal pensada específicament per entitats socials.',
+      'No és un ERP generalista ni un sistema de comptabilitat avançat. És una eina de gestió econòmica i fiscal pensada específicament per a entitats socials.',
     ],
   },
   finalCta: {
     title: 'Vols veure com funciona?',
     text: 'Si portes la gestió econòmica d’una entitat i cada any pateixes amb el Model 182, potser val la pena veure com funciona Summa Social.',
-    linkLabel: 'Demana una demostració per la teva entitat.',
+    linkLabel: 'Demana una demostració per a la teva entitat.',
     href: '/ca/contact',
   },
 };
