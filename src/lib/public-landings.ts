@@ -522,6 +522,313 @@ const DONATION_CERTIFICATES_CONTENT_CA: PublicLandingContent = {
   },
 };
 
+const SEPA_REMITTANCES_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
+  ca: {
+    title: 'Remeses SEPA per a quotes de socis | Software de gestió per entitats | Summa Social',
+    description:
+      'Prepara remeses SEPA de quotes de socis sense fulls de càlcul. Revisa IBAN, imports i genera el fitxer per al banc amb Summa Social.',
+  },
+  es: {
+    title: 'Remesas SEPA | Summa Social',
+    description: 'Landing en preparacion para remesas SEPA de entidades sin animo de lucro.',
+  },
+  fr: {
+    title: 'Prelevements SEPA | Summa Social',
+    description: 'Landing en preparation pour les prelevements SEPA des associations.',
+  },
+  pt: {
+    title: 'Remessas SEPA | Summa Social',
+    description: 'Landing em preparacao para remessas SEPA de entidades sem fins lucrativos.',
+  },
+};
+
+const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
+  hero: {
+    title: 'Cobrar quotes de socis amb remeses SEPA sense fulls de càlcul',
+    subtitle: 'Genera les remeses de cobrament de manera clara i ordenada.',
+    introParagraphs: [
+      'Moltes entitats cobren les quotes dels seus socis mitjançant domiciliació bancària. Però preparar les remeses SEPA acostuma a implicar fulls de càlcul, revisions manuals i molta cura per evitar errors.',
+      'Cal comprovar els IBAN, revisar qui toca cobrar aquell mes, generar el fitxer correcte i enviar-lo al banc.',
+      'Summa Social simplifica aquest procés. L aplicació permet preparar les remeses de cobrament de quotes a partir de les dades reals dels socis i generar el fitxer que el banc necessita.',
+    ],
+  },
+  problem: {
+    title: 'El problema habitual amb les remeses de quotes',
+    intro: 'Quan les remeses es preparen manualment, és fàcil trobar-se amb situacions com aquestes:',
+    points: [
+      'socis amb IBAN incorrecte o incomplet',
+      'dificultat per saber a qui toca cobrar aquell mes',
+      'errors en els imports de les quotes',
+      'fitxers generats amb Excel que després el banc rebutja',
+    ],
+    outroParagraphs: [
+      'A més, quan l entitat té molts socis, el procés pot convertir-se en una tasca administrativa molt pesada.',
+    ],
+  },
+  solution: {
+    title: 'Com ho resol Summa Social',
+    intro: 'Summa Social permet preparar les remeses de cobrament directament des de la informació dels socis. El procés és simple:',
+    steps: [
+      {
+        title: 'Selecciones el compte bancari de l entitat',
+        body: 'El sistema utilitza les dades del compte que cobrarà les quotes.',
+      },
+      {
+        title: 'El sistema identifica els socis que toca cobrar',
+        body: 'Segons la periodicitat de la quota, es pot preparar la remesa corresponent.',
+      },
+      {
+        title: 'Revises la selecció',
+        body: 'Abans de generar la remesa, es pot comprovar qui s inclou i qui no.',
+      },
+      {
+        title: 'Es genera el fitxer SEPA',
+        body: 'L entitat descarrega el fitxer amb el format que necessita el banc.',
+      },
+      {
+        title: 'Puges el fitxer al banc',
+        body: 'Amb el fitxer carregat al banc, es pot executar el cobrament de les quotes.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Què permet gestionar Summa Social',
+    intro: 'Amb Summa Social, l entitat pot:',
+    items: [
+      'preparar remeses de cobrament de quotes',
+      'gestionar socis amb diferents periodicitats de pagament',
+      'detectar socis amb dades bancàries incompletes',
+      'revisar fàcilment els cobraments abans d enviar-los al banc',
+    ],
+    outroParagraphs: [
+      'Tot el procés queda integrat amb la base de dades de donants i amb la gestió econòmica de l entitat.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficis operatius',
+    items: [
+      'Menys feina administrativa: no cal preparar fitxers manuals cada vegada.',
+      'Menys risc d errors: els cobraments es generen a partir de les dades dels socis.',
+      'Més control sobre les quotes: és més fàcil veure qui paga, quan paga i quant paga.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensat per a entitats socials',
+    paragraphs: [
+      'Aquest sistema és especialment útil per a entitats que tenen socis amb quotes recurrents, cobren per domiciliació bancària i volen simplificar la gestió de les remeses.',
+      'Summa Social no és un gestor bancari complet. És una eina pensada perquè les entitats socials puguin gestionar les quotes de manera clara i ordenada.',
+    ],
+  },
+  finalCta: {
+    title: 'Vols veure com funciona?',
+    text: 'Si la teva entitat cobra quotes de socis cada mes o cada trimestre, potser val la pena veure com funciona aquest procés dins de Summa Social. Preparar una remesa pot passar de ser una tasca manual amb Excel a ser simplement un pas més dins del sistema.',
+    linkLabel: 'Demana una demostració per la teva entitat.',
+    href: '/ca/contact',
+  },
+};
+
+const BANK_STATEMENT_IMPORT_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
+  ca: {
+    title: 'Importar extracte bancari per a entitats | Software de gestió | Summa Social',
+    description:
+      'Importa l extracte bancari i centralitza ingressos i despeses en un únic lloc. Classifica moviments i vincula transaccions amb donants o proveïdors.',
+  },
+  es: {
+    title: 'Importar extracto bancario | Summa Social',
+    description: 'Landing en preparacion para importacion de extractos bancarios de entidades.',
+  },
+  fr: {
+    title: 'Importer un extrait bancaire | Summa Social',
+    description: 'Landing en preparation pour l import des extraits bancaires des associations.',
+  },
+  pt: {
+    title: 'Importar extrato bancario | Summa Social',
+    description: 'Landing em preparacao para importacao de extratos bancarios de entidades.',
+  },
+};
+
+const BANK_STATEMENT_IMPORT_CONTENT_CA: PublicLandingContent = {
+  hero: {
+    title: 'Importar l extracte bancari i tenir tots els moviments controlats',
+    subtitle: 'Porta els moviments del banc a un únic lloc.',
+    introParagraphs: [
+      'Moltes entitats gestionen la seva informació econòmica amb extractes bancaris, fulls de càlcul i notes disperses. Això fa difícil tenir una visió clara de què ha passat realment durant el mes.',
+      'Summa Social permet importar l extracte bancari i treballar directament sobre els moviments.',
+      'Així, totes les entrades i sortides de diners es poden revisar, classificar i vincular amb donants o proveïdors.',
+    ],
+  },
+  problem: {
+    title: 'El problema habitual amb els extractes bancaris',
+    intro: 'Quan els moviments del banc es gestionen manualment, apareixen dificultats com:',
+    points: [
+      'moviments duplicats o mal registrats',
+      'dificultat per saber a què correspon cada despesa',
+      'pèrdua de temps classificant transaccions',
+      'informació repartida entre diversos documents',
+    ],
+    outroParagraphs: ['El resultat acostuma a ser una gestió econòmica poc clara.'],
+  },
+  solution: {
+    title: 'Com ho resol Summa Social',
+    intro: 'Summa Social permet importar els moviments del banc de manera senzilla.',
+    steps: [
+      {
+        title: 'Puges el fitxer del banc',
+        body: 'Els extractes es poden importar en formats habituals com CSV o Excel.',
+      },
+      {
+        title: 'El sistema detecta els moviments',
+        body: 'Cada línia d extracte queda identificada com un moviment nou.',
+      },
+      {
+        title: 'Cada moviment queda registrat',
+        body: 'Es guarda la data, la descripció i l import per treballar-ho des del sistema.',
+      },
+      {
+        title: 'Assignació de contactes i categories',
+        body: 'Els moviments es poden vincular amb donants, proveïdors o categories de despesa.',
+      },
+      {
+        title: 'Revisió i classificació',
+        body: 'L equip de l entitat pot revisar els moviments i completar la informació que calgui.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Què permet gestionar Summa Social',
+    intro: 'Amb els moviments importats, l entitat pot:',
+    items: [
+      'tenir tots els ingressos i despeses en un únic lloc',
+      'classificar moviments per categoria',
+      'vincular transaccions amb donants o proveïdors',
+      'adjuntar factures o documents relacionats',
+    ],
+    outroParagraphs: ['Això permet tenir una base econòmica clara per a informes, certificats o justificacions.'],
+  },
+  operationalBenefits: {
+    title: 'Beneficis operatius',
+    items: [
+      'Visió clara de les finances: tots els moviments del banc es poden consultar i revisar fàcilment.',
+      'Menys feina manual: no cal copiar dades del banc a Excel.',
+      'Base fiable per als informes fiscals: la informació econòmica ja queda preparada per generar informes o certificats.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensat per a entitats petites i mitjanes',
+    paragraphs: [
+      'Summa Social està pensat per entitats que gestionen els comptes amb extractes bancaris, volen tenir millor control de les despeses i ingressos i necessiten preparar informes fiscals o justificacions.',
+      'No és un sistema comptable complex. És una eina per organitzar la informació econòmica de l entitat.',
+    ],
+  },
+  finalCta: {
+    title: 'Vols veure com funciona?',
+    text: 'Si la teva entitat treballa amb extractes bancaris cada mes, potser val la pena veure com funciona aquest procés dins de Summa Social. Importar els moviments pot passar de ser una tasca manual a ser simplement el primer pas de la gestió econòmica.',
+    linkLabel: 'Demana una demostració per la teva entitat.',
+    href: '/ca/contact',
+  },
+};
+
+const DONOR_MANAGEMENT_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
+  ca: {
+    title: 'Gestió de donants per a entitats socials | Software de gestió | Summa Social',
+    description:
+      'Centralitza socis i donants en una base clara, amb historial d aportacions i suport per certificats i Model 182.',
+  },
+  es: {
+    title: 'Gestion de donantes | Summa Social',
+    description: 'Landing en preparacion para gestion de donantes de entidades sin animo de lucro.',
+  },
+  fr: {
+    title: 'Gestion des donateurs | Summa Social',
+    description: 'Landing en preparation pour la gestion des donateurs des associations.',
+  },
+  pt: {
+    title: 'Gestao de doadores | Summa Social',
+    description: 'Landing em preparacao para gestao de doadores de entidades sem fins lucrativos.',
+  },
+};
+
+const DONOR_MANAGEMENT_CONTENT_CA: PublicLandingContent = {
+  hero: {
+    title: 'Gestionar els donants de l entitat sense fulls de càlcul',
+    subtitle: 'Tenir una base clara de socis i donants.',
+    introParagraphs: [
+      'Per a moltes entitats, la informació dels donants es troba repartida entre fulls de càlcul, llistes antigues i correus electrònics.',
+      'Això fa difícil saber qui són realment els donants actius, quant ha aportat cada persona i quins socis paguen quotes regularment.',
+      'Summa Social centralitza la gestió de donants en un únic lloc.',
+    ],
+  },
+  problem: {
+    title: 'El problema habitual amb les bases de donants',
+    intro: 'Quan la informació dels donants es gestiona amb Excel, apareixen problemes com:',
+    points: [
+      'dades duplicades o desactualitzades',
+      'dificultat per saber què ha aportat cada persona',
+      'errors en preparar certificats de donació',
+      'manca de visió sobre l evolució dels donants',
+    ],
+    outroParagraphs: ['Amb el temps, la base de dades es torna difícil de mantenir.'],
+  },
+  solution: {
+    title: 'Com ho resol Summa Social',
+    intro: 'Summa Social permet gestionar els donants com una base estructurada vinculada als moviments econòmics.',
+    steps: [
+      {
+        title: 'Registres els donants de l entitat',
+        body: 'Cada persona o empresa té la seva fitxa amb les dades principals.',
+      },
+      {
+        title: 'Pots importar donants des d Excel',
+        body: 'La base inicial es pot carregar sense haver de crear cada fitxa manualment.',
+      },
+      {
+        title: 'Les donacions es vinculen automàticament',
+        body: 'Quan entra una donació, queda associada al donant corresponent.',
+      },
+      {
+        title: 'Pots veure l historial de cada donant',
+        body: 'La fitxa mostra totes les aportacions i devolucions.',
+      },
+      {
+        title: 'La informació serveix per als informes fiscals',
+        body: 'Els certificats i el Model 182 utilitzen aquesta base de dades.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Què permet gestionar Summa Social',
+    intro: 'Amb Summa Social, l entitat pot:',
+    items: [
+      'tenir una base actualitzada de socis i donants',
+      'importar donants des d Excel',
+      'veure l historial complet de donacions',
+      'identificar donants recurrents o puntuals',
+    ],
+    outroParagraphs: ['Això permet entendre millor qui sosté l activitat de l entitat.'],
+  },
+  operationalBenefits: {
+    title: 'Beneficis operatius',
+    items: [
+      'Base de donants clara: la informació ja no està repartida entre diferents documents.',
+      'Millor control de les donacions: és fàcil veure què ha aportat cada persona.',
+      'Preparació més simple dels informes fiscals: les dades dels donants ja estan estructurades.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensat per a entitats socials',
+    paragraphs: [
+      'Summa Social està pensat per a entitats que tenen socis o donants recurrents, volen ordenar la seva base de donants i necessiten generar certificats o informes fiscals.',
+      'És una eina per facilitar la gestió quotidiana de l entitat.',
+    ],
+  },
+  finalCta: {
+    title: 'Vols veure com funciona?',
+    text: 'Si la base de donants de la teva entitat està repartida entre diversos documents o fulls de càlcul, potser val la pena veure com funciona Summa Social. La gestió dels donants pot passar de ser un conjunt de llistes disperses a ser una base clara vinculada a la realitat econòmica de l entitat.',
+    linkLabel: 'Demana una demostració per la teva entitat.',
+    href: '/ca/contact',
+  },
+};
+
 const MODEL_182_CONTENT_CA: PublicLandingContent = {
   hero: {
     title: 'Model 182 per a ONGs i associacions',
@@ -640,9 +947,36 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
       pt: buildPendingContent('pt', LANDING_NAMES['certificats-donacio'].pt),
     },
   },
-  buildPendingLanding('remeses-sepa'),
-  buildPendingLanding('importar-extracte-bancari'),
-  buildPendingLanding('gestio-donants'),
+  {
+    slug: 'remeses-sepa',
+    metadata: SEPA_REMITTANCES_METADATA,
+    content: {
+      ca: SEPA_REMITTANCES_CONTENT_CA,
+      es: buildPendingContent('es', LANDING_NAMES['remeses-sepa'].es),
+      fr: buildPendingContent('fr', LANDING_NAMES['remeses-sepa'].fr),
+      pt: buildPendingContent('pt', LANDING_NAMES['remeses-sepa'].pt),
+    },
+  },
+  {
+    slug: 'importar-extracte-bancari',
+    metadata: BANK_STATEMENT_IMPORT_METADATA,
+    content: {
+      ca: BANK_STATEMENT_IMPORT_CONTENT_CA,
+      es: buildPendingContent('es', LANDING_NAMES['importar-extracte-bancari'].es),
+      fr: buildPendingContent('fr', LANDING_NAMES['importar-extracte-bancari'].fr),
+      pt: buildPendingContent('pt', LANDING_NAMES['importar-extracte-bancari'].pt),
+    },
+  },
+  {
+    slug: 'gestio-donants',
+    metadata: DONOR_MANAGEMENT_METADATA,
+    content: {
+      ca: DONOR_MANAGEMENT_CONTENT_CA,
+      es: buildPendingContent('es', LANDING_NAMES['gestio-donants'].es),
+      fr: buildPendingContent('fr', LANDING_NAMES['gestio-donants'].fr),
+      pt: buildPendingContent('pt', LANDING_NAMES['gestio-donants'].pt),
+    },
+  },
 ];
 
 const PUBLIC_LANDING_MAP = new Map(PUBLIC_LANDINGS.map((landing) => [landing.slug, landing]));
