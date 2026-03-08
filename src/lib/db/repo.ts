@@ -22,7 +22,10 @@ import type {
   TranscriptDoc,
 } from "@/src/lib/db/types";
 import { defaultTimezone } from "@/src/lib/firebase/env";
-import { createMeetingWithDaily } from "@/src/lib/meetings/create-meeting-with-daily";
+import {
+  createMeetingWithDaily,
+  type CreateMeetingWithDailyResult,
+} from "@/src/lib/meetings/create-meeting-with-daily";
 
 export type PollOption = PollOptionDoc & { id: string };
 
@@ -287,7 +290,7 @@ export async function closePollCreateMeeting(input: {
   pollId: string;
   winningOptionId: string;
   createdBy: string;
-}): Promise<string> {
+}): Promise<CreateMeetingWithDailyResult> {
   const pollRef = pollsCol.doc(input.pollId);
   const optionRef = pollRef.collection("options").doc(input.winningOptionId);
 
@@ -334,7 +337,7 @@ export async function closePollCreateMeeting(input: {
       }),
   });
 
-  return meeting.meetingId;
+  return meeting;
 }
 
 export async function createMeetingForOrg(input: {

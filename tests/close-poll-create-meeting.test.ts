@@ -60,16 +60,20 @@ test("closePollCreateMeeting stores Daily room data and mirrors meetingUrl on su
   };
 
   try {
-    const meetingId = await closePollCreateMeeting({
+    const created = await closePollCreateMeeting({
       pollId,
       winningOptionId: optionId,
       createdBy: "owner-success",
     });
-    const meetingSnap = await adminDb.collection("meetings").doc(meetingId).get();
+    const meetingSnap = await adminDb.collection("meetings").doc(created.meetingId).get();
     const meeting = meetingSnap.data();
 
     assert.equal(meetingSnap.exists, true);
-    assert.equal(requestedRoomName, `meeting-${meetingId}`);
+    assert.equal(created.meetingId, meetingSnap.id);
+    assert.equal(requestedRoomName, `meeting-${created.meetingId}`);
+    assert.equal(created.dailyRoomName, requestedRoomName);
+    assert.equal(created.dailyRoomUrl, `https://summareu.daily.co/${requestedRoomName}`);
+    assert.equal(created.meetingUrl, created.dailyRoomUrl);
     assert.equal(meeting?.dailyRoomName, requestedRoomName);
     assert.equal(meeting?.dailyRoomUrl, `https://summareu.daily.co/${requestedRoomName}`);
     assert.equal(meeting?.meetingUrl, meeting?.dailyRoomUrl);
@@ -92,22 +96,25 @@ test("closePollCreateMeeting keeps the meeting when Daily room creation fails", 
   };
 
   try {
-    const meetingId = await closePollCreateMeeting({
+    const created = await closePollCreateMeeting({
       pollId,
       winningOptionId: optionId,
       createdBy: "owner-failure",
     });
-    const meetingSnap = await adminDb.collection("meetings").doc(meetingId).get();
+    const meetingSnap = await adminDb.collection("meetings").doc(created.meetingId).get();
     const meeting = meetingSnap.data();
     const pollSnap = await adminDb.collection("polls").doc(pollId).get();
 
     assert.equal(meetingSnap.exists, true);
+    assert.equal(created.meetingUrl, null);
+    assert.equal(created.dailyRoomUrl, null);
+    assert.equal(created.dailyRoomName, null);
     assert.equal(meeting?.dailyRoomName, null);
     assert.equal(meeting?.dailyRoomUrl, null);
     assert.equal(meeting?.meetingUrl, null);
     assert.equal(pollSnap.data()?.status, "closed");
     assert.equal(
-      errorLogs.some((entry) => entry[0] === "daily_room_create_failed" && entry[1] === meetingId),
+      errorLogs.some((entry) => entry[0] === "daily_room_create_failed" && entry[1] === created.meetingId),
       true
     );
   } finally {
@@ -136,17 +143,17 @@ test("legacy meetingUrl consumers keep working after closePollCreateMeeting", as
   };
 
   try {
-    const meetingId = await closePollCreateMeeting({
+    const created = await closePollCreateMeeting({
       pollId,
       winningOptionId: optionId,
       createdBy: "owner-compat",
     });
-    const meetingSnap = await adminDb.collection("meetings").doc(meetingId).get();
+    const meetingSnap = await adminDb.collection("meetings").doc(created.meetingId).get();
     const meeting = meetingSnap.data();
     const legacyLookup = await getMeetingByMeetingUrl(meeting?.meetingUrl);
 
     assert.equal(typeof meeting?.meetingUrl, "string");
-    assert.equal(legacyLookup?.id, meetingId);
+    assert.equal(legacyLookup?.id, created.meetingId);
     assert.equal(legacyLookup?.meetingUrl, meeting?.dailyRoomUrl);
   } finally {
     globalThis.fetch = originalFetch;

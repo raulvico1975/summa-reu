@@ -38,13 +38,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
     }
 
-    const meetingId = await closePollCreateMeeting({
+    const meeting = await closePollCreateMeeting({
       pollId: body.pollId,
       winningOptionId: body.winningOptionId,
       createdBy: owner.uid,
     });
 
-    return NextResponse.json({ meetingId });
+    return NextResponse.json(meeting);
   } catch (error) {
     if (isSubscriptionRequiredError(error)) {
       return subscriptionRequiredResponse();

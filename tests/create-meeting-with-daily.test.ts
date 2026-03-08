@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
 import test from "node:test";
 
 process.env.FIREBASE_PROJECT_ID ||= "summa-board";
@@ -115,4 +116,15 @@ test("createMeetingWithDaily always creates the meeting document first", async (
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("owner meetings create route propagates the exact shape returned by the common helper", async () => {
+  const source = await fs.readFile("app/api/owner/meetings/create/route.ts", "utf8");
+
+  assert.equal(
+    source.includes("const meeting = await createMeetingRouteDeps.createMeetingWithDaily({"),
+    true
+  );
+  assert.equal(source.includes("return NextResponse.json(meeting);"), true);
+  assert.equal(source.includes("return NextResponse.json({ meetingId: meeting.meetingId });"), false);
 });

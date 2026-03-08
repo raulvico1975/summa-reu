@@ -19,24 +19,34 @@ const bodySchema = z.object({
   description: z.string().max(5000).optional(),
 });
 
+export const createMeetingRouteDeps = {
+  createMeetingForOrg,
+  createMeetingWithDaily,
+  requireActiveSubscription,
+  getOwnerFromRequest,
+  reportApiUnexpectedError,
+  isTrustedSameOrigin,
+  getRequestI18nFromNextRequest,
+};
+
 export async function POST(request: NextRequest) {
-  const { i18n } = getRequestI18nFromNextRequest(request);
+  const { i18n } = createMeetingRouteDeps.getRequestI18nFromNextRequest(request);
 
   try {
-    if (!isTrustedSameOrigin(request)) {
+    if (!createMeetingRouteDeps.isTrustedSameOrigin(request)) {
       return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
     }
 
-    const owner = await getOwnerFromRequest(request);
+    const owner = await createMeetingRouteDeps.getOwnerFromRequest(request);
     if (!owner) {
       return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 401 });
     }
-    requireActiveSubscription(owner);
+    createMeetingRouteDeps.requireActiveSubscription(owner);
 
     const body = bodySchema.parse(await request.json());
-    const meeting = await createMeetingWithDaily({
+    const meeting = await createMeetingRouteDeps.createMeetingWithDaily({
       createMeeting: () =>
-        createMeetingForOrg({
+        createMeetingRouteDeps.createMeetingForOrg({
           orgId: owner.orgId,
           title: body.title,
           description: body.description,
@@ -44,7 +54,7 @@ export async function POST(request: NextRequest) {
         }),
     });
 
-    return NextResponse.json({ meetingId: meeting.meetingId });
+    return NextResponse.json(meeting);
   } catch (error) {
     if (isSubscriptionRequiredError(error)) {
       return subscriptionRequiredResponse();
@@ -55,7 +65,7 @@ export async function POST(request: NextRequest) {
         ? i18n.errors.dailyNotConfigured
         : i18n.errors.invalidPayload;
 
-    await reportApiUnexpectedError({
+    await createMeetingRouteDeps.reportApiUnexpectedError({
       route: "/api/owner/meetings/create",
       action: "intentàvem crear una reunió",
       error,
