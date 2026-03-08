@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Upload, Settings, FileCheck } from 'lucide-react';
+import { ArrowRight, Upload, Settings, FileCheck, Download } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -83,6 +83,25 @@ const FEATURES_PATH: Record<PublicLocale, string> = {
   pt: 'funcionalidades',
 };
 
+const HOME_VISUALS = {
+  default: {
+    conciliation: '/visuals/web/web_concilia_bancaria.webp',
+    remittances: '/visuals/web/web_divide_remeses.webp',
+    donations: '/visuals/web/web_divide_stripe.webp',
+    fiscal: '/visuals/web/web_certificats_182.webp',
+    admin: '/visuals/web/web_gestio_docs.webp',
+    projects: '/visuals/web/web_seguiment_projectes.webp',
+  },
+  ca: {
+    conciliation: '/visuals/web/web_concilia_bancaria_ca.webp',
+    remittances: '/visuals/web/web_divideix_remeses_ca.webp',
+    donations: '/visuals/web/web_divideix_stripe_ca.webp',
+    fiscal: '/visuals/web/web_certificats_182_ca.webp',
+    admin: '/visuals/web/web_gestio_docs_ca.webp',
+    projects: '/visuals/web/web_seguiment_projectes_ca.webp',
+  },
+} as const;
+
 export default async function HomePage({ params }: PageProps) {
   const { lang } = await params;
 
@@ -94,6 +113,7 @@ export default async function HomePage({ params }: PageProps) {
   const t = getPublicTranslations(locale);
   const anchors = SECTION_ANCHORS[locale];
   const featuresPath = FEATURES_PATH[locale];
+  const visuals = locale === 'ca' ? HOME_VISUALS.ca : HOME_VISUALS.default;
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -113,14 +133,14 @@ export default async function HomePage({ params }: PageProps) {
           <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 items-center">
             {/* Columna esquerra: Text */}
             <div className="space-y-6 text-center lg:text-left">
-              <div className="flex items-center justify-center lg:justify-start gap-3">
+              <div className="flex items-center justify-center gap-2 lg:justify-start">
                 <Logo className="h-12 w-12 lg:h-14 lg:w-14 text-primary" />
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">
+                <span className="text-lg font-semibold font-headline text-primary">
                   {t.common.appName}
-                </p>
+                </span>
               </div>
 
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+              <h1 className="mx-auto max-w-3xl text-[2.75rem] font-extrabold leading-[1.02] tracking-[-0.03em] text-foreground sm:text-[3.5rem] lg:mx-0 lg:text-[3.35rem] 2xl:text-7xl">
                 {t.home.heroTagline}
               </h1>
 
@@ -130,10 +150,6 @@ export default async function HomePage({ params }: PageProps) {
 
               <p className="text-base text-muted-foreground/80 sm:text-lg">
                 {t.cta.supporting}
-              </p>
-
-              <p className="text-sm text-muted-foreground/80">
-                {t.home.hero.bridgeLine}
               </p>
 
               {/* Imatge en mòbil: entre text i CTAs */}
@@ -209,42 +225,65 @@ export default async function HomePage({ params }: PageProps) {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          C) WORKFLOW — 3 passos
+          C) WORKFLOW — 4 passos
           ═══════════════════════════════════════════════════════════════════════ */}
       <section className="px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-2xl font-semibold text-center mb-12">{t.home.workflow.title}</h2>
+          <p className="mx-auto mb-12 max-w-2xl text-center text-lg text-muted-foreground">
+            {t.home.workflow.lead}
+          </p>
 
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {/* Pas 1 */}
-            <div className="text-center space-y-4">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Upload className="h-6 w-6" />
+            <div className="rounded-2xl border border-border/60 bg-background p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <span className="text-5xl font-black leading-none text-primary/25">1</span>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Upload className="h-5 w-5" />
+                </div>
               </div>
-              <h3 className="text-lg font-semibold">{t.home.workflow.step1.title}</h3>
-              <p className="text-sm text-muted-foreground">{t.home.workflow.step1.description}</p>
+              <h3 className="mt-6 text-xl font-semibold">{t.home.workflow.step1.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{t.home.workflow.step1.description}</p>
             </div>
 
             {/* Pas 2 */}
-            <div className="text-center space-y-4">
-              <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Settings className="h-6 w-6" />
-                {/* Badge +IA estil Spark */}
-                <span className="absolute -top-1 -right-1 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
-                  +IA
-                </span>
+            <div className="rounded-2xl border border-border/60 bg-background p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <span className="text-5xl font-black leading-none text-primary/25">2</span>
+                <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Settings className="h-5 w-5" />
+                  <span className="absolute -top-1 -right-1 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                    +IA
+                  </span>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold">{t.home.workflow.step2.title}</h3>
-              <p className="text-sm text-muted-foreground">{t.home.workflow.step2.description}</p>
+              <h3 className="mt-6 text-xl font-semibold">{t.home.workflow.step2.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{t.home.workflow.step2.description}</p>
             </div>
 
             {/* Pas 3 */}
-            <div className="text-center space-y-4">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <FileCheck className="h-6 w-6" />
+            <div className="rounded-2xl border border-border/60 bg-background p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <span className="text-5xl font-black leading-none text-primary/25">3</span>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <FileCheck className="h-5 w-5" />
+                </div>
               </div>
-              <h3 className="text-lg font-semibold">{t.home.workflow.step3.title}</h3>
-              <p className="text-sm text-muted-foreground">{t.home.workflow.step3.description}</p>
+              <h3 className="mt-6 text-xl font-semibold">{t.home.workflow.step3.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{t.home.workflow.step3.description}</p>
+            </div>
+
+            {/* Pas 4 */}
+            <div className="rounded-2xl border border-border/60 bg-muted/20 p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <span className="text-5xl font-black leading-none text-primary/25">4</span>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Download className="h-5 w-5" />
+                </div>
+              </div>
+              <h3 className="mt-6 text-xl font-semibold">{t.home.workflow.step4.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{t.home.workflow.step4.description}</p>
             </div>
           </div>
         </div>
@@ -265,7 +304,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className={frameClass}>
               <div className="aspect-video overflow-hidden bg-muted/20">
                 <Image
-                  src="/visuals/web/web_concilia_bancaria.webp"
+                  src={visuals.conciliation}
                   alt={t.home.capabilities.conciliation.title}
                   width={600}
                   height={340}
@@ -289,7 +328,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className={frameClass}>
               <div className="aspect-video overflow-hidden bg-muted/20">
                 <Image
-                  src="/visuals/web/web_divide_remeses.webp"
+                  src={visuals.remittances}
                   alt={t.home.capabilities.remittances.title}
                   width={600}
                   height={340}
@@ -313,7 +352,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className={frameClass}>
               <div className="aspect-video overflow-hidden bg-muted/20">
                 <Image
-                  src="/visuals/web/web_divide_stripe.webp"
+                  src={visuals.donations}
                   alt={t.home.capabilities.donations.title}
                   width={600}
                   height={340}
@@ -337,7 +376,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className={frameClass}>
               <div className="aspect-video overflow-hidden bg-muted/20">
                 <Image
-                  src="/visuals/web/web_certificats_182.webp"
+                  src={visuals.fiscal}
                   alt={t.home.capabilities.fiscal.title}
                   width={600}
                   height={340}
@@ -400,7 +439,7 @@ export default async function HomePage({ params }: PageProps) {
             </div>
             <div className={frameClass}>
               <Image
-                src="/visuals/web/web_gestio_docs.webp"
+                src={visuals.admin}
                 alt={t.home.profiles.admin.title}
                 width={600}
                 height={400}
@@ -419,7 +458,7 @@ export default async function HomePage({ params }: PageProps) {
             <div className="order-2 lg:order-1">
               <div className={frameClass}>
                 <Image
-                  src="/visuals/web/web_seguiment_projectes.webp"
+                  src={visuals.projects}
                   alt={t.home.profiles.projects.title}
                   width={600}
                   height={400}

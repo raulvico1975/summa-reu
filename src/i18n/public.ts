@@ -241,9 +241,11 @@ export interface PublicTranslations {
     };
     workflow: {
       title: string;
+      lead: string;
       step1: { title: string; description: string };
       step2: { title: string; description: string };
       step3: { title: string; description: string };
+      step4: { title: string; description: string };
     };
     systemOverview: {
       title: string;
@@ -693,17 +695,23 @@ const ca: PublicTranslations = {
     },
     workflow: {
       title: 'Com funciona',
+      lead: "De l'extracte bancari a l'informe fiscal, tot en el mateix sistema.",
       step1: {
         title: 'Connecta',
-        description: "Importa l'extracte bancari i la documentació econòmica en pocs segons.",
+        description: 'Importa extractes, factures, nòmines i tiquets en segons. Summa posa cada dada al seu lloc des del primer moment.',
       },
       step2: {
         title: 'Gestiona',
-        description: 'Classifica moviments amb assistència automàtica — tu revises i confirmes.',
+        description: 'Controla remeses de socis, devolucions bancàries i cobraments Stripe. Concilia moviments i categoritza ingressos i despeses amb assistència automàtica.',
       },
       step3: {
         title: 'Compleix',
-        description: 'Genera models fiscals, certificats i justificacions amb un clic.',
+        description: "Genera Model 182, 347 i certificats de donació amb enviament directe des de l'app. Controla també l'execució econòmica dels projectes, inclús en cooperació i amb diverses monedes.",
+      },
+      step4: {
+        title: 'Obté',
+        description:
+          'Obté informes automàtics per a juntes i patronats amb dades reals actualitzades. Prepara remeses SEPA, fulls de liquidació i llistats ordenats de despeses i factures per a fiscalitat i justificacions.',
       },
     },
     systemOverview: {
@@ -1254,17 +1262,23 @@ const es: PublicTranslations = {
     },
     workflow: {
       title: 'Cómo funciona',
+      lead: 'Del extracto bancario al informe fiscal, todo en el mismo sistema.',
       step1: {
         title: 'Conecta',
-        description: 'Importa el extracto bancario y la documentación económica en pocos segundos.',
+        description: 'Importa extractos, facturas, nóminas y tickets en segundos. Summa sitúa cada dato en su lugar desde el primer momento.',
       },
       step2: {
         title: 'Gestiona',
-        description: 'Clasifica movimientos, genera remesas y controla cada euro con criterio.',
+        description: 'Controla remesas de socios, devoluciones bancarias y cobros Stripe. Concilia movimientos y categoriza ingresos y gastos con asistencia automática.',
       },
       step3: {
         title: 'Cumple',
-        description: 'Genera modelos fiscales, certificados y justificaciones con un clic.',
+        description: 'Genera Modelo 182, 347 y certificados de donación con envío directo desde la app. Controla también la ejecución económica de los proyectos, incluso en cooperación y con varias monedas.',
+      },
+      step4: {
+        title: 'Obtén',
+        description:
+          'Obtén informes automáticos para juntas y patronatos con datos reales actualizados. Prepara remesas SEPA, hojas de liquidación y listados ordenados de gastos y facturas para fiscalidad y justificaciones.',
       },
     },
     systemOverview: {
@@ -1815,17 +1829,23 @@ const fr: PublicTranslations = {
     },
     workflow: {
       title: 'Comment ça marche',
+      lead: "Du relevé bancaire au rapport fiscal, tout dans le même système.",
       step1: {
         title: 'Connectez',
-        description: "Importez l'extrait bancaire et la documentation économique en quelques secondes.",
+        description: "Importez relevés, factures, fiches de paie et justificatifs en quelques secondes. Summa place chaque donnée au bon endroit dès le départ.",
       },
       step2: {
         title: 'Gérez',
-        description: 'Classifiez les mouvements, générez des prélèvements et contrôlez chaque euro avec discernement.',
+        description: 'Contrôlez prélèvements membres, rejets bancaires et encaissements Stripe. Rapprochez les mouvements et catégorisez recettes et dépenses avec assistance automatique.',
       },
       step3: {
         title: 'Conformez',
-        description: "Générez les modèles fiscaux, certificats et justificatifs d'un seul clic.",
+        description: "Générez les modèles 182, 347 et les certificats de don avec envoi direct depuis l'app. Suivez aussi l'exécution économique des projets, y compris en coopération et en multi-devises.",
+      },
+      step4: {
+        title: 'Obtenez',
+        description:
+          'Obtenez des rapports automatiques pour conseils et comités avec des données réelles à jour. Préparez fichiers SEPA, notes de frais et listes ordonnées de dépenses et factures pour fiscalité et justificatifs.',
       },
     },
     systemOverview: {
@@ -2375,17 +2395,23 @@ const pt: PublicTranslations = {
     },
     workflow: {
       title: 'Como funciona',
+      lead: 'Do extrato bancário ao relatório fiscal, tudo no mesmo sistema.',
       step1: {
         title: 'Conecta',
-        description: 'Importa o extrato bancário e a documentação económica em poucos segundos.',
+        description: 'Importa extratos, faturas, folhas salariais e recibos em segundos. A Summa coloca cada dado no lugar certo desde o primeiro momento.',
       },
       step2: {
         title: 'Gere',
-        description: 'Classifica movimentos, gera remessas e controla cada euro com critério.',
+        description: 'Controla remessas de sócios, devoluções bancárias e cobranças Stripe. Reconcilia movimentos e categoriza receitas e despesas com assistência automática.',
       },
       step3: {
         title: 'Cumpre',
-        description: 'Gera modelos fiscais, certificados e justificações com um clique.',
+        description: 'Gera Modelo 182, 347 e certificados de doação com envio direto a partir da app. Controla também a execução económica dos projetos, incluindo cooperação e várias moedas.',
+      },
+      step4: {
+        title: 'Obtém',
+        description:
+          'Obtém relatórios automáticos para direções e patronatos com dados reais atualizados. Prepara ficheiros SEPA, folhas de liquidação e listagens ordenadas de despesas e faturas para fiscalidade e justificações.',
       },
     },
     systemOverview: {

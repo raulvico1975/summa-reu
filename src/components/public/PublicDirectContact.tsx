@@ -62,7 +62,6 @@ export function PublicDirectContact({ locale, className }: PublicDirectContactPr
           </Link>
         </Button>
       </div>
-      <p className="mt-2 text-sm text-muted-foreground">{CONTACT_PHONE}</p>
     </div>
   );
 }
