@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { getMeetingById } from "@/src/lib/db/repo";
+import {
+  isSubscriptionRequiredError,
+  requireActiveSubscription,
+  subscriptionRequiredResponse,
+} from "@/src/lib/auth/require-active-subscription";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 
@@ -13,6 +18,7 @@ export async function GET(request: NextRequest) {
     if (!owner) {
       return new NextResponse(i18n.errors.unauthorized, { status: 401 });
     }
+    requireActiveSubscription(owner);
 
     const meetingId = request.nextUrl.searchParams.get("meetingId");
     if (!meetingId) {
@@ -38,6 +44,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (isSubscriptionRequiredError(error)) {
+      return subscriptionRequiredResponse();
+    }
+
     await reportApiUnexpectedError({
       route: "/api/owner/minutes/export",
       action: "intentàvem exportar una acta",

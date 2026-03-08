@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
+import { EntitySignupForm } from "@/src/components/entity-signup-form";
 import { getOwnerFromServerCookies } from "@/src/lib/firebase/auth";
 import { getRequestI18n } from "@/src/i18n/server";
 import { withLocalePath } from "@/src/i18n/routing";
@@ -29,10 +29,7 @@ export default async function SignupPage() {
             <li>- {i18n.signup.benefitTwo}</li>
             <li>- {i18n.signup.benefitThree}</li>
           </ul>
-          <Button className="w-full" disabled>
-            {i18n.signup.paymentCta}
-          </Button>
-          <p className="break-words text-xs text-slate-500">{i18n.signup.paymentNote}</p>
+          <EntitySignupForm />
         </CardContent>
       </Card>
     </div>

@@ -12,11 +12,13 @@ import type {
   MinutesDoc,
   MinutesJson,
   OrgDoc,
+  OrgSubscriptionStatus,
   PollDoc,
   PollOptionDoc,
   PollVoteDoc,
   PollVoterDoc,
   RecordingDoc,
+  StripeEventDoc,
   TranscriptDoc,
 } from "@/src/lib/db/types";
 import { defaultTimezone } from "@/src/lib/firebase/env";
@@ -44,6 +46,7 @@ export type MeetingWithAssets = MeetingDoc & {
 };
 
 const orgsCol = adminDb.collection("orgs") as CollectionReference<OrgDoc>;
+const stripeEventsCol = adminDb.collection("stripe_events") as CollectionReference<StripeEventDoc>;
 const pollsCol = adminDb.collection("polls") as CollectionReference<PollDoc>;
 const meetingsCol = adminDb.collection("meetings") as CollectionReference<MeetingDoc>;
 const meetingIngestJobsCol = adminDb.collection(
@@ -89,6 +92,39 @@ export async function getOwnerOrgByUid(uid: string): Promise<(OrgDoc & { id: str
   const legacyDoc = legacySnap.docs[0];
   if (!legacyDoc) return null;
   return { id: legacyDoc.id, ...legacyDoc.data() };
+}
+
+export async function getOrgById(orgId: string): Promise<(OrgDoc & { id: string }) | null> {
+  const doc = await orgsCol.doc(orgId).get();
+  if (!doc.exists) {
+    return null;
+  }
+
+  return { id: doc.id, ...(doc.data() as OrgDoc) };
+}
+
+export async function findOrgByStripeCustomerId(
+  stripeCustomerId: string
+): Promise<(OrgDoc & { id: string }) | null> {
+  const snap = await orgsCol.where("stripeCustomerId", "==", stripeCustomerId).limit(1).get();
+  const doc = snap.docs[0];
+  if (!doc) {
+    return null;
+  }
+
+  return { id: doc.id, ...(doc.data() as OrgDoc) };
+}
+
+export async function findOrgByStripeSubscriptionId(
+  stripeSubscriptionId: string
+): Promise<(OrgDoc & { id: string }) | null> {
+  const snap = await orgsCol.where("stripeSubscriptionId", "==", stripeSubscriptionId).limit(1).get();
+  const doc = snap.docs[0];
+  if (!doc) {
+    return null;
+  }
+
+  return { id: doc.id, ...(doc.data() as OrgDoc) };
 }
 
 export async function listPollsByOrg(orgId: string): Promise<Array<PollDoc & { id: string }>> {
@@ -630,6 +666,53 @@ export async function createOrgForOwner(input: { ownerUid: string; name: string 
     name: input.name,
     ownerUid: input.ownerUid,
     createdAt: FieldValue.serverTimestamp() as Timestamp,
+    subscriptionStatus: "none",
+    plan: "basic",
+    recordingLimitMinutes: 90,
   });
   return ref.id;
+}
+
+export async function updateOrgSubscription(input: {
+  orgId: string;
+  subscriptionStatus?: OrgSubscriptionStatus;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+}): Promise<void> {
+  const patch: Partial<OrgDoc> = {};
+
+  if (input.subscriptionStatus) {
+    patch.subscriptionStatus = input.subscriptionStatus;
+  }
+  if (input.stripeCustomerId) {
+    patch.stripeCustomerId = input.stripeCustomerId;
+  }
+  if (input.stripeSubscriptionId) {
+    patch.stripeSubscriptionId = input.stripeSubscriptionId;
+  }
+
+  await orgsCol.doc(input.orgId).set(patch, { merge: true });
+}
+
+export async function recordStripeEvent(data: {
+  eventId: string;
+  type: string;
+  created: number;
+  orgId?: string | null;
+  subscriptionId?: string | null;
+  raw?: unknown;
+}): Promise<void> {
+  const ref = stripeEventsCol.doc(data.eventId);
+  await ref.set(
+    {
+      eventId: data.eventId,
+      type: data.type,
+      created: data.created,
+      orgId: data.orgId ?? null,
+      subscriptionId: data.subscriptionId ?? null,
+      receivedAt: FieldValue.serverTimestamp() as Timestamp,
+      raw: data.raw ?? null,
+    },
+    { merge: true }
+  );
 }

@@ -10,6 +10,9 @@ export async function requireOwnerPage(): Promise<OwnerContext> {
   if (!owner) {
     redirect(withLocalePath(locale, "/login"));
   }
+  if (owner.subscriptionStatus !== "active") {
+    redirect(withLocalePath(locale, "/billing"));
+  }
 
   return owner;
 }

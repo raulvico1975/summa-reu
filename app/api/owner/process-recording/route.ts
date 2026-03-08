@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  isSubscriptionRequiredError,
+  requireActiveSubscription,
+  subscriptionRequiredResponse,
+} from "@/src/lib/auth/require-active-subscription";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import {
   claimRecordingForProcessing,
@@ -35,6 +40,7 @@ export async function POST(request: NextRequest) {
     if (!owner) {
       return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 401 });
     }
+    requireActiveSubscription(owner);
 
     const meeting = await getMeetingById(body.meetingId);
     if (!meeting || meeting.orgId !== owner.orgId) {
@@ -104,15 +110,16 @@ export async function POST(request: NextRequest) {
       { status: 202 }
     );
   } catch (error) {
+    if (isSubscriptionRequiredError(error)) {
+      return subscriptionRequiredResponse();
+    }
+
     await reportApiUnexpectedError({
       route: "/api/owner/process-recording",
       action: "intentàvem processar una gravació de reunió",
       error,
     });
 
-    return NextResponse.json(
-      { error: i18n.errors.invalidPayload },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: i18n.errors.invalidPayload }, { status: 400 });
   }
 }

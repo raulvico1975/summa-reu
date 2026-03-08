@@ -314,6 +314,15 @@ if (ownerEmail && ownerPassword) {
   const signupData = await signupRes.json();
   assert(signupData.ok === true, "Alta d'entitat sense resposta ok=true");
 
+  await db.collection("orgs").doc(signupData.uid).set(
+    {
+      subscriptionStatus: "active",
+      plan: "basic",
+      recordingLimitMinutes: 90,
+    },
+    { merge: true }
+  );
+
   const secondOwnerIdToken = await signInEmulator(signupEmail, signupPassword);
   const secondOwnerCookie = await createSession(secondOwnerIdToken);
 

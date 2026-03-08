@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getMeetingById, updateMinutesMarkdown } from "@/src/lib/db/repo";
+import {
+  isSubscriptionRequiredError,
+  requireActiveSubscription,
+  subscriptionRequiredResponse,
+} from "@/src/lib/auth/require-active-subscription";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
@@ -25,6 +30,7 @@ export async function POST(request: NextRequest) {
     if (!owner) {
       return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 401 });
     }
+    requireActiveSubscription(owner);
 
     const body = bodySchema.parse(await request.json());
     const meeting = await getMeetingById(body.meetingId);
@@ -41,6 +47,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (isSubscriptionRequiredError(error)) {
+      return subscriptionRequiredResponse();
+    }
+
     await reportApiUnexpectedError({
       route: "/api/owner/minutes/update",
       action: "intentàvem desar canvis a l'acta",

@@ -4,6 +4,8 @@ export type PollStatus = "open" | "closed";
 export type RecordingStatus = "uploaded" | "processing" | "done" | "error";
 export type TranscriptStatus = "pending" | "processing" | "done" | "error";
 export type MinutesTaskStatus = "todo" | "doing" | "done";
+export type OrgSubscriptionStatus = "none" | "pending" | "active" | "past_due" | "canceled";
+export type OrgPlan = "basic";
 // Meeting recording state machine: none -> recording -> processing -> ready | error
 export type MeetingRecordingStatus = "none" | "recording" | "processing" | "ready" | "error";
 export type MeetingIngestJobStatus = "queued" | "processing" | "completed" | "error";
@@ -12,6 +14,11 @@ export type OrgDoc = {
   name: string;
   ownerUid: string;
   createdAt: Timestamp;
+  subscriptionStatus?: OrgSubscriptionStatus;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  plan?: OrgPlan;
+  recordingLimitMinutes?: number;
 };
 
 export type PollDoc = {
@@ -118,4 +125,14 @@ export type MeetingIngestJobDoc = {
   error: string | null;
   createdAt: number;
   updatedAt: number;
+};
+
+export type StripeEventDoc = {
+  eventId: string;
+  type: string;
+  created: number;
+  orgId?: string | null;
+  subscriptionId?: string | null;
+  receivedAt: Timestamp;
+  raw: unknown;
 };

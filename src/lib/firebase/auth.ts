@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 import { adminAuth, adminDb } from "@/src/lib/firebase/admin";
+import type { OrgDoc, OrgPlan, OrgSubscriptionStatus } from "@/src/lib/db/types";
 
 export const SESSION_COOKIE_NAME = "__session";
 
@@ -8,16 +9,22 @@ export type OwnerContext = {
   uid: string;
   orgId: string;
   orgName: string;
+  subscriptionStatus: OrgSubscriptionStatus;
+  plan: OrgPlan;
+  recordingLimitMinutes: number;
 };
 
 async function resolveOwnerContext(uid: string): Promise<OwnerContext | null> {
   const canonicalDoc = await adminDb.collection("orgs").doc(uid).get();
   if (canonicalDoc.exists) {
-    const data = canonicalDoc.data() as { name?: string };
+    const data = canonicalDoc.data() as OrgDoc;
     return {
       uid,
       orgId: canonicalDoc.id,
       orgName: data.name ?? "Organització",
+      subscriptionStatus: data.subscriptionStatus ?? "none",
+      plan: data.plan ?? "basic",
+      recordingLimitMinutes: data.recordingLimitMinutes ?? 90,
     };
   }
 
@@ -33,11 +40,14 @@ async function resolveOwnerContext(uid: string): Promise<OwnerContext | null> {
     return null;
   }
 
-  const data = orgDoc.data() as { name?: string };
+  const data = orgDoc.data() as OrgDoc;
   return {
     uid,
     orgId: orgDoc.id,
     orgName: data.name ?? "Organització",
+    subscriptionStatus: data.subscriptionStatus ?? "none",
+    plan: data.plan ?? "basic",
+    recordingLimitMinutes: data.recordingLimitMinutes ?? 90,
   };
 }
 

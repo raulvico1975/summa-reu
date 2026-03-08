@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getMeetingById, updateMeetingRecordingState } from "@/src/lib/db/repo";
+import {
+  isSubscriptionRequiredError,
+  requireActiveSubscription,
+  subscriptionRequiredResponse,
+} from "@/src/lib/auth/require-active-subscription";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 import { startDailyRecording } from "@/src/lib/meetings/daily";
@@ -25,6 +30,7 @@ export async function POST(request: NextRequest) {
     if (!owner) {
       return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 401 });
     }
+    requireActiveSubscription(owner);
 
     const body = bodySchema.parse(await request.json());
     const meeting = await getMeetingById(body.meetingId);
@@ -59,6 +65,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
+    if (isSubscriptionRequiredError(error)) {
+      return subscriptionRequiredResponse();
+    }
+
     const message =
       error instanceof Error && error.message === "DAILY_NOT_CONFIGURED"
         ? i18n.errors.dailyNotConfigured

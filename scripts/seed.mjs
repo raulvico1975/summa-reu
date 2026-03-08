@@ -46,6 +46,9 @@ async function seedFirestore() {
     name: "Fundació Demo",
     ownerUid,
     createdAt: FieldValue.serverTimestamp(),
+    subscriptionStatus: "active",
+    plan: "basic",
+    recordingLimitMinutes: 90,
   }, { merge: true });
 
   await db.collection("polls").doc(openPollId).set({
