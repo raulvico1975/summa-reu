@@ -170,6 +170,8 @@ export const ca = {
     recordingStartInvalidState: "La gravació només es pot iniciar si la reunió està preparada.",
     recordingStopInvalidState: "Només pots aturar una gravació que està en marxa.",
     missingMeetingUrl: "La reunió encara no té URL operativa.",
+    roomCreateError:
+      "No s'ha pogut crear la sala de reunió. Pots continuar amb la reunió i pujar després la gravació o el text.",
     transcriptProcessing: "La transcripció s'està generant.",
     minutesProcessing: "L'esborrany d'acta s'està generant.",
     rawText: "Notes o text base (opcional)",
@@ -204,7 +206,7 @@ export const ca = {
     meetingNotFound: "No s'ha trobat la reunió.",
     invalidMeetingDate: "Data de reunió no vàlida.",
     recordingNotFound: "Gravació no trobada.",
-    dailyNotConfigured: "Daily no està configurat.",
+    dailyNotConfigured: "No s'ha pogut connectar amb Daily. Revisa la configuració i torna-ho a provar.",
     dailyWebhookUnauthorized: "Webhook de Daily no autoritzat.",
     dailyWebhookInvalid: "Webhook de Daily no vàlid.",
     missingRecordingInput: "Cal fitxer o text base.",

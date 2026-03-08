@@ -30,6 +30,7 @@ export default async function OwnerMeetingPage({
   const showRefresh = recordingStatus === "processing";
   const latestIngestJob = meeting.latestIngestJob;
   const showProcessingError = recordingStatus === "error" || latestIngestJob?.status === "error";
+  const dailyRoomUrl = meeting.dailyRoomUrl ?? meeting.meetingUrl ?? null;
 
   return (
     <div className="space-y-4">
@@ -68,9 +69,9 @@ export default async function OwnerMeetingPage({
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="grid gap-2 sm:flex sm:flex-wrap">
-            {meeting.meetingUrl ? (
+            {dailyRoomUrl ? (
               <a
-                href={meeting.meetingUrl}
+                href={dailyRoomUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-md bg-sky-500 px-4 py-2 text-center font-medium text-white transition-colors hover:bg-sky-600"
@@ -78,9 +79,9 @@ export default async function OwnerMeetingPage({
                 {i18n.meeting.enterMeeting}
               </a>
             ) : (
-              <span className="rounded-md border border-slate-300 px-3 py-2 text-center font-medium text-slate-500">
-                {i18n.meeting.missingMeetingUrl}
-              </span>
+              <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-center font-medium text-red-600">
+                {i18n.meeting.roomCreateError}
+              </p>
             )}
             <a
               href={`/api/owner/minutes/export?meetingId=${meeting.id}`}
@@ -98,15 +99,15 @@ export default async function OwnerMeetingPage({
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-slate-600">{i18n.meeting.embeddedMeetingHint}</p>
-          {meeting.meetingUrl ? (
+          {dailyRoomUrl ? (
             <iframe
-              src={meeting.meetingUrl}
+              src={dailyRoomUrl}
               title={meeting.title}
               className="h-[520px] w-full rounded-md border border-slate-200 bg-white"
               allow="camera; microphone; fullscreen; display-capture"
             />
           ) : (
-            <p className="text-sm text-slate-500">{i18n.meeting.missingMeetingUrl}</p>
+            <p className="text-sm text-red-600">{i18n.meeting.roomCreateError}</p>
           )}
         </CardContent>
       </Card>
@@ -118,7 +119,7 @@ export default async function OwnerMeetingPage({
         <CardContent className="space-y-4">
           <MeetingRecordingControls
             meetingId={meeting.id}
-            meetingUrl={meeting.meetingUrl}
+            meetingUrl={dailyRoomUrl}
             recordingStatus={recordingStatus}
           />
           <MeetingLiveRefresh enabled={showRefresh} />

@@ -104,6 +104,8 @@ export const esExtra: DeepPartial<I18nCa> = {
     recordingStartInvalidState: "La grabación solo se puede iniciar si la reunión está preparada.",
     recordingStopInvalidState: "Solo puedes detener una grabación que está en marcha.",
     missingMeetingUrl: "La reunión todavía no tiene una URL operativa.",
+    roomCreateError:
+      "No se ha podido crear la sala de reunión. Puedes seguir con la reunión y subir después la grabación o el texto.",
     transcriptProcessing: "La transcripción se está generando.",
     minutesProcessing: "El borrador de acta se está generando.",
     rawText: "Notas o texto base (opcional)",

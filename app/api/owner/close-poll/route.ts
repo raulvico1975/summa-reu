@@ -9,7 +9,6 @@ import {
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
-import { createDailyRoom } from "@/src/lib/meetings/daily";
 import { isTrustedSameOrigin } from "@/src/lib/security/request";
 
 export const runtime = "nodejs";
@@ -39,12 +38,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
     }
 
-    const dailyRoom = await createDailyRoom({ title: poll.title });
     const meetingId = await closePollCreateMeeting({
       pollId: body.pollId,
       winningOptionId: body.winningOptionId,
       createdBy: owner.uid,
-      meetingUrl: dailyRoom.meetingUrl,
     });
 
     return NextResponse.json({ meetingId });

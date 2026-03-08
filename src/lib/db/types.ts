@@ -56,6 +56,8 @@ export type MeetingDoc = {
   createdAt: number;
   createdBy: string;
   meetingUrl?: string | null;
+  dailyRoomName?: string | null;
+  dailyRoomUrl?: string | null;
   recordingStatus?: MeetingRecordingStatus;
   recordingUrl?: string | null;
   transcript?: string | null;

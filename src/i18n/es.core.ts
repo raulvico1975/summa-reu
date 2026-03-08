@@ -78,7 +78,7 @@ export const esCore: I18nEsCore = {
     meetingNotFound: "No se ha encontrado la reunión.",
     invalidMeetingDate: "Fecha de reunión no válida.",
     recordingNotFound: "Grabación no encontrada.",
-    dailyNotConfigured: "Daily no está configurado.",
+    dailyNotConfigured: "No se ha podido conectar con Daily. Revisa la configuración y vuelve a intentarlo.",
     dailyWebhookUnauthorized: "Webhook de Daily no autorizado.",
     dailyWebhookInvalid: "Webhook de Daily no válido.",
     missingRecordingInput: "Hace falta archivo o texto base.",

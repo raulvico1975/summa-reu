@@ -32,11 +32,17 @@ function requireDailyConfig(): { apiKey: string; apiBaseUrl: string; domain: str
 }
 
 function normalizeDailyDomain(domain: string): string {
-  if (domain.startsWith("http://") || domain.startsWith("https://")) {
-    return domain.replace(/\/+$/, "");
+  const trimmedDomain = domain.replace(/\/+$/, "");
+
+  if (trimmedDomain.startsWith("http://") || trimmedDomain.startsWith("https://")) {
+    return trimmedDomain;
   }
 
-  return `https://${domain.replace(/\/+$/, "")}`;
+  if (trimmedDomain.includes(".")) {
+    return `https://${trimmedDomain}`;
+  }
+
+  return `https://${trimmedDomain}.daily.co`;
 }
 
 async function dailyFetch<T>(path: string, init?: RequestInit): Promise<T> {

@@ -22,6 +22,7 @@ import type {
   TranscriptDoc,
 } from "@/src/lib/db/types";
 import { defaultTimezone } from "@/src/lib/firebase/env";
+import { createDailyRoom } from "@/src/lib/integrations/daily/create-room";
 
 export type PollOption = PollOptionDoc & { id: string };
 
@@ -260,7 +261,6 @@ export async function closePollCreateMeeting(input: {
   pollId: string;
   winningOptionId: string;
   createdBy: string;
-  meetingUrl: string;
 }): Promise<string> {
   const pollRef = pollsCol.doc(input.pollId);
   const optionRef = pollRef.collection("options").doc(input.winningOptionId);
@@ -297,7 +297,9 @@ export async function closePollCreateMeeting(input: {
       description: poll.description,
       createdAt: Date.now(),
       createdBy: input.createdBy,
-      meetingUrl: input.meetingUrl,
+      meetingUrl: null,
+      dailyRoomName: null,
+      dailyRoomUrl: null,
       recordingStatus: "none",
       recordingUrl: null,
       transcript: null,
@@ -307,6 +309,18 @@ export async function closePollCreateMeeting(input: {
 
     return meetingRef.id;
   });
+
+  try {
+    const daily = await createDailyRoom(meetingId);
+    await meetingsCol.doc(meetingId).update({
+      dailyRoomName: daily.roomName,
+      dailyRoomUrl: daily.roomUrl,
+      meetingUrl: daily.roomUrl,
+    });
+  } catch (error) {
+    console.error("daily_room_create_failed", meetingId);
+    console.error(error);
+  }
 
   return meetingId;
 }
