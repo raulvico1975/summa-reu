@@ -224,6 +224,27 @@ resolve_postdeploy_urls() {
   POSTDEPLOY_URLS_READY=true
 }
 
+wait_for_text_marker() {
+  local label="$1"
+  local url="$2"
+  local marker="$3"
+  local attempts="${4:-6}"
+  local delay_seconds="${5:-10}"
+  local i
+  local body
+
+  for i in $(seq 1 "$attempts"); do
+    if body=$(curl -fsSL --max-time 20 "$url" 2>/dev/null) && printf '%s' "$body" | grep -Fq "$marker"; then
+      echo "  OK: $label"
+      return 0
+    fi
+    sleep "$delay_seconds"
+  done
+
+  echo "  PENDENT: $label"
+  return 1
+}
+
 # Patrons area fiscal (gate bloquejant)
 FISCAL_PATTERNS=(
   "src/lib/remittances/"
@@ -969,6 +990,35 @@ post_deploy_check() {
     echo "  Estat del deploy: PENDENT."
   fi
   echo ""
+
+  if [ -n "$RESOLVED_DEPLOY_BASE_URL" ]; then
+    echo "  Verificant contingut public real..."
+    local public_ok=true
+    if ! wait_for_text_marker \
+      "Home pública (/ca)" \
+      "${RESOLVED_DEPLOY_BASE_URL}/ca" \
+      "Controla donacions, quotes i informes fiscals de la teva ONG sense Excel."; then
+      public_ok=false
+    fi
+    if ! wait_for_text_marker \
+      "Contacte públic (/ca/contact)" \
+      "${RESOLVED_DEPLOY_BASE_URL}/ca/contact" \
+      "Parlem de la teva entitat"; then
+      public_ok=false
+    fi
+    if ! wait_for_text_marker \
+      "Hub econòmic (/ca/gestio-economica-ong)" \
+      "${RESOLVED_DEPLOY_BASE_URL}/ca/gestio-economica-ong" \
+      "Posa ordre a la gestió econòmica de la teva ONG"; then
+      public_ok=false
+    fi
+
+    if [ "$public_ok" = false ]; then
+      DEPLOY_RESULT="PENDENT"
+      echo "  Validació de contingut pendent: alguna ruta pública encara no serveix el text esperat."
+    fi
+    echo ""
+  fi
 
   if [ "$DEPLOY_RESULT" = "PENDENT" ]; then
     echo "  Post-deploy no confirmat. El log es registrara com a PENDENT."

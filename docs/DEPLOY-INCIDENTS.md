@@ -23,3 +23,11 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 | 2026-03-03 16:50 | Preflight git | BAIX | 840a1e9 | 071108e | BLOCKED_SAFE | El deploy nomes es pot fer des de main. | Pendent |
 | 2026-03-03 20:15 | Preflight git | BAIX | 840a1e9 | 071108e | BLOCKED_SAFE | El deploy nomes es pot fer des de main. | Pendent |
 | 2026-03-03 20:18 | Preflight git | BAIX | 840a1e9 | 72e885d | BLOCKED_SAFE | El deploy nomes es pot fer des de main. | Pendent |
+| 2026-03-08 09:04 | Preflight git | BAIX | ec3f157 | da256fa | BLOCKED_SAFE | Hi ha canvis pendents sense tancar abans de publicar. | Pendent |
+
+## 2026-03-08 — Deploy verd amb HTML antic durant una finestra curta
+
+- Què va passar: el deploy a `prod` va acabar en verd, però durant una finestra curta `/ca`, `/ca/contact` i `/ca/gestio-economica-ong` encara servien HTML antic.
+- Símptoma: resposta `200` amb `x-nextjs-cache: HIT` i `x-nextjs-prerender: 1`, mentre el contingut servit no coincidia encara amb el commit acabat de publicar.
+- Causa probable: propagació de revisió/prerender a origen a App Hosting; no era un problema de ruta ni de CDN edge.
+- Resolució: el contingut es va estabilitzar sol sense redeploy i després va servir el copy/metadades esperats.
