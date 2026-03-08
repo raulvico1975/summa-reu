@@ -74,6 +74,7 @@ test("closePollCreateMeeting stores Daily room data and mirrors meetingUrl on su
     assert.equal(meeting?.dailyRoomUrl, `https://summareu.daily.co/${requestedRoomName}`);
     assert.equal(meeting?.meetingUrl, meeting?.dailyRoomUrl);
     assert.equal(meeting?.recordingStatus, "none");
+    assert.equal(meeting?.pollId, pollId);
   } finally {
     globalThis.fetch = originalFetch;
   }

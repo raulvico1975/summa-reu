@@ -22,7 +22,7 @@ import type {
   TranscriptDoc,
 } from "@/src/lib/db/types";
 import { defaultTimezone } from "@/src/lib/firebase/env";
-import { createDailyRoom } from "@/src/lib/integrations/daily/create-room";
+import { createMeetingWithDaily } from "@/src/lib/meetings/create-meeting-with-daily";
 
 export type PollOption = PollOptionDoc & { id: string };
 
@@ -53,6 +53,32 @@ const meetingsCol = adminDb.collection("meetings") as CollectionReference<Meetin
 const meetingIngestJobsCol = adminDb.collection(
   "meeting_ingest_jobs"
 ) as CollectionReference<MeetingIngestJobDoc>;
+
+function buildMeetingDoc(input: {
+  orgId: string;
+  title: string;
+  description?: string | null;
+  createdBy: string;
+  pollId?: string | null;
+  scheduledAt?: Timestamp | null;
+}): MeetingDoc {
+  return {
+    orgId: input.orgId,
+    title: input.title,
+    description: input.description ?? null,
+    createdAt: Date.now(),
+    createdBy: input.createdBy,
+    meetingUrl: null,
+    dailyRoomName: null,
+    dailyRoomUrl: null,
+    recordingStatus: "none",
+    recordingUrl: null,
+    transcript: null,
+    minutesDraft: null,
+    pollId: input.pollId ?? null,
+    scheduledAt: input.scheduledAt ?? null,
+  };
+}
 
 function buildMeetingIngestJobId(meetingId: string, recordingId: string): string {
   return `${meetingId}__${recordingId.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
@@ -265,64 +291,50 @@ export async function closePollCreateMeeting(input: {
   const pollRef = pollsCol.doc(input.pollId);
   const optionRef = pollRef.collection("options").doc(input.winningOptionId);
 
-  const meetingId = await adminDb.runTransaction(async (trx) => {
-    const [pollDoc, optionDoc] = await Promise.all([trx.get(pollRef), trx.get(optionRef)]);
+  const meeting = await createMeetingWithDaily({
+    createMeeting: async () =>
+      adminDb.runTransaction(async (trx) => {
+        const [pollDoc, optionDoc] = await Promise.all([trx.get(pollRef), trx.get(optionRef)]);
 
-    if (!pollDoc.exists) {
-      throw new Error("POLL_NOT_FOUND");
-    }
+        if (!pollDoc.exists) {
+          throw new Error("POLL_NOT_FOUND");
+        }
 
-    if (!optionDoc.exists) {
-      throw new Error("OPTION_NOT_FOUND");
-    }
+        if (!optionDoc.exists) {
+          throw new Error("OPTION_NOT_FOUND");
+        }
 
-    const poll = pollDoc.data() as PollDoc;
-    if (poll.status !== "open") {
-      throw new Error("POLL_ALREADY_CLOSED");
-    }
+        const poll = pollDoc.data() as PollDoc;
+        if (poll.status !== "open") {
+          throw new Error("POLL_ALREADY_CLOSED");
+        }
 
-    trx.update(pollRef, {
-      status: "closed",
-      winningOptionId: input.winningOptionId,
-      closedAt: FieldValue.serverTimestamp(),
-    });
+        trx.update(pollRef, {
+          status: "closed",
+          winningOptionId: input.winningOptionId,
+          closedAt: FieldValue.serverTimestamp(),
+        });
 
-    const meetingRef = meetingsCol.doc();
-    const option = optionDoc.data() as PollOptionDoc;
+        const meetingRef = meetingsCol.doc();
+        const option = optionDoc.data() as PollOptionDoc;
 
-    trx.set(meetingRef, {
-      pollId: pollRef.id,
-      orgId: poll.orgId,
-      title: poll.title,
-      description: poll.description,
-      createdAt: Date.now(),
-      createdBy: input.createdBy,
-      meetingUrl: null,
-      dailyRoomName: null,
-      dailyRoomUrl: null,
-      recordingStatus: "none",
-      recordingUrl: null,
-      transcript: null,
-      minutesDraft: null,
-      scheduledAt: option.startsAt,
-    });
+        trx.set(
+          meetingRef,
+          buildMeetingDoc({
+            orgId: poll.orgId,
+            title: poll.title,
+            description: poll.description,
+            createdBy: input.createdBy,
+            pollId: pollRef.id,
+            scheduledAt: option.startsAt,
+          })
+        );
 
-    return meetingRef.id;
+        return meetingRef.id;
+      }),
   });
 
-  try {
-    const daily = await createDailyRoom(meetingId);
-    await meetingsCol.doc(meetingId).update({
-      dailyRoomName: daily.roomName,
-      dailyRoomUrl: daily.roomUrl,
-      meetingUrl: daily.roomUrl,
-    });
-  } catch (error) {
-    console.error("daily_room_create_failed", meetingId);
-    console.error(error);
-  }
-
-  return meetingId;
+  return meeting.meetingId;
 }
 
 export async function createMeetingForOrg(input: {
@@ -330,26 +342,21 @@ export async function createMeetingForOrg(input: {
   title: string;
   description?: string;
   createdBy: string;
-  meetingUrl: string;
   pollId?: string;
   scheduledAt?: Timestamp | null;
 }): Promise<string> {
   const meetingRef = meetingsCol.doc();
 
-  await meetingRef.set({
-    orgId: input.orgId,
-    title: input.title,
-    description: input.description ?? null,
-    createdAt: Date.now(),
-    createdBy: input.createdBy,
-    meetingUrl: input.meetingUrl,
-    recordingStatus: "none",
-    recordingUrl: null,
-    transcript: null,
-    minutesDraft: null,
-    pollId: input.pollId ?? null,
-    scheduledAt: input.scheduledAt ?? null,
-  });
+  await meetingRef.set(
+    buildMeetingDoc({
+      orgId: input.orgId,
+      title: input.title,
+      description: input.description,
+      createdBy: input.createdBy,
+      pollId: input.pollId,
+      scheduledAt: input.scheduledAt,
+    })
+  );
 
   return meetingRef.id;
 }

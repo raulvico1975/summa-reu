@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createMeetingForOrg } from "@/src/lib/db/repo";
+import { createMeetingWithDaily } from "@/src/lib/meetings/create-meeting-with-daily";
 import {
   isSubscriptionRequiredError,
   requireActiveSubscription,
@@ -8,7 +9,6 @@ import {
 } from "@/src/lib/auth/require-active-subscription";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
-import { createDailyRoom } from "@/src/lib/meetings/daily";
 import { isTrustedSameOrigin } from "@/src/lib/security/request";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 
@@ -34,16 +34,17 @@ export async function POST(request: NextRequest) {
     requireActiveSubscription(owner);
 
     const body = bodySchema.parse(await request.json());
-    const dailyRoom = await createDailyRoom({ title: body.title });
-    const meetingId = await createMeetingForOrg({
-      orgId: owner.orgId,
-      title: body.title,
-      description: body.description,
-      createdBy: owner.uid,
-      meetingUrl: dailyRoom.meetingUrl,
+    const meeting = await createMeetingWithDaily({
+      createMeeting: () =>
+        createMeetingForOrg({
+          orgId: owner.orgId,
+          title: body.title,
+          description: body.description,
+          createdBy: owner.uid,
+        }),
     });
 
-    return NextResponse.json({ meetingId });
+    return NextResponse.json({ meetingId: meeting.meetingId });
   } catch (error) {
     if (isSubscriptionRequiredError(error)) {
       return subscriptionRequiredResponse();

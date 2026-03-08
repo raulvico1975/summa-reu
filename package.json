@@ -17,7 +17,7 @@
     "test:telegram": "node scripts/test-telegram-alert.mjs",
     "monitor:login": "node scripts/monitor-login.mjs --watch",
     "bootstrap:firebase": "bash scripts/bootstrap-firebase.sh",
-    "test:close-poll": "PATH=/opt/homebrew/opt/openjdk/bin:$PATH firebase emulators:exec --project summa-board --only firestore \"FIREBASE_PROJECT_ID=summa-board FIREBASE_STORAGE_BUCKET=summa-board.firebasestorage.app node --experimental-strip-types --loader ./scripts/ts-alias-loader.mjs --test tests/close-poll-create-meeting.test.ts\""
+    "test:close-poll": "PATH=/opt/homebrew/opt/openjdk/bin:$PATH firebase emulators:exec --project summa-board --only firestore \"FIREBASE_PROJECT_ID=summa-board FIREBASE_STORAGE_BUCKET=summa-board.firebasestorage.app node --experimental-strip-types --loader ./scripts/ts-alias-loader.mjs --test tests/close-poll-create-meeting.test.ts tests/create-meeting-with-daily.test.ts\""
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
