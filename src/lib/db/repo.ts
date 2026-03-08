@@ -8,6 +8,7 @@ import {
 import { adminDb } from "@/src/lib/firebase/admin";
 import type {
   MeetingDoc,
+  MeetingIngestJobDoc,
   MinutesDoc,
   MinutesJson,
   OrgDoc,
@@ -35,15 +36,23 @@ export type VoteMatrixRow = {
 
 export type MeetingWithAssets = MeetingDoc & {
   id: string;
-  poll: PollDoc & { id: string };
+  poll: (PollDoc & { id: string }) | null;
   recordings: Array<RecordingDoc & { id: string }>;
   transcripts: Array<TranscriptDoc & { id: string }>;
   minutes: Array<MinutesDoc & { id: string }>;
+  latestIngestJob: (MeetingIngestJobDoc & { id: string }) | null;
 };
 
 const orgsCol = adminDb.collection("orgs") as CollectionReference<OrgDoc>;
 const pollsCol = adminDb.collection("polls") as CollectionReference<PollDoc>;
 const meetingsCol = adminDb.collection("meetings") as CollectionReference<MeetingDoc>;
+const meetingIngestJobsCol = adminDb.collection(
+  "meeting_ingest_jobs"
+) as CollectionReference<MeetingIngestJobDoc>;
+
+function buildMeetingIngestJobId(meetingId: string, recordingId: string): string {
+  return `${meetingId}__${recordingId.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+}
 
 function slugifyTitle(value: string): string {
   return value
@@ -214,6 +223,8 @@ export async function upsertVoteByVoterId(input: {
 export async function closePollCreateMeeting(input: {
   pollId: string;
   winningOptionId: string;
+  createdBy: string;
+  meetingUrl: string;
 }): Promise<string> {
   const pollRef = pollsCol.doc(input.pollId);
   const optionRef = pollRef.collection("options").doc(input.winningOptionId);
@@ -246,8 +257,16 @@ export async function closePollCreateMeeting(input: {
     trx.set(meetingRef, {
       pollId: pollRef.id,
       orgId: poll.orgId,
+      title: poll.title,
+      description: poll.description,
+      createdAt: Date.now(),
+      createdBy: input.createdBy,
+      meetingUrl: input.meetingUrl,
+      recordingStatus: "none",
+      recordingUrl: null,
+      transcript: null,
+      minutesDraft: null,
       scheduledAt: option.startsAt,
-      createdAt: FieldValue.serverTimestamp() as Timestamp,
     });
 
     return meetingRef.id;
@@ -256,27 +275,62 @@ export async function closePollCreateMeeting(input: {
   return meetingId;
 }
 
+export async function createMeetingForOrg(input: {
+  orgId: string;
+  title: string;
+  description?: string;
+  createdBy: string;
+  meetingUrl: string;
+  pollId?: string;
+  scheduledAt?: Timestamp | null;
+}): Promise<string> {
+  const meetingRef = meetingsCol.doc();
+
+  await meetingRef.set({
+    orgId: input.orgId,
+    title: input.title,
+    description: input.description ?? null,
+    createdAt: Date.now(),
+    createdBy: input.createdBy,
+    meetingUrl: input.meetingUrl,
+    recordingStatus: "none",
+    recordingUrl: null,
+    transcript: null,
+    minutesDraft: null,
+    pollId: input.pollId ?? null,
+    scheduledAt: input.scheduledAt ?? null,
+  });
+
+  return meetingRef.id;
+}
+
 export async function getMeetingById(meetingId: string): Promise<MeetingWithAssets | null> {
   const meetingDoc = await meetingsCol.doc(meetingId).get();
   if (!meetingDoc.exists) return null;
 
   const meetingData = meetingDoc.data() as MeetingDoc;
-  const pollDoc = await pollsCol.doc(meetingData.pollId).get();
-  if (!pollDoc.exists) return null;
+  const pollDoc = meetingData.pollId ? await pollsCol.doc(meetingData.pollId).get() : null;
 
   const [recordingsSnap, transcriptsSnap, minutesSnap] = await Promise.all([
     meetingDoc.ref.collection("recordings").orderBy("createdAt", "desc").get(),
     meetingDoc.ref.collection("transcripts").orderBy("createdAt", "desc").get(),
     meetingDoc.ref.collection("minutes").orderBy("createdAt", "desc").get(),
   ]);
+  const ingestJobSnap = await meetingIngestJobsCol
+    .where("meetingId", "==", meetingId)
+    .orderBy("createdAt", "desc")
+    .limit(1)
+    .get();
+  const ingestJobDoc = ingestJobSnap.docs[0];
 
   return {
     id: meetingDoc.id,
     ...meetingData,
-    poll: { id: pollDoc.id, ...(pollDoc.data() as PollDoc) },
+    poll: pollDoc?.exists ? { id: pollDoc.id, ...(pollDoc.data() as PollDoc) } : null,
     recordings: recordingsSnap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as RecordingDoc) })),
     transcripts: transcriptsSnap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as TranscriptDoc) })),
     minutes: minutesSnap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as MinutesDoc) })),
+    latestIngestJob: ingestJobDoc ? { id: ingestJobDoc.id, ...(ingestJobDoc.data() as MeetingIngestJobDoc) } : null,
   };
 }
 
@@ -284,6 +338,12 @@ export async function getMeetingIdByPollId(pollId: string): Promise<string | nul
   const snap = await meetingsCol.where("pollId", "==", pollId).limit(1).get();
   const doc = snap.docs[0];
   return doc ? doc.id : null;
+}
+
+export async function getMeetingByMeetingUrl(meetingUrl: string): Promise<MeetingWithAssets | null> {
+  const snap = await meetingsCol.where("meetingUrl", "==", meetingUrl).limit(1).get();
+  const doc = snap.docs[0];
+  return doc ? getMeetingById(doc.id) : null;
 }
 
 export async function registerMeetingRecording(input: {
@@ -385,7 +445,7 @@ export async function saveTranscript(input: {
   const transcriptRef = meetingsCol
     .doc(input.meetingId)
     .collection("transcripts")
-    .doc() as DocumentReference<TranscriptDoc>;
+    .doc(input.recordingId) as DocumentReference<TranscriptDoc>;
 
   await transcriptRef.set({
     recordingId: input.recordingId,
@@ -408,7 +468,7 @@ export async function saveMinutes(input: {
   const minutesRef = meetingsCol
     .doc(input.meetingId)
     .collection("minutes")
-    .doc() as DocumentReference<MinutesDoc>;
+    .doc(input.recordingId) as DocumentReference<MinutesDoc>;
 
   await minutesRef.set({
     recordingId: input.recordingId,
@@ -426,11 +486,142 @@ export async function updateMinutesMarkdown(input: {
   minutesId: string;
   minutesMarkdown: string;
 }): Promise<void> {
-  await meetingsCol
-    .doc(input.meetingId)
-    .collection("minutes")
-    .doc(input.minutesId)
-    .set({ minutesMarkdown: input.minutesMarkdown }, { merge: true });
+  const meetingRef = meetingsCol.doc(input.meetingId);
+  await Promise.all([
+    meetingRef.collection("minutes").doc(input.minutesId).set(
+      { minutesMarkdown: input.minutesMarkdown },
+      { merge: true }
+    ),
+    meetingRef.set({ minutesDraft: input.minutesMarkdown }, { merge: true }),
+  ]);
+}
+
+export async function updateMeetingRecordingState(input: {
+  meetingId: string;
+  recordingStatus: MeetingDoc["recordingStatus"];
+  recordingUrl?: string | null;
+  clearArtifacts?: boolean;
+}): Promise<void> {
+  const payload: Partial<MeetingDoc> = {
+    recordingStatus: input.recordingStatus ?? "none",
+  };
+
+  if (input.recordingUrl !== undefined) {
+    payload.recordingUrl = input.recordingUrl;
+  }
+
+  if (input.clearArtifacts) {
+    payload.transcript = null;
+    payload.minutesDraft = null;
+  }
+
+  await meetingsCol.doc(input.meetingId).set(payload, { merge: true });
+}
+
+export async function updateMeetingArtifacts(input: {
+  meetingId: string;
+  transcript: string;
+  minutesDraft: string;
+  recordingStatus: MeetingDoc["recordingStatus"];
+  recordingUrl?: string | null;
+}): Promise<void> {
+  const payload: Partial<MeetingDoc> = {
+    transcript: input.transcript,
+    minutesDraft: input.minutesDraft,
+    recordingStatus: input.recordingStatus,
+  };
+
+  if (input.recordingUrl !== undefined) {
+    payload.recordingUrl = input.recordingUrl;
+  }
+
+  await meetingsCol.doc(input.meetingId).set(payload, { merge: true });
+}
+
+export async function enqueueMeetingIngestJob(input: {
+  meetingId: string;
+  orgId: string;
+  recordingId: string;
+  recordingUrl: string;
+}): Promise<{ jobId: string; created: boolean }> {
+  const jobId = buildMeetingIngestJobId(input.meetingId, input.recordingId);
+  const jobRef = meetingIngestJobsCol.doc(jobId) as DocumentReference<MeetingIngestJobDoc>;
+
+  const created = await adminDb.runTransaction(async (trx) => {
+    const snap = await trx.get(jobRef);
+    if (snap.exists) {
+      return false;
+    }
+
+    trx.set(jobRef, {
+      meetingId: input.meetingId,
+      orgId: input.orgId,
+      recordingId: input.recordingId,
+      source: "daily",
+      status: "queued",
+      recordingUrl: input.recordingUrl,
+      error: null,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return true;
+  });
+
+  return { jobId, created };
+}
+
+export async function claimMeetingIngestJob(
+  jobId: string
+): Promise<"claimed" | "processing" | "completed" | "error" | "missing"> {
+  const jobRef = meetingIngestJobsCol.doc(jobId) as DocumentReference<MeetingIngestJobDoc>;
+
+  return adminDb.runTransaction(async (trx) => {
+    const snap = await trx.get(jobRef);
+    if (!snap.exists) {
+      return "missing";
+    }
+
+    const job = snap.data() as MeetingIngestJobDoc;
+    if (job.status === "processing") {
+      return "processing";
+    }
+
+    if (job.status === "completed") {
+      return "completed";
+    }
+
+    if (job.status === "error") {
+      return "error";
+    }
+
+    trx.set(
+      jobRef,
+      {
+        status: "processing",
+        updatedAt: Date.now(),
+        error: null,
+      },
+      { merge: true }
+    );
+
+    return "claimed";
+  });
+}
+
+export async function updateMeetingIngestJobStatus(input: {
+  jobId: string;
+  status: MeetingIngestJobDoc["status"];
+  error?: string | null;
+}): Promise<void> {
+  await meetingIngestJobsCol.doc(input.jobId).set(
+    {
+      status: input.status,
+      updatedAt: Date.now(),
+      error: input.error ?? null,
+    },
+    { merge: true }
+  );
 }
 
 export async function createOrgForOwner(input: { ownerUid: string; name: string }): Promise<string> {

@@ -25,11 +25,12 @@ export async function GET(request: NextRequest) {
     }
 
     const latestMinutes = meeting.minutes[0];
-    if (!latestMinutes) {
+    const markdown = meeting.minutesDraft ?? latestMinutes?.minutesMarkdown ?? null;
+    if (!markdown) {
       return new NextResponse(i18n.errors.minutesNotFound, { status: 404 });
     }
 
-    return new NextResponse(latestMinutes.minutesMarkdown, {
+    return new NextResponse(markdown, {
       status: 200,
       headers: {
         "Content-Type": "text/markdown; charset=utf-8",

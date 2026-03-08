@@ -1,7 +1,17 @@
 import { Badge } from "@/src/components/ui/badge";
 import type { I18nCa } from "@/src/i18n/ca";
 
-type Status = "open" | "closed" | "uploaded" | "processing" | "done" | "error" | "pending";
+type Status =
+  | "open"
+  | "closed"
+  | "uploaded"
+  | "processing"
+  | "done"
+  | "error"
+  | "pending"
+  | "none"
+  | "recording"
+  | "ready";
 
 const styleByStatus: Record<Status, string> = {
   open: "border-sky-200 bg-sky-50 text-sky-700",
@@ -11,6 +21,9 @@ const styleByStatus: Record<Status, string> = {
   done: "border-emerald-200 bg-emerald-50 text-emerald-700",
   error: "border-red-200 bg-red-50 text-red-700",
   pending: "border-slate-300 bg-slate-100 text-slate-700",
+  none: "border-slate-300 bg-slate-100 text-slate-700",
+  recording: "border-rose-200 bg-rose-50 text-rose-700",
+  ready: "border-emerald-200 bg-emerald-50 text-emerald-700",
 };
 
 export function StatusBadge({

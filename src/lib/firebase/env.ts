@@ -17,10 +17,19 @@ export const serverEnv = {
   projectId: process.env.FIREBASE_PROJECT_ID ?? defaultProjectId,
   storageBucket:
     process.env.FIREBASE_STORAGE_BUCKET ?? `${defaultProjectId}.firebasestorage.app`,
+  dailyApiKey: process.env.DAILY_API_KEY,
+  dailyApiBaseUrl: process.env.DAILY_API_BASE_URL ?? "https://api.daily.co/v1",
+  dailyDomain:
+    process.env.DAILY_DOMAIN ??
+    process.env.NEXT_PUBLIC_DAILY_DOMAIN ??
+    null,
+  dailyWebhookBearerToken: process.env.DAILY_WEBHOOK_BEARER_TOKEN ?? null,
+  dailyMockMode: process.env.DAILY_MOCK_MODE === "true",
   geminiApiKey: process.env.GEMINI_API_KEY,
   geminiBaseUrl:
     process.env.GEMINI_BASE_URL ?? "https://generativelanguage.googleapis.com",
   geminiModel: process.env.GEMINI_MODEL,
+  meetingIngestMockMode: process.env.MEETING_INGEST_MOCK_MODE === "true",
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
   telegramChatId: process.env.TELEGRAM_CHAT_ID ?? "68198321",
   telegramAlertsEnabled: process.env.TELEGRAM_ALERTS_ENABLED ?? "true",

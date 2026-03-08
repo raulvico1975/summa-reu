@@ -4,6 +4,9 @@ export type PollStatus = "open" | "closed";
 export type RecordingStatus = "uploaded" | "processing" | "done" | "error";
 export type TranscriptStatus = "pending" | "processing" | "done" | "error";
 export type MinutesTaskStatus = "todo" | "doing" | "done";
+// Meeting recording state machine: none -> recording -> processing -> ready | error
+export type MeetingRecordingStatus = "none" | "recording" | "processing" | "ready" | "error";
+export type MeetingIngestJobStatus = "queued" | "processing" | "completed" | "error";
 
 export type OrgDoc = {
   name: string;
@@ -40,10 +43,18 @@ export type PollVoteDoc = {
 };
 
 export type MeetingDoc = {
-  pollId: string;
   orgId: string;
-  scheduledAt: Timestamp;
-  createdAt: Timestamp;
+  title: string;
+  description?: string | null;
+  createdAt: number;
+  createdBy: string;
+  meetingUrl?: string | null;
+  recordingStatus?: MeetingRecordingStatus;
+  recordingUrl?: string | null;
+  transcript?: string | null;
+  minutesDraft?: string | null;
+  pollId?: string | null;
+  scheduledAt?: Timestamp | null;
 };
 
 export type RecordingDoc = {
@@ -95,4 +106,16 @@ export type MinutesDoc = {
   minutesMarkdown: string;
   minutesJson: MinutesJson;
   createdAt: Timestamp;
+};
+
+export type MeetingIngestJobDoc = {
+  meetingId: string;
+  orgId: string;
+  recordingId: string;
+  source: "daily";
+  status: MeetingIngestJobStatus;
+  recordingUrl: string;
+  error: string | null;
+  createdAt: number;
+  updatedAt: number;
 };

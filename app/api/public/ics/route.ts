@@ -5,6 +5,7 @@ import { timestampToDate } from "@/src/lib/dates";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
+import { defaultTimezone } from "@/src/lib/firebase/env";
 
 export const runtime = "nodejs";
 
@@ -33,10 +34,12 @@ export async function GET(request: NextRequest) {
 
     const ics = buildMeetingIcs({
       uid: `meeting-${meeting.id}@summareu.app`,
-      title: meeting.poll.title,
-      description: `Reunió generada des de la votació ${meeting.poll.slug}`,
+      title: meeting.title,
+      description:
+        meeting.description ??
+        (meeting.poll ? `Reunió generada des de la votació ${meeting.poll.slug}` : "Reunió creada a Summa Reu"),
       startsAt,
-      timezone: meeting.poll.timezone,
+      timezone: meeting.poll?.timezone ?? defaultTimezone,
     });
 
     return new NextResponse(ics, {

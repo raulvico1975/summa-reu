@@ -1,7 +1,15 @@
 import fs from "node:fs/promises";
+import { getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:3000";
 const emulatorAuthBase = process.env.SMOKE_AUTH_BASE || "http://127.0.0.1:9099";
+const projectId = process.env.FIREBASE_PROJECT_ID || "summa-board";
+
+process.env.FIRESTORE_EMULATOR_HOST ||= "127.0.0.1:8085";
+
+const adminApp = getApps()[0] || initializeApp({ projectId });
+const db = getFirestore(adminApp);
 
 async function readSeed() {
   const raw = await fs.readFile("scripts/.seed-output.json", "utf8");
@@ -45,6 +53,21 @@ async function createSession(idToken) {
   const setCookie = sessionRes.headers.get("set-cookie");
   assert(Boolean(setCookie), "Session login sense cookie");
   return setCookie;
+}
+
+async function waitFor(check, message, timeoutMs = 10000, intervalMs = 200) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const value = await check();
+    if (value) {
+      return value;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  throw new Error(message);
 }
 
 const seed = await readSeed();
@@ -136,6 +159,142 @@ if (ownerEmail && ownerPassword) {
   assert(ownerIcsRes.ok, "ICS owner no accessible amb sessió vàlida");
   assert((ownerIcsRes.headers.get("content-type") || "").includes("text/calendar"), "ICS content-type invàlid");
 
+  const closePollRes = await fetch(`${baseUrl}/api/owner/close-poll`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      cookie: ownerCookie,
+      origin: baseUrl,
+    },
+    body: JSON.stringify({
+      pollId,
+      winningOptionId: optionIds[0],
+    }),
+  });
+  assert(closePollRes.ok, `Tancar votació ha fallat (${closePollRes.status})`);
+  const closePollData = await closePollRes.json();
+  assert(Boolean(closePollData.meetingId), "Tancar votació no ha retornat meetingId");
+
+  const integratedMeetingId = closePollData.meetingId;
+  const integratedMeetingSnap = await db.collection("meetings").doc(integratedMeetingId).get();
+  assert(integratedMeetingSnap.exists, "La reunió integrada no s'ha persistit");
+  const integratedMeeting = integratedMeetingSnap.data();
+  assert(
+    typeof integratedMeeting?.meetingUrl === "string" && integratedMeeting.meetingUrl.includes("mock.daily.local"),
+    "La reunió integrada no té meetingUrl Daily"
+  );
+  assert(integratedMeeting?.recordingStatus === "none", "La reunió nova no arrenca en estat none");
+
+  const startRecordingRes = await fetch(`${baseUrl}/api/owner/meetings/start-recording`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      cookie: ownerCookie,
+      origin: baseUrl,
+    },
+    body: JSON.stringify({ meetingId: integratedMeetingId }),
+  });
+  assert(startRecordingRes.ok, `Start recording ha fallat (${startRecordingRes.status})`);
+
+  const startedMeeting = await waitFor(async () => {
+    const snap = await db.collection("meetings").doc(integratedMeetingId).get();
+    const data = snap.data();
+    return data?.recordingStatus === "recording" ? data : null;
+  }, "La reunió no ha passat a estat recording");
+  assert(startedMeeting.recordingUrl === null, "Start recording ha de netejar recordingUrl");
+
+  const stopRecordingRes = await fetch(`${baseUrl}/api/owner/meetings/stop-recording`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      cookie: ownerCookie,
+      origin: baseUrl,
+    },
+    body: JSON.stringify({ meetingId: integratedMeetingId }),
+  });
+  assert(stopRecordingRes.ok, `Stop recording ha fallat (${stopRecordingRes.status})`);
+
+  await waitFor(async () => {
+    const snap = await db.collection("meetings").doc(integratedMeetingId).get();
+    return snap.data()?.recordingStatus === "processing";
+  }, "La reunió no ha passat a estat processing després d'aturar la gravació");
+
+  const webhookPayload = {
+    event: "recording.ready-to-download",
+    room_name: new URL(integratedMeeting.meetingUrl).pathname.replace(/^\/+/, ""),
+    recording_id: `smoke-recording-${Date.now()}`,
+    download_link: "https://daily.mock/recordings/smoke.mp4",
+  };
+
+  const webhookRes = await fetch(`${baseUrl}/api/webhooks/daily/recording-complete`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: "Bearer smoke-secret",
+    },
+    body: JSON.stringify(webhookPayload),
+  });
+  assert(webhookRes.ok, `Webhook Daily ha fallat (${webhookRes.status})`);
+  const webhookData = await webhookRes.json();
+  assert(webhookData.ok === true, "Webhook Daily no ha retornat ok=true");
+
+  const ingestJob = await waitFor(async () => {
+    const snap = await db
+      .collection("meeting_ingest_jobs")
+      .where("meetingId", "==", integratedMeetingId)
+      .limit(1)
+      .get();
+    const doc = snap.docs[0];
+    return doc ? { id: doc.id, ...doc.data() } : null;
+  }, "No s'ha creat meeting_ingest_job");
+  assert(
+    ingestJob.status === "queued" || ingestJob.status === "processing" || ingestJob.status === "completed",
+    "meeting_ingest_job amb estat invàlid"
+  );
+
+  const completedJob = await waitFor(async () => {
+    const snap = await db.collection("meeting_ingest_jobs").doc(ingestJob.id).get();
+    const data = snap.data();
+    return data?.status === "completed" ? data : null;
+  }, "meeting_ingest_job no ha arribat a completed");
+  assert(completedJob.error === null, "meeting_ingest_job no ha d'acabar amb error");
+
+  const completedMeeting = await waitFor(async () => {
+    const snap = await db.collection("meetings").doc(integratedMeetingId).get();
+    const data = snap.data();
+    return data?.recordingStatus === "ready" && data?.transcript && data?.minutesDraft ? data : null;
+  }, "La reunió no ha persistit transcript + minutesDraft");
+  assert(typeof completedMeeting.transcript === "string", "La reunió no ha guardat transcript");
+  assert(typeof completedMeeting.minutesDraft === "string", "La reunió no ha guardat minutesDraft");
+
+  const duplicateWebhookRes = await fetch(`${baseUrl}/api/webhooks/daily/recording-complete`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: "Bearer smoke-secret",
+    },
+    body: JSON.stringify(webhookPayload),
+  });
+  assert(duplicateWebhookRes.ok, "Webhook duplicat ha fallat");
+  const duplicateWebhookData = await duplicateWebhookRes.json();
+  assert(duplicateWebhookData.duplicate === true, "El webhook duplicat no s'ha reconegut com a duplicat");
+
+  const transcriptSnap = await db
+    .collection("meetings")
+    .doc(integratedMeetingId)
+    .collection("transcripts")
+    .doc(webhookPayload.recording_id)
+    .get();
+  assert(transcriptSnap.exists, "La transcripció no s'ha persistit");
+
+  const minutesSnap = await db
+    .collection("meetings")
+    .doc(integratedMeetingId)
+    .collection("minutes")
+    .doc(webhookPayload.recording_id)
+    .get();
+  assert(minutesSnap.exists, "L'acta no s'ha persistit");
+
   const signupSuffix = Date.now();
   const signupOrg = `Entitat Smoke ${signupSuffix}`;
   const signupEmail = `owner-${signupSuffix}@summa.local`;
@@ -182,9 +341,10 @@ if (ownerEmail && ownerPassword) {
     headers: { cookie: ownerCookie },
     redirect: "manual",
   });
+  const revokedLocation = revokedDashboardRes.headers.get("location");
   assert(
     (revokedDashboardRes.status === 307 || revokedDashboardRes.status === 303) &&
-      revokedDashboardRes.headers.get("location") === "/login",
+      (revokedLocation === "/login" || revokedLocation === "/ca/login" || revokedLocation === "/es/login"),
     "Logout no revoca la sessió al servidor"
   );
 }

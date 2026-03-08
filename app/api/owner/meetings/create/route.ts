@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { closePollCreateMeeting, getPollById } from "@/src/lib/db/repo";
+import { createMeetingForOrg } from "@/src/lib/db/repo";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
-import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 import { createDailyRoom } from "@/src/lib/meetings/daily";
 import { isTrustedSameOrigin } from "@/src/lib/security/request";
+import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  pollId: z.string().min(1),
-  winningOptionId: z.string().min(1),
+  title: z.string().min(1).max(160),
+  description: z.string().max(5000).optional(),
 });
 
 export async function POST(request: NextRequest) {
   const { i18n } = getRequestI18nFromNextRequest(request);
+
   try {
     if (!isTrustedSameOrigin(request)) {
       return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
@@ -27,32 +28,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = bodySchema.parse(await request.json());
-    const poll = await getPollById(body.pollId);
-
-    if (!poll || poll.orgId !== owner.orgId) {
-      return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
-    }
-
-    const dailyRoom = await createDailyRoom({ title: poll.title });
-    const meetingId = await closePollCreateMeeting({
-      pollId: body.pollId,
-      winningOptionId: body.winningOptionId,
+    const dailyRoom = await createDailyRoom({ title: body.title });
+    const meetingId = await createMeetingForOrg({
+      orgId: owner.orgId,
+      title: body.title,
+      description: body.description,
       createdBy: owner.uid,
       meetingUrl: dailyRoom.meetingUrl,
     });
 
     return NextResponse.json({ meetingId });
   } catch (error) {
-    await reportApiUnexpectedError({
-      route: "/api/owner/close-poll",
-      action: "intentàvem tancar una votació i convocar la reunió",
-      error,
-    });
-
     const message =
       error instanceof Error && error.message === "DAILY_NOT_CONFIGURED"
         ? i18n.errors.dailyNotConfigured
-        : i18n.poll.closePollError;
+        : i18n.errors.invalidPayload;
+
+    await reportApiUnexpectedError({
+      route: "/api/owner/meetings/create",
+      action: "intentàvem crear una reunió",
+      error,
+    });
 
     return NextResponse.json({ error: message }, { status: 400 });
   }

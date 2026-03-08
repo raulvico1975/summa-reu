@@ -72,8 +72,16 @@ async function seedFirestore() {
   await db.collection("meetings").doc(meetingId).set({
     pollId: openPollId,
     orgId,
+    title: "Junta mensual",
+    description: "Reunió demo Summa Reu",
+    createdAt: Date.now(),
+    createdBy: ownerUid,
+    meetingUrl: "https://mock.daily.local/demo-meeting",
+    recordingStatus: "none",
+    recordingUrl: null,
+    transcript: null,
+    minutesDraft: null,
     scheduledAt: Timestamp.fromDate(optionDates[0]),
-    createdAt: FieldValue.serverTimestamp(),
   }, { merge: true });
 
   const output = {
