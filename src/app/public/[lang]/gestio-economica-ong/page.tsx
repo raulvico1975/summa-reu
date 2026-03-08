@@ -19,34 +19,34 @@ interface PageProps {
 }
 
 const HUB_METADATA = {
-  title: 'Gestió econòmica per a ONG | Hub de landings públiques | Summa Social',
+  title: 'Gestió econòmica per a ONG | Ordre en donacions, quotes i fiscalitat | Summa Social',
   description:
-    "Hub central de gestió econòmica per a ONG i associacions: conciliació bancària, donants, remeses SEPA, devolucions, Model 182, certificats i Model 347.",
+    'Ordena la gestió econòmica de la teva ONG: donacions, quotes, conciliació bancària i fiscalitat amb menys feina manual i una visió clara del dia a dia.',
 };
 
 const HUB_GROUPS = [
   {
     title: 'Moviments i conciliació bancària',
     intro:
-      "Pàgines orientades a ordenar l'entrada d'extractes, la lectura dels moviments i la conciliació del dia a dia.",
+      "Per deixar enrere extractes dispersos i quadrar els moviments amb més criteri, control i traçabilitat.",
     slugs: ['conciliacio-bancaria-ong', 'importar-extracte-bancari'],
   },
   {
     title: 'Socis, donants i quotes',
     intro:
-      'Peces per entendre la base de donants, cobrar quotes i controlar devolucions o incidències recurrents.',
+      'Per seguir quotes, aportacions i incidències recurrents sense dependre de fulls separats ni revisions manuals.',
     slugs: ['gestio-donants', 'control-donacions-ong', 'remeses-sepa', 'devolucions-rebuts-socis'],
   },
   {
     title: 'Fiscalitat',
     intro:
-      'Landings centrades en el tancament fiscal i en la preparació de la informació que després va a la gestoria o a l’AEAT.',
+      'Per arribar al tancament fiscal amb la informació preparada, revisada i més fàcil de justificar.',
     slugs: ['model-182', 'certificats-donacio', 'model-347-ong'],
   },
   {
     title: 'Visió general',
     intro:
-      'Entrades més àmplies per a entitats que encara estan valorant el sistema complet o una alternativa a Excel.',
+      'Per a entitats que volen una visió clara de com ordenar tota la gestió econòmica i reduir feina manual.',
     slugs: ['software-gestion-ong', 'programa-associacions'],
   },
 ] as const;
@@ -78,7 +78,7 @@ export default async function GestioEconomicaOngHubPage({ params }: PageProps) {
     items: group.slugs.map((slug) => {
       const landing = getPublicLandingBySlug(slug);
       if (!landing) {
-        throw new Error(`Landing no trobada al hub: ${slug}`);
+        throw new Error(`Landing no trobada al recorregut públic: ${slug}`);
       }
 
       const content = getPublicLandingContent(landing, 'ca');
@@ -109,39 +109,42 @@ export default async function GestioEconomicaOngHubPage({ params }: PageProps) {
         <header className="mb-16 space-y-6">
           <div className="space-y-4">
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Gestió econòmica per a ONG i associacions
+              Posa ordre a la gestió econòmica de la teva ONG
             </h1>
             <p className="text-lg text-muted-foreground">
-              Un hub central per entendre com encaixen la conciliació bancària, la gestió de donants, les
-              remeses i la fiscalitat dins de Summa Social.
+              Si avui combines Excel, extractes bancaris i eines disperses per gestionar donacions, quotes i
+              fiscalitat, aquí tens per on començar a simplificar-ho.
             </p>
           </div>
 
           <div className="space-y-4 text-muted-foreground">
             <p>
-              Aquest clúster agrupa les pàgines públiques que expliquen el nucli del producte: importar i
-              conciliar moviments, controlar socis i donants, resoldre devolucions i arribar als models fiscals
-              amb la informació ordenada.
+              Aquí trobaràs els processos que més acostumen a encallar el dia a dia d&apos;una entitat:
+              conciliació bancària, seguiment de donants i quotes, devolucions i preparació fiscal amb la
+              informació al seu lloc.
             </p>
             <p>
-              Si estàs valorant Summa Social o vols ubicar una funcionalitat concreta dins del conjunt, des
-              d&apos;aquí tens tots els punts d&apos;entrada del sistema.
+              L&apos;objectiu és tenir més control, menys feina manual i una visió clara del que passa, sense
+              haver d&apos;anar saltant entre fulls, correus i eines separades.
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg">
-              <Link href="/ca/contact">
-                Demana una demostració
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/ca/funcionalitats">Veure funcionalitats generals</Link>
-            </Button>
+          <div className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button asChild size="lg">
+                <Link href="/ca/contact">
+                  Demana una demostració
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" size="lg">
+                <Link href="/ca/funcionalitats">Veure funcionalitats generals</Link>
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Sessió breu, amb exemples reals i sense compromís.
+            </p>
           </div>
-
-          <PublicDirectContact locale="ca" />
         </header>
 
         <div className="space-y-12">
@@ -166,16 +169,19 @@ export default async function GestioEconomicaOngHubPage({ params }: PageProps) {
           ))}
 
           <section className="border-t pt-10">
-            <h2 className="text-2xl font-bold mb-3">Vols veure com encaixa a la teva entitat?</h2>
+            <h2 className="text-2xl font-bold mb-3">Demana una demostració</h2>
             <p className="text-muted-foreground mb-4">
-              Si avui la gestió econòmica encara depèn d&apos;extractes, Excels i revisions manuals, aquest
-              clúster et mostra les peces que Summa Social ordena dins d&apos;un únic sistema.
+              T&apos;ensenyem com ordenar donacions, quotes, bancs i fiscalitat segons la realitat de la teva
+              entitat, perquè puguis valorar si et resol els colls d&apos;ampolla reals.
             </p>
             <div className="space-y-6">
               <Button asChild size="lg">
-                <Link href="/ca/contact">Demana una demostració per a la teva entitat.</Link>
+                <Link href="/ca/contact">Demana una demostració</Link>
               </Button>
-              <PublicDirectContact locale="ca" />
+              <p className="text-sm text-muted-foreground">
+                Sessió breu, amb exemples reals i sense compromís.
+              </p>
+              <PublicDirectContact locale="ca" className="pt-2" />
             </div>
           </section>
         </div>

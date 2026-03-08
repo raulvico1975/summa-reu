@@ -20,6 +20,11 @@ export interface PublicTranslations {
     lastUpdated: string;
     privacyContact: string;
   };
+  cta: {
+    primary: string;
+    secondary: string;
+    supporting: string;
+  };
   login: {
     title: string;
     welcomeTitle: string;
@@ -148,7 +153,17 @@ export interface PublicTranslations {
   contact: {
     title: string;
     subtitle: string;
+    description: string;
     responseTime: string;
+    directEmailLabel: string;
+    form: {
+      nameLabel: string;
+      emailLabel: string;
+      organizationLabel: string;
+      messageLabel: string;
+      submit: string;
+      helper: string;
+    };
   };
   home: {
     metaTitle: string;
@@ -360,6 +375,12 @@ const ca: PublicTranslations = {
     lastUpdated: 'Última actualització',
     privacyContact: 'Contacte de privacitat',
   },
+  cta: {
+    primary: 'Contacta amb nosaltres',
+    secondary: 'Explica’ns la teva entitat',
+    supporting:
+      'Ens agrada entendre primer la realitat de cada entitat abans de proposar res.',
+  },
   login: {
     title: 'Accés | Summa Social',
     welcomeTitle: 'Benvingut a Summa Social',
@@ -557,16 +578,27 @@ const ca: PublicTranslations = {
     },
   },
   contact: {
-    title: 'Contacte',
-    subtitle: 'Tens dubtes o suggeriments? Escriu-nos.',
+    title: 'Parlem de la teva entitat',
+    subtitle: 'Si vols veure si Summa Social encaixa amb la teva ONG, escriu-nos.',
+    description:
+      'Ens agrada entendre primer la realitat de cada entitat abans de proposar res.',
     responseTime: 'Respondrem tan aviat com sigui possible.',
+    directEmailLabel: 'Correu directe',
+    form: {
+      nameLabel: 'Nom',
+      emailLabel: 'Correu electrònic',
+      organizationLabel: 'Entitat',
+      messageLabel: 'Missatge',
+      submit: 'Enviar contacte',
+      helper: 'El formulari obrirà el teu client de correu amb el missatge preparat.',
+    },
   },
   home: {
     metaTitle: 'Summa Social | Gestió econòmica per a entitats',
     metaDescription:
       "Gestió econòmica i fiscal per a entitats socials petites i mitjanes d'Espanya. Conciliació bancària, Model 182/347, remeses SEPA i més.",
     skipToContent: 'Saltar al contingut',
-    heroTagline: 'Gestió econòmica i fiscal per a entitats no lucratives.',
+    heroTagline: 'Controla donacions, quotes i informes fiscals de la teva ONG sense Excel.',
     hero: {
       visualAlt: 'Captura de pantalla de Summa Social',
       bridgeLine:
@@ -584,7 +616,7 @@ const ca: PublicTranslations = {
     solves: {
       title: 'Què resol Summa Social?',
       intro:
-        'Summa Social porta ordre, control i tranquil·litat a la gestió econòmica de les entitats d\'acció social i de cooperació.',
+        'Summa Social porta ordre, control i tranquil·litat a la gestió econòmica de les entitats d\'acció social i de cooperació, especialment quan la informació acaba dispersa entre extractes, fulls de càlcul i revisions manuals.',
       conciliation:
         "Conciliació bancària senzilla i ràpida: Importes l'extracte i en pocs minuts tens tots els moviments classificats, sense errors de transcripció. La intel·ligència artificial reconeix automàticament proveïdors, socis i donants.",
       fiscal:
@@ -706,9 +738,9 @@ const ca: PublicTranslations = {
       imageAlt: 'Il·lustració del procés de treball de Summa Social',
     },
     finalCta: {
-      title: 'Valora si Summa encaixa amb la teva entitat',
+      title: 'Vols ordenar la gestió econòmica de la teva entitat?',
       subtitle:
-        "El Model 182, els certificats de donació, els informes de junta: surten del que ja has registrat durant l'any. Sense doble feina. Contacta'ns per veure si encaixa.",
+        'Explica’ns com treballeu avui i veurem si Summa Social us pot ajudar a reduir Excel, revisions manuals i duplicitats.',
       cta: 'Entrar',
     },
   },
@@ -898,6 +930,12 @@ const es: PublicTranslations = {
     email: 'Email',
     lastUpdated: 'Última actualización',
     privacyContact: 'Contacto de privacidad',
+  },
+  cta: {
+    primary: 'Contacta con nosotros',
+    secondary: 'Cuéntanos sobre tu entidad',
+    supporting:
+      'Nos gusta entender primero la realidad de cada entidad antes de proponer nada.',
   },
   login: {
     title: 'Acceso | Summa Social',
@@ -1096,16 +1134,27 @@ const es: PublicTranslations = {
     },
   },
   contact: {
-    title: 'Contacto',
-    subtitle: '¿Tienes dudas o sugerencias? Escríbenos.',
+    title: 'Hablemos de tu entidad',
+    subtitle: 'Si quieres ver si Summa Social encaja con tu ONG, escríbenos.',
+    description:
+      'Nos gusta entender primero la realidad de cada entidad antes de proponer nada.',
     responseTime: 'Responderemos lo antes posible.',
+    directEmailLabel: 'Correo directo',
+    form: {
+      nameLabel: 'Nombre',
+      emailLabel: 'Correo electrónico',
+      organizationLabel: 'Entidad',
+      messageLabel: 'Mensaje',
+      submit: 'Enviar contacto',
+      helper: 'El formulario abrirá tu cliente de correo con el mensaje preparado.',
+    },
   },
   home: {
     metaTitle: 'Summa Social | Gestión económica para entidades',
     metaDescription:
       'Gestión económica y fiscal para entidades sociales pequeñas y medianas de España. Conciliación bancaria, Modelo 182/347, remesas SEPA y más.',
     skipToContent: 'Saltar al contenido',
-    heroTagline: 'Gestión económica y fiscal para entidades sin ánimo de lucro.',
+    heroTagline: 'Controla donaciones, cuotas e informes fiscales de tu ONG sin Excel.',
     hero: {
       visualAlt: 'Captura de pantalla de Summa Social',
       bridgeLine: 'Todo queda alineado sin tener que pensarlo cada vez.',
@@ -1122,7 +1171,7 @@ const es: PublicTranslations = {
     solves: {
       title: '¿Qué resuelve Summa Social?',
       intro:
-        'Summa Social aporta orden, control y tranquilidad a la gestión económica de las entidades sociales pequeñas y medianas.',
+        'Summa Social aporta orden, control y tranquilidad a la gestión económica de las entidades sociales pequeñas y medianas, especialmente cuando la información acaba dispersa entre extractos, hojas de cálculo y revisiones manuales.',
       conciliation:
         'Conciliación bancaria sencilla y rápida: Importas el extracto y en pocos minutos tienes todos los movimientos clasificados, sin errores de transcripción. La inteligencia artificial reconoce automáticamente proveedores, socios y donantes.',
       fiscal:
@@ -1243,8 +1292,9 @@ const es: PublicTranslations = {
       imageAlt: 'Ilustración del proceso de trabajo de Summa Social',
     },
     finalCta: {
-      title: 'Empieza hoy',
-      subtitle: 'Summa Social te ayuda a llevar orden y control a la gestión económica de tu entidad.',
+      title: '¿Quieres ordenar la gestión económica de tu entidad?',
+      subtitle:
+        'Cuéntanos cómo trabajáis hoy y veremos si Summa Social puede ayudaros a reducir Excel, revisiones manuales y duplicidades.',
       cta: 'Entrar',
     },
   },
@@ -1434,6 +1484,12 @@ const fr: PublicTranslations = {
     email: 'Email',
     lastUpdated: 'Dernière mise à jour',
     privacyContact: 'Contact vie privée',
+  },
+  cta: {
+    primary: 'Contactez-nous',
+    secondary: 'Parlez-nous de votre organisation',
+    supporting:
+      'Nous préférons comprendre la réalité de chaque organisation avant de proposer quoi que ce soit.',
   },
   login: {
     title: 'Accès | Summa Social',
@@ -1633,16 +1689,27 @@ const fr: PublicTranslations = {
     },
   },
   contact: {
-    title: 'Contact',
-    subtitle: 'Des questions ou suggestions ? Écrivez-nous.',
+    title: 'Parlons de votre organisation',
+    subtitle: 'Si vous voulez voir si Summa Social convient à votre association, écrivez-nous.',
+    description:
+      'Nous préférons comprendre la réalité de chaque organisation avant de proposer quoi que ce soit.',
     responseTime: 'Nous vous répondrons dans les meilleurs délais.',
+    directEmailLabel: 'Email direct',
+    form: {
+      nameLabel: 'Nom',
+      emailLabel: 'Email',
+      organizationLabel: 'Organisation',
+      messageLabel: 'Message',
+      submit: 'Envoyer le contact',
+      helper: 'Le formulaire ouvrira votre client email avec le message préparé.',
+    },
   },
   home: {
     metaTitle: 'Summa Social | Gestion économique pour les associations',
     metaDescription:
       "Gestion économique et fiscale pour les associations petites et moyennes d'Espagne. Rapprochement bancaire, Modèle 182/347, prélèvements SEPA et plus.",
     skipToContent: 'Aller au contenu',
-    heroTagline: 'Gestion économique et fiscale pour les associations à but non lucratif.',
+    heroTagline: 'Contrôlez dons, cotisations et rapports fiscaux de votre association sans Excel.',
     hero: {
       visualAlt: 'Capture d\'écran de Summa Social',
       bridgeLine: 'Tout reste aligné sans avoir à y penser à chaque fois.',
@@ -1659,7 +1726,7 @@ const fr: PublicTranslations = {
     solves: {
       title: 'Que résout Summa Social ?',
       intro:
-        'Summa Social apporte ordre, contrôle et sérénité à la gestion économique des petites et moyennes associations.',
+        'Summa Social apporte ordre, contrôle et sérénité à la gestion économique des petites et moyennes associations, surtout lorsque les informations finissent dispersées entre relevés, tableurs et validations manuelles.',
       conciliation:
         "Rapprochement bancaire simple et rapide : Importez le relevé et en quelques minutes, tous les mouvements sont classés, sans erreurs de transcription. L'intelligence artificielle reconnaît automatiquement fournisseurs, adhérents et donateurs.",
       fiscal:
@@ -1780,8 +1847,9 @@ const fr: PublicTranslations = {
       imageAlt: 'Illustration du processus de travail de Summa Social',
     },
     finalCta: {
-      title: "Commencez aujourd'hui",
-      subtitle: 'Summa Social vous aide à mettre de l\'ordre et du contrôle dans la gestion économique de votre association.',
+      title: 'Vous voulez remettre de l’ordre dans la gestion économique de votre organisation ?',
+      subtitle:
+        'Expliquez-nous votre fonctionnement actuel et nous verrons si Summa Social peut réduire Excel, les révisions manuelles et les doublons.',
       cta: 'Entrer',
     },
   },
@@ -1971,6 +2039,12 @@ const pt: PublicTranslations = {
     email: 'Email',
     lastUpdated: 'Última atualização',
     privacyContact: 'Contacto de privacidade',
+  },
+  cta: {
+    primary: 'Fale connosco',
+    secondary: 'Conte-nos sobre a sua organização',
+    supporting:
+      'Preferimos compreender primeiro a realidade de cada entidade antes de propor seja o que for.',
   },
   login: {
     title: 'Acesso | Summa Social',
@@ -2169,16 +2243,27 @@ const pt: PublicTranslations = {
     },
   },
   contact: {
-    title: 'Contacto',
-    subtitle: 'Tem dúvidas ou sugestões? Escreva-nos.',
+    title: 'Falemos da sua organização',
+    subtitle: 'Se quiser perceber se o Summa Social encaixa na sua ONG, escreva-nos.',
+    description:
+      'Preferimos compreender primeiro a realidade de cada entidade antes de propor seja o que for.',
     responseTime: 'Responderemos o mais brevemente possível.',
+    directEmailLabel: 'Email direto',
+    form: {
+      nameLabel: 'Nome',
+      emailLabel: 'Email',
+      organizationLabel: 'Entidade',
+      messageLabel: 'Mensagem',
+      submit: 'Enviar contacto',
+      helper: 'O formulário abrirá o seu cliente de email com a mensagem preparada.',
+    },
   },
   home: {
     metaTitle: 'Summa Social | Gestão económica para entidades',
     metaDescription:
       'Gestão económica e fiscal para entidades sociais pequenas e médias de Espanha. Reconciliação bancária, Modelo 182/347, remessas SEPA e mais.',
     skipToContent: 'Saltar para o conteúdo',
-    heroTagline: 'Gestão económica e fiscal para entidades sem fins lucrativos.',
+    heroTagline: 'Controla doações, quotas e relatórios fiscais da tua ONG sem Excel.',
     hero: {
       visualAlt: 'Captura de ecrã de Summa Social',
       bridgeLine: 'Tudo fica alinhado sem ter de pensar nisso a cada momento.',
@@ -2195,7 +2280,7 @@ const pt: PublicTranslations = {
     solves: {
       title: 'O que resolve o Summa Social?',
       intro:
-        'Summa Social traz ordem, controlo e tranquilidade à gestão económica das entidades sociais pequenas e médias.',
+        'Summa Social traz ordem, controlo e tranquilidade à gestão económica das entidades sociais pequenas e médias, sobretudo quando a informação acaba dispersa entre extratos, folhas de cálculo e revisões manuais.',
       conciliation:
         'Reconciliação bancária simples e rápida: Importa o extrato e em poucos minutos tens todos os movimentos classificados, sem erros de transcrição. A inteligência artificial reconhece automaticamente fornecedores, sócios e doadores.',
       fiscal:
@@ -2316,8 +2401,9 @@ const pt: PublicTranslations = {
       imageAlt: 'Ilustração do processo de trabalho de Summa Social',
     },
     finalCta: {
-      title: 'Começa hoje',
-      subtitle: 'Summa Social ajuda-te a levar ordem e controlo à gestão económica da tua entidade.',
+      title: 'Queres organizar melhor a gestão económica da tua entidade?',
+      subtitle:
+        'Conta-nos como trabalham hoje e veremos se o Summa Social pode reduzir Excel, revisões manuais e duplicações.',
       cta: 'Entrar',
     },
   },

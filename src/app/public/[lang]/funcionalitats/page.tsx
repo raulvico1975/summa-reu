@@ -290,7 +290,7 @@ export default async function FeaturesPage({ params }: PageProps) {
         {/* CTA */}
         <div className="mt-16 text-center">
           <Button asChild size="lg">
-            <Link href={`/${locale}/contact`}>{t.common.contact}</Link>
+            <Link href={`/${locale}/contact`}>{t.cta.primary}</Link>
           </Button>
         </div>
       </div>

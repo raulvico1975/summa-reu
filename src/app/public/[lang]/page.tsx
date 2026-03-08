@@ -14,8 +14,6 @@ import {
 } from '@/lib/public-locale';
 import { getPublicTranslations } from '@/i18n/public';
 
-const BASE_URL = 'https://summasocial.app';
-
 // Classe consistent per "product window frame" a totes les captures
 const frameClass = 'rounded-xl border border-border/50 shadow-sm overflow-hidden bg-background';
 
@@ -117,17 +115,21 @@ export default async function HomePage({ params }: PageProps) {
             <div className="space-y-6 text-center lg:text-left">
               <div className="flex items-center justify-center lg:justify-start gap-3">
                 <Logo className="h-12 w-12 lg:h-14 lg:w-14 text-primary" />
-                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">
                   {t.common.appName}
-                </h1>
+                </p>
               </div>
 
-              <p className="text-xl text-muted-foreground sm:text-2xl">
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
                 {t.home.heroTagline}
+              </h1>
+
+              <p className="text-xl text-muted-foreground sm:text-2xl">
+                {t.home.solves.intro}
               </p>
 
               <p className="text-base text-muted-foreground/80 sm:text-lg">
-                {t.home.solves.intro}
+                {t.cta.supporting}
               </p>
 
               <p className="text-sm text-muted-foreground/80">
@@ -152,13 +154,17 @@ export default async function HomePage({ params }: PageProps) {
               {/* CTAs */}
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
                 <Button asChild size="lg">
-                  <Link href={`/${locale}/${featuresPath}`}>{t.common.features}</Link>
+                  <Link href={`/${locale}/contact`}>
+                    {t.cta.primary}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <Link href={`/${locale}/contact`}>{t.common.contact}</Link>
+                  <Link href={`/${locale}/${featuresPath}`}>{t.common.features}</Link>
                 </Button>
               </div>
 
+              <p className="text-sm text-muted-foreground">{t.cta.secondary}</p>
               <PublicDirectContact locale={locale} className="pt-2" />
             </div>
 
@@ -354,28 +360,26 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      {locale === 'ca' && (
-        <section className="px-6 py-12">
-          <div className="mx-auto max-w-4xl rounded-2xl border border-border/60 bg-muted/20 p-8">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-primary">Gestió econòmica per a ONG</p>
-                <h2 className="text-2xl font-semibold">Accedeix al hub central del clúster SEO públic</h2>
-                <p className="text-muted-foreground">
-                  Recorregut complet per conciliació bancària, donants, remeses, devolucions i fiscalitat dins de
-                  Summa Social.
-                </p>
-              </div>
+      <section className="px-6 py-12">
+        <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl border border-border/60 bg-muted/20 p-8">
+            <p className="text-sm font-medium text-primary">{t.cta.secondary}</p>
+            <h2 className="mt-2 text-2xl font-semibold">{t.home.finalCta.title}</h2>
+            <p className="mt-3 text-muted-foreground">{t.home.finalCta.subtitle}</p>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-background p-8 shadow-sm">
+            <p className="text-sm font-medium text-primary">{t.cta.secondary}</p>
+            <h2 className="mt-2 text-2xl font-semibold">{t.contact.title}</h2>
+            <p className="mt-3 text-muted-foreground">{t.contact.description}</p>
+            <div className="mt-6">
               <Button asChild size="lg">
-                <Link href="/ca/gestio-economica-ong">
-                  Veure el hub
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
+                <Link href={`/${locale}/contact`}>{t.cta.primary}</Link>
               </Button>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
           E) BLOCS "Per a qui és" — 2 blocs grans
@@ -477,7 +481,7 @@ export default async function HomePage({ params }: PageProps) {
           {/* CTA */}
           <div className="pt-4">
             <Button asChild variant="outline" size="lg">
-              <Link href={`/${locale}/contact`}>{t.home.howWeWork.cta}</Link>
+              <Link href={`/${locale}/contact`}>{t.cta.primary}</Link>
             </Button>
           </div>
         </div>
@@ -496,7 +500,7 @@ export default async function HomePage({ params }: PageProps) {
           </p>
           <Button asChild size="lg" variant="secondary">
             <Link href={`/${locale}/contact`}>
-              {t.common.contact}
+              {t.cta.primary}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

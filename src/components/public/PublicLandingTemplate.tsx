@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { RelatedLandings } from '@/components/public/RelatedLandings';
 import type { PublicLocale } from '@/lib/public-locale';
 import type { PublicLandingContent } from '@/lib/public-landings';
+import { getPublicTranslations } from '@/i18n/public';
 
 interface PublicLandingTemplateProps {
   locale: PublicLocale;
@@ -19,6 +20,8 @@ interface PublicLandingTemplateProps {
 }
 
 export function PublicLandingTemplate({ locale, content, labels }: PublicLandingTemplateProps) {
+  const t = getPublicTranslations(locale);
+
   return (
     <main className="min-h-screen bg-background">
       <div className="border-b">
@@ -142,10 +145,10 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
           )}
 
           <section className="border-t pt-10">
-            <h2 className="text-2xl font-bold mb-3">{content.finalCta.title}</h2>
-            <p className="text-muted-foreground mb-4">{content.finalCta.text}</p>
+            <h2 className="text-2xl font-bold mb-3">{t.cta.secondary}</h2>
+            <p className="text-muted-foreground mb-4">{t.contact.description}</p>
             <Button asChild size="lg">
-              <Link href={content.finalCta.href}>{content.finalCta.linkLabel}</Link>
+              <Link href={`/${locale}/contact`}>{t.cta.primary}</Link>
             </Button>
             <PublicDirectContact locale={locale} className="mt-6" />
           </section>

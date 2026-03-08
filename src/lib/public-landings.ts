@@ -20,7 +20,7 @@ export interface PublicLandingRelatedLink {
 export interface PublicLandingRelatedSection {
   title: string;
   intro: string;
-  hub: {
+  guide: {
     href: string;
     label: string;
     description: string;
@@ -167,7 +167,7 @@ function contactHref(locale: PublicLocale) {
   return `/${locale}/contact`;
 }
 
-function clusterHubHref(locale: PublicLocale) {
+function publicGuideHref(locale: PublicLocale) {
   return `/${locale}/gestio-economica-ong`;
 }
 
@@ -271,30 +271,30 @@ function buildRelatedLandingsSection(
             : 'Tambem te pode interessar',
     intro:
       locale === 'ca'
-        ? 'Si estàs treballant aquesta part de la gestió econòmica, aquestes pàgines et donaran context complementari dins del mateix clúster.'
+        ? 'Si estàs treballant aquesta part de la gestió econòmica, aquestes pàgines et donaran context complementari dins del mateix recorregut.'
         : locale === 'es'
-          ? 'Si estas trabajando esta parte de la gestion economica, estas paginas te dan contexto complementario dentro del mismo cluster.'
+          ? 'Si estas trabajando esta parte de la gestión económica, estas páginas te dan contexto complementario dentro del mismo recorrido.'
           : locale === 'fr'
-            ? 'Si vous travaillez cette partie de la gestion economique, ces pages apportent un contexte complementaire.'
-            : 'Se estas a trabalhar esta area da gestao economica, estas paginas dao contexto complementar.',
-    hub: {
-      href: clusterHubHref(locale),
+            ? 'Si vous travaillez cette partie de la gestion économique, ces pages apportent un contexte complémentaire.'
+            : 'Se estás a trabalhar esta área da gestão económica, estas páginas dão contexto complementar.',
+    guide: {
+      href: publicGuideHref(locale),
       label:
         locale === 'ca'
-          ? "Hub de gestió econòmica per a ONG"
+          ? 'Guia de gestió econòmica per a ONG'
           : locale === 'es'
-            ? 'Hub de gestion economica para ONG'
+            ? 'Guía de gestión económica para ONG'
             : locale === 'fr'
-              ? 'Hub de gestion economique pour associations'
-              : 'Hub de gestao economica para ONG',
+              ? 'Guide de gestion économique pour associations'
+              : 'Guia de gestão económica para ONG',
       description:
         locale === 'ca'
-          ? 'Pàgina mare del clúster amb tots els enllaços interns de gestió econòmica, remeses, donants i fiscalitat.'
+          ? 'Visió general dels processos clau: conciliació bancària, remeses, donants i fiscalitat.'
           : locale === 'es'
-            ? 'Pagina principal del cluster con todos los enlaces internos.'
+            ? 'Visión general de los procesos clave: conciliación bancaria, remesas, donantes y fiscalidad.'
             : locale === 'fr'
-              ? 'Page mere du cluster avec tous les liens internes.'
-              : 'Pagina principal do cluster com todas as ligacoes internas.',
+              ? 'Vue générale des processus clés : rapprochement bancaire, prélèvements, donateurs et fiscalité.'
+              : 'Visão geral dos processos-chave: reconciliação bancária, remessas, doadores e fiscalidade.',
     },
     items: relatedSlugs.map((relatedSlug) => ({
       slug: relatedSlug,
@@ -568,41 +568,6 @@ function buildPendingContent(locale: PublicLocale, landingName: string): PublicL
   };
 }
 
-function buildPendingMetadata(name: Record<PublicLocale, string>): Record<PublicLocale, PublicLandingMetadata> {
-  return {
-    ca: {
-      title: `${name.ca} | Summa Social`,
-      description: `${name.ca} per a entitats sense ànim de lucre. Contingut complet en preparació.`,
-    },
-    es: {
-      title: `${name.es} | Summa Social`,
-      description: `${name.es} para entidades sin animo de lucro. Contenido completo en preparacion.`,
-    },
-    fr: {
-      title: `${name.fr} | Summa Social`,
-      description: `${name.fr} pour associations. Contenu complet en preparation.`,
-    },
-    pt: {
-      title: `${name.pt} | Summa Social`,
-      description: `${name.pt} para entidades sem fins lucrativos. Conteudo completo em preparacao.`,
-    },
-  };
-}
-
-function buildPendingLanding(slug: keyof typeof LANDING_NAMES): PublicLandingDefinition {
-  const name = LANDING_NAMES[slug];
-  return {
-    slug,
-    metadata: buildPendingMetadata(name),
-    content: {
-      ca: buildPendingContent('ca', name.ca),
-      es: buildPendingContent('es', name.es),
-      fr: buildPendingContent('fr', name.fr),
-      pt: buildPendingContent('pt', name.pt),
-    },
-  };
-}
-
 const MODEL_182_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: 'Model 182 per a ONG | Software de gestió per a entitats | Summa Social',
@@ -732,9 +697,9 @@ const DONATION_CERTIFICATES_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: "Si cada any la generació dels certificats de donació et porta massa hores o massa revisions manuals, potser val la pena veure com funciona Summa Social. L'emissió de certificats pot passar de ser una tasca pesada i repetitiva a ser simplement un procés més dins del sistema.",
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: "Si cada any la generació dels certificats de donació et porta massa hores o massa revisions manuals, escriu-nos i t'explicarem si Summa Social us pot ajudar a simplificar aquest procés.",
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };
@@ -837,9 +802,9 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: 'Si la teva entitat cobra quotes de socis cada mes o cada trimestre, potser val la pena veure com funciona aquest procés dins de Summa Social. Preparar una remesa pot passar de ser una tasca manual amb Excel a ser simplement un pas més dins del sistema.',
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: 'Si la teva entitat cobra quotes de socis cada mes o cada trimestre, contacta amb nosaltres i veurem si Summa Social us pot ajudar a ordenar aquest procés.',
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };
@@ -938,9 +903,9 @@ const BANK_STATEMENT_IMPORT_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: 'Si la teva entitat treballa amb extractes bancaris cada mes, potser val la pena veure com funciona aquest procés dins de Summa Social. Importar els moviments pot passar de ser una tasca manual a ser simplement el primer pas de la gestió econòmica.',
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: 'Si la teva entitat treballa amb extractes bancaris cada mes, contacta amb nosaltres i veurem si Summa Social us pot ajudar a ordenar aquesta operativa.',
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };
@@ -1041,9 +1006,9 @@ const BANK_RECONCILIATION_ONG_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: "Si cada mes l'equip ha de revisar extractes bancaris i fulls de càlcul per entendre què ha passat, potser val la pena veure com funciona la conciliació bancària dins de Summa Social. La revisió dels moviments pot passar de ser una tasca confusa a ser simplement una part natural de la gestió econòmica.",
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: "Si cada mes l'equip ha de revisar extractes bancaris i fulls de càlcul per entendre què ha passat, contacta amb nosaltres i valorarem si Summa Social us pot ajudar a simplificar aquesta feina.",
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };
@@ -1142,9 +1107,9 @@ const DONATIONS_CONTROL_ONG_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: "Si la informació sobre donacions de la teva entitat està repartida entre diversos documents o fulls de càlcul, potser val la pena veure com funciona Summa Social. El control de donacions pot passar de ser una revisió manual a ser simplement una part natural de la gestió de l'entitat.",
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: "Si la informació sobre donacions de la teva entitat està repartida entre diversos documents o fulls de càlcul, contacta amb nosaltres i veurem si Summa Social us pot ajudar a centralitzar-la.",
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };
@@ -1245,9 +1210,9 @@ const SOFTWARE_MANAGEMENT_ONG_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: "Si la gestió econòmica de la teva entitat depèn de diversos fulls de càlcul i revisions manuals, potser val la pena veure com funciona Summa Social. La gestió econòmica pot passar de ser un conjunt d'eines disperses a ser un sistema clar i coherent.",
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: "Si la gestió econòmica de la teva entitat depèn de diversos fulls de càlcul i revisions manuals, contacta amb nosaltres i veurem si Summa Social encaixa amb la vostra manera de treballar.",
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };
@@ -1346,9 +1311,9 @@ const ASSOCIATIONS_PROGRAM_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: "Si la gestió econòmica de la teva associació depèn de diversos fulls de càlcul i revisions manuals, potser val la pena veure com funciona Summa Social. La gestió econòmica pot passar de ser un conjunt d'eines disperses a ser un sistema clar i coherent.",
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: "Si la gestió econòmica de la teva associació depèn de diversos fulls de càlcul i revisions manuals, contacta amb nosaltres i valorarem si Summa Social us pot ajudar a ordenar-la.",
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };
@@ -1454,9 +1419,9 @@ const DONOR_MANAGEMENT_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: "Si la base de donants de la teva entitat està repartida entre diversos documents o fulls de càlcul, potser val la pena veure com funciona Summa Social. La gestió dels donants pot passar de ser un conjunt de llistes disperses a ser una base clara vinculada a la realitat econòmica de l'entitat.",
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: "Si la base de donants de la teva entitat està repartida entre diversos documents o fulls de càlcul, contacta amb nosaltres i veurem si Summa Social us pot ajudar a unificar-la.",
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };
@@ -1559,9 +1524,9 @@ const MODEL_347_ONG_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: 'Si el Model 347 t’obliga a revisar proveïdors i pagaments des de zero cada any, potser val la pena veure com es prepara dins de Summa Social.',
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: 'Si el Model 347 t’obliga a revisar proveïdors i pagaments des de zero cada any, contacta amb nosaltres i valorarem si Summa Social us pot ajudar a ordenar aquesta part fiscal.',
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };
@@ -1664,9 +1629,9 @@ const RETURNED_RECEIPTS_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: 'Si les devolucions bancàries et fan perdre temps i et generen dubtes abans del tancament anual, potser val la pena veure com es gestionen dins de Summa Social.',
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: 'Si les devolucions bancàries et fan perdre temps i et generen dubtes abans del tancament anual, contacta amb nosaltres i veurem si Summa Social us pot ajudar a controlar-les millor.',
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };
@@ -1761,9 +1726,9 @@ const MODEL_182_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Vols veure com funciona?',
-    text: 'Si portes la gestió econòmica d’una entitat i cada any pateixes amb el Model 182, potser val la pena veure com funciona Summa Social.',
-    linkLabel: 'Demana una demostració per a la teva entitat.',
+    title: 'Parlem de la teva entitat',
+    text: 'Si portes la gestió econòmica d’una entitat i cada any pateixes amb el Model 182, contacta amb nosaltres i valorarem si Summa Social us pot ajudar a simplificar aquest tancament.',
+    linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
 };

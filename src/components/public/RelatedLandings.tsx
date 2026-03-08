@@ -6,7 +6,7 @@ interface RelatedLandingsProps {
 }
 
 export function RelatedLandings({ section }: RelatedLandingsProps) {
-  const hubLabel = 'Hub central';
+  const guideLabel = 'Guia relacionada';
 
   return (
     <section className="border-t pt-10">
@@ -15,12 +15,12 @@ export function RelatedLandings({ section }: RelatedLandingsProps) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Link
-          href={section.hub.href}
+          href={section.guide.href}
           className="rounded-xl border border-border/60 p-5 transition-colors hover:border-primary/40 hover:bg-muted/30"
         >
-          <p className="text-sm font-semibold text-primary mb-2">{hubLabel}</p>
-          <p className="font-medium mb-2">{section.hub.label}</p>
-          <p className="text-sm text-muted-foreground">{section.hub.description}</p>
+          <p className="text-sm font-semibold text-primary mb-2">{guideLabel}</p>
+          <p className="font-medium mb-2">{section.guide.label}</p>
+          <p className="text-sm text-muted-foreground">{section.guide.description}</p>
         </Link>
 
         {section.items.map((item) => (

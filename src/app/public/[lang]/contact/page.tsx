@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
+import { PublicContactForm } from '@/components/public/PublicContactForm';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Mail } from 'lucide-react';
@@ -18,13 +19,6 @@ interface PageProps {
   params: Promise<{ lang: string }>;
 }
 
-const ALTERNATIVE_CONTACT_COPY: Record<PublicLocale, string> = {
-  ca: 'Si ho prefereixes, també ens pots contactar per telèfon o WhatsApp.',
-  es: 'Si lo prefieres, también puedes contactarnos por teléfono o WhatsApp.',
-  fr: 'Si vous préférez, vous pouvez aussi nous contacter par téléphone ou WhatsApp.',
-  pt: 'Se preferires, também podes contactar-nos por telefone ou WhatsApp.',
-};
-
 export function generateStaticParams() {
   return PUBLIC_LOCALES.map((lang) => ({ lang }));
 }
@@ -37,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const seoMeta = generatePublicPageMetadata(lang, '/contact');
 
   return {
-    title: `${t.contact.title} | ${t.common.appName}`,
+    title: `${t.contact.title} | Summa Social`,
     description: t.contact.subtitle,
     ...seoMeta,
   };
@@ -56,39 +50,60 @@ export default async function ContactPage({ params }: PageProps) {
   return (
     <main className="flex min-h-screen flex-col">
       <div className="flex flex-1 flex-col items-center justify-center bg-background px-4 py-16">
-        <div className="w-full max-w-lg text-center space-y-8">
+        <div className="w-full max-w-3xl space-y-8">
           <Logo className="h-12 w-12 mx-auto text-primary" />
 
-          <div className="space-y-4">
+          <div className="space-y-4 text-center">
             <h1 className="text-3xl font-bold tracking-tight">{t.contact.title}</h1>
             <p className="text-muted-foreground">{t.contact.subtitle}</p>
+            <p className="text-muted-foreground">{t.contact.description}</p>
           </div>
 
-          <div className="bg-muted/50 rounded-lg p-6 space-y-4">
-            <div className="flex items-center justify-center gap-3">
-              <Mail className="h-5 w-5 text-primary" />
-              <a
-                href={`mailto:${SUPPORT_EMAIL}`}
-                className="text-lg font-medium hover:underline"
-              >
-                {SUPPORT_EMAIL}
-              </a>
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-lg bg-muted/50 p-6">
+              <PublicContactForm
+                email={SUPPORT_EMAIL}
+                labels={{
+                  nameLabel: t.contact.form.nameLabel,
+                  emailLabel: t.contact.form.emailLabel,
+                  organizationLabel: t.contact.form.organizationLabel,
+                  messageLabel: t.contact.form.messageLabel,
+                  submit: t.contact.form.submit,
+                  helper: t.contact.form.helper,
+                }}
+              />
             </div>
-            <p className="text-sm text-muted-foreground">{t.contact.responseTime}</p>
-            <div className="border-t border-border/60 pt-4">
-              <p className="text-sm text-muted-foreground mb-4">{ALTERNATIVE_CONTACT_COPY[locale]}</p>
-              <div className="flex justify-center text-left">
-                <PublicDirectContact locale={locale} />
+
+            <div className="rounded-lg border border-border/60 bg-background p-6 space-y-5">
+              <div>
+                <p className="text-sm font-medium text-primary">{t.contact.directEmailLabel}</p>
+                <div className="mt-3 flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-primary" />
+                  <a
+                    href={`mailto:${SUPPORT_EMAIL}`}
+                    className="text-lg font-medium hover:underline"
+                  >
+                    {SUPPORT_EMAIL}
+                  </a>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">{t.contact.responseTime}</p>
+              <div className="border-t border-border/60 pt-4">
+                <div className="flex justify-center text-left">
+                  <PublicDirectContact locale={locale} />
+                </div>
               </div>
             </div>
           </div>
 
-          <Button asChild variant="ghost" size="sm">
-            <Link href={`/${locale}`}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              {t.common.backToHome}
-            </Link>
-          </Button>
+          <div className="text-center">
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/${locale}`}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                {t.common.backToHome}
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 
