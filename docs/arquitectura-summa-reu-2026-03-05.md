@@ -1,8 +1,8 @@
-# Summa Reu - Arquitectura, estat del codi i contingut (08/03/2026)
+# Summa Reu - Arquitectura, estat del codi i contingut (09/03/2026)
 
 ## 1) Abast i context d'aquest document
 
-- Data de la fotografia tècnica: **8 de març de 2026** (timezone projecte: `Europe/Madrid`).
+- Data de la fotografia tècnica: **9 de març de 2026** (timezone projecte: `Europe/Madrid`).
 - Fitxer històric: el nom del document conserva la data original, però el contingut reflecteix l'estat actual.
 - Font: estat **real** del workspace local a `/Users/raulvico/Documents/summa-board`.
 - Aquesta fotografia descriu arquitectura, estat operatiu i qualitat verificada avui.
@@ -23,7 +23,13 @@
   - `npm run i18n:check-es`: OK
   - `npm run build`: OK
   - `npm run ci:smoke`: OK
+- Commits rellevants més recents a `main`:
+  - `043f33ca` `meetings: return unified meeting creation shape`
+  - `5ee58d95` `meetings: remove firestore composite index dependency in getMeetingById`
+  - `56af8ae9` `meetings(recording): improve recording observability`
+  - `76516339` `meeting(owner): afegeix esborrat de reunions`
 - Maduresa: base sòlida de producte MVP, amb observabilitat, scripts operatius i CI/CD; encara amb pendents clars en signup públic, processament asíncron robust i capa de reunió en directe.
+- Validació de producció: onboarding públic amb Stripe operatiu; blocker de build antiga resolt al commit `151c9473`.
 
 ## 3) Stack i versions actuals
 
@@ -64,7 +70,7 @@ Directoris principals:
 
 Observacions de mida:
 
-- El build actual genera **22 rutes**.
+- El build actual genera **29 rutes**.
 - L'estructura funcional principal continua centralitzada a `app/` i `src/lib/`.
 
 ## 5) Arquitectura lògica
@@ -80,10 +86,12 @@ Rutes UI visibles:
   - `/p/[slug]`
   - `/p/[slug]/results`
 - Owner:
+  - `/billing`
   - `/dashboard`
   - `/polls/new`
   - `/polls/[pollId]`
-  - `/meetings/[meetingId]`
+  - `/owner/meetings/[meetingId]`
+  - `/meetings/[meetingId]` com a redirect localitzat
 
 Model de locale:
 
@@ -107,6 +115,9 @@ Endpoints principals:
 - Owner:
   - `POST /api/owner/polls/create`
   - `POST /api/owner/close-poll`
+  - `POST /api/owner/meetings/start-recording`
+  - `POST /api/owner/meetings/stop-recording`
+  - `POST /api/owner/meetings/delete`
   - `POST /api/owner/recordings/register`
   - `POST /api/owner/process-recording`
   - `POST /api/owner/minutes/update`
@@ -143,6 +154,7 @@ El nucli de negoci continua a `src/lib/db/repo.ts`:
 - Firebase Admin SDK
 - Firebase Web SDK
 - Daily REST + webhook
+- Stripe Checkout + webhook
 - Gemini REST
 - Telegram Bot API
 
@@ -151,6 +163,7 @@ El nucli de negoci continua a `src/lib/db/repo.ts`:
 ### 6.1 Col·leccions principals
 
 - `orgs/{orgId}`
+- `stripe_events/{eventId}`
 - `polls/{pollId}`
   - `options/{optionId}`
   - `voters/{voterId}`
@@ -164,7 +177,8 @@ El nucli de negoci continua a `src/lib/db/repo.ts`:
 
 ### 6.2 Camps rellevants
 
-- `orgs`: `name`, `ownerUid`, `createdAt`
+- `orgs`: `name`, `ownerUid`, `createdAt`, `subscriptionStatus`, `stripeCustomerId`, `stripeSubscriptionId`, `plan`, `recordingLimitMinutes`
+- `stripe_events`: `eventId`, `type`, `created`, `orgId`, `subscriptionId`, `receivedAt`, `raw`
 - `polls`: `orgId`, `title`, `description`, `timezone`, `slug`, `status`, `winningOptionId`, `createdAt`, `closedAt`
 - `meetings`: `orgId`, `title`, `description`, `createdAt`, `createdBy`, `meetingUrl`, `recordingStatus`, `recordingUrl`, `transcript`, `minutesDraft`, `pollId`, `scheduledAt`
 - `recordings`: `storagePath`, `rawText`, `mimeType`, `originalName`, `status`, `error`, `createdAt`
@@ -200,8 +214,10 @@ Contractes d’estat:
 ### 7.3 Proteccions d'API
 
 - `same-origin` per mutacions
+- `subscription_required` (`402`) a `api/owner/*` si l’org no està activa
 - `require owner` + ownership sobre `meetingId` a endpoints owner de reunions
 - webhook Daily amb bearer opcional i filtre d’events admesos
+- webhook Stripe amb verificació de signatura i auditoria Firestore
 - rate limit server-side:
   - signup: `10 / 10min / IP`
   - vot públic: `40 / 10min / poll+ip`
@@ -245,6 +261,7 @@ Contractes d’estat:
 9. La UI es refresca mentre hi ha estat `processing`.
 10. Owner pot editar markdown i exportar `.md`.
 11. Owner pot exportar `.ics`.
+12. Owner pot eliminar la reunió amb neteja en cascada.
 
 ### 8.3 Processament IA
 
@@ -312,6 +329,13 @@ Què s’ha de verificar a Firestore:
 - `meetings/{meetingId}.minutesDraft`
 - `meeting_ingest_jobs/{jobId}` associat amb estat coherent
 
+Què s’ha de verificar en eliminació segura de reunió:
+
+- el document `meetings/{meetingId}` desapareix
+- les subcol·leccions `recordings`, `transcripts` i `minutes` queden buides
+- no queden `meeting_ingest_jobs` associats
+- el prefix de Storage `meetings/{meetingId}/` queda sense fitxers útils
+
 Criteri d’èxit:
 
 - Daily crea la room i la gravació.
@@ -326,14 +350,14 @@ Criteri d’error:
 
 ## 11) Estat de qualitat avui
 
-Comandes executades avui, **8 de març de 2026**:
+Comandes executades avui, **9 de març de 2026**:
 
 - `npm run lint` -> **OK**
 - `npm run i18n:check-es` -> **OK**
 - `npm run build` -> **OK**
 - `npm run ci:smoke` -> **OK**
 
-El build actual genera **22 rutes**.
+El build actual genera **29 rutes**.
 
 El smoke valida, entre altres:
 
@@ -350,8 +374,7 @@ El smoke valida, entre altres:
 ### 12.1 Canvis locals
 
 - Branca actual: `main`
-- Fitxers modificats (tracked): **2**
-- El workspace actual conté, com a mínim, actualitzacions de documentació i smoke.
+- El workspace s’ha de deixar net després de comitejar documentació i desplegar.
 
 ### 12.2 Coherència funcional
 
@@ -362,8 +385,8 @@ El smoke valida, entre altres:
 
 ### 12.3 Punts a tenir presents
 
-- **Signup UI**: `/signup` continua mostrant bloc comercial amb CTA deshabilitat; `EntitySignupForm` existeix però no està connectat a la pàgina.
-- **Reunió en directe**: encara no hi ha integració real de videoproveïdor extern.
+- **Verificació visual final**: queda recomanat entrar una vegada amb l’owner actiu per confirmar confort de redirecció final a `/dashboard`.
+- **Reunió en directe**: hi ha integració operativa amb Daily per room, embed i controls de gravació; encara no és una capa pròpia ni està endurida com a E2E de producció.
 - **Processament asíncron**: es llança amb `void processRecordingTask(...)` des d'un handler HTTP; per escalar bé cal cua dedicada.
 - **Rate-limit store**: `_rate_limits` pot créixer sense neteja automàtica explícita.
 - **Dedupe alertes**: és local al procés; en múltiples instàncies no és global.
@@ -372,27 +395,46 @@ El smoke valida, entre altres:
 
 - Home pública de producte
 - Accés owner per login
-- Alta d'entitat via API
+- Alta d'entitat pública amb Stripe
+- Pantalla `/billing`
 - Votacions públiques amb slug
 - Resultats públics i resultats owner
 - Còpia d'enllaç públic de votació
 - Tancament de votació i creació de reunió
+- Inici/aturada de gravació Daily des de la reunió
 - Pujada de gravacions o entrada manual de text
 - Pipeline transcripció + acta amb edició manual
+- Eliminació segura de reunió amb neteja en cascada
 - Exportació `.ics` i `.md`
 - Monitorització d'errors server/client amb Telegram
 - Entorn local reproductible amb emuladors, seed i smoke
 - CI obligatòria i deploy manual segur
 - Mirror de prod segregat
 - Localització `ca/es` amb cobertura controlada
+- Auditoria de webhooks Stripe a Firestore
 
 ## 14) Conclusió tècnica
 
-L'estat actual de Summa Reu és **consistent i desplegable** per a un MVP operatiu: arquitectura clara per capes, seguretat raonable pel model owner/public, proves automàtiques útils i pipeline funcional complet `votació -> reunió -> acta`.
+L'estat actual de Summa Reu és **consistent, desplegat i operativament llest per operar**: arquitectura clara per capes, seguretat raonable pel model owner/public, proves automàtiques útils i pipeline funcional complet `signup -> billing -> Stripe -> votació -> reunió -> gravació -> acta`.
 
 Els següents salts de solidesa passen principalment per:
 
-- connectar o retirar definitivament el signup autoservei pendent,
 - externalitzar el processament de gravacions a una cua robusta,
 - afegir neteja/TTL per documents de rate-limit,
 - decidir i executar l'estratègia real de reunió síncrona.
+
+## 15) Evidència mínima d'obertura
+
+- Org validada a producció: `FnNsMxFscHfOyt2oxhTPi3uUQD22`
+- `subscriptionStatus = active`
+- `stripeSubscriptionId = sub_1T8hIy1w5oTdm9u8IBZeBPjW`
+- Event auditat: `stripe_events/evt_1T8hJ81w5oTdm9u8pvhPgF6r`
+- Tipus: `checkout.session.completed`
+
+## 16) Checklist postobertura
+
+- Revisar noves `orgs/*` creades
+- Revisar `subscriptionStatus`
+- Revisar `stripe_events`
+- Revisar si apareixen `pending` anòmals
+- Revisar errors SSR i webhook

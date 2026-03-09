@@ -1,7 +1,7 @@
 # SUMMA REU - REFERÈNCIA COMPLETA
 
 > Document viu de referència de producte i tecnologia de Summa Reu.
-> Data de base: **8 de març de 2026** (`Europe/Madrid`).
+> Data de base: **9 de març de 2026** (`Europe/Madrid`).
 > Abast: estat real implementat al repositori `summa-board` i roadmap immediat explícit.
 
 ## 1) Propòsit del document
@@ -105,16 +105,15 @@ Punts clau de valor actual:
 - ERP/CRM complet.
 - Multi-tenant amb rols interns avançats.
 - Videoconferència pròpia.
-- Checkout de pagament plenament operatiu a UI.
 - Edició col·laborativa tipus Google Docs.
 
-## 6) Estat del producte (08/03/2026)
+## 6) Estat del producte (09/03/2026)
 
 ### 6.1 Fase global
 
-- **MVP funcional i desplegable**.
-- Preparat per proves pilot controlades.
-- Amb extensió immediata oberta en àrees de reunió en directe, operació asíncrona i alta comercial.
+- **MVP funcional, desplegat i obertura pública tècnicament tancada**.
+- Onboarding públic amb subscripció Stripe operativa.
+- Amb extensió immediata oberta en àrees de reunió en directe i operació asíncrona.
 
 ### 6.2 Implementat actualment
 
@@ -122,30 +121,31 @@ Punts clau de valor actual:
 - Localització català/castellà amb routing localitzat i fallback controlat.
 - Login owner amb sessió server via cookie `__session`.
 - Logout amb revocació de tokens.
-- Alta d’entitat via API.
+- Alta d’entitat pública amb creació d’org.
+- Pantalla `/billing` i checkout Stripe de subscripció.
+- Webhook Stripe amb activació de subscripció i auditoria a `stripe_events`.
+- Guard global de subscripció a UI i `api/owner/*`.
 - Dashboard owner amb llistat de votacions.
 - Creació de votacions amb selector assistit de franges.
 - Votació pública sense registre.
 - Resultats públics i vista owner.
 - Còpia d’enllaç públic de votació.
 - Tancament de votació i creació automàtica de reunió.
+- Control d’inici/aturada de gravació a reunions Daily.
 - Pujada manual d’àudio/vídeo o text base.
 - Processament asíncron de gravació amb transcripció i acta.
 - Edició i export d’acta en Markdown.
+- Eliminació de reunions amb esborrat en cascada de subcol·leccions, jobs i fitxers associats.
 - Export d’ICS de reunió.
 - Monitorització d’errors server/client amb alertes Telegram.
 - CI amb lint + smoke sobre emuladors.
 
 ### 6.3 Implementat parcialment
 
-- `/signup` pública disponible com a pàgina comercial/informativa.
-- L’API d’alta d’entitat està operativa i coberta per smoke.
-- El formulari públic autoservei d’alta existeix al codi, però avui **no està connectat a la pàgina `/signup`**.
+- Verificació visual manual final de confort amb l’owner actiu a `/dashboard`.
 
 ### 6.4 En desenvolupament / roadmap immediat
 
-- Publicació real del signup autoservei a UI.
-- Connexió del flux comercial/pagament.
 - Enduriment del processament asíncron amb cua dedicada.
 - Reunió en directe dins la plataforma o integrada amb proveïdor extern.
 - Gravació automàtica i pipeline plenament automàtic.
@@ -193,7 +193,7 @@ Punts clau de valor actual:
 
 ### 8.3 Criteris a mantenir
 
-- Accions irreversibles clares, especialment `tancar votació`.
+- Accions irreversibles clares, especialment `tancar votació` i `eliminar reunió`.
 - Errors curts i accionables.
 - Estats coherents: `open`, `closed`, `uploaded`, `processing`, `done`, `error`.
 - Evitar bucles de routing o pèrdua de context de locale.
@@ -214,6 +214,7 @@ Punts clau de valor actual:
 10. Daily envia webhook de gravació completada.
 11. El sistema crea `meeting_ingest_job` idempotent i processa transcripció + esborrany d’acta.
 12. Owner revisa transcripció, edita acta i exporta.
+13. Si cal, owner elimina la reunió amb neteja en cascada i redirecció segura.
 
 ### 9.2 Flux objectiu immediat
 
@@ -240,7 +241,7 @@ Punts clau de valor actual:
 
 - Landing pública amb CTA d’accés i alta: **Implementat**.
 - Pàgina `/signup` amb missatge comercial i estat del pla: **Implementat**.
-- CTA de pagament/alta final operativa: **No implementat**.
+- Activació de subscripció via `/billing` i Stripe Checkout: **Implementat**.
 
 ### 10.3 Votacions
 
@@ -269,6 +270,7 @@ Capacitats actuals:
 - webhook Daily per tancar gravació i llançar ingestió,
 - `meeting_ingest_job` idempotent per cada `meetingId + recordingId`,
 - refresc automàtic de la pantalla mentre hi ha processament,
+- eliminació de reunió amb esborrat de `recordings`, `transcripts`, `minutes`, `meeting_ingest_jobs` i prefix de Storage `meetings/{meetingId}/`,
 - export d’ICS,
 - export d’acta en `.md`.
 
@@ -335,7 +337,8 @@ Owner:
 - `/dashboard`
 - `/polls/new`
 - `/polls/[pollId]`
-- `/meetings/[meetingId]`
+- `/owner/meetings/[meetingId]`
+- `/meetings/[meetingId]` (redirect localitzat)
 
 Notes de locale:
 
@@ -369,17 +372,20 @@ El backend funcional principal resideix dins de Next API routes:
 
 ### 12.2 Arquitectura real de reunions avui
 
-Summa Reu **encara no integra** tecnologia de videoconferència pròpia ni de tercers.
+Summa Reu no incorpora tecnologia de videoconferència pròpia, però **sí integra Daily** per crear rooms, obrir la reunió, controlar gravació i processar la sortida via webhook.
 
 L’arquitectura de reunió actual és:
 
 - document de reunió a Firestore,
-- gravació/text base aportats manualment,
-- processament llançat des d’un endpoint HTTP,
+- room Daily associada al `meetingId`,
+- reunió accessible dins Summa via `iframe` o en pestanya nova,
+- gravació Daily controlada des de la UI owner,
+- pujada manual de gravació/text base com a camí alternatiu,
+- processament llançat des d’un endpoint HTTP o via webhook de Daily,
 - persistència de transcript i acta en subcol·leccions,
-- UI de reunió que es refresca mentre hi ha estat `uploaded` o `processing`.
+- UI de reunió que es refresca mentre hi ha estat `processing`.
 
-La integració amb proveïdor extern és **roadmap**, no estat implementat.
+La capa pròpia de videoconferència continua sent **roadmap**, però la integració amb Daily sí és estat implementat.
 
 ### 12.3 Estructura del codi
 
@@ -453,6 +459,9 @@ La integració amb proveïdor extern és **roadmap**, no estat implementat.
 - `POST /api/owner/close-poll`
 - `POST /api/owner/recordings/register`
 - `POST /api/owner/process-recording`
+- `POST /api/owner/meetings/start-recording`
+- `POST /api/owner/meetings/stop-recording`
+- `POST /api/owner/meetings/delete`
 - `POST /api/owner/minutes/update`
 - `GET /api/owner/minutes/export?meetingId=...`
 
@@ -584,8 +593,7 @@ Summa Reu s’orienta a subscripció per entitat.
 
 ### 21.1 Curt termini
 
-- Publicar signup autoservei real a `/signup`.
-- Connectar flux comercial/pagament.
+- Verificació visual final de confort amb l’owner actiu a `/dashboard`.
 - Validar flux real de Daily de punta a punta fora del mock controlat.
 - Resoldre ingestió de gravacions grans sense degradar experiència premium.
 - Consolidar govern de dades efímeres a `_rate_limits`.
@@ -600,7 +608,7 @@ Summa Reu s’orienta a subscripció per entitat.
 
 ## 22) Estat de qualitat actual
 
-Execucions verificades avui, **8 de març de 2026**:
+Execucions verificades avui, **9 de març de 2026**:
 
 - `npm run lint` -> **OK**
 - `npm run i18n:check-es` -> **OK**
@@ -650,17 +658,34 @@ Norma d’actualització:
 
 ## 26) Registre de canvis del document
 
+### 2026-03-09
+
+- Actualitzada la data base del document a 9 de març de 2026.
+- Documentats els commits recents de reunions `043f33ca`, `5ee58d95`, `56af8ae9` i `76516339`.
+- Afegida la capacitat d’eliminar reunions amb esborrat en cascada de subcol·leccions, jobs i fitxers associats.
+- Corregides les rutes owner de reunió i els endpoints reals de control de gravació/eliminació.
+
 ### 2026-03-08
 
 - Actualitzada la data base del document a 8 de març de 2026.
-- Corregit l’estat real de signup: API operativa, UI pública encara parcial.
+- Corregit l’estat real d’onboarding: signup públic + billing Stripe operatius a producció.
 - Actualitzat el flux de reunions: Summa crea room Daily, controla gravació i processa transcripció/acta via webhook + `meeting_ingest_job`.
 - Documentat el contracte del flux premium: `recordingStatus` (`none -> recording -> processing -> ready|error`) i ingestió idempotent per `meetingId + recordingId`.
 - Afegides les novetats de localització `ca/es`, routing per locale i control de fallback.
 - Incorporada la home pública i el flux comercial actual.
 - Afegides les rutes i endpoints d’autenticació reals, incloent `password-login`.
+- Documentada la resolució del blocker de build antiga amb el commit `151c9473`.
+- Afegida evidència de validació real amb l’org `FnNsMxFscHfOyt2oxhTPi3uUQD22`, `subscriptionStatus = active`, `stripeSubscriptionId = sub_1T8hIy1w5oTdm9u8IBZeBPjW` i `stripe_events/evt_1T8hJ81w5oTdm9u8pvhPgF6r`.
 - Ajustats riscos, roadmap i decisions tècniques a l’estat real del codi.
 - Actualitzada l’evidència de qualitat amb `lint`, `i18n:check-es`, `build` i `ci:smoke` executats avui.
+
+## Annex C - Checklist postobertura
+
+- Revisar noves `orgs/*` creades a Firestore
+- Revisar `subscriptionStatus` i detectar `pending` anòmals
+- Revisar `stripe_events` i confirmar `checkout.session.completed`
+- Revisar logs SSR i webhook Stripe
+- Revisar alertes Telegram de `past_due`, `canceled` o errors inesperats
 
 ### 2026-03-05
 

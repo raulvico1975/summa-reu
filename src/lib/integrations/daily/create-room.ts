@@ -19,15 +19,23 @@ function buildDailyRoomUrl(domain: string, roomName: string): string {
 
 export async function createDailyRoom(meetingId: string) {
   const apiKey = process.env.DAILY_API_KEY;
+  const apiBaseUrl = process.env.DAILY_API_BASE_URL ?? "https://api.daily.co/v1";
   const domain = process.env.DAILY_DOMAIN;
-
-  if (!apiKey || !domain) {
-    throw new Error("Daily env not configured");
-  }
-
+  const mockMode = process.env.DAILY_MOCK_MODE === "true";
   const roomName = `meeting-${meetingId}`;
 
-  const res = await fetch("https://api.daily.co/v1/rooms", {
+  if (mockMode) {
+    return {
+      roomName,
+      roomUrl: buildDailyRoomUrl(domain ?? "mock.daily.local", roomName),
+    };
+  }
+
+  if (!apiKey || !domain) {
+    throw new Error("DAILY_NOT_CONFIGURED");
+  }
+
+  const res = await fetch(`${apiBaseUrl}/rooms`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,

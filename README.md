@@ -2,6 +2,22 @@
 
 MVP local-first per coordinar votacions tipus Doodle i generar actes de reunió per entitats socials.
 
+## Estat de producció
+
+- Onboarding públic amb Stripe operatiu a `summareu.app`
+- Blocker de build antiga resolt al commit `151c9473` (`fix(billing): restore public checkout routes`)
+- Flux de reunions Daily estabilitzat amb:
+  - `043f33ca` (`meetings: return unified meeting creation shape`)
+  - `5ee58d95` (`meetings: remove firestore composite index dependency in getMeetingById`)
+  - `56af8ae9` (`meetings(recording): improve recording observability`)
+  - `76516339` (`meeting(owner): afegeix esborrat de reunions`)
+- Validació real confirmada amb:
+  - org `FnNsMxFscHfOyt2oxhTPi3uUQD22`
+  - `subscriptionStatus = active`
+  - `stripeSubscriptionId = sub_1T8hIy1w5oTdm9u8IBZeBPjW`
+  - `stripe_events/evt_1T8hJ81w5oTdm9u8pvhPgF6r`
+  - `type = checkout.session.completed`
+
 ## Stack
 
 - Next.js App Router + TypeScript
@@ -23,6 +39,11 @@ Variables importants:
 - `TELEGRAM_BOT_TOKEN=` (obligatori per alertes)
 - `TELEGRAM_CHAT_ID=68198321`
 - `FORCE_CANONICAL_REDIRECT=true` (posa `false` només si necessites desactivar redirecció canònica temporalment)
+- `STRIPE_SECRET_KEY=`
+- `STRIPE_WEBHOOK_SECRET=`
+- `STRIPE_PRICE_ID=`
+- `STRIPE_SUCCESS_URL=https://summareu.app/dashboard`
+- `STRIPE_CANCEL_URL=https://summareu.app/signup`
 
 ## Execució local
 
@@ -172,10 +193,28 @@ Owner:
 
 - `/login`
 - `/signup`
+- `/billing`
 - `/dashboard`
 - `/polls/new`
 - `/polls/[pollId]`
-- `/meetings/[meetingId]`
+- `/owner/meetings/[meetingId]`
+- `/meetings/[meetingId]` (redirect localitzat cap a owner)
+
+## Meeting creation flow
+
+- The meeting is always created.
+- Daily room creation is attempted after persistence.
+- Meeting detail supports start/stop recording, ingest polling, minutes export and deletion with cascade cleanup.
+- API always returns:
+
+```ts
+{
+  meetingId,
+  meetingUrl,
+  dailyRoomUrl,
+  dailyRoomName,
+}
+```
 
 ## Notes MVP
 
@@ -204,3 +243,11 @@ npm run test:permissions
 ```bash
 npm run test:telegram
 ```
+
+## Checklist postobertura
+
+- Revisar noves `orgs/*` creades a Firestore
+- Revisar `subscriptionStatus` de les noves entitats
+- Revisar `stripe_events` i confirmar `checkout.session.completed`
+- Revisar si apareixen `pending` anòmals o sessions Stripe `open/unpaid`
+- Revisar errors SSR i webhook a logs/alertes Telegram
