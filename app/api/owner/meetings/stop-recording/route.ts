@@ -47,7 +47,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: i18n.meeting.recordingStopInvalidState }, { status: 409 });
     }
 
-    await stopDailyRecording(meeting.meetingUrl);
+    try {
+      await stopDailyRecording(meeting.meetingUrl);
+    } catch (error) {
+      await updateMeetingRecordingState({
+        meetingId: meeting.id,
+        recordingStatus: "error",
+      });
+
+      console.error("DAILY_STOP_RECORDING_ERROR", {
+        meetingId: meeting.id,
+        meetingUrl: meeting.meetingUrl,
+        error,
+      });
+
+      return NextResponse.json(
+        {
+          error: "daily_stop_failed",
+          message: "Daily no ha pogut aturar la gravació",
+          details: String(error),
+        },
+        { status: 500 }
+      );
+    }
+
     await updateMeetingRecordingState({
       meetingId: meeting.id,
       recordingStatus: "processing",

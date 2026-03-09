@@ -100,6 +100,11 @@ export async function POST(request: NextRequest) {
       recordingUrl: resolvedRecordingUrl,
     });
 
+    console.info("DAILY_RECORDING_COMPLETE", {
+      meetingId: meeting.id,
+      recordingId: recordingId ?? null,
+    });
+
     // Idempotency key: one ingest job per meetingId + recordingId.
     const enqueued = await enqueueMeetingIngestJob({
       meetingId: meeting.id,

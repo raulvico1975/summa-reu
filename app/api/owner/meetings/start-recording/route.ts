@@ -49,6 +49,12 @@ export async function POST(request: NextRequest) {
     }
 
     await startDailyRecording(meeting.meetingUrl);
+
+    console.info("DAILY_START_RECORDING", {
+      meetingId: meeting.id,
+      meetingUrl: meeting.meetingUrl,
+    });
+
     await updateMeetingRecordingState({
       meetingId: meeting.id,
       recordingStatus: "recording",

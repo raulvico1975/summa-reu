@@ -33,9 +33,20 @@ export function MeetingRecordingControls({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ meetingId }),
       });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
+      const data = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        message?: string;
+        details?: string;
+      };
       if (!res.ok || !data.ok) {
-        throw new Error(data.error ?? i18n.poll.unexpectedError);
+        if (data.error === "daily_stop_failed") {
+          throw new Error(
+            "No s'ha pogut aturar la gravació. Si la reunió encara està oberta a Daily, torna-ho a provar. Si ja has sortit de la reunió, Daily pot haver tancat la gravació automàticament."
+          );
+        }
+
+        throw new Error(data.error ?? data.message ?? i18n.poll.unexpectedError);
       }
 
       setState({ loading: false });
