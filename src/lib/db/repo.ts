@@ -371,17 +371,19 @@ export async function getMeetingById(meetingId: string): Promise<MeetingWithAsse
   const meetingData = meetingDoc.data() as MeetingDoc;
   const pollDoc = meetingData.pollId ? await pollsCol.doc(meetingData.pollId).get() : null;
 
-  const [recordingsSnap, transcriptsSnap, minutesSnap] = await Promise.all([
+  const [recordingsSnap, transcriptsSnap, minutesSnap, ingestJobSnap] = await Promise.all([
     meetingDoc.ref.collection("recordings").orderBy("createdAt", "desc").get(),
     meetingDoc.ref.collection("transcripts").orderBy("createdAt", "desc").get(),
     meetingDoc.ref.collection("minutes").orderBy("createdAt", "desc").get(),
+    meetingIngestJobsCol.where("meetingId", "==", meetingId).get(),
   ]);
-  const ingestJobSnap = await meetingIngestJobsCol
-    .where("meetingId", "==", meetingId)
-    .orderBy("createdAt", "desc")
-    .limit(1)
-    .get();
-  const ingestJobDoc = ingestJobSnap.docs[0];
+  const ingestJobDoc = ingestJobSnap.docs
+    .slice()
+    .sort((left, right) => {
+      const leftCreatedAt = (left.data() as MeetingIngestJobDoc).createdAt ?? 0;
+      const rightCreatedAt = (right.data() as MeetingIngestJobDoc).createdAt ?? 0;
+      return rightCreatedAt - leftCreatedAt;
+    })[0];
 
   return {
     id: meetingDoc.id,

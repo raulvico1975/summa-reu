@@ -9,7 +9,7 @@ process.env.DAILY_API_KEY ||= "test-daily-key";
 process.env.DAILY_DOMAIN ||= "summareu";
 
 const { adminDb } = await import("../src/lib/firebase/admin.ts");
-const { closePollCreateMeeting, getMeetingByMeetingUrl } = await import("../src/lib/db/repo.ts");
+const { closePollCreateMeeting, getMeetingById, getMeetingByMeetingUrl } = await import("../src/lib/db/repo.ts");
 
 function buildId(prefix: string) {
   return `${prefix}-${crypto.randomBytes(6).toString("hex")}`;
@@ -155,6 +155,65 @@ test("legacy meetingUrl consumers keep working after closePollCreateMeeting", as
     assert.equal(typeof meeting?.meetingUrl, "string");
     assert.equal(legacyLookup?.id, created.meetingId);
     assert.equal(legacyLookup?.meetingUrl, meeting?.dailyRoomUrl);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("getMeetingById returns the latest ingest job without requiring ordered Firestore results", async () => {
+  const { pollId, optionId } = await seedOpenPoll();
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (_input, init) => {
+    const payload = JSON.parse(String(init?.body ?? "{}"));
+
+    return new Response(
+      JSON.stringify({
+        name: payload.name,
+        url: `https://summareu.daily.co/${payload.name}`,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  };
+
+  try {
+    const created = await closePollCreateMeeting({
+      pollId,
+      winningOptionId: optionId,
+      createdBy: "owner-ingest",
+    });
+
+    await adminDb.collection("meeting_ingest_jobs").doc(buildId("job-old")).set({
+      meetingId: created.meetingId,
+      orgId: "org-test",
+      recordingId: buildId("recording"),
+      source: "daily",
+      status: "queued",
+      recordingUrl: "https://example.com/old.mp4",
+      error: null,
+      createdAt: 100,
+      updatedAt: 100,
+    });
+
+    await adminDb.collection("meeting_ingest_jobs").doc(buildId("job-new")).set({
+      meetingId: created.meetingId,
+      orgId: "org-test",
+      recordingId: buildId("recording"),
+      source: "daily",
+      status: "processing",
+      recordingUrl: "https://example.com/new.mp4",
+      error: null,
+      createdAt: 200,
+      updatedAt: 200,
+    });
+
+    const meeting = await getMeetingById(created.meetingId);
+
+    assert.equal(meeting?.latestIngestJob?.status, "processing");
+    assert.equal(meeting?.latestIngestJob?.recordingUrl, "https://example.com/new.mp4");
   } finally {
     globalThis.fetch = originalFetch;
   }
