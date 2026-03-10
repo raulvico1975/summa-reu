@@ -31,3 +31,17 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 - Símptoma: resposta `200` amb `x-nextjs-cache: HIT` i `x-nextjs-prerender: 1`, mentre el contingut servit no coincidia encara amb el commit acabat de publicar.
 - Causa probable: propagació de revisió/prerender a origen a App Hosting; no era un problema de ruta ni de CDN edge.
 - Resolució: el contingut es va estabilitzar sol sense redeploy i després va servir el copy/metadades esperats.
+
+## 2026-03-10 — Rollout d'App Hosting desalineat en fix critic d'invitacions
+
+- PR afectada: `#17`
+- Commit funcional: `f37c5c6` (`fix(invitations): harden invited auth flow`)
+- Commit operatiu de rollout: `d73d1dc` (`ops(deploy): force app hosting rollout`)
+- Incidencia: App Hosting servia una revisio anterior tot i que `prod` ja contenia el fix; el comportament real de `/api/invitations/accept` continuava consumint invitacions de `already_member`.
+- Resolucio: push d'un commit buit operatiu a `prod` per forcar un nou rollout i revalidacio directa de l'endpoint i dels fluxos d'usuari.
+- Verificacio final en produccio:
+  - registre amb invitacio nova: OK
+  - login normal sense invitacio: OK
+  - token invalid: OK
+  - `already_member`: OK, no consumeix invitacio, no deixa entrada incoherent al dashboard i no queden comptes parcials
+- Estat final: `resolt`, `desplegat`, `verificat en produccio`
