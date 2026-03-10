@@ -4669,17 +4669,26 @@ El flux de registre d'usuaris convidats ha estat migrat a Admin SDK per resoldre
 | Ruta | Funció |
 |------|--------|
 | `POST /api/invitations/resolve` | Llegeix la invitació per codi (Admin SDK, bypassa rules de lectura) |
-| `POST /api/invitations/accept` | Crea el document `members/{uid}`, marca invitació com `accepted`, assigna `organizationId` al perfil |
+| `POST /api/invitations/accept` | Crea el document `members/{uid}` i consumeix la invitació només si l'acceptació és vàlida |
+| `POST /api/invitations/create` | Crea una invitació manual o reutilitza una pendent de la mateixa org/email |
 
 **Flux complet:**
-1. Usuari obre link d'invitació → pàgina `/registre?code=XXX`
-2. UI crida `/api/invitations/resolve` amb el codi → retorna dades de la invitació (orgId, email, role)
-3. Usuari crea compte Firebase Auth (email + password)
-4. UI crida `/api/invitations/accept` amb `{ orgId, invitationId, uid, email, role }` → Admin SDK crea membre + actualitza invitació
+1. Usuari obre link d'invitació → pàgina `/registre?token=XXX`
+2. UI crida `/api/invitations/resolve` amb el token → retorna dades de la invitació (orgId, email, role)
+3. UI crea compte Firebase Auth
+4. UI crida `/api/invitations/accept`
+5. Si l'acceptació és correcta: Admin SDK crea `members/{uid}`, crea `users/{uid}` si no existeix i marca la invitació com usada
+6. Si l'acceptació falla: el registre fa rollback del compte recent creat i no deixa artefactes parcials
+
+**Guardrails del flux:**
+- `already_member` retorna `409` i no consumeix la invitació
+- El login amb `inviteToken` no entra al dashboard si `accept` falla i tanca la sessió
+- La creació manual d'invitacions no genera un segon token actiu per la mateixa org/email
 
 **Fitxers:**
 - `src/app/api/invitations/resolve/route.ts` — Resolve invitació
 - `src/app/api/invitations/accept/route.ts` — Acceptar invitació
+- `src/app/api/invitations/create/route.ts` — Crear/reutilitzar invitació manual
 - `src/app/registre/page.tsx` — Pàgina de registre
 
 ### 3.13.6 Fitxers principals

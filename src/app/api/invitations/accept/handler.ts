@@ -147,48 +147,47 @@ export async function handleInvitationAccept(
     const batch = db.batch();
     const memberRef = db.doc(`organizations/${organizationId}/members/${authResult.uid}`);
     const memberSnap = await memberRef.get();
+    if (memberSnap.exists) {
+      return NextResponse.json({ success: false, error: 'already_member' }, { status: 409 });
+    }
 
-    if (!memberSnap.exists) {
-      const memberPayload: Record<string, unknown> = {
-        userId: authResult.uid,
-        email,
-        displayName,
+    const memberPayload: Record<string, unknown> = {
+      userId: authResult.uid,
+      email,
+      displayName,
+      role: invitationRole,
+      joinedAt: deps.nowIsoFn(),
+      invitationId,
+    };
+
+    if (isUserGranularInvitation) {
+      const effectivePermissions = resolveEffectivePermissions({
         role: invitationRole,
-        joinedAt: deps.nowIsoFn(),
-        invitationId,
-      };
-
-      if (isUserGranularInvitation) {
-        const effectivePermissions = resolveEffectivePermissions({
-          role: invitationRole,
-          userOverrides: canonicalDeny.length > 0 ? { deny: canonicalDeny } : null,
-          userGrants: canonicalGrants.length > 0 ? canonicalGrants : null,
-        });
-        memberPayload.capabilities = permissionsToCapabilities(effectivePermissions);
-        if (canonicalDeny.length > 0) {
-          memberPayload.userOverrides = { deny: canonicalDeny };
-        }
-        if (canonicalGrants.length > 0) {
-          memberPayload.userGrants = canonicalGrants;
-        }
-      } else {
-        memberPayload.capabilities = defaultCapabilitiesForRole(invitationRole);
+        userOverrides: canonicalDeny.length > 0 ? { deny: canonicalDeny } : null,
+        userGrants: canonicalGrants.length > 0 ? canonicalGrants : null,
+      });
+      memberPayload.capabilities = permissionsToCapabilities(effectivePermissions);
+      if (canonicalDeny.length > 0) {
+        memberPayload.userOverrides = { deny: canonicalDeny };
       }
-
-      batch.set(memberRef, memberPayload);
+      if (canonicalGrants.length > 0) {
+        memberPayload.userGrants = canonicalGrants;
+      }
     } else {
-      const memberData = memberSnap.data() as Record<string, unknown> | undefined;
-      const hasCapabilities = memberData?.capabilities !== undefined && memberData?.capabilities !== null;
+      memberPayload.capabilities = defaultCapabilitiesForRole(invitationRole);
+    }
 
-      if (!hasCapabilities) {
-        const existingRole = memberData?.role;
-        const roleForDefaults: OrganizationRole = isOrganizationRole(existingRole)
-          ? existingRole
-          : invitationRole;
-        batch.update(memberRef, {
-          capabilities: defaultCapabilitiesForRole(roleForDefaults),
-        });
-      }
+    batch.set(memberRef, memberPayload);
+
+    const userRef = db.doc(`users/${authResult.uid}`);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) {
+      batch.set(userRef, {
+        organizationId,
+        role: invitationRole,
+        displayName,
+        email,
+      });
     }
 
     batch.update(invitationRef, {

@@ -14,6 +14,7 @@ import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence, 
 import { doc, getDoc } from 'firebase/firestore';
 import { Loader2, Building2, AlertCircle, Clock } from 'lucide-react';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
+import { processLoginInviteFlow } from '@/lib/invitations/login-invite-flow';
 
 interface OrgInfo {
   id: string;
@@ -54,6 +55,9 @@ function OrgLoginContent() {
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
   const [isSendingReset, setIsSendingReset] = React.useState(false);
   const [nextResetAllowedAt, setNextResetAllowedAt] = React.useState(0);
+  const [inviteGate, setInviteGate] = React.useState<'idle' | 'processing' | 'passed' | 'failed'>(
+    inviteToken ? 'idle' : 'passed'
+  );
   // DEMO: Bypass per /demo/login — no cal carregar org abans de login
   const isDemoLogin = isDemoEnv() && orgSlug === 'demo';
 
@@ -100,11 +104,11 @@ function OrgLoginContent() {
 
   // Si l'usuari ja està autenticat, redirigir al dashboard (o nextPath si ve de inactivitat)
   React.useEffect(() => {
-    if (user && !isUserLoading && organization) {
+    if (user && !isUserLoading && organization && (!inviteToken || inviteGate === 'passed')) {
       const destination = nextPath || `/${orgSlug}/dashboard`;
       router.push(destination);
     }
-  }, [user, isUserLoading, organization, orgSlug, router, nextPath]);
+  }, [user, isUserLoading, organization, orgSlug, router, nextPath, inviteGate, inviteToken]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -123,69 +127,106 @@ function OrgLoginContent() {
 
       // Si hi ha inviteToken, completar l'acceptació de la invitació
       if (inviteToken && organization) {
+        setInviteGate('processing');
         try {
-          const resolveRes = await fetch(`/api/invitations/resolve?token=${encodeURIComponent(inviteToken)}`);
-          const resolveBody = await resolveRes.json().catch(() => ({} as { error?: string }));
-
-          if (resolveRes.status === 410) {
-            if (resolveBody.error === 'expired') {
-              toast({
-                variant: 'destructive',
-                title: 'Invitació expirada',
-                description: 'Demana una nova invitació a l\'administrador',
-              });
-            }
-          } else if (!resolveRes.ok) {
-            console.error('Error resolent invitació:', resolveBody);
-          } else {
-            const invitationData = resolveBody as ResolvedInvitation;
-            const loginEmail = (loggedInUser.email || email).toLowerCase();
-            const isValidOrg = invitationData.organizationId === organization.id;
-            const emailMatches = invitationData.email.toLowerCase() === loginEmail;
-
-            if (!isValidOrg) {
-              toast({
-                variant: 'destructive',
-                title: 'Invitació no vàlida',
-                description: 'Aquesta invitació no correspon a aquesta organització',
-              });
-            } else if (!emailMatches) {
-              toast({
-                variant: 'destructive',
-                title: 'Email no coincideix',
-                description: `Aquesta invitació és per ${invitationData.email}`,
-              });
-            } else {
-              const idToken = await loggedInUser.getIdToken();
-              const acceptRes = await fetch('/api/invitations/accept', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${idToken}`,
-                },
-                body: JSON.stringify({
-                  invitationId: invitationData.invitationId,
-                  organizationId: invitationData.organizationId,
-                  displayName: loggedInUser.displayName || email.split('@')[0],
-                  email: loggedInUser.email || email,
-                  role: invitationData.role,
-                }),
-              });
-
-              const acceptBody = await acceptRes.json().catch(() => ({} as { error?: string }));
-              if (acceptRes.ok) {
-                toast({
-                  title: 'Invitació acceptada!',
-                  description: `T'has unit a ${organization.name}`,
+          const inviteResult = await processLoginInviteFlow(
+            {
+              resolveInvitation: async () => {
+                const resolveRes = await fetch(`/api/invitations/resolve?token=${encodeURIComponent(inviteToken)}`);
+                const resolveBody = await resolveRes.json().catch(() => ({} as { error?: string }));
+                if (!resolveRes.ok) {
+                  return { ok: false as const, error: resolveBody.error || 'resolve_failed' };
+                }
+                return { ok: true as const, invitation: resolveBody as ResolvedInvitation };
+              },
+              getIdToken: async () => loggedInUser.getIdToken(),
+              acceptInvitation: async (idToken, invitationData) => {
+                const acceptRes = await fetch('/api/invitations/accept', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${idToken}`,
+                  },
+                  body: JSON.stringify({
+                    invitationId: invitationData.invitationId,
+                    organizationId: invitationData.organizationId,
+                    displayName: loggedInUser.displayName || email.split('@')[0],
+                    email: loggedInUser.email || email,
+                    role: invitationData.role,
+                  }),
                 });
-              } else if (!(acceptRes.status === 410 && acceptBody.error === 'already_used')) {
-                console.error('Error acceptant invitació:', acceptBody);
-              }
+
+                if (acceptRes.ok) {
+                  return { ok: true };
+                }
+
+                const acceptBody = await acceptRes.json().catch(() => ({} as { error?: string }));
+                return { ok: false, error: acceptBody.error || 'accept_failed' };
+              },
+              signOut: async () => {
+                await auth.signOut();
+              },
+            },
+            {
+              organizationId: organization.id,
+              loginEmail: email,
+              user: {
+                email: loggedInUser.email,
+                displayName: loggedInUser.displayName,
+              },
             }
+          );
+
+          if (!inviteResult.ok) {
+            setInviteGate('failed');
+            setIsLoggingIn(false);
+
+            let inviteError = 'No s\'ha pogut acceptar la invitació. Torna-ho a provar.';
+            switch (inviteResult.error) {
+              case 'expired':
+              case 'invitation_expired':
+                inviteError = 'Aquesta invitació ha expirat. Demana\'n una de nova a l\'administrador.';
+                break;
+              case 'already_used':
+                inviteError = 'Aquesta invitació ja s\'ha utilitzat. Si encara necessites accés, demana una nova invitació.';
+                break;
+              case 'already_member':
+                inviteError = 'Aquest compte ja és membre d’aquesta organització. Entra sense l’enllaç d’invitació.';
+                break;
+              case 'org_mismatch':
+                inviteError = 'Aquesta invitació no correspon a aquesta organització.';
+                break;
+              case 'email_mismatch':
+                inviteError = 'El compte amb què has iniciat sessió no coincideix amb l’email de la invitació.';
+                break;
+            }
+
+            setError(inviteError);
+            toast({
+              variant: 'destructive',
+              title: 'Invitació no acceptada',
+              description: inviteError,
+            });
+            return;
           }
+
+          setInviteGate('passed');
+          toast({
+            title: 'Invitació acceptada!',
+            description: `T'has unit a ${organization.name}`,
+          });
         } catch (inviteErr) {
-          // Si falla l'acceptació de la invitació, no bloquegem el login
           console.error('Error processant invitació:', inviteErr);
+          setInviteGate('failed');
+          setIsLoggingIn(false);
+          setError('No s\'ha pogut completar l\'accés amb la invitació. Torna-ho a provar.');
+          await auth.signOut().catch(() => undefined);
+          toast({
+            variant: 'destructive',
+            title: 'Invitació no acceptada',
+            description: 'No s\'ha pogut completar l\'accés amb la invitació. Torna-ho a provar.',
+          });
+          return;
         }
       }
 
@@ -196,6 +237,7 @@ function OrgLoginContent() {
 
       // Redirigir a nextPath si existeix, sinó al dashboard
       const destination = nextPath || `/${orgSlug}/dashboard`;
+      setInviteGate('passed');
       router.push(destination);
     } catch (err: any) {
       console.error('Error de login:', err);

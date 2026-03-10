@@ -235,3 +235,41 @@ test('POST /api/invitations/accept returns invitation_expired when expiresAt is 
   assert.equal(store.get('organizations/org-4/members/uid-4'), undefined);
   assert.equal(store.get('invitations/inv-4')?.usedAt, undefined);
 });
+
+test('POST /api/invitations/accept returns already_member and does not consume invitation', async () => {
+  const store = new Map<string, DocData>();
+  store.set('invitations/inv-5', {
+    organizationId: 'org-5',
+    email: 'member@test.com',
+    role: 'admin',
+  });
+  store.set('organizations/org-5/members/uid-5', {
+    userId: 'uid-5',
+    email: 'member@test.com',
+    displayName: 'Existing Member',
+    role: 'viewer',
+    capabilities: { 'moviments.read': true },
+  });
+
+  const response = await handleInvitationAccept(
+    createRequest({
+      invitationId: 'inv-5',
+      organizationId: 'org-5',
+      displayName: 'Existing Member',
+      email: 'member@test.com',
+      role: 'admin',
+    }),
+    {
+      verifyIdTokenFn: async () => ({ uid: 'uid-5', email: 'member@test.com' }),
+      getAdminDbFn: () => new FakeDb(store) as any,
+      nowIsoFn: () => '2026-03-05T12:00:00.000Z',
+    }
+  );
+
+  assert.equal(response.status, 409);
+  const body = await response.json() as { success: boolean; error?: string };
+  assert.equal(body.success, false);
+  assert.equal(body.error, 'already_member');
+  assert.equal(store.get('invitations/inv-5')?.usedAt, undefined);
+  assert.equal((store.get('organizations/org-5/members/uid-5')?.role as string), 'viewer');
+});

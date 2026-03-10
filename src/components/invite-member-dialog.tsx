@@ -27,9 +27,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
-import { collection, doc, setDoc } from 'firebase/firestore';
 import { Loader2, Mail, Copy, Check, UserPlus } from 'lucide-react';
-import type { Invitation, OrganizationRole } from '@/lib/data';
+import type { OrganizationRole } from '@/lib/data';
 import {
   applyOverrides,
   getProjectCapability,
@@ -44,16 +43,6 @@ interface InviteMemberDialogProps {
   onOpenChange: (open: boolean) => void;
   onInviteCreated?: () => void;
 }
-
-// Genera un token únic
-const generateToken = (): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
-  for (let i = 0; i < 32; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return token;
-};
 
 const SECTION_TOGGLES: PermissionKey[] = [
   'sections.moviments',
@@ -96,7 +85,7 @@ const ACTION_LABEL_KEYS: Partial<Record<PermissionKey, string>> = {
 };
 
 export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: InviteMemberDialogProps) {
-  const { firestore, user } = useFirebase();
+  const { user } = useFirebase();
   const { organization, organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t, tr } = useTranslations();
@@ -229,13 +218,6 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
     setIsCreating(true);
 
     try {
-      // Crear la invitació
-      const invitationRef = doc(collection(firestore, 'invitations'));
-      const token = generateToken();
-      const now = new Date().toISOString();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // Expira en 7 dies
-
       let canonicalDeny: PermissionKey[] = [];
       let canonicalGrants: PermissionKey[] = [];
 
@@ -254,29 +236,51 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
         canonicalGrants = validation.value.grants;
       }
 
-      const invitationData: Omit<Invitation, 'id'> = {
-        token,
-        organizationId: organizationId,
-        organizationName: organization.name,
-        role: role,
-        email: email.trim().toLowerCase(),
-        createdAt: now,
-        expiresAt: expiresAt.toISOString(),
-        createdBy: user!.uid,
-        ...(role === 'user' && canonicalDeny.length > 0 ? { userOverrides: { deny: canonicalDeny } } : {}),
-        ...(role === 'user' && canonicalGrants.length > 0 ? { userGrants: canonicalGrants } : {}),
-      };
+      const idToken = await user!.getIdToken();
+      const createRes = await fetch('/api/invitations/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          organizationId,
+          email,
+          role,
+          ...(role === 'user' && canonicalDeny.length > 0 ? { userOverrides: { deny: canonicalDeny } } : {}),
+          ...(role === 'user' && canonicalGrants.length > 0 ? { userGrants: canonicalGrants } : {}),
+        }),
+      });
 
-      await setDoc(invitationRef, { ...invitationData, id: invitationRef.id });
+      const createBody = await createRes.json().catch(() => ({} as { error?: string; token?: string; reused?: boolean }));
+
+      if (!createRes.ok) {
+        switch (createBody.error) {
+          case 'member_already_exists':
+            setError('Aquest email ja és membre de l’organització.');
+            return;
+          default:
+            setError(t.members.errorCreatingInvitation);
+            return;
+        }
+      }
+
+      const createdToken = createBody.token;
+      if (!createdToken) {
+        setError(t.members.errorCreatingInvitation);
+        return;
+      }
 
       // Generar URL d'invitació
       const baseUrl = window.location.origin;
-      const inviteUrl = `${baseUrl}/registre?token=${token}`;
+      const inviteUrl = `${baseUrl}/registre?token=${createdToken}`;
       setCreatedInviteUrl(inviteUrl);
 
       toast({
-        title: t.members.invitationCreated,
-        description: t.members.invitationCreatedDescription(email),
+        title: createBody.reused ? t.members.invitationReady : t.members.invitationCreated,
+        description: createBody.reused
+          ? 'Ja existia una invitació pendent per aquest email. Hem reutilitzat l’enllaç actiu.'
+          : t.members.invitationCreatedDescription(email),
       });
 
       onInviteCreated?.();

@@ -10,12 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, deleteUser, signOut, updateProfile } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import type { Invitation, UserProfile } from '@/lib/data';
+import type { Invitation } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTranslations } from '@/i18n';
+import { registerWithInvitationFlow } from '@/lib/invitations/register-flow';
 
 // 👇 AFEGIR AIXÒ per evitar el prerendering estàtic
 export const dynamic = 'force-dynamic';
@@ -144,46 +145,78 @@ function RegistreContent() {
     setPageState('registering');
 
     try {
-      // 1. Crear l'usuari a Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const result = await registerWithInvitationFlow(
+        {
+          createUser: async (nextEmail, nextPassword) => {
+            const credential = await createUserWithEmailAndPassword(auth, nextEmail, nextPassword);
+            return credential.user;
+          },
+          updateProfile: async (user, nextDisplayName) => {
+            await updateProfile(user, { displayName: nextDisplayName });
+          },
+          getIdToken: async (user, forceRefresh) => user.getIdToken(forceRefresh),
+          acceptInvitation: async (idToken) => {
+            const acceptRes = await fetch('/api/invitations/accept', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+              },
+              body: JSON.stringify({
+                invitationId: invitation.id,
+                organizationId: invitation.organizationId,
+                displayName,
+                email,
+                role: invitation.role,
+              }),
+            });
 
-      // 2. Actualitzar el perfil amb el nom
-      await updateProfile(user, { displayName });
+            if (acceptRes.ok) {
+              return { ok: true };
+            }
 
-      // 3. Refrescar el token perquè request.auth.token.email estigui populat
-      // (necessari perquè Firestore Rules valida invitation.email == token.email)
-      await user.getIdToken(true);
-
-      // 4. Crear el perfil d'usuari a Firestore
-      const userProfile: UserProfile = {
-        organizationId: invitation.organizationId,
-        role: invitation.role,
-        displayName: displayName,
-      };
-      await setDoc(doc(firestore, 'users', user.uid), userProfile);
-
-      // 5. Acceptar invitació via API (crear membre + marcar usada)
-      // Usa Admin SDK server-side per evitar problemes de token.email timing
-      const idToken = await user.getIdToken();
-      const acceptRes = await fetch('/api/invitations/accept', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
+            const errBody = await acceptRes.json().catch(() => ({}));
+            return { ok: false, error: errBody.error || 'accept_failed' };
+          },
+          deleteUser: async (user) => {
+            await deleteUser(user);
+          },
+          signOut: async () => {
+            await signOut(auth);
+          },
         },
-        body: JSON.stringify({
-          invitationId: invitation.id,
-          organizationId: invitation.organizationId,
-          displayName,
+        {
           email,
-          role: invitation.role,
-        }),
-      });
+          password,
+          displayName,
+        }
+      );
 
-      if (!acceptRes.ok) {
-        const errBody = await acceptRes.json().catch(() => ({}));
-        throw new Error(errBody.error || 'accept_failed');
+      if (!result.ok) {
+        const cleanupMessage = result.cleanup === 'deleted'
+          ? (t.register?.errors?.genericError ?? 'No s\'ha pogut completar l\'alta. Torna-ho a provar.')
+          : 'No s\'ha pogut completar l\'alta. Torna-ho a provar abans d\'entrar a l\'organització.';
+
+        switch (result.error) {
+          case 'already_used':
+            setPageState('used');
+            return;
+          case 'invitation_expired':
+            setPageState('expired');
+            return;
+          case 'already_member':
+            setPageState('ready');
+            setError('Aquest correu ja és membre d’aquesta organització. Inicia sessió amb el teu compte.');
+            return;
+          case 'email_mismatch':
+            setPageState('ready');
+            setError((t.register?.errors?.emailMismatch ?? 'Aquesta invitació és només per a {email}').replace('{email}', invitation.email));
+            return;
+          default:
+            setPageState('ready');
+            setError(cleanupMessage);
+            return;
+        }
       }
 
       setPageState('success');
