@@ -88,6 +88,7 @@ import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions'
 import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
 import { getPeriodicitySuffix } from '@/lib/donors/periodicity-suffix';
+import { usePermissions } from '@/hooks/use-permissions';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'inactiveSince'>;
 
@@ -206,11 +207,55 @@ const DONORS_PAGE_SIZE = 500;
 export function DonorManager() {
   const { firestore, auth, user } = useFirebase();
   const { organizationId, orgSlug } = useCurrentOrganization();
+  const { can } = usePermissions();
   const { toast } = useToast();
   const { t, tr, language } = useTranslations();
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const urlDonorId = searchParams.get('id');
+  const canReadTransactions = can('moviments.read');
+
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isImportOpen, setIsImportOpen] = React.useState(false);
+  const [isDetailOpen, setIsDetailOpen] = React.useState(false);
+  const [selectedDonor, setSelectedDonor] = React.useState<Donor | null>(null);
+  const [editingDonor, setEditingDonor] = React.useState<Donor | null>(null);
+  const [donorToDelete, setDonorToDelete] = React.useState<Donor | null>(null);
+  const [formData, setFormData] = React.useState<DonorFormData>(emptyFormData);
+  const [status, setStatus] = React.useState<'active' | 'inactive'>('active');
+  const [inactiveSince, setInactiveSince] = React.useState<string | null>(null);
+
+  // Filtre de donants incomplets
+  const [showIncompleteOnly, setShowIncompleteOnly] = React.useState(false);
+  const [hasUrlFilter, setHasUrlFilter] = React.useState(false);
+
+  // Filtre per estat (actiu/inactiu)
+  const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('active');
+
+  // Cercador intel·ligent
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  // Nous filtres: view=active i membershipType
+  const [activeViewFilter, setActiveViewFilter] = React.useState(false);
+  const [membershipTypeFilter, setMembershipTypeFilter] = React.useState<'one-time' | 'recurring' | null>(null);
+
+  // Filtre per tipus de donant (persona física / jurídica)
+  const [donorTypeFilter, setDonorTypeFilter] = React.useState<'individual' | 'company' | null>(null);
+
+  // Filtre per periodicitat de quota
+  const [periodicityFilter, setPeriodicityFilter] = React.useState<'all' | 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'manual' | 'none'>('all');
+  const [periodFilter, setPeriodFilter] = React.useState<DateFilterValue | null>(null);
+  const [periodLabel, setPeriodLabel] = React.useState<string>('');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DINÀMICA DE DONANTS
+  // ═══════════════════════════════════════════════════════════════════════════
+  const [dynamicsOpen, setDynamicsOpen] = React.useState(false);
+  const [dynamicsPeriod, setDynamicsPeriod] = React.useState<DateFilterValue>({
+    type: 'year',
+    year: new Date().getFullYear()
+  });
 
   // Estat de paginació
   const [contactsLimit, setContactsLimit] = React.useState(DONORS_PAGE_SIZE);
@@ -266,10 +311,15 @@ export function DonorManager() {
     [allCategories]
   );
 
-  // Query per transaccions (només quan view=active)
+  // Les transaccions només són necessàries per filtres/dinàmiques secundàries.
   const transactionsCollection = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
-    [firestore, organizationId]
+    () => {
+      if (!organizationId || !canReadTransactions || (!activeViewFilter && !dynamicsOpen)) {
+        return null;
+      }
+      return collection(firestore, 'organizations', organizationId, 'transactions');
+    },
+    [activeViewFilter, canReadTransactions, dynamicsOpen, firestore, organizationId]
   );
   const { data: allTransactions } = useCollection<Transaction>(transactionsCollection);
   // Memoitzar per evitar re-renders innecessaris
@@ -277,48 +327,6 @@ export function DonorManager() {
     () => t.categories as Record<string, string>,
     [t.categories]
   );
-
-  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-  const [isAlertOpen, setIsAlertOpen] = React.useState(false);
-  const [isImportOpen, setIsImportOpen] = React.useState(false);
-  const [isDetailOpen, setIsDetailOpen] = React.useState(false);
-  const [selectedDonor, setSelectedDonor] = React.useState<Donor | null>(null);
-  const [editingDonor, setEditingDonor] = React.useState<Donor | null>(null);
-  const [donorToDelete, setDonorToDelete] = React.useState<Donor | null>(null);
-  const [formData, setFormData] = React.useState<DonorFormData>(emptyFormData);
-  const [status, setStatus] = React.useState<'active' | 'inactive'>('active');
-  const [inactiveSince, setInactiveSince] = React.useState<string | null>(null);
-
-  // Filtre de donants incomplets
-  const [showIncompleteOnly, setShowIncompleteOnly] = React.useState(false);
-  const [hasUrlFilter, setHasUrlFilter] = React.useState(false);
-
-  // Filtre per estat (actiu/inactiu)
-  const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('active');
-
-  // Cercador intel·ligent
-  const [searchQuery, setSearchQuery] = React.useState('');
-
-  // Nous filtres: view=active i membershipType
-  const [activeViewFilter, setActiveViewFilter] = React.useState(false);
-  const [membershipTypeFilter, setMembershipTypeFilter] = React.useState<'one-time' | 'recurring' | null>(null);
-
-  // Filtre per tipus de donant (persona física / jurídica)
-  const [donorTypeFilter, setDonorTypeFilter] = React.useState<'individual' | 'company' | null>(null);
-
-  // Filtre per periodicitat de quota
-  const [periodicityFilter, setPeriodicityFilter] = React.useState<'all' | 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'manual' | 'none'>('all');
-  const [periodFilter, setPeriodFilter] = React.useState<DateFilterValue | null>(null);
-  const [periodLabel, setPeriodLabel] = React.useState<string>('');
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // DINÀMICA DE DONANTS
-  // ═══════════════════════════════════════════════════════════════════════════
-  const [dynamicsOpen, setDynamicsOpen] = React.useState(false);
-  const [dynamicsPeriod, setDynamicsPeriod] = React.useState<DateFilterValue>({
-    type: 'year',
-    year: new Date().getFullYear()
-  });
 
   // Càlcul lazy: només quan dynamicsOpen és true
   const dynamics = React.useMemo(() => {
@@ -352,7 +360,7 @@ export function DonorManager() {
   const [loadingReturns, setLoadingReturns] = React.useState(false);
 
   const loadDonorsWithReturns = React.useCallback(async () => {
-    if (!organizationId || !firestore) return;
+    if (!organizationId || !firestore || !canReadTransactions) return;
     setLoadingReturns(true);
     try {
       const txRef = collection(firestore, 'organizations', organizationId, 'transactions');
@@ -387,12 +395,21 @@ export function DonorManager() {
     } finally {
       setLoadingReturns(false);
     }
-  }, [organizationId, firestore]);
+  }, [canReadTransactions, organizationId, firestore]);
 
   // Carregar devolucions al mount
   React.useEffect(() => {
+    if (!canReadTransactions) {
+      setDonorsWithReturns(new Set());
+      setDonorsWithReturnsThisMonth(new Set());
+      setDonorsWithTwoOrMoreReturns(new Set());
+      setShowWithReturnsOnly(false);
+      setShowWithReturnsThisMonthOnly(false);
+      setShowWithTwoOrMoreReturnsOnly(false);
+      return;
+    }
     loadDonorsWithReturns();
-  }, [loadDonorsWithReturns]);
+  }, [canReadTransactions, loadDonorsWithReturns]);
 
   React.useEffect(() => {
     if (status === 'inactive' && !inactiveSince) {
@@ -419,7 +436,7 @@ export function DonorManager() {
       const view = params.get('view');
       const membershipType = params.get('membershipType');
 
-      if (view === 'active') {
+      if (view === 'active' && canReadTransactions) {
         setActiveViewFilter(true);
         setHasUrlFilter(true);
         // Llegir el període dels paràmetres
@@ -444,7 +461,7 @@ export function DonorManager() {
         setHasUrlFilter(true);
       }
     }
-  }, [t.donors.allPeriods]);
+  }, [canReadTransactions, t.donors.allPeriods]);
 
   // Efecte separat per obrir el drawer quan hi ha ?id= a la URL (reactiu)
   // PATRÓ: useSearchParams() + useEffect amb deps [urlParam, data] per drawers controlats per URL
@@ -491,7 +508,10 @@ export function DonorManager() {
   };
 
   // Filtrar transaccions pel període seleccionat
-  const filteredTransactions = useTransactionFilters(allTransactions || undefined, periodFilter || { type: 'all' });
+  const filteredTransactions = useTransactionFilters(
+    canReadTransactions ? (allTransactions || undefined) : undefined,
+    periodFilter || { type: 'all' }
+  );
 
   // Calcular IDs de contactes actius (amb transaccions al període)
   const activeContactIds = React.useMemo(() => {
@@ -1292,7 +1312,7 @@ export function DonorManager() {
             )}
 
             {/* Avís de filtre actiu: donants/socis actius al període */}
-            {hasUrlFilter && (activeViewFilter || membershipTypeFilter !== null) && !showIncompleteOnly && (
+            {hasUrlFilter && (membershipTypeFilter !== null || (canReadTransactions && activeViewFilter)) && !showIncompleteOnly && (
               <div className="mb-4 p-3 bg-violet-50 border border-violet-200 rounded-lg flex items-center gap-3">
                 <Heart className="h-5 w-5 text-violet-500 flex-shrink-0" />
                 <div className="flex-1">
@@ -1324,95 +1344,97 @@ export function DonorManager() {
             {/* ═══════════════════════════════════════════════════════════════════════
                 DINÀMICA DE DONANTS - Secció col·lapsable
             ═══════════════════════════════════════════════════════════════════════ */}
-            <Collapsible open={dynamicsOpen} onOpenChange={setDynamicsOpen}>
-              <div className="mb-4 border rounded-lg">
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="text-left">
-                      <h3 className="font-medium text-base">
-                        {tr('donors.dynamics.title', 'Dinàmica de donants')}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {tr('donors.dynamics.subtitle', 'Lectura basada en moviments reals del període seleccionat.')}
-                      </p>
-                    </div>
-                    <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", dynamicsOpen && "rotate-180")} />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="px-4 pb-4 space-y-4">
-                    {/* Selector de període */}
-                    <div>
-                      <Label className="text-sm text-muted-foreground mb-2 block">
-                        {tr('donors.dynamics.period.title', "Període d'anàlisi")}
-                      </Label>
-                      <DateFilter value={dynamicsPeriod} onChange={setDynamicsPeriod} />
-                    </div>
-
-                    {/* Estat "no hi ha dades" */}
-                    {hasNoData && (
-                      <p className="text-sm text-muted-foreground py-4">
-                        {tr('donors.dynamics.noData', 'No hi ha dades suficients per calcular la dinàmica amb aquest període.')}
-                      </p>
-                    )}
-
-                    {/* Blocs de dinàmica */}
-                    {dynamics && !hasNoData && (
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        <DynamicsBlock
-                          title={tr('donors.dynamics.blocks.new.title', 'Altes')}
-                          help={tr('donors.dynamics.blocks.new.help', 'Primer moviment dins el període seleccionat')}
-                          items={dynamics.newDonors}
-                          onDonorClick={handleDynamicsDonorClick}
-                          tr={tr}
-                          icon={<UserPlus className="h-4 w-4 text-green-600" />}
-                        />
-                        <DynamicsBlock
-                          title={tr('donors.dynamics.blocks.leavers.title', 'Baixes')}
-                          help={tr('donors.dynamics.blocks.leavers.help', 'Donants donats de baixa dins el període')}
-                          items={dynamics.leavers}
-                          onDonorClick={handleDynamicsDonorClick}
-                          tr={tr}
-                          icon={<UserX className="h-4 w-4 text-red-500" />}
-                        />
-                        <DynamicsBlock
-                          title={tr('donors.dynamics.blocks.returns.title', 'Amb devolucions')}
-                          help={tr('donors.dynamics.blocks.returns.help', 'Tenen almenys una devolució dins el període')}
-                          items={dynamics.withReturns}
-                          onDonorClick={handleDynamicsDonorClick}
-                          tr={tr}
-                          icon={<RefreshCw className="h-4 w-4 text-orange-500" />}
-                          showAmount
-                        />
-                        <DynamicsBlock
-                          title={tr('donors.dynamics.blocks.topIndividuals.title', 'Donants principals (PF)')}
-                          help={tr('donors.dynamics.blocks.topIndividuals.help', 'Top 15 persones físiques per import net dins el període')}
-                          items={dynamics.topIndividuals}
-                          onDonorClick={handleDynamicsDonorClick}
-                          tr={tr}
-                          icon={<User className="h-4 w-4 text-yellow-600" />}
-                          showNetAmount
-                          numbered
-                        />
-                        <DynamicsBlock
-                          title={tr('donors.dynamics.blocks.topCompanies.title', 'Donants principals (PJ)')}
-                          help={tr('donors.dynamics.blocks.topCompanies.help', 'Top 15 persones jurídiques per import net dins el període')}
-                          items={dynamics.topCompanies}
-                          onDonorClick={handleDynamicsDonorClick}
-                          tr={tr}
-                          icon={<Building2 className="h-4 w-4 text-indigo-600" />}
-                          showNetAmount
-                          numbered
-                        />
+            {canReadTransactions && (
+              <Collapsible open={dynamicsOpen} onOpenChange={setDynamicsOpen}>
+                <div className="mb-4 border rounded-lg">
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="text-left">
+                        <h3 className="font-medium text-base">
+                          {tr('donors.dynamics.title', 'Dinàmica de donants')}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {tr('donors.dynamics.subtitle', 'Lectura basada en moviments reals del període seleccionat.')}
+                        </p>
                       </div>
-                    )}
-                  </div>
-                </CollapsibleContent>
-              </div>
-            </Collapsible>
+                      <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", dynamicsOpen && "rotate-180")} />
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="px-4 pb-4 space-y-4">
+                      {/* Selector de període */}
+                      <div>
+                        <Label className="text-sm text-muted-foreground mb-2 block">
+                          {tr('donors.dynamics.period.title', "Període d'anàlisi")}
+                        </Label>
+                        <DateFilter value={dynamicsPeriod} onChange={setDynamicsPeriod} />
+                      </div>
+
+                      {/* Estat "no hi ha dades" */}
+                      {hasNoData && (
+                        <p className="text-sm text-muted-foreground py-4">
+                          {tr('donors.dynamics.noData', 'No hi ha dades suficients per calcular la dinàmica amb aquest període.')}
+                        </p>
+                      )}
+
+                      {/* Blocs de dinàmica */}
+                      {dynamics && !hasNoData && (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          <DynamicsBlock
+                            title={tr('donors.dynamics.blocks.new.title', 'Altes')}
+                            help={tr('donors.dynamics.blocks.new.help', 'Primer moviment dins el període seleccionat')}
+                            items={dynamics.newDonors}
+                            onDonorClick={handleDynamicsDonorClick}
+                            tr={tr}
+                            icon={<UserPlus className="h-4 w-4 text-green-600" />}
+                          />
+                          <DynamicsBlock
+                            title={tr('donors.dynamics.blocks.leavers.title', 'Baixes')}
+                            help={tr('donors.dynamics.blocks.leavers.help', 'Donants donats de baixa dins el període')}
+                            items={dynamics.leavers}
+                            onDonorClick={handleDynamicsDonorClick}
+                            tr={tr}
+                            icon={<UserX className="h-4 w-4 text-red-500" />}
+                          />
+                          <DynamicsBlock
+                            title={tr('donors.dynamics.blocks.returns.title', 'Amb devolucions')}
+                            help={tr('donors.dynamics.blocks.returns.help', 'Tenen almenys una devolució dins el període')}
+                            items={dynamics.withReturns}
+                            onDonorClick={handleDynamicsDonorClick}
+                            tr={tr}
+                            icon={<RefreshCw className="h-4 w-4 text-orange-500" />}
+                            showAmount
+                          />
+                          <DynamicsBlock
+                            title={tr('donors.dynamics.blocks.topIndividuals.title', 'Donants principals (PF)')}
+                            help={tr('donors.dynamics.blocks.topIndividuals.help', 'Top 15 persones físiques per import net dins el període')}
+                            items={dynamics.topIndividuals}
+                            onDonorClick={handleDynamicsDonorClick}
+                            tr={tr}
+                            icon={<User className="h-4 w-4 text-yellow-600" />}
+                            showNetAmount
+                            numbered
+                          />
+                          <DynamicsBlock
+                            title={tr('donors.dynamics.blocks.topCompanies.title', 'Donants principals (PJ)')}
+                            help={tr('donors.dynamics.blocks.topCompanies.help', 'Top 15 persones jurídiques per import net dins el període')}
+                            items={dynamics.topCompanies}
+                            onDonorClick={handleDynamicsDonorClick}
+                            tr={tr}
+                            icon={<Building2 className="h-4 w-4 text-indigo-600" />}
+                            showNetAmount
+                            numbered
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            )}
 
             {/* Vista mòbil */}
             {isMobile ? (
