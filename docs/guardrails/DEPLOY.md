@@ -39,6 +39,16 @@ El ritual actual fa, en ordre:
 
 Si alguna comprovació crítica falla, el deploy aborta i no es publica res.
 
+## Checklist addicional per canvis d'auth/invitacions
+
+Després del deploy, a més del ritual general, cal validar el comportament real del backend servit:
+
+1. Prova real de `POST /api/invitations/accept`
+2. Cas `already_member`: ha de retornar `409` i no consumir la invitació
+3. Confirmació que la revisió efectiva servida per Firebase App Hosting coincideix amb `prod`
+
+No n'hi ha prou amb verificar el codi a la branca: cal comprovar l'endpoint i el comportament real a producció.
+
 ## Modes útils
 
 - `DEPLOY_REQUIRE_MANUAL_CONFIRMATION_ON_RESIDUAL_ALT=1` fa bloquejant el risc ALT residual.

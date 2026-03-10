@@ -45,3 +45,5 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
   - token invalid: OK
   - `already_member`: OK, no consumeix invitacio, no deixa entrada incoherent al dashboard i no queden comptes parcials
 - Estat final: `resolt`, `desplegat`, `verificat en produccio`
+- Estat de seguiment intern: `tancat`
+- Criteri de reobertura: nomes si apareix un cas funcional nou diferent o una regressio detectada en produccio
