@@ -87,6 +87,7 @@ import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import { TRANSACTION_URL_FILTERS, type TransactionUrlFilter, type SourceFilter, findSystemCategoryId, isCategoryIdCompatibleStrict } from '@/lib/constants';
+import { toPeriodQuery } from '@/lib/period-query';
 import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcile-modal';
 import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
@@ -120,6 +121,12 @@ interface TransactionsTableProps {
   canEditMovements?: boolean;
 }
 
+type TransactionsPageResponse = {
+  success: boolean;
+  items?: Transaction[];
+  nextCursor?: string | null;
+};
+
 const RemittanceSplitter = dynamic(
   () => import('@/components/remittance-splitter').then((mod) => mod.RemittanceSplitter),
   { ssr: false },
@@ -151,6 +158,11 @@ export function TransactionsTable({
   // SuperAdmin detection per bulk mode
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
   const [isBulkMode, setIsBulkMode] = React.useState(false);
+  const [allTransactions, setAllTransactions] = React.useState<Transaction[] | null>(null);
+  const [isLoadingTransactions, setIsLoadingTransactions] = React.useState(false);
+  const [isLoadingMoreTransactions, setIsLoadingMoreTransactions] = React.useState(false);
+  const [transactionsNextCursor, setTransactionsNextCursor] = React.useState<string | null>(null);
+  const [hasMoreTransactions, setHasMoreTransactions] = React.useState(false);
   // Memoitzar categoryTranslations per evitar re-renders innecessaris
   const categoryTranslations = React.useMemo(
     () => t.categories as Record<string, string>,
@@ -162,6 +174,7 @@ export function TransactionsTable({
 
   // Filtre de dates
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>(initialDateFilter || { type: 'all' });
+  const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
 
   // Cercador intel·ligent
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -301,16 +314,6 @@ export function TransactionsTable({
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
     [firestore, organizationId]
   );
-
-  // Query ordenada per data (carrega totes les transaccions)
-  const transactionsQuery = useMemoFirebase(
-    () => {
-      if (!organizationId) return null;
-      const baseCollection = collection(firestore, 'organizations', organizationId, 'transactions');
-      return query(baseCollection, orderBy('date', 'desc'));
-    },
-    [firestore, organizationId]
-  );
   const categoriesCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
     [firestore, organizationId]
@@ -324,7 +327,6 @@ export function TransactionsTable({
     [firestore, organizationId]
   );
   
-  const { data: allTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
   const { data: availableCategories } = useCollection<Category>(categoriesCollection);
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
@@ -337,6 +339,93 @@ export function TransactionsTable({
   // Estat per toggle SuperAdmin "incloure arxivades"
   const [showArchived, setShowArchived] = React.useState(false);
   const showArchivedInLedger = showArchived && isSuperAdmin;
+
+  const loadTransactionsPage = React.useCallback(
+    async (mode: 'reset' | 'append') => {
+      if (!organizationId || !user) {
+        setAllTransactions(null);
+        setTransactionsNextCursor(null);
+        setHasMoreTransactions(false);
+        setIsLoadingTransactions(false);
+        setIsLoadingMoreTransactions(false);
+        return;
+      }
+
+      if (mode === 'reset') {
+        setIsLoadingTransactions(true);
+      } else {
+        setIsLoadingMoreTransactions(true);
+      }
+
+      try {
+        const idToken = await user.getIdToken();
+        const params = new URLSearchParams({
+          orgId: organizationId,
+          limit: '50',
+          showArchived: showArchivedInLedger ? 'true' : 'false',
+          ...periodQuery,
+        });
+
+        if (mode === 'append' && transactionsNextCursor) {
+          params.set('cursor', transactionsNextCursor);
+        }
+
+        const response = await fetch(`/api/transactions/page?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`transactions page request failed: ${response.status}`);
+        }
+
+        const payload = await response.json() as TransactionsPageResponse;
+        const nextItems = payload.items ?? [];
+
+        setAllTransactions((prev) => {
+          if (mode === 'reset' || !prev) {
+            return nextItems;
+          }
+          const seen = new Set(prev.map((tx) => tx.id));
+          const merged = [...prev];
+          for (const tx of nextItems) {
+            if (seen.has(tx.id)) continue;
+            seen.add(tx.id);
+            merged.push(tx);
+          }
+          return merged;
+        });
+        setTransactionsNextCursor(payload.nextCursor ?? null);
+        setHasMoreTransactions(Boolean(payload.nextCursor));
+      } catch (error) {
+        console.error('[transactions-table] page load error:', error);
+        if (mode === 'reset') {
+          setAllTransactions([]);
+          setTransactionsNextCursor(null);
+          setHasMoreTransactions(false);
+        }
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: t.common.dbConnectionError,
+        });
+      } finally {
+        setIsLoadingTransactions(false);
+        setIsLoadingMoreTransactions(false);
+      }
+    },
+    [organizationId, periodQuery, showArchivedInLedger, t.common.dbConnectionError, t.common.error, toast, transactionsNextCursor, user]
+  );
+
+  React.useEffect(() => {
+    void loadTransactionsPage('reset');
+  }, [loadTransactionsPage]);
+
+  const handleLoadMoreTransactions = React.useCallback(() => {
+    if (!hasMoreTransactions || isLoadingMoreTransactions) return;
+    void loadTransactionsPage('append');
+  }, [hasMoreTransactions, isLoadingMoreTransactions, loadTransactionsPage]);
 
   // Filtrar transaccions arxivades (soft-delete) - només SuperAdmin pot veure-les
   const activeTransactions = React.useMemo(() => {
@@ -2318,6 +2407,25 @@ export function TransactionsTable({
                )}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {hasMoreTransactions && (
+        <div className="mt-4 flex justify-center">
+          <Button
+            variant="outline"
+            onClick={handleLoadMoreTransactions}
+            disabled={isLoadingMoreTransactions}
+          >
+            {isLoadingMoreTransactions ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t.common.loading}
+              </>
+            ) : (
+              tr('common.loadMore', 'Carregar més')
+            )}
+          </Button>
         </div>
       )}
 

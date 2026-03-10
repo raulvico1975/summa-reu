@@ -79,6 +79,15 @@ interface DashboardAdminAlert {
   createdAt?: unknown;
 }
 
+interface DashboardSummaryResponse {
+  success: boolean;
+  income: number;
+  expense: number;
+  missionTransfers: number;
+  balance: number;
+  count: number;
+}
+
 // Component per mostrar comparativa amb any anterior
 function ComparisonBadge({
   current,
@@ -596,6 +605,9 @@ export default function DashboardPage() {
     { ignorePermissionDenied: true }
   );
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
+  const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
+  const [dashboardSummary, setDashboardSummary] = React.useState<DashboardSummaryResponse | null>(null);
+  const [isDashboardSummaryLoading, setIsDashboardSummaryLoading] = React.useState(false);
   const dateFilteredTransactions = useTransactionFilters(transactions || undefined, dateFilter);
 
   // Base dataset: exclou transaccions arxivades (soft-deleted)
@@ -678,6 +690,55 @@ export default function DashboardPage() {
     return socialTxs;
   }, [baseTransactions]);
 
+  React.useEffect(() => {
+    if (!canViewFinancial || !organizationId || !user) {
+      setDashboardSummary(null);
+      setIsDashboardSummaryLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadDashboardSummary = async () => {
+      setIsDashboardSummaryLoading(true);
+      try {
+        const idToken = await user.getIdToken();
+        const params = new URLSearchParams({
+          orgId: organizationId,
+          ...periodQuery,
+        });
+        const response = await fetch(`/api/dashboard/summary?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`dashboard summary request failed: ${response.status}`);
+        }
+
+        const payload = (await response.json()) as DashboardSummaryResponse;
+        if (!controller.signal.aborted) {
+          setDashboardSummary(payload);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error('[dashboard] summary load error:', error);
+          setDashboardSummary(null);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsDashboardSummaryLoading(false);
+        }
+      }
+    };
+
+    void loadDashboardSummary();
+
+    return () => controller.abort();
+  }, [canViewFinancial, organizationId, periodQuery, user]);
+
   const missionTransferCategoryId = React.useMemo(
     () => (canViewFinancial && categories ? findSystemCategoryId(categories, 'missionTransfers') : null),
     [canViewFinancial, categories]
@@ -726,27 +787,16 @@ export default function DashboardPage() {
     },
     [canViewFinancial, filteredTransactions, contacts, shareModalTexts, missionTransferCategoryId]
   );
-  const { totalIncome, totalExpenses, totalMissionTransfers } = React.useMemo(() => {
-    if (!canViewFinancial) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
-    if (!filteredTransactions) return { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 };
-    return filteredTransactions.reduce((acc, tx) => {
-      if (tx.amount > 0) {
-        acc.totalIncome += tx.amount;
-      } else if (missionTransferCategoryId && tx.category === missionTransferCategoryId) {
-        acc.totalMissionTransfers += tx.amount;
-      } else {
-        acc.totalExpenses += tx.amount;
-      }
-      return acc;
-    }, { totalIncome: 0, totalExpenses: 0, totalMissionTransfers: 0 });
-  }, [canViewFinancial, filteredTransactions, missionTransferCategoryId]);
+  const totalIncome = canViewFinancial ? dashboardSummary?.income ?? 0 : 0;
+  const totalExpenses = canViewFinancial ? dashboardSummary?.expense ?? 0 : 0;
+  const totalMissionTransfers = canViewFinancial ? dashboardSummary?.missionTransfers ?? 0 : 0;
 
   const expenseTransactions = React.useMemo(
     () => (canViewFinancial ? filteredTransactions?.filter((tx) => tx.amount < 0 && tx.category !== missionTransferCategoryId) || [] : []),
     [canViewFinancial, filteredTransactions, missionTransferCategoryId]
   );
   // Saldo = Ingressos + Despeses + Terreny (tots tres ja amb signe: despeses i terreny són negatius)
-  const netBalance = canViewFinancial ? totalIncome + totalExpenses + totalMissionTransfers : 0;
+  const netBalance = canViewFinancial ? dashboardSummary?.balance ?? 0 : 0;
   // Estat per compartir resum
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
   const [summaryText, setSummaryText] = React.useState('');
@@ -757,7 +807,6 @@ export default function DashboardPage() {
   const [editingValue, setEditingValue] = React.useState('');
   const [isNarrativeEditorOpen, setNarrativeEditorOpen] = React.useState(false);
   const isMobile = useIsMobile();
-  const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
   const createMovementsLink = React.useCallback(
     (filter: string) => {
       const params = new URLSearchParams({ filter, ...periodQuery });
@@ -1652,7 +1701,9 @@ ${tr("dashboard.generatedWith")}`;
                 className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
               >
                 <p className="text-sm text-muted-foreground">{tr("dashboard.totalIncome")}</p>
-                <p className="text-2xl font-bold text-emerald-600">{formatCurrencyEU(totalIncome)}</p>
+                <p className="text-2xl font-bold text-emerald-600">
+                  {isDashboardSummaryLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : formatCurrencyEU(totalIncome)}
+                </p>
                 <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.totalIncomeDescription")}</p>
               </Link>
               <Link
@@ -1660,7 +1711,9 @@ ${tr("dashboard.generatedWith")}`;
                 className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
               >
                 <p className="text-sm text-muted-foreground">{tr("dashboard.operatingExpenses")}</p>
-                <p className="text-2xl font-bold text-rose-600">{formatCurrencyEU(totalExpenses)}</p>
+                <p className="text-2xl font-bold text-rose-600">
+                  {isDashboardSummaryLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : formatCurrencyEU(totalExpenses)}
+                </p>
                 <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.operatingExpensesDescription")}</p>
               </Link>
               <Link
@@ -1668,13 +1721,15 @@ ${tr("dashboard.generatedWith")}`;
                 className="block rounded-lg border p-4 text-left hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 active:scale-[0.99] cursor-pointer transition-colors"
               >
                 <p className="text-sm text-muted-foreground">{tr("dashboard.missionTransfers")}</p>
-                <p className="text-2xl font-bold text-blue-600">{formatCurrencyEU(totalMissionTransfers)}</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {isDashboardSummaryLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : formatCurrencyEU(totalMissionTransfers)}
+                </p>
                 <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.missionTransfersDescription")}</p>
               </Link>
               <div className="rounded-lg border p-4 bg-muted/20">
                 <p className="text-sm text-muted-foreground">{tr("dashboard.operatingBalance")}</p>
                 <p className={`text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {formatCurrencyEU(netBalance)}
+                  {isDashboardSummaryLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : formatCurrencyEU(netBalance)}
                 </p>
                 <p className="text-xs text-muted-foreground/70 mt-1">{tr("dashboard.operatingBalanceDescription")}</p>
               </div>
