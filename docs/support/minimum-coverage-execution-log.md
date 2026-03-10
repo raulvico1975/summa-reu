@@ -12,6 +12,7 @@
 - `howto-donor-update-iban`
 - `howto-donor-history-summary`
 - `howto-donor-update-fee`
+- `howto-dashboard-income-period`
 - `howto-donor-fiscal-review`
 - `howto-member-invite`
 - `howto-member-user-permissions`
@@ -37,12 +38,6 @@
   - què falta: no hi ha cap camp, estat o acció verificable de `pausa` per a quotes de soci.
   - quin fitxer no ho confirma: `/Users/raulvico/Documents/summa-social/src/components/donor-manager.tsx`, `/Users/raulvico/Documents/summa-social/src/i18n/locales/ca.json`
   - per què no s'ha escrit la card: només està verificat el canvi d'import, modalitat i periodicitat; no una pausa formal.
-
-- `income-period-view`
-  - status: `blocked-by-verification`
-  - què falta: no hi ha una ruta ni una acció única i estable per a “veure els ingressos d’un període” amb una card operativa mínima sense barrejar Dashboard, exports i filtres.
-  - quin fitxer no ho confirma: `/Users/raulvico/Documents/summa-social/src/app/[orgSlug]/dashboard/page.tsx`, `/Users/raulvico/Documents/summa-social/docs/manual-usuari-summa-social.md`
-  - per què no s'ha escrit la card: la cobertura actual és transversal i no hi ha un flux curt verificat prou estable per publicar-lo com a mínim garantit.
 
 ## verificationEvidence
 
@@ -72,6 +67,14 @@
 - `howto-donor-update-fee`
   - evidence:
     - `/Users/raulvico/Documents/summa-social/src/components/donor-manager.tsx`
+    - `/Users/raulvico/Documents/summa-social/docs/manual-usuari-summa-social.md`
+
+- `howto-dashboard-income-period`
+  - evidence:
+    - `/Users/raulvico/Documents/summa-social/src/app/[orgSlug]/dashboard/page.tsx`
+    - `/Users/raulvico/Documents/summa-social/src/components/date-filter.tsx`
+    - `/Users/raulvico/Documents/summa-social/src/i18n/locales/ca.json`
+    - `/Users/raulvico/Documents/summa-social/src/i18n/locales/es.json`
     - `/Users/raulvico/Documents/summa-social/docs/manual-usuari-summa-social.md`
 
 - `howto-donor-fiscal-review`

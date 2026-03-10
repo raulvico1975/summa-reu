@@ -25,6 +25,7 @@
   { "q": "com modifico l'IBAN d'un soci", "expectedCardId": "howto-donor-update-iban" },
   { "q": "com veig l'historial d'un soci", "expectedCardId": "howto-donor-history-summary" },
   { "q": "com canvio la quota d'un soci", "expectedCardId": "howto-donor-update-fee" },
+  { "q": "com veig els ingressos d'un període", "expectedCardId": "howto-dashboard-income-period" },
   { "q": "com reviso les dades fiscals d'un donant", "expectedCardId": "howto-donor-fiscal-review" },
   { "q": "com convido un nou usuari", "expectedCardId": "howto-member-invite" },
   { "q": "com canvio els permisos d'un usuari", "expectedCardId": "howto-member-user-permissions" },

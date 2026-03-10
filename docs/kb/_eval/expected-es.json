@@ -25,6 +25,7 @@
   { "q": "¿cómo modifico el IBAN de un socio?", "expectedCardId": "howto-donor-update-iban" },
   { "q": "¿cómo veo el historial de un socio?", "expectedCardId": "howto-donor-history-summary" },
   { "q": "¿cómo cambio la cuota de un socio?", "expectedCardId": "howto-donor-update-fee" },
+  { "q": "¿cómo veo los ingresos de un período?", "expectedCardId": "howto-dashboard-income-period" },
   { "q": "¿cómo reviso los datos fiscales de un donante?", "expectedCardId": "howto-donor-fiscal-review" },
   { "q": "¿cómo invito a un nuevo usuario?", "expectedCardId": "howto-member-invite" },
   { "q": "¿cómo cambio los permisos de un usuario?", "expectedCardId": "howto-member-user-permissions" },

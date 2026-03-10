@@ -1,0 +1,58 @@
+{
+  "id": "howto-dashboard-income-period",
+  "type": "howto",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Veure els ingressos d'un període",
+    "es": "Ver los ingresos de un período"
+  },
+  "intents": {
+    "ca": [
+      "com veig els ingressos d'un període",
+      "on miro els ingressos del mes",
+      "vull veure els ingressos del trimestre",
+      "com veig els ingressos al dashboard"
+    ],
+    "es": [
+      "cómo veo los ingresos de un período",
+      "dónde miro los ingresos del mes",
+      "quiero ver los ingresos del trimestre",
+      "cómo veo los ingresos en el dashboard"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per veure els ingressos d'un període:\n1. Ves a Dashboard.\n2. Al selector de període, tria \"Tots els períodes\", \"Any\", \"Trimestre\", \"Mes\" o \"Personalitzat\".\n3. Revisa la targeta \"Ingressos Totals\" del bloc \"Diners\": el selector afecta tot el Dashboard.\n4. Si vols el detall, clica \"Ingressos Totals\". S'obren els Moviments amb el període i el filtre d'ingressos aplicats.\n5. Si vols compartir o exportar el resum del període, fes servir \"Compartir resum\".\n\nAixò et serveix tant per consultar el total com per baixar al detall dels moviments d'ingrés del període triat.",
+    "es": "Para ver los ingresos de un período:\n1. Ve a Dashboard.\n2. En el selector de período, elige \"Todos los períodos\", \"Año\", \"Trimestre\", \"Mes\" o \"Personalizado\".\n3. Revisa la tarjeta \"Ingresos Totales\" del bloque \"Dinero\": el selector afecta a todo el Dashboard.\n4. Si quieres el detalle, haz clic en \"Ingresos Totales\". Se abren los Movimientos con el período y el filtro de ingresos aplicados.\n5. Si quieres compartir o exportar el resumen del período, usa \"Compartir resumen\".\n\nEsto te sirve tanto para consultar el total como para bajar al detalle de los movimientos de ingreso del período elegido."
+  },
+  "uiPaths": [
+    "Dashboard > Ingressos Totals",
+    "Dashboard > Compartir resum"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "dashboard",
+    "ingressos",
+    "ingresos",
+    "període",
+    "periodo"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "1.4"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-change-period",
+    "guide-movement-filters",
+    "manual-dashboard-other-income"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}
