@@ -212,7 +212,7 @@ export type Transaction = {
   operationDate?: string;
   /** Data valor bancària (opcional). */
   valueDate?: string;
-  /** Motiu intern de detecció de duplicat fort (només importació). */
+  /** Motiu intern de classificació de duplicat en importació (oficial o heurístic). */
   duplicateReason?: string;
 
   // ═══════════════════════════════════════════════════════════════════════════

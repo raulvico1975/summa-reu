@@ -84,7 +84,7 @@ interface CreatedTransaction {
   description: string;
   amount: number;
   balanceAfter?: number;
-  operationDate?: string;
+  operationDate: string;
   category: string | null;
   document: string | null;
   contactId: string | null;
@@ -261,6 +261,26 @@ function normalizeTransactionInput(
     };
   }
 
+  if (tx.source !== undefined && tx.source !== 'bank') {
+    return {
+      ok: false,
+      error: `transactions[${index}] només permet source='bank' a l'import bancari directe`,
+      code: 'INVALID_SOURCE_CONTRACT',
+    };
+  }
+
+  if (
+    typeof tx.bankAccountId === 'string' &&
+    tx.bankAccountId.trim() !== '' &&
+    tx.bankAccountId !== bankAccountId
+  ) {
+    return {
+      ok: false,
+      error: `transactions[${index}] bankAccountId no coincideix amb el compte seleccionat`,
+      code: 'BANK_ACCOUNT_MISMATCH',
+    };
+  }
+
   const operationDate = normalizeIsoDateOnly(tx.operationDate);
   if (!operationDate) {
     return {
@@ -292,7 +312,7 @@ function normalizeTransactionInput(
       description: normalizeBankDescription(tx.description),
       amount: tx.amount,
       ...(balanceAfter !== undefined ? { balanceAfter } : {}),
-      ...(operationDate ? { operationDate } : {}),
+      operationDate,
       category: tx.category ?? null,
       document: null,
       contactId: tx.contactId ?? null,
@@ -666,7 +686,7 @@ export async function POST(
       description: item.tx.description,
       amount: item.tx.amount,
       ...(item.tx.balanceAfter !== undefined ? { balanceAfter: item.tx.balanceAfter } : {}),
-      ...(item.tx.operationDate ? { operationDate: item.tx.operationDate } : {}),
+      operationDate: item.tx.operationDate,
       category: item.tx.category,
       document: item.tx.document,
       contactId: item.tx.contactId,

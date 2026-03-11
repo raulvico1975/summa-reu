@@ -322,17 +322,22 @@ export function DonationCertificateGenerator() {
 
     setIsLoading(true);
     try {
+      const yearStart = `${selectedYear}-01-01`;
+      const yearEnd = `${selectedYear}-12-31`;
+
       const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
       const donorsQuery = query(contactsRef, where('type', '==', 'donor'));
       const donorsSnapshot = await getDocs(donorsQuery);
       const donors: Donor[] = donorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donor));
 
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
-      const transactionsSnapshot = await getDocs(transactionsRef);
+      const transactionsQuery = query(
+        transactionsRef,
+        where('date', '>=', yearStart),
+        where('date', '<=', yearEnd)
+      );
+      const transactionsSnapshot = await getDocs(transactionsQuery);
       const allTransactions: Transaction[] = transactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-
-      const yearStart = `${selectedYear}-01-01`;
-      const yearEnd = `${selectedYear}-12-31`;
       
       // Criteri fiscal únic: només transactionType='donation' (helper unificat)
       const yearDonations = allTransactions.filter(tx => {

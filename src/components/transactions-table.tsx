@@ -87,6 +87,7 @@ import { DateFilter, type DateFilterValue } from '@/components/date-filter';
 import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import { TRANSACTION_URL_FILTERS, type TransactionUrlFilter, type SourceFilter, findSystemCategoryId, isCategoryIdCompatibleStrict } from '@/lib/constants';
+import { toPeriodQuery } from '@/lib/period-query';
 import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcile-modal';
 import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
@@ -120,6 +121,12 @@ interface TransactionsTableProps {
   canEditMovements?: boolean;
 }
 
+type TransactionsPageResponse = {
+  success: boolean;
+  items?: Transaction[];
+  nextCursor?: string | null;
+};
+
 const RemittanceSplitter = dynamic(
   () => import('@/components/remittance-splitter').then((mod) => mod.RemittanceSplitter),
   { ssr: false },
@@ -151,6 +158,12 @@ export function TransactionsTable({
   // SuperAdmin detection per bulk mode
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
   const [isBulkMode, setIsBulkMode] = React.useState(false);
+  const [allTransactions, setAllTransactions] = React.useState<Transaction[] | null>(null);
+  const [isLoadingTransactions, setIsLoadingTransactions] = React.useState(false);
+  const [isLoadingMoreTransactions, setIsLoadingMoreTransactions] = React.useState(false);
+  const [transactionsNextCursor, setTransactionsNextCursor] = React.useState<string | null>(null);
+  const [hasMoreTransactions, setHasMoreTransactions] = React.useState(false);
+  const [autoLoadBlockedByError, setAutoLoadBlockedByError] = React.useState(false);
   // Memoitzar categoryTranslations per evitar re-renders innecessaris
   const categoryTranslations = React.useMemo(
     () => t.categories as Record<string, string>,
@@ -162,6 +175,7 @@ export function TransactionsTable({
 
   // Filtre de dates
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>(initialDateFilter || { type: 'all' });
+  const periodQuery = React.useMemo(() => toPeriodQuery(dateFilter), [dateFilter]);
 
   // Cercador intel·ligent
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -301,16 +315,6 @@ export function TransactionsTable({
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
     [firestore, organizationId]
   );
-
-  // Query ordenada per data (carrega totes les transaccions)
-  const transactionsQuery = useMemoFirebase(
-    () => {
-      if (!organizationId) return null;
-      const baseCollection = collection(firestore, 'organizations', organizationId, 'transactions');
-      return query(baseCollection, orderBy('date', 'desc'));
-    },
-    [firestore, organizationId]
-  );
   const categoriesCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
     [firestore, organizationId]
@@ -324,7 +328,6 @@ export function TransactionsTable({
     [firestore, organizationId]
   );
   
-  const { data: allTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
   const { data: availableCategories } = useCollection<Category>(categoriesCollection);
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
@@ -337,6 +340,100 @@ export function TransactionsTable({
   // Estat per toggle SuperAdmin "incloure arxivades"
   const [showArchived, setShowArchived] = React.useState(false);
   const showArchivedInLedger = showArchived && isSuperAdmin;
+
+  const loadTransactionsPage = React.useCallback(
+    async (mode: 'reset' | 'append', cursorOverride?: string | null) => {
+      if (!organizationId || !user) {
+        setAllTransactions(null);
+        setTransactionsNextCursor(null);
+        setHasMoreTransactions(false);
+        setIsLoadingTransactions(false);
+        setIsLoadingMoreTransactions(false);
+        return;
+      }
+
+      if (mode === 'reset') {
+        setIsLoadingTransactions(true);
+      } else {
+        setIsLoadingMoreTransactions(true);
+      }
+
+      try {
+        const idToken = await user.getIdToken();
+        const params = new URLSearchParams({
+          orgId: organizationId,
+          limit: '50',
+          showArchived: showArchivedInLedger ? 'true' : 'false',
+          ...periodQuery,
+        });
+
+        if (mode === 'append' && cursorOverride) {
+          params.set('cursor', cursorOverride);
+        }
+
+        const response = await fetch(`/api/transactions/page?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`transactions page request failed: ${response.status}`);
+        }
+
+        const payload = await response.json() as TransactionsPageResponse;
+        const nextItems = payload.items ?? [];
+
+        setAllTransactions((prev) => {
+          if (mode === 'reset' || !prev) {
+            return nextItems;
+          }
+          const seen = new Set(prev.map((tx) => tx.id));
+          const merged = [...prev];
+          for (const tx of nextItems) {
+            if (seen.has(tx.id)) continue;
+            seen.add(tx.id);
+            merged.push(tx);
+          }
+          return merged;
+        });
+        setTransactionsNextCursor(payload.nextCursor ?? null);
+        setHasMoreTransactions(Boolean(payload.nextCursor));
+        if (mode === 'reset') {
+          setAutoLoadBlockedByError(false);
+        }
+      } catch (error) {
+        console.error('[transactions-table] page load error:', error);
+        if (mode === 'reset') {
+          setAllTransactions([]);
+          setTransactionsNextCursor(null);
+          setHasMoreTransactions(false);
+          setAutoLoadBlockedByError(false);
+        } else {
+          setAutoLoadBlockedByError(true);
+        }
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: t.common.dbConnectionError,
+        });
+      } finally {
+        setIsLoadingTransactions(false);
+        setIsLoadingMoreTransactions(false);
+      }
+    },
+    [organizationId, periodQuery, showArchivedInLedger, t.common.dbConnectionError, t.common.error, toast, user]
+  );
+
+  React.useEffect(() => {
+    void loadTransactionsPage('reset');
+  }, [loadTransactionsPage]);
+
+  const handleLoadMoreTransactions = React.useCallback(() => {
+    if (!hasMoreTransactions || isLoadingMoreTransactions) return;
+    setAutoLoadBlockedByError(false);
+    void loadTransactionsPage('append', transactionsNextCursor);
+  }, [hasMoreTransactions, isLoadingMoreTransactions, loadTransactionsPage, transactionsNextCursor]);
 
   // Filtrar transaccions arxivades (soft-delete) - només SuperAdmin pot veure-les
   const activeTransactions = React.useMemo(() => {
@@ -937,10 +1034,34 @@ export function TransactionsTable({
   const hasSecondaryFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || contactIdFilter !== null || sourceFilter !== 'all' || bankAccountFilter !== '__all__';
   // hasActiveFilter inclou també el filtre de dates per a altres usos
   const hasActiveFilter = hasSecondaryFilter || dateFilter.type !== 'all';
+  const isResolvingSecondaryFilters = hasSecondaryFilter && hasMoreTransactions && !autoLoadBlockedByError;
+  const hasIncompleteSecondaryDataset = hasSecondaryFilter && (hasMoreTransactions || autoLoadBlockedByError);
+  const canRenderResolvedSecondaryResults = !hasIncompleteSecondaryDataset;
+  const visibleTransactions = canRenderResolvedSecondaryResults ? filteredTransactions : [];
+
+  React.useEffect(() => {
+    setAutoLoadBlockedByError(false);
+  }, [organizationId, periodQuery, showArchivedInLedger, tableFilter, searchQuery, contactIdFilter, sourceFilter, bankAccountFilter]);
+
+  React.useEffect(() => {
+    if (!hasSecondaryFilter) return;
+    if (!hasMoreTransactions) return;
+    if (autoLoadBlockedByError) return;
+    if (isLoadingTransactions || isLoadingMoreTransactions) return;
+    void loadTransactionsPage('append', transactionsNextCursor);
+  }, [
+    autoLoadBlockedByError,
+    hasMoreTransactions,
+    hasSecondaryFilter,
+    isLoadingMoreTransactions,
+    isLoadingTransactions,
+    loadTransactionsPage,
+    transactionsNextCursor,
+  ]);
 
   const filteredSummary = React.useMemo(() => {
     // Mostrar resum sempre que hi hagi filtres secundaris O filtre de dates actiu
-    if (!hasActiveFilter || !transactions) return null;
+    if (!hasActiveFilter || !transactions || !canRenderResolvedSecondaryResults) return null;
 
     // Total del període = només apunts bancaris (ledger), excloent desglossaments interns
     const periodTotal = filterSplitChildTransactions(
@@ -950,14 +1071,14 @@ export function TransactionsTable({
       allTransactionsById
     ).length;
 
-    const visible = filteredTransactions;
+    const visible = visibleTransactions;
     return {
       showing: visible.length,
       total: periodTotal,
       income: visible.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0),
       expenses: visible.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0),
     };
-  }, [filteredTransactions, transactions, hasActiveFilter, allTransactionsById, showArchivedInLedger]);
+  }, [visibleTransactions, transactions, hasActiveFilter, allTransactionsById, canRenderResolvedSecondaryResults, showArchivedInLedger]);
 
   const clearAllFilters = React.useCallback(() => {
     setTableFilter('all');
@@ -1011,8 +1132,8 @@ export function TransactionsTable({
 
   // Derivats per a la capçalera
   const selectableVisibleIds = React.useMemo(
-    () => filteredTransactions.filter((tx) => !isBulkSelectionBlocked(tx)).map((tx) => tx.id),
-    [filteredTransactions, isBulkSelectionBlocked]
+    () => visibleTransactions.filter((tx) => !isBulkSelectionBlocked(tx)).map((tx) => tx.id),
+    [visibleTransactions, isBulkSelectionBlocked]
   );
   const selectedCount = selectedIds.size;
   const allVisibleSelected = selectableVisibleIds.length > 0 && selectableVisibleIds.every(id => selectedIds.has(id));
@@ -1266,7 +1387,15 @@ export function TransactionsTable({
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleExportFilteredTransactions = async () => {
-    if (filteredTransactions.length === 0) {
+    if (!canRenderResolvedSecondaryResults) {
+      toast({
+        title: 'Carregant més moviments',
+        description: 'La cerca i els filtres necessiten carregar totes les pàgines abans de mostrar o exportar un resultat final.',
+      });
+      return;
+    }
+
+    if (visibleTransactions.length === 0) {
       toast({ title: t.movements.table.noTransactions });
       return;
     }
@@ -1318,7 +1447,7 @@ export function TransactionsTable({
       return_fee: t.movements.table.typeReturnFee ?? 'Comissió devolució',
     };
 
-    const excelData = filteredTransactions.map(tx => {
+    const excelData = visibleTransactions.map(tx => {
       const contact = tx.contactId ? contactMap[tx.contactId] : null;
       return {
         [exportCols.date]: formatDate(tx.date),
@@ -1362,7 +1491,7 @@ export function TransactionsTable({
 
     toast({
       title: t.movements.table.exportSuccess,
-      description: t.movements.table.exportedCount(filteredTransactions.length),
+      description: t.movements.table.exportedCount(visibleTransactions.length),
     });
   };
 
@@ -1976,6 +2105,45 @@ export function TransactionsTable({
         </div>
       )}
 
+      {hasSecondaryFilter && !canRenderResolvedSecondaryResults && (
+        <div className="mb-4 px-4 py-3 border rounded-lg bg-muted/40 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3 text-sm">
+            {isResolvingSecondaryFilters ? (
+              <Loader2 className="h-4 w-4 mt-0.5 shrink-0 animate-spin text-muted-foreground" />
+            ) : (
+              <XCircle className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
+            )}
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">
+                {isResolvingSecondaryFilters
+                  ? 'Carregant més moviments'
+                  : 'No s\'ha pogut completar la cerca'}
+              </p>
+              <p className="text-muted-foreground">
+                {isResolvingSecondaryFilters
+                  ? 'La cerca i els filtres esperen a tenir totes les pàgines carregades abans de mostrar un resultat final.'
+                  : 'Els filtres actius necessiten més pàgines de moviments. Reintenta la càrrega o neteja filtres per evitar resultats parcials.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {autoLoadBlockedByError && hasMoreTransactions && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLoadMoreTransactions}
+                disabled={isLoadingMoreTransactions}
+              >
+                {isLoadingMoreTransactions ? t.common.loading : 'Reintenta'}
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+              {t.movements.table.clearFilters}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Barra de resum quan hi ha filtre actiu */}
       {filteredSummary && (
         <div className="mb-4 px-4 py-2 bg-muted/50 border rounded-lg flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
@@ -2120,7 +2288,7 @@ export function TransactionsTable({
           )}
 
           {/* Llista de transaccions mòbil */}
-          {!isLoadingTransactions && filteredTransactions.map((tx) => (
+          {!isLoadingTransactions && visibleTransactions.map((tx) => (
             <TransactionRowMobile
               key={tx.id}
               transaction={tx}
@@ -2146,7 +2314,7 @@ export function TransactionsTable({
           ))}
 
           {/* Empty state mòbil */}
-          {!isLoadingTransactions && filteredTransactions.length === 0 && (
+          {!isLoadingTransactions && canRenderResolvedSecondaryResults && visibleTransactions.length === 0 && (
             <EmptyState
               icon={tableFilter === 'missing' ? FileX : tableFilter === 'returns' ? Undo : Search}
               title={
@@ -2221,7 +2389,7 @@ export function TransactionsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((tx) => (
+              {visibleTransactions.map((tx) => (
                 <TransactionRow
                   key={tx.id}
                   transaction={tx}
@@ -2294,7 +2462,7 @@ export function TransactionsTable({
                 ))
               )}
               {/* Empty state (only when not loading) */}
-              {!isLoadingTransactions && filteredTransactions.length === 0 && (
+              {!isLoadingTransactions && canRenderResolvedSecondaryResults && visibleTransactions.length === 0 && (
                   <TableRow>
                       <TableCell colSpan={(canBulkEdit ? 9 : 8) + (showProjectColumn ? 1 : 0)} className="p-0">
                         <EmptyState
@@ -2318,6 +2486,25 @@ export function TransactionsTable({
                )}
             </TableBody>
           </Table>
+        </div>
+      )}
+
+      {hasMoreTransactions && !hasSecondaryFilter && (
+        <div className="mt-4 flex justify-center">
+          <Button
+            variant="outline"
+            onClick={handleLoadMoreTransactions}
+            disabled={isLoadingMoreTransactions}
+          >
+            {isLoadingMoreTransactions ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t.common.loading}
+              </>
+            ) : (
+              tr('common.loadMore', 'Carregar més')
+            )}
+          </Button>
         </div>
       )}
 

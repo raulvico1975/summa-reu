@@ -43,6 +43,7 @@ function makeImportTx(overrides: Partial<CanonicalBankImportTx> = {}): Canonical
     date: '2026-02-15T00:00:00.000Z',
     description: 'Quota soci febrer',
     amount: 25,
+    operationDate: '2026-02-15',
     category: null,
     document: null,
     contactId: 'donor-1',
@@ -99,7 +100,7 @@ describe('transaction dedupe real life scenarios', () => {
     const classified = classifyTransactions(parsed, existing, 'acc-1');
     assert.equal(classified.length, 1);
     assert.equal(classified[0].status, 'DUPLICATE_CANDIDATE');
-    assert.equal(classified[0].reason, 'BASE_KEY');
+    assert.equal(classified[0].reason, 'HEURISTIC_NEAR_DATE');
     assert.ok(classified[0].tx.duplicateReason?.includes('nearDate'));
   });
 

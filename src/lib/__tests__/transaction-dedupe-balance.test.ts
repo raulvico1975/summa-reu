@@ -120,6 +120,7 @@ describe('transaction dedupe with balanceAfter strong rule', () => {
 
     assert.equal(result.length, 1);
     assert.equal(result[0].status, 'DUPLICATE_CANDIDATE');
+    assert.equal(result[0].reason, 'HEURISTIC_LEGACY_BALANCE_PROXY');
     assert.equal(result[0].tx.duplicateReason, 'balance+amount+proxyDate');
     assert.deepEqual(result[0].matchedExistingIds, ['tx-legacy']);
   });
@@ -143,6 +144,7 @@ describe('transaction dedupe with balanceAfter strong rule', () => {
 
     assert.equal(result.length, 1);
     assert.equal(result[0].status, 'DUPLICATE_CANDIDATE');
+    assert.equal(result[0].reason, 'HEURISTIC_NEAR_DATE');
     assert.notEqual(result[0].tx.duplicateReason, 'balance+amount+proxyDate');
     assert.ok(result[0].tx.duplicateReason?.includes('nearDate'));
   });
@@ -190,5 +192,16 @@ describe('transaction dedupe with balanceAfter strong rule', () => {
     assert.equal(result[0].status, 'DUPLICATE_SAFE');
     assert.equal(result[0].reason, 'BALANCE_AMOUNT_DATE');
     assert.notEqual(result[0].tx.duplicateReason, 'balance+amount+proxyDate');
+  });
+
+  it('match exacte per clau base continua sent només heuristic candidate', () => {
+    const existing = [makeExisting({ id: 'tx-base' })];
+    const parsed = [makeIncoming()];
+
+    const result = classifyTransactions(parsed, existing, 'acc-1');
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].status, 'DUPLICATE_CANDIDATE');
+    assert.equal(result[0].reason, 'HEURISTIC_BASE_KEY');
   });
 });

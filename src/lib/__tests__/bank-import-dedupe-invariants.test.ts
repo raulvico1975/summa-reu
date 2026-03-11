@@ -25,7 +25,7 @@ function makeClassifiedRow(
   return {
     tx,
     status,
-    reason: status === 'DUPLICATE_SAFE' ? 'INTRA_FILE' : status === 'DUPLICATE_CANDIDATE' ? 'BASE_KEY' : null,
+    reason: status === 'DUPLICATE_SAFE' ? 'INTRA_FILE' : status === 'DUPLICATE_CANDIDATE' ? 'HEURISTIC_BASE_KEY' : null,
     matchedExistingIds: [],
     matchedExisting: [],
     rawRow: {},

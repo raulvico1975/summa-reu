@@ -181,6 +181,15 @@ En cas de test intern del mecanisme, pot ser necessari utilitzar `git add -f` pe
 
 **Sense això: prohibit push.**
 
+**Nota de tancament operatiu — Read Models Fase 1 (2026-03-11)**
+1. La fase 1 de read models queda funcionalment acceptada amb el patch posterior de `transactions-table`.
+2. La regressió detectada va ser: cerca i filtres de Moviments treballant sobre un dataset parcial paginat.
+3. La correcció aplicada va ser: bloqueig honest de resultats fins completar la resolució suficient, evitant resultats parcials enganyosos.
+4. `main` queda apte per esperar deploy, però sense desplegar encara.
+5. Millora estructural pendent:
+   - portar cerca i filtres de Moviments a backend
+   - evitar haver de completar el dataset al client per resoldre filtres
+
 Guia ràpida d'execució: [scripts/verify-fiscal.md](../scripts/verify-fiscal.md)
 
 Nota docs: `check-doc-sync` és flexible per defecte (warnings) i bloqueja en incoherències greus. Si vols bloqueig estricte per tota la part documental, executa amb `DOC_SYNC_STRICT=1`.

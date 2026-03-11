@@ -53,9 +53,8 @@ import { useSearchParams } from 'next/navigation';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Donor, Category, Transaction } from '@/lib/data';
-import { fromPeriodQuery } from '@/lib/period-query';
+import { fromPeriodQuery, toPeriodQuery } from '@/lib/period-query';
 import type { DateFilterValue } from '@/components/date-filter';
-import { useTransactionFilters } from '@/hooks/use-transaction-filters';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
@@ -83,7 +82,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { DateFilter } from '@/components/date-filter';
-import { computeDonorDynamics, type DonorWithMeta, type DonorDynamicsResult } from '@/lib/donor-dynamics';
+import { computeDonorDynamics, getDateRange, type DonorWithMeta, type DonorDynamicsResult } from '@/lib/donor-dynamics';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
@@ -204,6 +203,13 @@ function DynamicsBlock({
 // ═══════════════════════════════════════════════════════════════════════════
 const DONORS_PAGE_SIZE = 500;
 
+type DonorYearlySummaryItem = {
+  donorId: string;
+  year: number | null;
+  totalDonations: number;
+  donationCount: number;
+};
+
 export function DonorManager() {
   const { firestore, auth, user } = useFirebase();
   const { organizationId, orgSlug } = useCurrentOrganization();
@@ -256,6 +262,8 @@ export function DonorManager() {
     type: 'year',
     year: new Date().getFullYear()
   });
+  const [activeDonorSummaries, setActiveDonorSummaries] = React.useState<DonorYearlySummaryItem[] | null>(null);
+  const [dynamicsTransactions, setDynamicsTransactions] = React.useState<Transaction[] | null>(null);
 
   // Estat de paginació
   const [contactsLimit, setContactsLimit] = React.useState(DONORS_PAGE_SIZE);
@@ -311,28 +319,98 @@ export function DonorManager() {
     [allCategories]
   );
 
-  // Les transaccions només són necessàries per filtres/dinàmiques secundàries.
-  const transactionsCollection = useMemoFirebase(
-    () => {
-      if (!organizationId || !canReadTransactions || (!activeViewFilter && !dynamicsOpen)) {
-        return null;
-      }
-      return collection(firestore, 'organizations', organizationId, 'transactions');
-    },
-    [activeViewFilter, canReadTransactions, dynamicsOpen, firestore, organizationId]
-  );
-  const { data: allTransactions } = useCollection<Transaction>(transactionsCollection);
   // Memoitzar per evitar re-renders innecessaris
   const categoryTranslations = React.useMemo(
     () => t.categories as Record<string, string>,
     [t.categories]
   );
 
-  // Càlcul lazy: només quan dynamicsOpen és true
+  React.useEffect(() => {
+    if (!organizationId || !user || !canReadTransactions || !activeViewFilter) {
+      setActiveDonorSummaries(null);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadActiveDonorSummaries = async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const params = new URLSearchParams({
+          orgId: organizationId,
+          ...toPeriodQuery(periodFilter || { type: 'all' }),
+        });
+        const response = await fetch(`/api/donors/yearly-summary?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(`donor summary request failed: ${response.status}`);
+        }
+
+        const payload = await response.json() as { items?: DonorYearlySummaryItem[] };
+        if (!controller.signal.aborted) {
+          setActiveDonorSummaries(payload.items ?? []);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error('[donor-manager] yearly summary load error:', error);
+          setActiveDonorSummaries([]);
+        }
+      }
+    };
+
+    void loadActiveDonorSummaries();
+
+    return () => controller.abort();
+  }, [activeViewFilter, canReadTransactions, organizationId, periodFilter, user]);
+
+  React.useEffect(() => {
+    if (!organizationId || !dynamicsOpen || !canReadTransactions) {
+      setDynamicsTransactions(null);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadDynamicsTransactions = async () => {
+      try {
+        const range = dynamicsPeriod.type === 'all' ? null : getDateRange(dynamicsPeriod);
+        let dynamicsQuery = query(
+          collection(firestore, 'organizations', organizationId, 'transactions'),
+          orderBy('date', 'desc')
+        );
+
+        if (range?.to) {
+          dynamicsQuery = query(
+            collection(firestore, 'organizations', organizationId, 'transactions'),
+            where('date', '<=', range.to),
+            orderBy('date', 'desc')
+          );
+        }
+
+        const snapshot = await getDocs(dynamicsQuery);
+        if (controller.signal.aborted) return;
+        setDynamicsTransactions(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Transaction)));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error('[donor-manager] dynamics load error:', error);
+          setDynamicsTransactions([]);
+        }
+      }
+    };
+
+    void loadDynamicsTransactions();
+
+    return () => controller.abort();
+  }, [canReadTransactions, dynamicsOpen, dynamicsPeriod, firestore, organizationId]);
+
   const dynamics = React.useMemo(() => {
-    if (!dynamicsOpen || !donors || !allTransactions) return null;
-    return computeDonorDynamics(donors, allTransactions, dynamicsPeriod);
-  }, [dynamicsOpen, donors, allTransactions, dynamicsPeriod]);
+    if (!dynamicsOpen || !donors || !dynamicsTransactions) return null;
+    return computeDonorDynamics(donors, dynamicsTransactions, dynamicsPeriod);
+  }, [dynamicsOpen, donors, dynamicsTransactions, dynamicsPeriod]);
 
   // Detectar si no hi ha dades
   const hasNoData = dynamics &&
@@ -507,23 +585,10 @@ export function DonorManager() {
     }
   };
 
-  // Filtrar transaccions pel període seleccionat
-  const filteredTransactions = useTransactionFilters(
-    canReadTransactions ? (allTransactions || undefined) : undefined,
-    periodFilter || { type: 'all' }
-  );
-
-  // Calcular IDs de contactes actius (amb transaccions al període)
   const activeContactIds = React.useMemo(() => {
-    if (!activeViewFilter || !filteredTransactions) return new Set<string>();
-    const ids = new Set<string>();
-    filteredTransactions.forEach(tx => {
-      if (tx.amount > 0 && tx.contactType === 'donor' && tx.contactId) {
-        ids.add(tx.contactId);
-      }
-    });
-    return ids;
-  }, [activeViewFilter, filteredTransactions]);
+    if (!activeViewFilter || !activeDonorSummaries) return new Set<string>();
+    return new Set(activeDonorSummaries.map((item) => item.donorId));
+  }, [activeDonorSummaries, activeViewFilter]);
 
   // Comptadors per estat
   const statusCounts = React.useMemo(() => {

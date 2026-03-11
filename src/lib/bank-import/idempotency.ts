@@ -5,7 +5,7 @@ export interface CanonicalBankImportTx {
   description: string;
   amount: number;
   balanceAfter?: number;
-  operationDate?: string;
+  operationDate: string;
   category: string | null;
   document: string | null;
   contactId: string | null;
@@ -32,13 +32,31 @@ function toAmountCents(amount: number): number {
   return Math.round(amount * 100);
 }
 
+const ISO_DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function assertCanonicalBankImportTx(tx: CanonicalBankImportTx): void {
+  if (tx.source !== 'bank') {
+    throw new Error('CanonicalBankImportTx only supports source=bank');
+  }
+
+  if (typeof tx.bankAccountId !== 'string' || tx.bankAccountId.trim() === '') {
+    throw new Error('CanonicalBankImportTx requires bankAccountId');
+  }
+
+  if (!ISO_DATE_ONLY_RE.test(tx.operationDate)) {
+    throw new Error('CanonicalBankImportTx requires operationDate as ISO YYYY-MM-DD');
+  }
+}
+
 export function buildCanonicalSignature(tx: CanonicalBankImportTx): string {
+  assertCanonicalBankImportTx(tx);
+
   return JSON.stringify({
     d: tx.date,
     n: tx.description.trim().replace(/\s+/g, ' ').toUpperCase(),
     a: toAmountCents(tx.amount),
     ...(tx.balanceAfter !== undefined ? { ba: toAmountCents(tx.balanceAfter) } : {}),
-    ...(tx.operationDate ? { od: tx.operationDate } : {}),
+    od: tx.operationDate,
     c: tx.category ?? null,
     x: tx.contactId ?? null,
     y: tx.contactType ?? null,

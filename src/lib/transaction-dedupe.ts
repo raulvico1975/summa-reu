@@ -2,8 +2,8 @@
  * Dedupe determinista per importació de transaccions
  *
  * 3 estats:
- * - DUPLICATE_SAFE: auto-skip (bankRef match o duplicat intra-fitxer)
- * - DUPLICATE_CANDIDATE: match per clau base sense bankRef → decisió de l'usuari
+ * - DUPLICATE_SAFE: auto-skip oficial (bankRef, 4-tupla forta o duplicat intra-fitxer)
+ * - DUPLICATE_CANDIDATE: només heurístic → decisió de l'usuari
  * - NEW: sense cap match → importar
  */
 
@@ -14,14 +14,20 @@ import type { Transaction } from '@/lib/data';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export type DedupeStatus = 'NEW' | 'DUPLICATE_SAFE' | 'DUPLICATE_CANDIDATE';
-export type DedupeReason = 'BANK_REF' | 'BALANCE_AMOUNT_DATE' | 'BASE_KEY' | 'ENRICHED_KEY' | 'INTRA_FILE';
+export type DedupeReason =
+  | 'BANK_REF'
+  | 'BALANCE_AMOUNT_DATE'
+  | 'INTRA_FILE'
+  | 'HEURISTIC_BASE_KEY'
+  | 'HEURISTIC_NEAR_DATE'
+  | 'HEURISTIC_LEGACY_BALANCE_PROXY';
 
 export interface ClassifiedRow {
   /** Transacció parsejada */
   tx: Omit<Transaction, 'id'>;
   /** Estat de classificació */
   status: DedupeStatus;
-  /** Motiu de la classificació (null si NEW sense enrichment) */
+  /** Motiu de la classificació (null si NEW) */
   reason: DedupeReason | null;
   /** IDs dels existents que coincideixen (buit si NEW o intra-fitxer) */
   matchedExistingIds: string[];
@@ -55,6 +61,18 @@ export interface DedupeTransaction {
 }
 
 const NEAR_DATE_TOLERANCE_DAYS = 3;
+
+export function isOfficialDuplicateReason(reason: DedupeReason | null): boolean {
+  return reason === 'BANK_REF' || reason === 'BALANCE_AMOUNT_DATE' || reason === 'INTRA_FILE';
+}
+
+export function isHeuristicDuplicateReason(reason: DedupeReason | null): boolean {
+  return (
+    reason === 'HEURISTIC_BASE_KEY'
+    || reason === 'HEURISTIC_NEAR_DATE'
+    || reason === 'HEURISTIC_LEGACY_BALANCE_PROXY'
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // NORMALITZACIONS
@@ -283,8 +301,8 @@ export function getExtraSignature(
 
 /**
  * Classifica un array de transaccions parsejades en 3 estats:
- * - DUPLICATE_SAFE: auto-skip (bankRef match o duplicat intra-fitxer)
- * - DUPLICATE_CANDIDATE: match base sense bankRef → decisió usuari
+ * - DUPLICATE_SAFE: auto-skip oficial (bankRef, 4-tupla forta o intra-fitxer)
+ * - DUPLICATE_CANDIDATE: heurístiques legacy/base/near-date → decisió usuari
  * - NEW: sense match
  *
  * @param parsedRows - Files parsejades amb tx i rawRow
@@ -498,7 +516,7 @@ export function classifyTransactions(
         results.push({
           tx: { ...tx, duplicateReason: 'balance+amount+proxyDate' },
           status: 'DUPLICATE_CANDIDATE',
-          reason: 'BASE_KEY',
+          reason: 'HEURISTIC_LEGACY_BALANCE_PROXY',
           matchedExistingIds: [bestLegacyCandidate.id],
           matchedExisting: [{
             id: bestLegacyCandidate.id,
@@ -542,7 +560,7 @@ export function classifyTransactions(
         results.push({
           tx: { ...tx, duplicateReason: `amount+description+nearDate<=${NEAR_DATE_TOLERANCE_DAYS}d` },
           status: 'DUPLICATE_CANDIDATE',
-          reason: 'BASE_KEY',
+          reason: 'HEURISTIC_NEAR_DATE',
           matchedExistingIds: nearDateMatches.map((m) => m.id),
           matchedExisting: nearDateMatches.map((m) => ({
             id: m.id,
@@ -593,7 +611,7 @@ export function classifyTransactions(
         results.push({
           tx,
           status: 'NEW',
-          reason: 'ENRICHED_KEY',
+          reason: null,
           matchedExistingIds: [],
           matchedExisting: [],
           rawRow,
@@ -607,7 +625,7 @@ export function classifyTransactions(
     results.push({
       tx,
       status: 'DUPLICATE_CANDIDATE',
-      reason: 'BASE_KEY',
+      reason: 'HEURISTIC_BASE_KEY',
       matchedExistingIds: baseMatches.map(m => m.id),
       matchedExisting: baseMatches.map(m => ({
         id: m.id,

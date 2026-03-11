@@ -274,12 +274,14 @@ export const TransactionRow = React.memo(function TransactionRow({
   ]);
   // Detecta transaccions via Stripe (donations, fees)
   const isFromStripe = tx.source === 'stripe';
+  const hasStripeChildren = !!tx.stripeTransferId;
   const canSplitAmount =
     tx.amount > 0 &&
     !tx.isRemittance &&
     !tx.isRemittanceItem &&
     !tx.isSplit &&
     !tx.parentTransactionId &&
+    !hasStripeChildren &&
     tx.source !== 'stripe' &&
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
@@ -290,8 +292,9 @@ export const TransactionRow = React.memo(function TransactionRow({
     const isIncome = transaction.amount > 0;
     const isNotAlreadyDivided = transaction.transactionType !== 'donation' && transaction.transactionType !== 'fee';
     const isNotRemittance = !transaction.isRemittance;
+    const hasStripeChildren = !!transaction.stripeTransferId;
 
-    if (!isIncome || !isNotAlreadyDivided || !isNotRemittance) {
+    if (!isIncome || !isNotAlreadyDivided || !isNotRemittance || hasStripeChildren) {
       return false;
     }
 
@@ -988,13 +991,13 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.splitAmount}
               </DropdownMenuItem>
             )}
-            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !isFromStripe && (
+            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !isFromStripe && !hasStripeChildren && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4" />
                 {t.splitRemittance}
               </DropdownMenuItem>
             )}
-            {tx.amount < 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !isFromStripe && (
+            {tx.amount < 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !isFromStripe && !hasStripeChildren && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4 text-orange-600" />
                 {t.splitPaymentRemittance || 'Dividir remesa pagaments'}
@@ -1007,7 +1010,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.reconcileSepa || 'Desagregar i conciliar'}
               </DropdownMenuItem>
             )}
-            {tx.isRemittance && onUndoRemittance && (
+            {(tx.isRemittance || hasStripeChildren) && onUndoRemittance && (
               <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
                 <Undo2 className="mr-2 h-4 w-4" />
                 {t.undoRemittance || 'Desfer remesa'}

@@ -11,6 +11,7 @@ function makeTx(overrides: Partial<CanonicalBankImportTx> = {}): CanonicalBankIm
     date: '2026-02-01T00:00:00.000Z',
     description: 'Quota soci',
     amount: 25,
+    operationDate: '2026-02-01',
     category: null,
     document: null,
     contactId: 'donor-1',
@@ -70,12 +71,11 @@ describe('bank import idempotency', () => {
     assert.notEqual(ids[0], ids[1]);
   });
 
-  it('manté el mateix hash quan els opcionals no existeixen', () => {
-    const txWithoutOptionals = makeTx({ description: 'Quota sense opcionals' });
-    const txWithUndefinedOptionals = makeTx({
-      description: 'Quota sense opcionals',
+  it('manté el mateix hash quan balanceAfter no existeix o és undefined', () => {
+    const txWithoutBalance = makeTx({ description: 'Quota sense saldo' });
+    const txWithUndefinedBalance = makeTx({
+      description: 'Quota sense saldo',
       balanceAfter: undefined,
-      operationDate: undefined,
     });
 
     const hash1 = computeBankImportHash({
@@ -84,7 +84,7 @@ describe('bank import idempotency', () => {
       source: 'csv',
       fileName: 'extracte.csv',
       totalRows: 1,
-      transactions: [txWithoutOptionals],
+      transactions: [txWithoutBalance],
     });
 
     const hash2 = computeBankImportHash({
@@ -93,7 +93,7 @@ describe('bank import idempotency', () => {
       source: 'csv',
       fileName: 'extracte.csv',
       totalRows: 1,
-      transactions: [txWithUndefinedOptionals],
+      transactions: [txWithUndefinedBalance],
     });
 
     assert.equal(hash1, hash2);
@@ -147,5 +147,21 @@ describe('bank import idempotency', () => {
     });
 
     assert.notEqual(hash1, hash2);
+  });
+
+  it('falla si operationDate no compleix el contracte canònic', () => {
+    const invalidTx = makeTx({ operationDate: '2026-02-01T00:00:00.000Z' as unknown as CanonicalBankImportTx['operationDate'] });
+
+    assert.throws(
+      () => computeBankImportHash({
+        orgId: 'org-1',
+        bankAccountId: 'acc-1',
+        source: 'csv',
+        fileName: 'extracte.csv',
+        totalRows: 1,
+        transactions: [invalidTx],
+      }),
+      /operationDate as ISO YYYY-MM-DD/
+    );
   });
 });

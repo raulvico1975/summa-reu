@@ -78,7 +78,8 @@ export interface ImportSelectionResult {
 
 /**
  * Invariant IMP-2:
- * - DUPLICATE_CANDIDATE només s'importa si hi ha opt-in explícit.
+ * - DUPLICATE_CANDIDATE és sempre heurístic.
+ * - Només s'importa si hi ha opt-in explícit.
  */
 export function buildImportSelection(
   classifiedResults: ClassifiedRow[],
