@@ -342,7 +342,7 @@ export function TransactionsTable({
   const showArchivedInLedger = showArchived && isSuperAdmin;
 
   const loadTransactionsPage = React.useCallback(
-    async (mode: 'reset' | 'append') => {
+    async (mode: 'reset' | 'append', cursorOverride?: string | null) => {
       if (!organizationId || !user) {
         setAllTransactions(null);
         setTransactionsNextCursor(null);
@@ -367,8 +367,8 @@ export function TransactionsTable({
           ...periodQuery,
         });
 
-        if (mode === 'append' && transactionsNextCursor) {
-          params.set('cursor', transactionsNextCursor);
+        if (mode === 'append' && cursorOverride) {
+          params.set('cursor', cursorOverride);
         }
 
         const response = await fetch(`/api/transactions/page?${params.toString()}`, {
@@ -422,7 +422,7 @@ export function TransactionsTable({
         setIsLoadingMoreTransactions(false);
       }
     },
-    [organizationId, periodQuery, showArchivedInLedger, t.common.dbConnectionError, t.common.error, toast, transactionsNextCursor, user]
+    [organizationId, periodQuery, showArchivedInLedger, t.common.dbConnectionError, t.common.error, toast, user]
   );
 
   React.useEffect(() => {
@@ -432,8 +432,8 @@ export function TransactionsTable({
   const handleLoadMoreTransactions = React.useCallback(() => {
     if (!hasMoreTransactions || isLoadingMoreTransactions) return;
     setAutoLoadBlockedByError(false);
-    void loadTransactionsPage('append');
-  }, [hasMoreTransactions, isLoadingMoreTransactions, loadTransactionsPage]);
+    void loadTransactionsPage('append', transactionsNextCursor);
+  }, [hasMoreTransactions, isLoadingMoreTransactions, loadTransactionsPage, transactionsNextCursor]);
 
   // Filtrar transaccions arxivades (soft-delete) - només SuperAdmin pot veure-les
   const activeTransactions = React.useMemo(() => {
@@ -1048,7 +1048,7 @@ export function TransactionsTable({
     if (!hasMoreTransactions) return;
     if (autoLoadBlockedByError) return;
     if (isLoadingTransactions || isLoadingMoreTransactions) return;
-    void loadTransactionsPage('append');
+    void loadTransactionsPage('append', transactionsNextCursor);
   }, [
     autoLoadBlockedByError,
     hasMoreTransactions,
@@ -1056,6 +1056,7 @@ export function TransactionsTable({
     isLoadingMoreTransactions,
     isLoadingTransactions,
     loadTransactionsPage,
+    transactionsNextCursor,
   ]);
 
   const filteredSummary = React.useMemo(() => {
@@ -1388,11 +1389,8 @@ export function TransactionsTable({
   const handleExportFilteredTransactions = async () => {
     if (!canRenderResolvedSecondaryResults) {
       toast({
-        title: tr('movements.table.filtersResolvingTitle', 'Carregant més moviments'),
-        description: tr(
-          'movements.table.filtersResolvingDescription',
-          'La cerca i els filtres necessiten carregar totes les pàgines abans de mostrar o exportar un resultat final.'
-        ),
+        title: 'Carregant més moviments',
+        description: 'La cerca i els filtres necessiten carregar totes les pàgines abans de mostrar o exportar un resultat final.',
       });
       return;
     }
@@ -2118,19 +2116,13 @@ export function TransactionsTable({
             <div className="space-y-1">
               <p className="font-medium text-foreground">
                 {isResolvingSecondaryFilters
-                  ? tr('movements.table.filtersResolvingTitle', 'Carregant més moviments')
-                  : tr('movements.table.filtersResolvingErrorTitle', 'No s\'ha pogut completar la cerca')}
+                  ? 'Carregant més moviments'
+                  : 'No s\'ha pogut completar la cerca'}
               </p>
               <p className="text-muted-foreground">
                 {isResolvingSecondaryFilters
-                  ? tr(
-                    'movements.table.filtersResolvingDescription',
-                    'La cerca i els filtres esperen a tenir totes les pàgines carregades abans de mostrar un resultat final.'
-                  )
-                  : tr(
-                    'movements.table.filtersResolvingErrorDescription',
-                    'Els filtres actius necessiten més pàgines de moviments. Reintenta la càrrega o neteja filtres per evitar resultats parcials.'
-                  )}
+                  ? 'La cerca i els filtres esperen a tenir totes les pàgines carregades abans de mostrar un resultat final.'
+                  : 'Els filtres actius necessiten més pàgines de moviments. Reintenta la càrrega o neteja filtres per evitar resultats parcials.'}
               </p>
             </div>
           </div>
@@ -2142,7 +2134,7 @@ export function TransactionsTable({
                 onClick={handleLoadMoreTransactions}
                 disabled={isLoadingMoreTransactions}
               >
-                {isLoadingMoreTransactions ? t.common.loading : tr('common.retry', 'Reintenta')}
+                {isLoadingMoreTransactions ? t.common.loading : 'Reintenta'}
               </Button>
             )}
             <Button variant="ghost" size="sm" onClick={clearAllFilters}>
