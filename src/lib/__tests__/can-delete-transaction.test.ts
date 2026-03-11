@@ -22,6 +22,12 @@ describe('canDeleteTransaction', () => {
     assert.equal(getDeleteTransactionBlockedReason(tx), 'parentRemittance');
   });
 
+  it('retorna false per pare bancari de Stripe ja processat', () => {
+    const tx = makeTx({ stripeTransferId: 'tr_123' });
+    assert.equal(canDeleteTransaction(tx), false);
+    assert.equal(getDeleteTransactionBlockedReason(tx), 'parentRemittance');
+  });
+
   it('retorna false per filla de remesa/desglossament', () => {
     const tx = makeTx({ isRemittanceItem: true, parentTransactionId: 'parent-1' });
     assert.equal(canDeleteTransaction(tx), false);

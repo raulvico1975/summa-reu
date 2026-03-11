@@ -89,6 +89,16 @@ test('buildDashboardSummary keeps current ledger semantics', () => {
         isRemittance: false,
         isRemittanceItem: true,
       },
+      {
+        amount: 100,
+        category: null,
+        archivedAt: null,
+        parentTransactionId: 'bank-parent-2',
+        source: 'stripe',
+        transactionType: 'donation',
+        isRemittance: false,
+        isRemittanceItem: false,
+      },
     ],
     'mission'
   );

@@ -14,7 +14,7 @@ const DERIVED_SOURCES = new Set(['remittance', 'stripe']);
 export function getDeleteTransactionBlockedReason(
   tx: Transaction
 ): DeleteTransactionBlockedReason | null {
-  if (tx.isRemittance === true) {
+  if (tx.isRemittance === true || !!tx.stripeTransferId) {
     return 'parentRemittance';
   }
 

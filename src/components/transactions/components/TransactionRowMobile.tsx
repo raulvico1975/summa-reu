@@ -124,6 +124,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   const hasBalanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter);
   const balanceText = hasBalanceAfter ? formatCurrencyEU(Math.abs(tx.balanceAfter!)) : '—';
   const isFromStripe = tx.source === 'stripe';
+  const hasStripeChildren = !!tx.stripeTransferId;
   const canManageReturn =
     tx.amount < 0 &&
     !tx.isRemittance &&
@@ -136,6 +137,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     !tx.isRemittanceItem &&
     !tx.isSplit &&
     !tx.parentTransactionId &&
+    !hasStripeChildren &&
     !isFromStripe &&
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
@@ -145,6 +147,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     !isReturnFee &&
     !tx.isRemittance &&
     !tx.isRemittanceItem &&
+    !hasStripeChildren &&
     !isFromStripe;
   const canSplitPaymentRemittance =
     tx.amount < 0 &&
@@ -152,13 +155,14 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     !isReturnFee &&
     !tx.isRemittance &&
     !tx.isRemittanceItem &&
+    !hasStripeChildren &&
     !isFromStripe;
   const canSplitStripeRemittance = React.useMemo(() => {
     const isIncome = tx.amount > 0;
     const isNotAlreadyDivided = tx.transactionType !== 'donation' && tx.transactionType !== 'fee';
     const isNotRemittance = !tx.isRemittance;
 
-    if (!isIncome || !isNotAlreadyDivided || !isNotRemittance) {
+    if (!isIncome || !isNotAlreadyDivided || !isNotRemittance || hasStripeChildren) {
       return false;
     }
 
@@ -170,7 +174,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
 
     const descUpper = tx.description?.toUpperCase() || '';
     return descUpper.includes('STRIPE') || descUpper.includes('TRANSFERENCIA DE STRIPE');
-  }, [tx.amount, tx.description, tx.isRemittance, tx.source, tx.transactionType]);
+  }, [hasStripeChildren, tx.amount, tx.description, tx.isRemittance, tx.source, tx.transactionType]);
   const deleteBlockedMessage = React.useMemo(() => {
     if (deleteBlockedReason === 'parentRemittance') {
       return t.deleteBlockedParentRemittance;
@@ -484,7 +488,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
                 {t.undoSplit || 'Desfer desglossament'}
               </DropdownMenuItem>
             )}
-            {tx.isRemittance && onUndoRemittance && (
+            {(tx.isRemittance || hasStripeChildren) && onUndoRemittance && (
               <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
                 <Undo2 className="h-4 w-4 mr-2" />
                 {t.undoRemittance || 'Desfer remesa'}

@@ -41,6 +41,19 @@ describe('isVisibleInMovementsLedger', () => {
     assert.equal(visible, false);
   });
 
+  it("oculta filla Stripe amb parentTransactionId encara que no sigui remesa clàssica", () => {
+    const visible = isVisibleInMovementsLedger({
+      isRemittance: false,
+      isRemittanceItem: false,
+      source: 'stripe',
+      parentTransactionId: 'bank-parent-1',
+      archivedAt: null,
+    }, {
+      showArchived: false,
+    });
+    assert.equal(visible, false);
+  });
+
   it('gestiona arxivades: showArchived OFF oculta, ON mostra', () => {
     const tx = {
       isRemittance: true,

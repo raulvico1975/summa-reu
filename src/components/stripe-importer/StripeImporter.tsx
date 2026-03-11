@@ -12,7 +12,7 @@ import {
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, doc, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, getDoc, writeBatch, deleteField } from 'firebase/firestore';
 import type { Transaction, Category } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
@@ -45,7 +45,8 @@ import { CreateQuickDonorDialog, type QuickDonorFormData } from './CreateQuickDo
 import { useTranslations } from '@/i18n';
 import { addDocumentNonBlocking } from '@/firebase';
 import { findExistingContact, addRole, needsRoleUpdate } from '@/lib/contact-matching';
-import { updateDoc } from 'firebase/firestore';
+import { updateContactViaApi } from '@/services/contacts';
+import { STRIPE_IMPORT_CHILD_CHUNK_SIZE } from '@/lib/stripe/import-chunking';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -89,6 +90,9 @@ type DonorMatch = {
   contactId: string;
   contactName: string;
   defaultCategoryId?: string | null;
+  roleUpdateData?: {
+    roles: Record<string, boolean>;
+  };
 } | null;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -104,7 +108,7 @@ export function StripeImporter({
   onImportDone,
 }: StripeImporterProps) {
   // Hooks de Firebase i organització
-  const { firestore, user } = useFirebase();
+  const { firestore, user, auth } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const userId = user?.uid;
   const { toast } = useToast();
@@ -390,9 +394,13 @@ export function StripeImporter({
         );
       }
 
-      // 3. Preparar batch d'escriptura atòmica
-      const batch = writeBatch(firestore);
-      let docsCreated = 0;
+      // 3. Preparar escriptures chunkades <= 50 operacions
+      const childWrites: Array<{
+        ref: ReturnType<typeof doc>;
+        data: Omit<Transaction, 'id'>;
+      }> = [];
+      const parentTxRef = doc(transactionsRef, bankTransaction.id);
+      const importStartedAt = new Date().toISOString();
 
       // 3a. Crear N transaccions d'ingrés (donacions)
       for (const row of selectedGroup.rows) {
@@ -439,8 +447,7 @@ export function StripeImporter({
           }
         );
 
-        batch.set(newTxRef, txData);
-        docsCreated++;
+        childWrites.push({ ref: newTxRef, data: txData });
       }
 
       // 3b. Crear 1 transacció de despesa (comissions agregades)
@@ -481,15 +488,63 @@ export function StripeImporter({
           }
         );
 
-        batch.set(feeTxRef, feeTxData);
-        docsCreated++;
+        childWrites.push({ ref: feeTxRef, data: feeTxData });
       }
 
-      // 3c. Eliminar el moviment bancari original
-      const originalTxRef = doc(transactionsRef, bankTransaction.id);
-      batch.delete(originalTxRef);
+      // 3c. Conservar el pare bancari i marcar-lo com a Stripe ja processat
+      const committedChildRefs: Array<ReturnType<typeof doc>> = [];
+      let parentMarked = false;
 
-      await batch.commit();
+      for (let i = 0; i < childWrites.length; i += STRIPE_IMPORT_CHILD_CHUNK_SIZE) {
+        const chunk = childWrites.slice(i, i + STRIPE_IMPORT_CHILD_CHUNK_SIZE);
+        const batch = writeBatch(firestore);
+        const isLastChunk = i + STRIPE_IMPORT_CHILD_CHUNK_SIZE >= childWrites.length;
+
+        for (const item of chunk) {
+          batch.set(item.ref, item.data);
+        }
+
+        if (isLastChunk) {
+          batch.update(parentTxRef, {
+            stripeTransferId: selectedGroup.transferId,
+            updatedAt: importStartedAt,
+          });
+        }
+
+        try {
+          await batch.commit();
+          committedChildRefs.push(...chunk.map((item) => item.ref));
+          if (isLastChunk) {
+            parentMarked = true;
+          }
+        } catch (commitError) {
+          if (committedChildRefs.length > 0 || parentMarked) {
+            try {
+              for (let j = 0; j < committedChildRefs.length; j += 50) {
+                const rollbackBatch = writeBatch(firestore);
+                const rollbackChunk = committedChildRefs.slice(j, j + 50);
+                for (const ref of rollbackChunk) {
+                  rollbackBatch.delete(ref);
+                }
+                await rollbackBatch.commit();
+              }
+
+              if (parentMarked) {
+                const resetBatch = writeBatch(firestore);
+                resetBatch.update(parentTxRef, {
+                  stripeTransferId: deleteField(),
+                  updatedAt: new Date().toISOString(),
+                });
+                await resetBatch.commit();
+              }
+            } catch (rollbackError) {
+              console.error('[stripe-importer] Rollback error after chunk failure:', rollbackError);
+            }
+          }
+
+          throw commitError;
+        }
+      }
 
       // VERIFICACIÓ POST-COMMIT OBLIGATÒRIA
       const q = query(
@@ -530,8 +585,72 @@ export function StripeImporter({
         errors.push(`Expected ${expectedFees} fee transaction, got ${feeCount}`);
       }
 
+      const parentSnap = await getDoc(parentTxRef);
+      if (!parentSnap.exists()) {
+        errors.push('Parent bank transaction missing after Stripe split');
+      } else {
+        const parentData = parentSnap.data() as Transaction;
+        if (parentData.stripeTransferId !== selectedGroup.transferId) {
+          errors.push('Parent bank transaction missing stripeTransferId marker');
+        }
+      }
+
       if (errors.length > 0) {
+        try {
+          for (let i = 0; i < childWrites.length; i += 50) {
+            const rollbackBatch = writeBatch(firestore);
+            const rollbackChunk = childWrites.slice(i, i + 50);
+            for (const item of rollbackChunk) {
+              rollbackBatch.delete(item.ref);
+            }
+            await rollbackBatch.commit();
+          }
+
+          const resetBatch = writeBatch(firestore);
+          resetBatch.update(parentTxRef, {
+            stripeTransferId: deleteField(),
+            updatedAt: new Date().toISOString(),
+          });
+          await resetBatch.commit();
+        } catch (rollbackError) {
+          console.error('[stripe-importer] Rollback error after post-commit validation failure:', rollbackError);
+        }
+
         throw new Error(`Validació post-commit fallida: ${errors.join('; ')}`);
+      }
+
+      const pendingRoleUpdates = Array.from(
+        new Map(
+          Object.values(donorMatches)
+            .filter((match): match is Exclude<DonorMatch, null> => !!match?.roleUpdateData)
+            .map((match) => [match.contactId, match.roleUpdateData!])
+        ).entries()
+      );
+
+      if (pendingRoleUpdates.length > 0) {
+        const roleUpdateResults = await Promise.allSettled(
+          pendingRoleUpdates.map(([docId, roleUpdateData]) =>
+            updateContactViaApi({
+              orgId: organizationId,
+              docId,
+              data: roleUpdateData,
+              auth,
+            })
+          )
+        );
+
+        const failedRoleUpdates = roleUpdateResults.filter(
+          (result) => result.status === 'rejected'
+        );
+
+        if (failedRoleUpdates.length > 0) {
+          console.error('[stripe-importer] Deferred contact role updates failed:', failedRoleUpdates);
+          toast({
+            variant: 'destructive',
+            title: t.common.error,
+            description: `Import Stripe completat, però ${failedRoleUpdates.length} actualització(ns) de contacte no s'han pogut aplicar.`,
+          });
+        }
       }
 
       // Toast d'èxit actualitzat
@@ -578,7 +697,18 @@ export function StripeImporter({
    * Si email és null, només assigna el contactId a la fila rowId
    */
   const applyDonorMatchForEmail = React.useCallback(
-    (rowId: string, contactId: string, contactName: string, email: string | null) => {
+    (
+      rowId: string,
+      contactId: string,
+      contactName: string,
+      email: string | null,
+      options?: {
+        defaultCategoryId?: string | null;
+        roleUpdateData?: {
+          roles: Record<string, boolean>;
+        };
+      }
+    ) => {
       if (!selectedGroup) return;
 
       setDonorMatches((prev) => {
@@ -588,7 +718,8 @@ export function StripeImporter({
         updated[rowId] = {
           contactId,
           contactName,
-          defaultCategoryId: null,
+          defaultCategoryId: options?.defaultCategoryId ?? null,
+          roleUpdateData: options?.roleUpdateData,
         };
 
         // Si hi ha email, auto-matcheja totes les altres files amb el mateix email
@@ -609,7 +740,8 @@ export function StripeImporter({
               updated[row.id] = {
                 contactId,
                 contactName,
-                defaultCategoryId: null,
+                defaultCategoryId: options?.defaultCategoryId ?? null,
+                roleUpdateData: options?.roleUpdateData,
               };
             }
           }
@@ -666,18 +798,16 @@ export function StripeImporter({
       );
 
       if (existingMatch.found && existingMatch.contact) {
-        // Ja existeix un contacte - usar-lo i afegir rol 'donor' si cal
+        // Ja existeix un contacte - usar-lo i diferir l'upgrade de rol fins que l'import acabi bé
         const existing = existingMatch.contact;
+        const roleUpdateData = needsRoleUpdate(existing, 'donor')
+          ? { roles: addRole(existing, 'donor') }
+          : undefined;
 
-        if (needsRoleUpdate(existing, 'donor')) {
-          // Afegir rol 'donor' al contacte existent
-          const contactRef = doc(contactsCollection, existing.id);
-          const newRoles = addRole(existing, 'donor');
-          await updateDoc(contactRef, { roles: newRoles });
-
+        if (roleUpdateData) {
           toast({
             title: t.importers.stripeImporter.createQuickDonor.success.title,
-            description: `${existing.name} ja existia com a ${existing.type}. S'ha afegit el rol de donant.`,
+            description: `${existing.name} ja existia com a ${existing.type}. S'aplicarà el rol de donant en completar la importació.`,
           });
         } else {
           toast({
@@ -692,7 +822,8 @@ export function StripeImporter({
             createDonorInitialData.rowId,
             existing.id,
             existing.name,
-            (existing as any).email || null
+            (existing as any).email || null,
+            { roleUpdateData }
           );
         }
 

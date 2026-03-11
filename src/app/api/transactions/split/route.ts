@@ -418,7 +418,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<SplitResp
     parentData.isRemittance === true ||
     parentData.isRemittanceItem === true ||
     parentData.isSplit === true ||
-    !!parentData.parentTransactionId
+    !!parentData.parentTransactionId ||
+    !!parentData.stripeTransferId
   ) {
     return NextResponse.json(
       {
