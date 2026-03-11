@@ -188,7 +188,13 @@ export const ca = {
     processingErrorTitle: "No s'ha pogut processar la gravació.",
     processingErrorAction: "Torna-ho a provar amb una nova gravació o revisa la configuració.",
     recordingStartError: "No s'ha pogut iniciar la gravació.",
+    recordingStartHint:
+      "La gravació només estarà disponible quan hi hagi almenys una persona dins la reunió. Primer entra a la reunió i després torna aquí per iniciar la gravació.",
+    recordingStartRequiresParticipant:
+      "No s'ha pogut iniciar la gravació perquè la sala encara no té participants actius. Entra a la reunió i torna a provar-ho.",
     recordingStopError: "No s'ha pogut aturar la gravació.",
+    recordingStopActionError:
+      "No s'ha pogut aturar la gravació. Si la reunió encara està oberta a Daily, torna-ho a provar. Si ja has sortit de la reunió, Daily pot haver tancat la gravació automàticament.",
     recordingStartInvalidState: "La gravació només es pot iniciar si la reunió està preparada.",
     recordingStopInvalidState: "Només pots aturar una gravació que està en marxa.",
     missingMeetingUrl: "La reunió encara no té URL operativa.",

@@ -116,7 +116,13 @@ export const esExtra: DeepPartial<I18nCa> = {
     processingErrorTitle: "No se ha podido procesar la grabación.",
     processingErrorAction: "Vuelve a intentarlo con una nueva grabación o revisa la configuración.",
     recordingStartError: "No se ha podido iniciar la grabación.",
+    recordingStartHint:
+      "La grabación solo estará disponible cuando haya al menos una persona dentro de la reunión. Primero entra en la reunión y luego vuelve aquí para iniciar la grabación.",
+    recordingStartRequiresParticipant:
+      "No se ha podido iniciar la grabación porque la sala aún no tiene participantes activos. Entra en la reunión y vuelve a intentarlo.",
     recordingStopError: "No se ha podido detener la grabación.",
+    recordingStopActionError:
+      "No se ha podido detener la grabación. Si la reunión todavía está abierta en Daily, vuelve a intentarlo. Si ya has salido de la reunión, Daily puede haber cerrado la grabación automáticamente.",
     recordingStartInvalidState: "La grabación solo se puede iniciar si la reunión está preparada.",
     recordingStopInvalidState: "Solo puedes detener una grabación que está en marcha.",
     missingMeetingUrl: "La reunión todavía no tiene una URL operativa.",

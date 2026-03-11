@@ -40,10 +40,12 @@ export function MeetingRecordingControls({
         details?: string;
       };
       if (!res.ok || !data.ok) {
+        if (url === "/api/owner/meetings/start-recording" && res.status === 400) {
+          throw new Error(i18n.meeting.recordingStartRequiresParticipant);
+        }
+
         if (data.error === "daily_stop_failed") {
-          throw new Error(
-            "No s'ha pogut aturar la gravació. Si la reunió encara està oberta a Daily, torna-ho a provar. Si ja has sortit de la reunió, Daily pot haver tancat la gravació automàticament."
-          );
+          throw new Error(i18n.meeting.recordingStopActionError);
         }
 
         throw new Error(data.error ?? data.message ?? i18n.poll.unexpectedError);
@@ -83,6 +85,9 @@ export function MeetingRecordingControls({
           {i18n.meeting.stopRecording}
         </Button>
       </div>
+      {recordingStatus === "none" ? (
+        <p className="text-sm text-slate-600">{i18n.meeting.recordingStartHint}</p>
+      ) : null}
       {state.error ? <p className="break-words text-sm text-red-600">{state.error}</p> : null}
     </div>
   );
