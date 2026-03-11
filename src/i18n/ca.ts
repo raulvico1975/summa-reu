@@ -7,6 +7,12 @@ export const ca = {
     signup: "Donar d'alta entitat",
     logout: "Sortir",
   },
+  session: {
+    idleWarningTitle: "Sessió a punt de tancar-se",
+    idleWarningDescription:
+      "Fa estona que no hi ha activitat. Si continues inactiu, la sessió es tancarà automàticament.",
+    continueSession: "Continuar sessió",
+  },
   status: {
     open: "Oberta",
     closed: "Tancada",

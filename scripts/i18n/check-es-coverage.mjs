@@ -11,8 +11,8 @@ const files = {
   esExtra: path.join(root, "src/i18n/es.extra.ts"),
 };
 
-const coreSections = ["appName", "nav", "status", "home", "login", "signup", "errors"];
-const noFallbackSections = ["home", "nav", "status", "errors", "dashboard", "poll", "meeting"];
+const coreSections = ["appName", "nav", "session", "status", "home", "login", "signup", "errors"];
+const noFallbackSections = ["home", "nav", "session", "status", "errors", "dashboard", "poll", "meeting"];
 
 function read(filePath) {
   return fs.readFileSync(filePath, "utf8");

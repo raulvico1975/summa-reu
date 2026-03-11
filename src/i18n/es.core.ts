@@ -12,6 +12,12 @@ export const esCore: I18nEsCore = {
     signup: "Dar de alta entidad",
     logout: "Cerrar sesión",
   },
+  session: {
+    idleWarningTitle: "La sesión está a punto de cerrarse",
+    idleWarningDescription:
+      "Hace un rato que no hay actividad. Si sigues inactivo, la sesión se cerrará automáticamente.",
+    continueSession: "Continuar sesión",
+  },
   status: {
     open: "Abierta",
     closed: "Cerrada",
