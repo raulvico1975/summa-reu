@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
-import { StatusBadge } from "@/src/components/ui/status-badge";
 import { MeetingLiveRefresh } from "@/src/components/meetings/meeting-live-refresh";
-import { MeetingRecordingControls } from "@/src/components/meetings/meeting-recording-controls";
+import { MeetingControlPanel } from "@/src/components/meetings/meeting-control-panel";
 import { MinutesEditor } from "@/src/components/meetings/minutes-editor";
 import { DeleteMeetingButton } from "@/src/components/meetings/delete-meeting-button";
 import { getMeetingById } from "@/src/lib/db/repo";
@@ -38,121 +37,61 @@ export default async function OwnerMeetingPage({
     : withLocalePath(locale, "/dashboard");
 
   return (
-    <div className="space-y-4">
-      <Card>
+    <div className="space-y-6">
+      <Card className="border-slate-300 shadow-sm">
         <CardHeader>
-          <h2 className="text-base font-semibold">{meeting.title}</h2>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-slate-700">
-              {i18n.meeting.recordingStatusLabel}: {i18n.status[recordingStatus]}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              {i18n.meeting.title}
             </p>
-            <StatusBadge status={recordingStatus} labels={i18n.status} />
+            <h1 className="text-xl font-semibold text-slate-950 sm:text-2xl">{meeting.title}</h1>
           </div>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-slate-700">
           {meeting.scheduledAt ? (
-            <p>
+            <p className="font-medium">
               {i18n.meeting.meetingDateLabel}: {formatDateTime(meeting.scheduledAt, locale)}
             </p>
           ) : null}
           {meeting.description ? <p className="break-words text-slate-600">{meeting.description}</p> : null}
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-300 shadow-sm">
+        <CardHeader>
+          <h2 className="text-base font-semibold">{i18n.meeting.controlPanelTitle}</h2>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <MeetingControlPanel
+            meetingId={meeting.id}
+            meetingUrl={dailyRoomUrl}
+            recordingStatus={recordingStatus}
+          />
           {showProcessingError ? (
-            <div className="space-y-1 text-sm text-red-600">
-              <p>{i18n.meeting.processingErrorTitle}</p>
+            <div className="space-y-1 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <p className="font-medium">{i18n.meeting.processingErrorTitle}</p>
               <p>{i18n.meeting.processingErrorAction}</p>
             </div>
           ) : null}
           {latestIngestJob?.status === "processing" || recordingStatus === "processing" ? (
             <p className="text-sm text-slate-500">{i18n.meeting.recordingReady}</p>
           ) : null}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <h2 className="text-base font-semibold">{i18n.meeting.sectionCall}</h2>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="grid gap-2 sm:flex sm:flex-wrap">
-            {dailyRoomUrl ? (
-              <a
-                href={dailyRoomUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-md bg-sky-500 px-4 py-2 text-center font-medium text-white transition-colors hover:bg-sky-600"
-              >
-                {i18n.meeting.enterMeeting}
-              </a>
-            ) : (
-              <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-center font-medium text-red-600">
-                {i18n.meeting.roomCreateError}
-              </p>
-            )}
-            <a
-              href={`/api/owner/minutes/export?meetingId=${meeting.id}`}
-              className="rounded-md border border-slate-300 px-3 py-2 text-center font-medium transition-colors hover:bg-slate-50"
-            >
-              {i18n.meeting.exportMinutesMd}
-            </a>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <h2 className="text-base font-semibold">{i18n.meeting.embeddedMeeting}</h2>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-slate-600">{i18n.meeting.embeddedMeetingHint}</p>
-          {dailyRoomUrl ? (
-            <iframe
-              src={dailyRoomUrl}
-              title={meeting.title}
-              className="h-[520px] w-full rounded-md border border-slate-200 bg-white"
-              allow="camera; microphone; fullscreen; display-capture"
-            />
-          ) : (
-            <p className="text-sm text-red-600">{i18n.meeting.roomCreateError}</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <h2 className="text-base font-semibold">{i18n.meeting.sectionRecording}</h2>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <MeetingRecordingControls
-            meetingId={meeting.id}
-            meetingUrl={dailyRoomUrl}
-            recordingStatus={recordingStatus}
-          />
           <MeetingLiveRefresh enabled={showRefresh} />
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-slate-300 shadow-sm">
         <CardHeader>
-          <h2 className="text-base font-semibold">{i18n.meeting.sectionRecordings}</h2>
+          <h2 className="text-base font-semibold">{i18n.meeting.sectionTranscript}</h2>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {meeting.recordingUrl ? (
             <video
               controls
               className="w-full rounded-md border border-slate-200 bg-slate-950"
               src={meeting.recordingUrl}
             />
-          ) : (
-            <p className="text-sm text-slate-500">{i18n.meeting.emptyRecordings}</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <h2 className="text-base font-semibold">{i18n.meeting.sectionTranscript}</h2>
-        </CardHeader>
-        <CardContent>
+          ) : null}
           {transcript ? (
             <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
               {transcript}
@@ -170,9 +109,15 @@ export default async function OwnerMeetingPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
+      <Card className="border-slate-300 shadow-sm">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-base font-semibold">{i18n.meeting.sectionMinutes}</h2>
+          <a
+            href={`/api/owner/minutes/export?meetingId=${meeting.id}`}
+            className="rounded-md border border-slate-300 px-3 py-2 text-center text-sm font-medium transition-colors hover:bg-slate-50"
+          >
+            {i18n.meeting.exportMinutesMd}
+          </a>
         </CardHeader>
         <CardContent>
           {minutesDraft ? (
@@ -190,7 +135,7 @@ export default async function OwnerMeetingPage({
         </CardContent>
       </Card>
 
-      <Card className="border-red-200">
+      <Card className="border-red-200 shadow-sm">
         <CardHeader>
           <h2 className="text-base font-semibold text-red-700">{i18n.meeting.deleteTitle}</h2>
         </CardHeader>

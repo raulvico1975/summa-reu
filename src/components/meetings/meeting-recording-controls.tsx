@@ -59,16 +59,16 @@ export function MeetingRecordingControls({
     }
   }
 
-  const isRecording = recordingStatus === "recording";
-  const isProcessing = recordingStatus === "processing";
+  const canStartRecording = recordingStatus === "none";
+  const canStopRecording = recordingStatus === "recording";
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           type="button"
           onClick={() => post("/api/owner/meetings/start-recording")}
-          disabled={state.loading || !meetingUrl || isRecording || isProcessing}
+          disabled={state.loading || !meetingUrl || !canStartRecording}
           className="w-full sm:w-auto"
         >
           {i18n.meeting.startRecording}
@@ -77,7 +77,7 @@ export function MeetingRecordingControls({
           type="button"
           variant="secondary"
           onClick={() => post("/api/owner/meetings/stop-recording")}
-          disabled={state.loading || !meetingUrl || !isRecording}
+          disabled={state.loading || !meetingUrl || !canStopRecording}
           className="w-full sm:w-auto"
         >
           {i18n.meeting.stopRecording}
