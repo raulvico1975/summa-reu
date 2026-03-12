@@ -16,6 +16,10 @@ import {
 import type { Transaction } from '../data';
 import { isFiscallyRelevantTransaction } from './softDeleteTransaction';
 import { acquireProcessLock, releaseProcessLock, type LockOperation } from './processLocks';
+import {
+  filterActiveRemittanceChildren,
+  isActiveRemittanceChild,
+} from '../remittances/is-active-child';
 
 // =============================================================================
 // TIPUS
@@ -198,7 +202,9 @@ export async function countChildTransactions(
     where('parentTransactionId', '==', parentTxId)
   );
   const byParentSnap = await getDocs(byParentQuery);
-  const byParentCount = byParentSnap.size;
+  const byParentCount = filterActiveRemittanceChildren(
+    byParentSnap.docs.map((d) => ({ ...(d.data() as Transaction), id: d.id }))
+  ).length;
 
   // Mètode 2: remittanceId (remeses legacy)
   let remittanceDocIds: string[] = [];
@@ -208,7 +214,9 @@ export async function countChildTransactions(
       where('remittanceId', '==', remittanceId)
     );
     const byRemittanceSnap = await getDocs(byRemittanceQuery);
-    remittanceDocIds = byRemittanceSnap.docs.map((d) => d.id);
+    remittanceDocIds = filterActiveRemittanceChildren(
+      byRemittanceSnap.docs.map((d) => ({ ...(d.data() as Transaction), id: d.id }))
+    ).map((d) => d.id);
   }
 
   count = resolveUndoChildCount(byParentCount, remittanceDocIds, parentTxId, remittanceId);
@@ -264,7 +272,10 @@ export async function executeUndo(
     );
     const byParentSnap = await getDocs(byParentQuery);
     byParentSnap.forEach(d => {
-      children.push({ id: d.id, data: { id: d.id, ...d.data() } as Transaction });
+      const childData = { id: d.id, ...d.data() } as Transaction;
+      if (isActiveRemittanceChild(childData)) {
+        children.push({ id: d.id, data: childData });
+      }
     });
 
     // Buscar per remittanceId (legacy) si no hem trobat res
@@ -275,8 +286,9 @@ export async function executeUndo(
       );
       const byRemittanceSnap = await getDocs(byRemittanceQuery);
       byRemittanceSnap.forEach(d => {
-        if (d.id !== parentTxId) {
-          children.push({ id: d.id, data: { id: d.id, ...d.data() } as Transaction });
+        const childData = { id: d.id, ...d.data() } as Transaction;
+        if (d.id !== parentTxId && isActiveRemittanceChild(childData)) {
+          children.push({ id: d.id, data: childData });
         }
       });
     }

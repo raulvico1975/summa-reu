@@ -9,6 +9,7 @@ import type { Transaction, Donor } from '@/lib/data';
 import { normalizeIBAN, normalizeTaxId as normalizeLibTaxId } from '@/lib/normalize';
 import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
 import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
+import { isActiveRemittanceChild } from '@/lib/remittances/is-active-child';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -1206,7 +1207,10 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           where('parentTransactionId', '==', parentId)
         );
         const existingChildrenSnap = await getDocs(existingChildrenQuery);
-        const existingChildrenCount = existingChildrenSnap.size;
+        const existingActiveChildrenDocs = existingChildrenSnap.docs.filter((childDoc) =>
+          isActiveRemittanceChild(childDoc.data())
+        );
+        const existingChildrenCount = existingActiveChildrenDocs.length;
 
         // ═══════════════════════════════════════════════════════════════════
         // MODE FORCE RECREATE: Eliminar TOTS els fills i crear des de zero
@@ -1216,7 +1220,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           // 1. ELIMINAR tots els fills existents (devolucions)
           let deletedChildrenCount = 0;
           if (existingChildrenCount > 0) {
-            for (const childDoc of existingChildrenSnap.docs) {
+            for (const childDoc of existingActiveChildrenDocs) {
               await deleteDoc(doc(firestore, 'organizations', organizationId, 'transactions', childDoc.id));
               deletedChildrenCount++;
             }
@@ -1375,7 +1379,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
         if (skipChildCreation) {
           // Ja hi ha fills - recalcular estat des de Firestore
-          const existingChildren = existingChildrenSnap.docs.map(d => d.data());
+          const existingChildren = existingActiveChildrenDocs.map(d => d.data());
           resolvedCount = existingChildren.filter(c => c.contactId).length;
           itemCount = group.originalTransaction.remittanceItemCount ?? existingChildrenCount;
           pendingCount = Math.max(0, itemCount - resolvedCount);
