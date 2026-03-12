@@ -66,7 +66,7 @@ import { StripeImporter } from '@/components/stripe-importer';
 import { SplitAmountDialog } from '@/components/transactions/split-amount-dialog';
 import { SplitDetailDialog } from '@/components/transactions/split-detail-dialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch, query, orderBy, where, getDocs, deleteDoc, deleteField } from 'firebase/firestore';
+import { collection, doc, writeBatch, query, orderBy, where, getDocs, deleteDoc, deleteField, updateDoc, type UpdateData } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tag, XCircle, Search, FileX, Undo } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -114,6 +114,12 @@ import { filterSplitChildTransactions } from '@/lib/splits/split-visibility';
 import { undoSplit } from '@/lib/splits/undoSplit';
 import { handleTransactionDelete, isFiscallyRelevantTransaction } from '@/lib/fiscal/softDeleteTransaction';
 import { isS9PendingFiscalTransaction } from '@/lib/fiscal/sentinels/s9-fiscal-coherence';
+import {
+  applyTransactionPatch,
+  buildCategoryInlineUpdate,
+  buildContactInlineUpdate,
+  matchesInlineReactiveFilter,
+} from '@/lib/transactions/inline-update-state';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -164,6 +170,8 @@ export function TransactionsTable({
   const [transactionsNextCursor, setTransactionsNextCursor] = React.useState<string | null>(null);
   const [hasMoreTransactions, setHasMoreTransactions] = React.useState(false);
   const [autoLoadBlockedByError, setAutoLoadBlockedByError] = React.useState(false);
+  const [inlineUpdatePendingByTxId, setInlineUpdatePendingByTxId] = React.useState<Record<string, 'contact' | 'category'>>({});
+  const INLINE_UPDATE_TIMEOUT_MS = 8000;
   // Memoitzar categoryTranslations per evitar re-renders innecessaris
   const categoryTranslations = React.useMemo(
     () => t.categories as Record<string, string>,
@@ -654,8 +662,8 @@ export function TransactionsTable({
     // Note Setter
     handleSetNote,
     // Property Setters
-    handleSetCategory,
-    handleSetContact,
+    handleSetCategory: handleSetCategoryFromHook,
+    handleSetContact: handleSetContactFromHook,
     handleSetProject,
     // Document Upload / Delete
     docLoadingStates,
@@ -693,6 +701,154 @@ export function TransactionsTable({
     userId: user?.uid,
     canEditMovements,
   });
+
+  const setInlineUpdatePending = React.useCallback((txId: string, nextState: 'contact' | 'category' | null) => {
+    setInlineUpdatePendingByTxId((prev) => {
+      if (nextState === null) {
+        if (!prev[txId]) return prev;
+        const next = { ...prev };
+        delete next[txId];
+        return next;
+      }
+
+      if (prev[txId] === nextState) return prev;
+      return {
+        ...prev,
+        [txId]: nextState,
+      };
+    });
+  }, []);
+
+  const rollbackInlineTransaction = React.useCallback((previousTx: Transaction) => {
+    setAllTransactions((prev) => applyTransactionPatch(prev, previousTx.id, previousTx));
+  }, []);
+
+  const runInlineTransactionUpdate = React.useCallback(async (
+    txId: string,
+    kind: 'contact' | 'category',
+    remoteUpdate: Record<string, unknown>,
+    localPatch: Partial<Transaction>
+  ) => {
+    if (!canEditMovements) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: 'No tens permisos per editar moviments.',
+      });
+      return;
+    }
+
+    if (!transactionsCollection) return;
+    if (inlineUpdatePendingByTxId[txId]) return;
+
+    const previousTx = allTransactionsById[txId];
+    if (!previousTx) return;
+
+    setInlineUpdatePending(txId, kind);
+    setAllTransactions((prev) => applyTransactionPatch(prev, txId, localPatch));
+
+    try {
+      const writePromise = updateDoc(doc(transactionsCollection, txId), remoteUpdate as UpdateData<Transaction>);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        const timeoutId = window.setTimeout(() => {
+          reject(new Error('Inline update timeout'));
+        }, INLINE_UPDATE_TIMEOUT_MS);
+        writePromise.finally(() => window.clearTimeout(timeoutId)).catch(() => {
+          window.clearTimeout(timeoutId);
+        });
+      });
+
+      await Promise.race([writePromise, timeoutPromise]);
+    } catch (error) {
+      rollbackInlineTransaction(previousTx);
+
+      const firebaseError = error as { message?: string };
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: firebaseError.message || t.common.dbConnectionError,
+      });
+    } finally {
+      setInlineUpdatePending(txId, null);
+    }
+  }, [
+    allTransactionsById,
+    canEditMovements,
+    INLINE_UPDATE_TIMEOUT_MS,
+    inlineUpdatePendingByTxId,
+    rollbackInlineTransaction,
+    setInlineUpdatePending,
+    t.common.dbConnectionError,
+    t.common.error,
+    toast,
+    transactionsCollection,
+  ]);
+
+  const handleSetCategory = React.useCallback((txId: string, categoryId: string) => {
+    const tx = allTransactionsById[txId];
+    if (!tx) return;
+
+    if (!canEditMovements) {
+      handleSetCategoryFromHook(txId, categoryId);
+      return;
+    }
+
+    if (!availableCategories) {
+      toast({
+        variant: 'destructive',
+        title: t.movements?.table?.categoryTypeMismatch?.title ?? 'Error',
+        description: t.movements?.table?.categoryTypeMismatch?.loading ?? 'Carregant categories… torna-ho a provar.',
+      });
+      return;
+    }
+
+    if (!isCategoryIdCompatibleStrict(tx.amount, categoryId, availableCategories)) {
+      toast({
+        variant: 'destructive',
+        title: t.movements?.table?.categoryTypeMismatch?.title ?? 'Tipus incompatible',
+        description: t.movements?.table?.categoryTypeMismatch?.description ?? 'Aquesta categoria no és compatible amb el signe del moviment.',
+      });
+      return;
+    }
+
+    const update = buildCategoryInlineUpdate(categoryId);
+    void runInlineTransactionUpdate(txId, 'category', update.remoteUpdate, update.localPatch);
+  }, [
+    allTransactionsById,
+    availableCategories,
+    canEditMovements,
+    handleSetCategoryFromHook,
+    runInlineTransactionUpdate,
+    t,
+    toast,
+  ]);
+
+  const handleSetContact = React.useCallback((txId: string, newContactId: string | null, contactType?: ContactType) => {
+    const tx = allTransactionsById[txId];
+    if (!tx) return;
+
+    if (!canEditMovements) {
+      handleSetContactFromHook(txId, newContactId, contactType);
+      return;
+    }
+
+    const update = buildContactInlineUpdate({
+      transaction: tx,
+      nextContactId: newContactId,
+      contactType,
+      availableContacts,
+      availableCategories,
+    });
+
+    void runInlineTransactionUpdate(txId, 'contact', update.remoteUpdate, update.localPatch);
+  }, [
+    allTransactionsById,
+    availableCategories,
+    availableContacts,
+    canEditMovements,
+    handleSetContactFromHook,
+    runInlineTransactionUpdate,
+  ]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENAME DIALOG STATE & HELPERS
@@ -876,156 +1032,160 @@ export function TransactionsTable({
     return transactions.filter(tx => isS9PendingFiscalTransaction(tx));
   }, [transactions]);
 
-  // Transaccions filtrades i ordenades per data (més recents primer)
-  const filteredTransactions = React.useMemo(() => {
-    if (!transactions) return [];
+  const pendingReturnsIds = React.useMemo(
+    () => new Set(pendingReturns.map((tx) => tx.id)),
+    [pendingReturns]
+  );
+  const pendingRemittanceIds = React.useMemo(
+    () => new Set(pendingReturnsStats.pendingRemittancesList.map((tx) => tx.id)),
+    [pendingReturnsStats.pendingRemittancesList]
+  );
+  const pendingIndividualIds = React.useMemo(
+    () => new Set(pendingReturnsStats.pendingIndividualsList.map((tx) => tx.id)),
+    [pendingReturnsStats.pendingIndividualsList]
+  );
 
-    let result: Transaction[];
+  const matchesTransactionFilters = React.useCallback((tx: Transaction) => {
     switch (tableFilter) {
       case 'missing':
-        result = expensesWithoutDoc;
+        if (!(tx.amount < 0 && !tx.document)) return false;
         break;
       case 'returns':
-        result = returnTransactions;
+        if (!(tx.transactionType === 'return' || tx.transactionType === 'return_fee')) return false;
         break;
       case 'income':
-        result = transactions.filter(tx => tx.amount > 0);
+        if (!(tx.amount > 0)) return false;
         break;
       case 'expenses':
-        // Totes les despeses (amount < 0)
-        result = transactions.filter(tx => tx.amount < 0);
+        if (!(tx.amount < 0)) return false;
         break;
       case 'expensesWithoutDoc':
-        // Despeses sense document adjunt
-        result = transactions.filter(tx => tx.amount < 0 && !tx.document);
+        if (!(tx.amount < 0 && !tx.document)) return false;
         break;
       case 'operatingExpenses':
-        result = transactions.filter(
-          tx => tx.amount < 0 && tx.category !== missionTransferCategoryId
-        );
+        if (!(tx.amount < 0 && tx.category !== missionTransferCategoryId)) return false;
         break;
       case 'missionTransfers':
-        result = transactions.filter(tx => missionTransferCategoryId && tx.category === missionTransferCategoryId);
+        if (!(missionTransferCategoryId && tx.category === missionTransferCategoryId)) return false;
         break;
-      case 'donations':
-        // Donacions: ingressos de contactType donor amb membershipType one-time
-        result = transactions.filter(tx => {
-          if (tx.amount <= 0 || tx.contactType !== 'donor' || !tx.contactId) return false;
-          const membershipType = donorMembershipMap.get(tx.contactId) || 'one-time';
-          return membershipType === 'one-time';
-        });
+      case 'donations': {
+        if (tx.amount <= 0 || tx.contactType !== 'donor' || !tx.contactId) return false;
+        const membershipType = donorMembershipMap.get(tx.contactId) || 'one-time';
+        if (membershipType !== 'one-time') return false;
         break;
-      case 'memberFees':
-        // Quotes de socis: ingressos de contactType donor amb membershipType recurring
-        result = transactions.filter(tx => {
-          if (tx.amount <= 0 || tx.contactType !== 'donor' || !tx.contactId) return false;
-          const membershipType = donorMembershipMap.get(tx.contactId) || 'one-time';
-          return membershipType === 'recurring';
-        });
+      }
+      case 'memberFees': {
+        if (tx.amount <= 0 || tx.contactType !== 'donor' || !tx.contactId) return false;
+        const membershipType = donorMembershipMap.get(tx.contactId) || 'one-time';
+        if (membershipType !== 'recurring') return false;
         break;
+      }
       case 'pendingReturns':
-        result = pendingReturns;
+        if (!pendingReturnsIds.has(tx.id)) return false;
         break;
       case 'pendingRemittances':
-        // Només fitxers de devolucions pendents (remeses)
-        result = pendingReturnsStats.pendingRemittancesList;
+        if (!pendingRemittanceIds.has(tx.id)) return false;
         break;
       case 'pendingIndividuals':
-        // Només devolucions individuals pendents
-        result = pendingReturnsStats.pendingIndividualsList;
+        if (!pendingIndividualIds.has(tx.id)) return false;
         break;
       case 'uncategorized':
-        result = uncategorizedTransactions;
-        break;
       case 'noContact':
-        result = noContactTransactions;
-        break;
       case 'donationsNoContact':
-        result = donationsNoContactTransactions;
+        if (!matchesInlineReactiveFilter(tx, tableFilter)) return false;
         break;
       case 'fiscalPending':
-        result = fiscalPendingTransactions;
+        if (!isS9PendingFiscalTransaction(tx)) return false;
         break;
+      case 'all':
       default:
-        result = transactions;
+        break;
     }
 
-    // Filtre de visibilitat ledger (contracte únic a remittance-visibility.ts)
-    if (hideRemittanceItems) {
-      result = result.filter((tx) =>
-        isVisibleInMovementsLedger(tx, { showArchived: showArchivedInLedger })
-      );
+    if (hideRemittanceItems && !isVisibleInMovementsLedger(tx, { showArchived: showArchivedInLedger })) {
+      return false;
     }
 
-    // Filtre per amagar fills de "Desglossar import" (només es veu el pare bancari).
-    result = filterSplitChildTransactions(result, allTransactionsById);
+    if (tx.parentTransactionId && allTransactionsById[tx.parentTransactionId]?.isSplit) {
+      return false;
+    }
 
-    // Filtre per source
     if (sourceFilter !== 'all') {
       if (sourceFilter === 'null') {
-        result = result.filter(tx => !tx.source);
-      } else {
-        result = result.filter(tx => tx.source === sourceFilter);
+        if (tx.source) return false;
+      } else if (tx.source !== sourceFilter) {
+        return false;
       }
     }
 
-    // Filtre per compte bancari
-    if (bankAccountFilter !== '__all__') {
-      result = result.filter(tx => tx.bankAccountId === bankAccountFilter);
+    if (bankAccountFilter !== '__all__' && tx.bankAccountId !== bankAccountFilter) {
+      return false;
     }
 
-    // Filtre de cerca intel·ligent
+    if (contactIdFilter && tx.contactId !== contactIdFilter) {
+      return false;
+    }
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      result = result.filter(tx => {
-        // Camps de text de la transacció
-        const txFields = [
-          tx.description,
-          tx.note,
-        ].filter(Boolean).map(f => f!.toLowerCase());
+      const txFields = [tx.description, tx.note]
+        .filter(Boolean)
+        .map((field) => field!.toLowerCase());
+      const contactName = tx.contactId && contactMap[tx.contactId]
+        ? contactMap[tx.contactId].name.toLowerCase()
+        : '';
+      const projectName = tx.projectId && projectMap[tx.projectId]
+        ? projectMap[tx.projectId].toLowerCase()
+        : '';
+      const categoryName = tx.category
+        ? getCategoryDisplayName(tx.category).toLowerCase()
+        : '';
+      const amountStr = Math.abs(tx.amount).toString();
+      const amountFormatted = formatCurrencyEU(tx.amount).toLowerCase();
 
-        // Nom del contacte
-        const contactName = tx.contactId && contactMap[tx.contactId]
-          ? contactMap[tx.contactId].name.toLowerCase()
-          : '';
+      const matchesSearch = (
+        txFields.some((field) => field.includes(query)) ||
+        contactName.includes(query) ||
+        projectName.includes(query) ||
+        categoryName.includes(query) ||
+        amountStr.includes(query.replace(',', '.').replace('.', '')) ||
+        amountFormatted.includes(query)
+      );
 
-        // Nom del projecte
-        const projectName = tx.projectId && projectMap[tx.projectId]
-          ? projectMap[tx.projectId].toLowerCase()
-          : '';
-
-        // Nom de la categoria traduït
-        const categoryName = tx.category
-          ? getCategoryDisplayName(tx.category).toLowerCase()
-          : '';
-
-        // Import (cerca per número)
-        const amountStr = Math.abs(tx.amount).toString();
-        const amountFormatted = formatCurrencyEU(tx.amount).toLowerCase();
-
-        // Comprovar si coincideix amb algun camp
-        return (
-          txFields.some(field => field.includes(query)) ||
-          contactName.includes(query) ||
-          projectName.includes(query) ||
-          categoryName.includes(query) ||
-          amountStr.includes(query.replace(',', '.').replace('.', '')) ||
-          amountFormatted.includes(query)
-        );
-      });
+      if (!matchesSearch) return false;
     }
 
-    // Filtre per contactId (des d'enllaç de donant)
-    if (contactIdFilter) {
-      result = result.filter(tx => tx.contactId === contactIdFilter);
-    }
+    return true;
+  }, [
+    allTransactionsById,
+    bankAccountFilter,
+    contactIdFilter,
+    contactMap,
+    donorMembershipMap,
+    getCategoryDisplayName,
+    hideRemittanceItems,
+    missionTransferCategoryId,
+    pendingIndividualIds,
+    pendingRemittanceIds,
+    pendingReturnsIds,
+    projectMap,
+    searchQuery,
+    showArchivedInLedger,
+    sourceFilter,
+    tableFilter,
+  ]);
+
+  // Transaccions filtrades i ordenades per data (més recents primer)
+  const filteredTransactions = React.useMemo(() => {
+    if (!transactions) return [];
+    const result = transactions.filter(matchesTransactionFilters);
 
     // Ordenar per data (criteri principal) i, en grups fiables, per saldo intra-dia
     return sortTransactionsForTable(result, {
       sortDateAsc,
       getDisplayDate,
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, fiscalPendingTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter, getDisplayDate, allTransactionsById, showArchivedInLedger]);
+  }, [transactions, matchesTransactionFilters, sortDateAsc, getDisplayDate]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
@@ -2403,7 +2563,8 @@ export function TransactionsTable({
                   availableProjects={availableProjects}
                   showProjectColumn={showProjectColumn}
                   isDocumentLoading={docLoadingStates[tx.id] || false}
-                  isCategoryLoading={loadingStates[tx.id] || false}
+                  isCategoryLoading={loadingStates[tx.id] || Boolean(inlineUpdatePendingByTxId[tx.id])}
+                  isContactLoading={Boolean(inlineUpdatePendingByTxId[tx.id])}
                   isSelected={canBulkEdit ? selectedIds.has(tx.id) : undefined}
                   isSelectionDisabled={canBulkEdit ? isBulkSelectionBlocked(tx) : undefined}
                   onToggleSelect={canBulkEdit ? toggleOne : undefined}

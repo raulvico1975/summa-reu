@@ -94,6 +94,7 @@ interface TransactionRowProps {
   showProjectColumn: boolean;
   isDocumentLoading: boolean;
   isCategoryLoading: boolean;
+  isContactLoading?: boolean;
   // Bulk selection (opcional, només si canBulkEdit)
   isSelected?: boolean;
   isSelectionDisabled?: boolean;
@@ -204,6 +205,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   showProjectColumn,
   isDocumentLoading,
   isCategoryLoading,
+  isContactLoading,
   isSelected,
   isSelectionDisabled,
   onToggleSelect,
@@ -791,6 +793,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             value={tx.contactId ?? null}
             onSelect={handleSelectContact}
             onCreateNew={handleCreateNewContact}
+            disabled={isContactLoading}
           />
         )}
       </TableCell>
@@ -802,7 +805,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             <Button
               variant="ghost"
               role="combobox"
-              disabled={isCategoryLoading}
+              disabled={isCategoryLoading || isContactLoading}
               className={`justify-start rounded-full border border-border bg-muted/30 px-2 py-0.5 text-xs font-medium h-6 min-w-0 w-auto gap-0.5 text-foreground/90 hover:bg-muted/50 ${isReturnedDonation ? 'opacity-50' : ''}`}
             >
               {isCategoryLoading ? (
