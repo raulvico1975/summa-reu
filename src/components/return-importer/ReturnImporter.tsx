@@ -19,9 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Tooltip,
   TooltipContent,
@@ -51,6 +55,7 @@ import {
   UserRoundX,
   Search,
   UserPlus,
+  ChevronDown,
 } from 'lucide-react';
 import { useReturnImporter, type ParsedReturn, type BulkReturnGroup } from './useReturnImporter';
 import { useTranslations } from '@/i18n';
@@ -86,6 +91,7 @@ export function ReturnImporter({
   const [dragActive, setDragActive] = React.useState(false);
   const [forceRecreateChildren, setForceRecreateChildren] = React.useState(false);
   const [confirmForceRecreate, setConfirmForceRecreate] = React.useState(false);
+  const [isOptionalMappingOpen, setIsOptionalMappingOpen] = React.useState(false);
 
   const {
     step,
@@ -295,11 +301,36 @@ export function ReturnImporter({
   );
 
   const dialogContentClassName =
-    step === 'mapping'
-      ? 'w-[95vw] max-h-[90vh] overflow-x-hidden overflow-y-auto p-4 sm:max-w-4xl sm:p-6'
-      : step === 'preview'
-        ? 'w-[95vw] max-h-[90vh] overflow-x-hidden overflow-y-auto p-4 sm:max-w-5xl sm:p-6'
-        : 'w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto sm:max-w-lg';
+    step === 'mapping' || step === 'preview'
+      ? 'max-h-[85vh] w-full max-w-5xl flex flex-col overflow-hidden p-0'
+      : 'w-[calc(100vw-2rem)] max-w-lg';
+
+  const mappingMissingMessage =
+    mapping.ibanColumn === null
+      ? "Falta assignar l'IBAN."
+      : mapping.amountColumn === null
+        ? "Falta assignar l'import."
+        : null;
+
+  const bulkAutoProcessCount = bulkReturnGroups.filter((group) => group.status === 'auto').length;
+
+  const previewActionMessage = bulkReturnGroups.length > 0
+    ? (
+      bulkAutoProcessCount === 0
+        ? 'No hi ha cap liquidacio llesta per processar.'
+        : forceRecreateChildren && !confirmForceRecreate
+          ? (t.returnImporter?.confirmRequiredDesc || 'Confirma la recreacio forçada per continuar.')
+          : null
+    )
+    : (
+      partialRemittanceStats.allPending
+        ? (t.returnImporter?.identifyAtLeastOne || 'Identifica almenys un donant per continuar')
+        : selectedRows.size === 0
+          ? 'Selecciona almenys una devolucio per continuar.'
+          : forceRecreateChildren && !confirmForceRecreate
+            ? (t.returnImporter?.confirmRequiredDesc || 'Confirma la recreacio forçada per continuar.')
+            : null
+    );
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDERITZACIÓ
@@ -389,214 +420,236 @@ export function ReturnImporter({
             ═══════════════════════════════════════════════════════════════════ */}
         {step === 'mapping' && (
           <>
-            <DialogHeader>
-              <DialogTitle>
-                {t.returnImporter?.columnMapping || "Configuració de columnes"}
-              </DialogTitle>
-              <DialogDescription>
-                {(t.returnImporter?.dataRowsDetected || "S'han detectat {count} files de dades en {files} fitxer(s)")
-                  .replace('{count}', String(allRows.length - startRow))
-                  .replace('{files}', String(files.length))}
-              </DialogDescription>
-            </DialogHeader>
-
-            {/* Configuració fila inicial */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t.returnImporter?.startRowLabel || "Fila inicial de dades:"}</label>
-              <Select
-                value={String(startRow)}
-                onValueChange={(value) => setStartRow(parseInt(value, 10))}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: Math.min(allRows.length, 20) }, (_, i) => (
-                    <SelectItem key={i} value={String(i)}>
-                      {(t.returnImporter?.rowPreview || "Fila {n}: {preview}...")
-                        .replace('{n}', String(i + 1))
-                        .replace('{preview}', allRows[i]?.slice(0, 3).join(' | ').substring(0, 60) || '')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="shrink-0 border-b px-6 py-4">
+              <DialogHeader className="pr-8">
+                <DialogTitle>
+                  {t.returnImporter?.columnMapping || "Configuracio de columnes"}
+                </DialogTitle>
+                <DialogDescription>
+                  {(t.returnImporter?.dataRowsDetected || "S'han detectat {count} files de dades en {files} fitxer(s)")
+                    .replace('{count}', String(allRows.length - startRow))
+                    .replace('{files}', String(files.length))}
+                </DialogDescription>
+              </DialogHeader>
             </div>
 
-            {/* Mapejat de columnes */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* IBAN */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                  {t.returnImporter?.ibanColumn || "Columna IBAN"} *
-                </label>
-                <Select
-                  value={mapping.ibanColumn !== null ? String(mapping.ibanColumn) : 'none'}
-                  onValueChange={(value) => setMapping({ ...mapping, ibanColumn: value === 'none' ? null : parseInt(value, 10) })}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder={t.returnImporter?.selectPlaceholder || "-- Selecciona --"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t.returnImporter?.selectPlaceholder || "-- Selecciona --"}</SelectItem>
-                    {Array.from({ length: numColumns }, (_, i) => (
-                      <SelectItem key={i} value={String(i)}>
-                        {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
-                          .replace('{n}', String(i + 1))
-                          .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Import */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                  {t.returnImporter?.amountColumn || "Columna Import"} *
-                </label>
-                <Select
-                  value={mapping.amountColumn !== null ? String(mapping.amountColumn) : 'none'}
-                  onValueChange={(value) => setMapping({ ...mapping, amountColumn: value === 'none' ? null : parseInt(value, 10) })}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder={t.returnImporter?.selectPlaceholder || "-- Selecciona --"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t.returnImporter?.selectPlaceholder || "-- Selecciona --"}</SelectItem>
-                    {Array.from({ length: numColumns }, (_, i) => (
-                      <SelectItem key={i} value={String(i)}>
-                        {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
-                          .replace('{n}', String(i + 1))
-                          .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Data */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-purple-500"></span>
-                  {t.returnImporter?.dateColumn || "Columna Data"} (opcional)
-                </label>
-                <Select
-                  value={mapping.dateColumn !== null ? String(mapping.dateColumn) : 'none'}
-                  onValueChange={(value) => setMapping({ ...mapping, dateColumn: value === 'none' ? null : parseInt(value, 10) })}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder={t.returnImporter?.notAvailable || "-- No disponible --"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t.returnImporter?.notAvailable || "-- No disponible --"}</SelectItem>
-                    {Array.from({ length: numColumns }, (_, i) => (
-                      <SelectItem key={i} value={String(i)}>
-                        {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
-                          .replace('{n}', String(i + 1))
-                          .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* DNI */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-gray-400"></span>
-                  {t.returnImporter?.dniColumn || "Columna DNI"} (opcional)
-                </label>
-                <Select
-                  value={mapping.dniColumn !== null ? String(mapping.dniColumn) : 'none'}
-                  onValueChange={(value) => setMapping({ ...mapping, dniColumn: value === 'none' ? null : parseInt(value, 10) })}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder={t.returnImporter?.notAvailable || "-- No disponible --"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t.returnImporter?.notAvailable || "-- No disponible --"}</SelectItem>
-                    {Array.from({ length: numColumns }, (_, i) => (
-                      <SelectItem key={i} value={String(i)}>
-                        {(t.returnImporter?.columnPreview || "Col {n}: {preview}")
-                          .replace('{n}', String(i + 1))
-                          .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Preview de dades */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{(t.returnImporter?.previewLabel || "Vista prèvia (primeres {n} files):").replace('{n}', String(previewRows.length))}</label>
-              <ScrollArea className="h-[180px] rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12 text-xs">#</TableHead>
-                      {Array.from({ length: numColumns }, (_, i) => (
-                        <TableHead
-                          key={i}
-                          className={`text-xs min-w-[100px] ${
-                            i === mapping.ibanColumn ? 'bg-green-100 dark:bg-green-900/30' :
-                            i === mapping.amountColumn ? 'bg-blue-100 dark:bg-blue-900/30' :
-                            i === mapping.dateColumn ? 'bg-purple-100 dark:bg-purple-900/30' :
-                            i === mapping.dniColumn ? 'bg-gray-100 dark:bg-gray-800/30' :
-                            ''
-                          }`}
-                        >
-                          Col {i + 1}
-                        </TableHead>
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-6">
+                <div className="space-y-2 rounded-lg border p-4">
+                  <label className="text-sm font-medium">{t.returnImporter?.startRowLabel || "Fila inicial de dades:"}</label>
+                  <Select
+                    value={String(startRow)}
+                    onValueChange={(value) => setStartRow(parseInt(value, 10))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: Math.min(allRows.length, 20) }, (_, i) => (
+                        <SelectItem key={i} value={String(i)}>
+                          {(t.returnImporter?.rowPreview || "Fila {n}: {preview}...")
+                            .replace('{n}', String(i + 1))
+                            .replace('{preview}', allRows[i]?.slice(0, 3).join(' | ').substring(0, 60) || '')}
+                        </SelectItem>
                       ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {previewRows.map((row, rowIdx) => (
-                      <TableRow key={rowIdx}>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {startRow + rowIdx + 1}
-                        </TableCell>
-                        {Array.from({ length: numColumns }, (_, colIdx) => (
-                          <TableCell
-                            key={colIdx}
-                            className={`text-xs truncate max-w-[150px] ${
-                              colIdx === mapping.ibanColumn ? 'bg-green-50 dark:bg-green-900/20' :
-                              colIdx === mapping.amountColumn ? 'bg-blue-50 dark:bg-blue-900/20' :
-                              colIdx === mapping.dateColumn ? 'bg-purple-50 dark:bg-purple-900/20' :
-                              colIdx === mapping.dniColumn ? 'bg-gray-50 dark:bg-gray-800/20' :
-                              ''
-                            }`}
-                          >
-                            {row[colIdx] || '-'}
-                          </TableCell>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3 rounded-lg border p-4">
+                  <Label className="font-medium">Camps obligatoris</Label>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                        {t.returnImporter?.ibanColumn || 'Columna IBAN'} *
+                      </label>
+                      <Select
+                        value={mapping.ibanColumn !== null ? String(mapping.ibanColumn) : 'none'}
+                        onValueChange={(value) => setMapping({ ...mapping, ibanColumn: value === 'none' ? null : parseInt(value, 10) })}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t.returnImporter?.selectPlaceholder || '-- Selecciona --'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{t.returnImporter?.selectPlaceholder || '-- Selecciona --'}</SelectItem>
+                          {Array.from({ length: numColumns }, (_, i) => (
+                            <SelectItem key={i} value={String(i)}>
+                              {(t.returnImporter?.columnPreview || 'Col {n}: {preview}')
+                                .replace('{n}', String(i + 1))
+                                .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                        {t.returnImporter?.amountColumn || 'Columna Import'} *
+                      </label>
+                      <Select
+                        value={mapping.amountColumn !== null ? String(mapping.amountColumn) : 'none'}
+                        onValueChange={(value) => setMapping({ ...mapping, amountColumn: value === 'none' ? null : parseInt(value, 10) })}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder={t.returnImporter?.selectPlaceholder || '-- Selecciona --'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{t.returnImporter?.selectPlaceholder || '-- Selecciona --'}</SelectItem>
+                          {Array.from({ length: numColumns }, (_, i) => (
+                            <SelectItem key={i} value={String(i)}>
+                              {(t.returnImporter?.columnPreview || 'Col {n}: {preview}')
+                                .replace('{n}', String(i + 1))
+                                .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <Collapsible open={isOptionalMappingOpen} onOpenChange={setIsOptionalMappingOpen} className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <Label className="font-medium">Mes camps</Label>
+                    <CollapsibleTrigger asChild>
+                      <Button type="button" variant="ghost" size="sm" className="gap-2 px-2">
+                        Mostrar opcionals
+                        <ChevronDown className={`h-4 w-4 transition-transform ${isOptionalMappingOpen ? 'rotate-180' : ''}`} />
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                  <CollapsibleContent className="pt-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-purple-500"></span>
+                          {t.returnImporter?.dateColumn || 'Columna Data'} (opcional)
+                        </label>
+                        <Select
+                          value={mapping.dateColumn !== null ? String(mapping.dateColumn) : 'none'}
+                          onValueChange={(value) => setMapping({ ...mapping, dateColumn: value === 'none' ? null : parseInt(value, 10) })}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={t.returnImporter?.notAvailable || '-- No disponible --'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t.returnImporter?.notAvailable || '-- No disponible --'}</SelectItem>
+                            {Array.from({ length: numColumns }, (_, i) => (
+                              <SelectItem key={i} value={String(i)}>
+                                {(t.returnImporter?.columnPreview || 'Col {n}: {preview}')
+                                  .replace('{n}', String(i + 1))
+                                  .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full bg-gray-400"></span>
+                          {t.returnImporter?.dniColumn || 'Columna DNI'} (opcional)
+                        </label>
+                        <Select
+                          value={mapping.dniColumn !== null ? String(mapping.dniColumn) : 'none'}
+                          onValueChange={(value) => setMapping({ ...mapping, dniColumn: value === 'none' ? null : parseInt(value, 10) })}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder={t.returnImporter?.notAvailable || '-- No disponible --'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t.returnImporter?.notAvailable || '-- No disponible --'}</SelectItem>
+                            {Array.from({ length: numColumns }, (_, i) => (
+                              <SelectItem key={i} value={String(i)}>
+                                {(t.returnImporter?.columnPreview || 'Col {n}: {preview}')
+                                  .replace('{n}', String(i + 1))
+                                  .replace('{preview}', previewRows[0]?.[i]?.substring(0, 25) || '-')}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{(t.returnImporter?.previewLabel || 'Vista previa (primeres {n} files):').replace('{n}', String(previewRows.length))}</label>
+                  <div className="max-h-[240px] overflow-auto rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12 text-xs">#</TableHead>
+                          {Array.from({ length: numColumns }, (_, i) => (
+                            <TableHead
+                              key={i}
+                              className={`text-xs min-w-[100px] ${
+                                i === mapping.ibanColumn ? 'bg-green-100 dark:bg-green-900/30' :
+                                i === mapping.amountColumn ? 'bg-blue-100 dark:bg-blue-900/30' :
+                                i === mapping.dateColumn ? 'bg-purple-100 dark:bg-purple-900/30' :
+                                i === mapping.dniColumn ? 'bg-gray-100 dark:bg-gray-800/30' :
+                                ''
+                              }`}
+                            >
+                              Col {i + 1}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {previewRows.map((row, rowIdx) => (
+                          <TableRow key={rowIdx}>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {startRow + rowIdx + 1}
+                            </TableCell>
+                            {Array.from({ length: numColumns }, (_, colIdx) => (
+                              <TableCell
+                                key={colIdx}
+                                className={`text-xs truncate max-w-[150px] ${
+                                  colIdx === mapping.ibanColumn ? 'bg-green-50 dark:bg-green-900/20' :
+                                  colIdx === mapping.amountColumn ? 'bg-blue-50 dark:bg-blue-900/20' :
+                                  colIdx === mapping.dateColumn ? 'bg-purple-50 dark:bg-purple-900/20' :
+                                  colIdx === mapping.dniColumn ? 'bg-gray-50 dark:bg-gray-800/20' :
+                                  ''
+                                }`}
+                              >
+                                {row[colIdx] || '-'}
+                              </TableCell>
+                            ))}
+                          </TableRow>
                         ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => { reset(); }}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {t.returnImporter?.back || "Tornar"}
-              </Button>
-              <Button
-                onClick={performMatching}
-                disabled={isProcessing || mapping.ibanColumn === null || mapping.amountColumn === null}
-              >
-                {isProcessing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                )}
-                {t.returnImporter?.continue || "Continuar"}
-              </Button>
-            </DialogFooter>
+            <div className="shrink-0 border-t px-6 py-4">
+              {mappingMissingMessage ? (
+                <p className="mb-3 text-sm text-muted-foreground">{mappingMissingMessage}</p>
+              ) : null}
+              <DialogFooter className="gap-2 sm:justify-between sm:space-x-0">
+                <Button variant="outline" onClick={() => { reset(); }}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  {t.returnImporter?.back || 'Tornar'}
+                </Button>
+                <Button
+                  onClick={performMatching}
+                  disabled={isProcessing || mapping.ibanColumn === null || mapping.amountColumn === null}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                  )}
+                  {t.returnImporter?.continue || 'Continuar'}
+                </Button>
+              </DialogFooter>
+            </div>
           </>
         )}
 
@@ -605,478 +658,473 @@ export function ReturnImporter({
             ═══════════════════════════════════════════════════════════════════ */}
         {step === 'preview' && (
           <>
-            <DialogHeader>
-              <DialogTitle>
-                {isContextMode
-                  ? (t.returnImporter?.contextModeTitle || "Assignar devolucions a l'apunt seleccionat")
-                  : (t.returnImporter?.results || "Resultat del matching")}
-              </DialogTitle>
-              <DialogDescription>
-                {isContextMode && hookParentTx ? (
-                  <span className="flex flex-col gap-1">
-                    <span className="font-medium text-foreground">
-                      {hookParentTx.date} · {formatCurrencyEU(Math.abs(hookParentTx.amount))} · {hookParentTx.description?.slice(0, 50)}
+            <div className="shrink-0 border-b px-6 py-4">
+              <DialogHeader className="pr-8">
+                <DialogTitle>
+                  {isContextMode
+                    ? (t.returnImporter?.contextModeTitle || "Assignar devolucions a l'apunt seleccionat")
+                    : (t.returnImporter?.results || "Resultat del matching")}
+                </DialogTitle>
+                <DialogDescription>
+                  {isContextMode && hookParentTx ? (
+                    <span className="flex flex-col gap-1">
+                      <span className="font-medium text-foreground">
+                        {hookParentTx.date} · {formatCurrencyEU(Math.abs(hookParentTx.amount))} · {hookParentTx.description?.slice(0, 50)}
+                      </span>
+                      <span>{(t.returnImporter?.contextModeDesc || "Les {count} devolucions del fitxer s'assignaran a aquest apunt").replace('{count}', String(parsedReturns.length))}</span>
                     </span>
-                    <span>{(t.returnImporter?.contextModeDesc || "Les {count} devolucions del fitxer s'assignaran a aquest apunt").replace('{count}', String(parsedReturns.length))}</span>
-                  </span>
-                ) : (
-                  t.returnImporter?.reviewDesc || "Revisa les coincidències i selecciona les devolucions a assignar"
-                )}
-              </DialogDescription>
-            </DialogHeader>
+                  ) : (
+                    t.returnImporter?.reviewDesc || "Revisa les coincidencies i selecciona les devolucions a assignar"
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+            </div>
 
-            {/* Resum */}
-            <div className="flex flex-wrap gap-4">
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-4">
               {/* Mode BULK: Resum de grups */}
-              {bulkReturnGroups.length > 0 ? (
-                <>
-                  {bulkReturnGroups.filter(g => g.status === 'auto').length > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-800">
-                        {bulkReturnGroups.filter(g => g.status === 'auto').length} {t.returnImporter?.autoMatched || "liquidacions auto-matched"}
-                      </span>
-                    </div>
+                  {bulkReturnGroups.length > 0 ? (
+                    <>
+                      {bulkReturnGroups.filter(g => g.status === 'auto').length > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-medium text-green-800">
+                            {bulkAutoProcessCount} {t.returnImporter?.autoMatched || 'liquidacions auto-matched'}
+                          </span>
+                        </div>
+                      )}
+                      {bulkReturnGroups.filter(g => g.status === 'needsReview').length > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200">
+                          <AlertTriangle className="h-4 w-4 text-orange-600" />
+                          <span className="text-sm font-medium text-orange-800">
+                            {bulkReturnGroups.filter(g => g.status === 'needsReview').length} {t.returnImporter?.pendingReview || 'pendents de revisio'}
+                          </span>
+                        </div>
+                      )}
+                      {bulkReturnGroups.filter(g => g.status === 'noMatch').length > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+                          <X className="h-4 w-4 text-red-600" />
+                          <span className="text-sm font-medium text-red-800">
+                            {bulkReturnGroups.filter(g => g.status === 'noMatch').length} {t.returnImporter?.noMatch || 'sense coincidencia'}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {(stats.matched + stats.donorFound) > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-medium text-green-800">
+                            {stats.matched + stats.donorFound} {t.returnImporter?.withDonorIdentified || 'amb donant identificat'}
+                          </span>
+                        </div>
+                      )}
+                      {stats.grouped > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
+                          <Layers className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-800">
+                            {stats.grouped} {t.returnImporter?.inRemittance || 'en remesa'} ({groupedMatches.length} {groupedMatches.length === 1 ? (t.returnImporter?.group || 'grup') : (t.returnImporter?.groups || 'grups')})
+                          </span>
+                        </div>
+                      )}
+                      {stats.notFound > 0 && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+                          <X className="h-4 w-4 text-red-600" />
+                          <span className="text-sm font-medium text-red-800">
+                            {stats.notFound} {t.returnImporter?.withoutDonor || 'sense donant'}
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
-                  {bulkReturnGroups.filter(g => g.status === 'needsReview').length > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200">
-                      <AlertTriangle className="h-4 w-4 text-orange-600" />
-                      <span className="text-sm font-medium text-orange-800">
-                        {bulkReturnGroups.filter(g => g.status === 'needsReview').length} {t.returnImporter?.pendingReview || "pendents de revisió"}
-                      </span>
-                    </div>
-                  )}
-                  {bulkReturnGroups.filter(g => g.status === 'noMatch').length > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
-                      <X className="h-4 w-4 text-red-600" />
-                      <span className="text-sm font-medium text-red-800">
-                        {bulkReturnGroups.filter(g => g.status === 'noMatch').length} {t.returnImporter?.noMatch || "sense coincidència"}
-                      </span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* Mode NORMAL: Devolucions amb donant identificat */}
-                  {(stats.matched + stats.donorFound) > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 border border-green-200">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-800">
-                        {stats.matched + stats.donorFound} {t.returnImporter?.withDonorIdentified || "amb donant identificat"}
-                      </span>
-                    </div>
-                  )}
-                  {/* Devolucions agrupades (remesa) */}
-                  {stats.grouped > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
-                      <Layers className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800">
-                        {stats.grouped} {t.returnImporter?.inRemittance || "en remesa"} ({groupedMatches.length} {groupedMatches.length === 1 ? (t.returnImporter?.group || 'grup') : (t.returnImporter?.groups || 'grups')})
-                      </span>
-                    </div>
-                  )}
-                  {/* Devolucions sense donant (no trobat) */}
-                  {stats.notFound > 0 && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
-                      <X className="h-4 w-4 text-red-600" />
-                      <span className="text-sm font-medium text-red-800">
-                        {stats.notFound} {t.returnImporter?.withoutDonor || "sense donant"}
-                      </span>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Avís de remesa parcial */}
-            {partialRemittanceStats.pendingCount > 0 && (
-              <div className={`p-3 rounded-lg border ${partialRemittanceStats.allPending ? 'border-red-300 bg-red-50' : 'border-orange-300 bg-orange-50'}`}>
-                <div className="flex items-start gap-2">
-                  <UserRoundX className={`h-5 w-5 mt-0.5 flex-shrink-0 ${partialRemittanceStats.allPending ? 'text-red-600' : 'text-orange-600'}`} />
-                  <div className="flex-1">
-                    <p className={`text-sm font-medium ${partialRemittanceStats.allPending ? 'text-red-800' : 'text-orange-800'}`}>
-                      {partialRemittanceStats.allPending
-                        ? (t.returnImporter?.noDonorIdentified?.(partialRemittanceStats.pendingCount, formatCurrencyEU(partialRemittanceStats.pendingAmount)) || `Cap donant identificat: ${partialRemittanceStats.pendingCount} devolucions pendents (${formatCurrencyEU(partialRemittanceStats.pendingAmount)})`)
-                        : (t.returnImporter?.partialRemittance?.(partialRemittanceStats.pendingCount, formatCurrencyEU(partialRemittanceStats.pendingAmount)) || `Remesa parcial: ${partialRemittanceStats.pendingCount} devolucions sense donant identificat (${formatCurrencyEU(partialRemittanceStats.pendingAmount)} pendents)`)
-                      }
-                    </p>
-                    <p className={`text-xs mt-1 ${partialRemittanceStats.allPending ? 'text-red-700' : 'text-orange-700'}`}>
-                      {partialRemittanceStats.allPending
-                        ? (t.returnImporter?.noDonorIdentifiedHelp || 'No hi ha cap devolució amb donant identificat. Identifica almenys un donant per poder processar.')
-                        : (t.returnImporter?.partialRemittanceHelp || 'Les devolucions amb donant es processaran ara. Les pendents quedaran registrades per identificar-les manualment després.')
-                      }
-                    </p>
-                    <p className={`text-xs font-medium mt-1 ${partialRemittanceStats.allPending ? 'text-red-800' : 'text-orange-800'}`}>
-                      {t.returnImporter?.statusIdentified?.(partialRemittanceStats.resolvedCount, partialRemittanceStats.pendingCount + partialRemittanceStats.resolvedCount) || `Estat: ${partialRemittanceStats.resolvedCount}/${partialRemittanceStats.pendingCount + partialRemittanceStats.resolvedCount} identificades`}
-                    </p>
-                  </div>
                 </div>
-              </div>
-            )}
 
-            {/* Taula de resultats - Mode BULK */}
-            {bulkReturnGroups.length > 0 ? (
-              <ScrollArea className="h-[350px] rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t.returnImporter?.settlementDate || "Data Liquidació"}</TableHead>
-                      <TableHead>{t.returnImporter?.settlementNumber || "Núm. Liquidació"}</TableHead>
-                      <TableHead className="text-right">{t.returnImporter?.amount || "Import"}</TableHead>
-                      <TableHead className="text-center">{t.returnImporter?.returnsCount || "Devolucions"}</TableHead>
-                      <TableHead>{t.returnImporter?.status || "Estat"}</TableHead>
-                      <TableHead>{t.returnImporter?.parentTransaction || "Transacció Pare"}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bulkReturnGroups.map((group) => (
-                      <TableRow
-                        key={group.key}
-                        className={
-                          group.status === 'auto' ? 'bg-green-50/50' :
-                          group.status === 'needsReview' ? 'bg-orange-50/50' :
-                          'bg-red-50/30'
-                        }
-                      >
-                        <TableCell className="text-sm font-mono">
-                          {group.liquidationDateISO}
-                        </TableCell>
-                        <TableCell className="text-sm font-mono">
-                          {group.liquidationNumber}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
-                          {formatCurrencyEU(group.totalAmount)}
-                        </TableCell>
-                        <TableCell className="text-center text-sm">
-                          {group.rows.length}
-                        </TableCell>
-                        <TableCell>
-                          {group.status === 'auto' ? (
-                            <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                              <CheckCircle2 className="mr-1 h-3 w-3" />
-                              Auto-matched
-                            </Badge>
-                          ) : group.status === 'needsReview' ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 cursor-help">
-                                  <AlertTriangle className="mr-1 h-3 w-3" />
-                                  {group.reason === 'multipleCandidates' ? (t.returnImporter?.multipleCandidates || 'Múltiples candidats') :
-                                   group.reason === 'outsideWindow' ? (t.returnImporter?.outsideWindow || 'Fora finestra') : (t.returnImporter?.needsReview || 'Revisió')}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {group.reason === 'multipleCandidates'
-                                  ? (t.returnImporter?.candidatesInWindow || "{n} candidats dins ±2 dies").replace('{n}', String(group.candidatesInWindow.length))
-                                  : group.reason === 'outsideWindow'
-                                  ? (t.returnImporter?.candidatesOutsideWindow || "{n} candidats fora de la finestra ±2 dies").replace('{n}', String(group.candidatesOutsideWindow.length))
-                                  : (t.returnImporter?.manualReviewNeeded || 'Cal revisió manual')}
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
-                              <X className="mr-1 h-3 w-3" />
-                              {t.returnImporter?.noMatchLabel || "Sense coincidència"}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {group.matchedParent ? (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-green-700 font-medium">
-                                {group.matchedParent.date?.split('T')[0] || '-'}
-                              </span>
-                              <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                {group.matchedParent.description || '-'}
-                              </span>
-                            </div>
-                          ) : group.candidatesInWindow.length > 0 ? (
-                            <span className="text-orange-600 text-xs">
-                              {(t.returnImporter?.candidatesAvailable || "{n} candidats disponibles").replace('{n}', String(group.candidatesInWindow.length))}
-                            </span>
-                          ) : group.candidatesOutsideWindow.length > 0 ? (
-                            <span className="text-orange-600 text-xs">
-                              {(t.returnImporter?.outsideWindowLabel || "{n} fora finestra").replace('{n}', String(group.candidatesOutsideWindow.length))}
-                            </span>
-                          ) : (
-                            <span className="text-red-500 text-xs">{t.returnImporter?.noCandidate || "Cap candidat"}</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            ) : (
-              /* Taula de resultats - Mode NORMAL */
-              <ScrollArea className="h-[350px] rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={selectedRows.size === selectableCount && selectableCount > 0}
-                          onCheckedChange={handleToggleAll}
-                          disabled={selectableCount === 0 || partialRemittanceStats.allPending}
-                        />
-                      </TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead className="text-right">Import</TableHead>
-                      <TableHead>IBAN</TableHead>
-                      <TableHead>Donant</TableHead>
-                      {hasAnyTypeBadge && <TableHead>Tipus</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {parsedReturns.map((item, index) => (
-                    <TableRow
-                      key={index}
-                      className={
-                        item.matchType === 'grouped' ? 'bg-blue-50/50' :
-                        item.status === 'matched' ? 'bg-green-50/50' :
-                        item.status === 'donor_found' ? 'bg-yellow-50/50' :
-                        'bg-red-50/30'
-                      }
-                    >
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedRows.has(index)}
-                          onCheckedChange={() => handleToggleRow(index)}
-                          disabled={item.status === 'not_found' || (item.matchType === 'grouped' && !item.matchedDonor)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {item.date ? item.date.toISOString().split('T')[0] : '-'}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {formatCurrencyEU(item.amount)}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {truncateIban(item.iban)}
-                      </TableCell>
-                      <TableCell>
-                        {item.matchedDonor ? (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-sm text-green-700 font-medium">
-                              {item.matchedDonor.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              via {item.matchedBy === 'iban' ? 'IBAN' : item.matchedBy === 'dni' ? 'DNI' : item.matchedBy === 'manual' ? 'Manual' : 'Nom'}
-                            </span>
-                          </div>
-                        ) : item.matchType === 'grouped' ? (
-                          // Devolució agrupada SENSE donant → pendent d'identificar
-                          <div className="flex flex-col gap-1">
-                            <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 w-fit">
-                              <UserRoundX className="mr-1 h-3 w-3" />
-                              {t.returnImporter?.pendingIdentify || "Pendent d'identificar"}
-                            </Badge>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-xs text-orange-700 hover:text-orange-900 hover:bg-orange-100"
-                                onClick={() => toast({ title: t.returnImporter?.featurePending || 'Funcionalitat pendent', description: t.returnImporter?.searchDonorSoon || 'Buscar donant existent - pròximament' })}
-                              >
-                                <Search className="mr-1 h-3 w-3" />
-                                {t.returnImporter?.searchButton || "Buscar"}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-xs text-orange-700 hover:text-orange-900 hover:bg-orange-100"
-                                onClick={() => handleOpenCreateDonor(index, item)}
-                              >
-                                <UserPlus className="mr-1 h-3 w-3" />
-                                {t.returnImporter?.createButton || "Crear"}
-                              </Button>
-                            </div>
-                            {item.originalName && (
-                              <span className="text-xs text-muted-foreground">
-                                {item.originalName}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-0.5">
-                            <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 w-fit">
-                              <AlertTriangle className="mr-1 h-3 w-3" />
-                              {t.returnImporter?.notFoundLabel || "No trobat"}
-                            </Badge>
-                            {item.dni && (
-                              <span className="text-xs text-muted-foreground">
-                                DNI: {item.dni}
-                              </span>
-                            )}
-                            {!item.dni && item.originalName && (
-                              <span className="text-xs text-muted-foreground">
-                                Nom: {item.originalName}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </TableCell>
-                      {hasAnyTypeBadge && (
-                        <TableCell>
-                          {item.matchType === 'grouped' ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 cursor-help">
-                                  <Layers className="mr-1 h-3 w-3" />
-                                  {t.returnImporter?.groupedBadge || "Agrupada"}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>{t.returnImporter?.groupedTooltip || "Forma part d'una remesa de devolucions"}</TooltipContent>
-                            </Tooltip>
-                          ) : item.matchType === 'individual' ? (
-                            <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                              <CheckCircle2 className="mr-1 h-3 w-3" />
-                              {t.returnImporter?.individualBadge || "Individual"}
-                            </Badge>
-                          ) : !item.matchedDonor ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 cursor-help">
-                                  <UserRoundX className="mr-1 h-3 w-3" />
-                                  {t.returnImporter?.pendingBadge || "Pendent"}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>{t.returnImporter?.pendingTooltip || "Pendent d'identificar donant"}</TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            )}
-
-            {/* Info */}
-            <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3 space-y-1">
-              {bulkReturnGroups.length > 0 ? (
-                <>
-                  <p>
-                    {(t.returnImporter?.settlementsAutoProcess || "{n} liquidacions es processaran automàticament.")
-                      .replace('{n}', `<strong>${bulkReturnGroups.filter(g => g.status === 'auto').length}</strong>`)
-                      .split('<strong>').map((part, i) =>
-                        i === 0 ? part : <><strong key={i}>{part.split('</strong>')[0]}</strong>{part.split('</strong>')[1]}</>
-                      )}
-                  </p>
-                  {bulkReturnGroups.filter(g => g.status === 'needsReview').length > 0 && (
-                    <p className="text-orange-700">
-                      <AlertTriangle className="inline h-3 w-3 mr-1" />
-                      {(t.returnImporter?.settlementsNeedReview || "{n} liquidacions requereixen revisió manual (múltiples candidats o fora de la finestra ±2 dies).")
-                        .replace('{n}', String(bulkReturnGroups.filter(g => g.status === 'needsReview').length))}
-                    </p>
-                  )}
-                  {bulkReturnGroups.filter(g => g.status === 'noMatch').length > 0 && (
-                    <p className="text-red-700">
-                      <X className="inline h-3 w-3 mr-1" />
-                      {(t.returnImporter?.settlementsNoMatch || "{n} liquidacions sense cap transacció coincident.")
-                        .replace('{n}', String(bulkReturnGroups.filter(g => g.status === 'noMatch').length))}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <p>
-                    {(t.returnImporter?.selectedCount || "{n} devolucions seleccionades per assignar.")
-                      .replace('{n}', `<strong>${selectedRows.size}</strong>`)
-                      .split('<strong>').map((part, i) =>
-                        i === 0 ? part : <><strong key={i}>{part.split('</strong>')[0]}</strong>{part.split('</strong>')[1]}</>
-                      )}
-                  </p>
-                  {stats.grouped > 0 && partialRemittanceStats.resolvedCount > 0 && (
-                    <p className="text-blue-700">
-                      <Layers className="inline h-3 w-3 mr-1" />
-                      {(t.returnImporter?.groupedAssignInfo || "Les {n} devolucions agrupades s'assignaran com a part d'una remesa.")
-                        .replace('{n}', String(partialRemittanceStats.resolvedCount))}
-                    </p>
-                  )}
-                  {partialRemittanceStats.pendingCount > 0 && (
-                    <p className="text-orange-700">
-                      <UserRoundX className="inline h-3 w-3 mr-1" />
-                      {(t.returnImporter?.pendingRemaining || "{n} devolucions quedaran pendents d'identificar. La remesa es marcarà com a parcial fins que s'identifiquin tots els donants.")
-                        .replace('{n}', String(partialRemittanceStats.pendingCount))}
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* SuperAdmin: Opció de recrear fills - SEMPRE visible per SuperAdmin */}
-            {isSuperAdmin && (
-              <div className="space-y-2 p-3 rounded-lg border border-red-300 bg-red-50">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="forceRecreateChildren"
-                    checked={forceRecreateChildren}
-                    onCheckedChange={(checked) => {
-                      setForceRecreateChildren(checked === true);
-                      if (!checked) setConfirmForceRecreate(false);
-                    }}
-                  />
-                  <div className="flex-1">
-                    <Label htmlFor="forceRecreateChildren" className="text-red-800 font-medium cursor-pointer">
-                      {t.returnImporter?.forceRecreateLabel || "Forçar recreació de devolucions (SuperAdmin)"}
-                    </Label>
-                    <p className="text-xs text-red-700 mt-0.5">
-                      {t.returnImporter?.forceRecreateDesc || "Elimina i recrea les filles de l'apunt pare seleccionat. Ús només per migracions."}
-                    </p>
+                {partialRemittanceStats.pendingCount > 0 && (
+                  <div className={`p-3 rounded-lg border ${partialRemittanceStats.allPending ? 'border-red-300 bg-red-50' : 'border-orange-300 bg-orange-50'}`}>
+                    <div className="flex items-start gap-2">
+                      <UserRoundX className={`h-5 w-5 mt-0.5 flex-shrink-0 ${partialRemittanceStats.allPending ? 'text-red-600' : 'text-orange-600'}`} />
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${partialRemittanceStats.allPending ? 'text-red-800' : 'text-orange-800'}`}>
+                          {partialRemittanceStats.allPending
+                            ? (t.returnImporter?.noDonorIdentified?.(partialRemittanceStats.pendingCount, formatCurrencyEU(partialRemittanceStats.pendingAmount)) || `Cap donant identificat: ${partialRemittanceStats.pendingCount} devolucions pendents (${formatCurrencyEU(partialRemittanceStats.pendingAmount)})`)
+                            : (t.returnImporter?.partialRemittance?.(partialRemittanceStats.pendingCount, formatCurrencyEU(partialRemittanceStats.pendingAmount)) || `Remesa parcial: ${partialRemittanceStats.pendingCount} devolucions sense donant identificat (${formatCurrencyEU(partialRemittanceStats.pendingAmount)} pendents)`)
+                          }
+                        </p>
+                        <p className={`text-xs mt-1 ${partialRemittanceStats.allPending ? 'text-red-700' : 'text-orange-700'}`}>
+                          {partialRemittanceStats.allPending
+                            ? (t.returnImporter?.noDonorIdentifiedHelp || 'No hi ha cap devolucio amb donant identificat. Identifica almenys un donant per poder processar.')
+                            : (t.returnImporter?.partialRemittanceHelp || "Les devolucions amb donant es processaran ara. Les pendents quedaran registrades per identificar-les manualment despres.")
+                          }
+                        </p>
+                        <p className={`text-xs font-medium mt-1 ${partialRemittanceStats.allPending ? 'text-red-800' : 'text-orange-800'}`}>
+                          {t.returnImporter?.statusIdentified?.(partialRemittanceStats.resolvedCount, partialRemittanceStats.pendingCount + partialRemittanceStats.resolvedCount) || `Estat: ${partialRemittanceStats.resolvedCount}/${partialRemittanceStats.pendingCount + partialRemittanceStats.resolvedCount} identificades`}
+                        </p>
+                      </div>
+                    </div>
                   </div>
+                )}
+
+                {bulkReturnGroups.length > 0 ? (
+                  <div className="max-h-[320px] overflow-auto rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t.returnImporter?.settlementDate || 'Data Liquidacio'}</TableHead>
+                          <TableHead>{t.returnImporter?.settlementNumber || 'Num. Liquidacio'}</TableHead>
+                          <TableHead className="text-right">{t.returnImporter?.amount || 'Import'}</TableHead>
+                          <TableHead className="text-center">{t.returnImporter?.returnsCount || 'Devolucions'}</TableHead>
+                          <TableHead>{t.returnImporter?.status || 'Estat'}</TableHead>
+                          <TableHead>{t.returnImporter?.parentTransaction || 'Transaccio Pare'}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {bulkReturnGroups.map((group) => (
+                          <TableRow
+                            key={group.key}
+                            className={
+                              group.status === 'auto' ? 'bg-green-50/50' :
+                              group.status === 'needsReview' ? 'bg-orange-50/50' :
+                              'bg-red-50/30'
+                            }
+                          >
+                            <TableCell className="text-sm font-mono">
+                              {group.liquidationDateISO}
+                            </TableCell>
+                            <TableCell className="text-sm font-mono">
+                              {group.liquidationNumber}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">
+                              {formatCurrencyEU(group.totalAmount)}
+                            </TableCell>
+                            <TableCell className="text-center text-sm">
+                              {group.rows.length}
+                            </TableCell>
+                            <TableCell>
+                              {group.status === 'auto' ? (
+                                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                                  Auto-matched
+                                </Badge>
+                              ) : group.status === 'needsReview' ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 cursor-help">
+                                      <AlertTriangle className="mr-1 h-3 w-3" />
+                                      {group.reason === 'multipleCandidates' ? (t.returnImporter?.multipleCandidates || 'Multiples candidats') :
+                                       group.reason === 'outsideWindow' ? (t.returnImporter?.outsideWindow || 'Fora finestra') : (t.returnImporter?.needsReview || 'Revisio')}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {group.reason === 'multipleCandidates'
+                                      ? (t.returnImporter?.candidatesInWindow || '{n} candidats dins ±2 dies').replace('{n}', String(group.candidatesInWindow.length))
+                                      : group.reason === 'outsideWindow'
+                                      ? (t.returnImporter?.candidatesOutsideWindow || '{n} candidats fora de la finestra ±2 dies').replace('{n}', String(group.candidatesOutsideWindow.length))
+                                      : (t.returnImporter?.manualReviewNeeded || 'Cal revisio manual')}
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300">
+                                  <X className="mr-1 h-3 w-3" />
+                                  {t.returnImporter?.noMatchLabel || 'Sense coincidencia'}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {group.matchedParent ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-green-700 font-medium">
+                                    {group.matchedParent.date?.split('T')[0] || '-'}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                    {group.matchedParent.description || '-'}
+                                  </span>
+                                </div>
+                              ) : group.candidatesInWindow.length > 0 ? (
+                                <span className="text-orange-600 text-xs">
+                                  {(t.returnImporter?.candidatesAvailable || '{n} candidats disponibles').replace('{n}', String(group.candidatesInWindow.length))}
+                                </span>
+                              ) : group.candidatesOutsideWindow.length > 0 ? (
+                                <span className="text-orange-600 text-xs">
+                                  {(t.returnImporter?.outsideWindowLabel || '{n} fora finestra').replace('{n}', String(group.candidatesOutsideWindow.length))}
+                                </span>
+                              ) : (
+                                <span className="text-red-500 text-xs">{t.returnImporter?.noCandidate || 'Cap candidat'}</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="max-h-[320px] overflow-auto rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">
+                            <Checkbox
+                              checked={selectedRows.size === selectableCount && selectableCount > 0}
+                              onCheckedChange={handleToggleAll}
+                              disabled={selectableCount === 0 || partialRemittanceStats.allPending}
+                            />
+                          </TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead className="text-right">Import</TableHead>
+                          <TableHead>IBAN</TableHead>
+                          <TableHead>Donant</TableHead>
+                          {hasAnyTypeBadge && <TableHead>Tipus</TableHead>}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {parsedReturns.map((item, index) => (
+                          <TableRow
+                            key={index}
+                            className={
+                              item.matchType === 'grouped' ? 'bg-blue-50/50' :
+                              item.status === 'matched' ? 'bg-green-50/50' :
+                              item.status === 'donor_found' ? 'bg-yellow-50/50' :
+                              'bg-red-50/30'
+                            }
+                          >
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedRows.has(index)}
+                                onCheckedChange={() => handleToggleRow(index)}
+                                disabled={item.status === 'not_found' || (item.matchType === 'grouped' && !item.matchedDonor)}
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {item.date ? item.date.toISOString().split('T')[0] : '-'}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm">
+                              {formatCurrencyEU(item.amount)}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {truncateIban(item.iban)}
+                            </TableCell>
+                            <TableCell>
+                              {item.matchedDonor ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-sm text-green-700 font-medium">
+                                    {item.matchedDonor.name}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    via {item.matchedBy === 'iban' ? 'IBAN' : item.matchedBy === 'dni' ? 'DNI' : item.matchedBy === 'manual' ? 'Manual' : 'Nom'}
+                                  </span>
+                                </div>
+                              ) : item.matchType === 'grouped' ? (
+                                <div className="flex flex-col gap-1">
+                                  <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 w-fit">
+                                    <UserRoundX className="mr-1 h-3 w-3" />
+                                    {t.returnImporter?.pendingIdentify || "Pendent d'identificar"}
+                                  </Badge>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs text-orange-700 hover:text-orange-900 hover:bg-orange-100"
+                                      onClick={() => toast({ title: t.returnImporter?.featurePending || 'Funcionalitat pendent', description: t.returnImporter?.searchDonorSoon || 'Buscar donant existent - proximament' })}
+                                    >
+                                      <Search className="mr-1 h-3 w-3" />
+                                      {t.returnImporter?.searchButton || 'Buscar'}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2 text-xs text-orange-700 hover:text-orange-900 hover:bg-orange-100"
+                                      onClick={() => handleOpenCreateDonor(index, item)}
+                                    >
+                                      <UserPlus className="mr-1 h-3 w-3" />
+                                      {t.returnImporter?.createButton || 'Crear'}
+                                    </Button>
+                                  </div>
+                                  {item.originalName && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {item.originalName}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-0.5">
+                                  <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 w-fit">
+                                    <AlertTriangle className="mr-1 h-3 w-3" />
+                                    {t.returnImporter?.notFoundLabel || 'No trobat'}
+                                  </Badge>
+                                  {item.dni && (
+                                    <span className="text-xs text-muted-foreground">
+                                      DNI: {item.dni}
+                                    </span>
+                                  )}
+                                  {!item.dni && item.originalName && (
+                                    <span className="text-xs text-muted-foreground">
+                                      Nom: {item.originalName}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                            {hasAnyTypeBadge && (
+                              <TableCell>
+                                {item.matchType === 'grouped' ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 cursor-help">
+                                        <Layers className="mr-1 h-3 w-3" />
+                                        {t.returnImporter?.groupedBadge || 'Agrupada'}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{t.returnImporter?.groupedTooltip || "Forma part d'una remesa de devolucions"}</TooltipContent>
+                                  </Tooltip>
+                                ) : item.matchType === 'individual' ? (
+                                  <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                                    <CheckCircle2 className="mr-1 h-3 w-3" />
+                                    {t.returnImporter?.individualBadge || 'Individual'}
+                                  </Badge>
+                                ) : !item.matchedDonor ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 cursor-help">
+                                        <UserRoundX className="mr-1 h-3 w-3" />
+                                        {t.returnImporter?.pendingBadge || 'Pendent'}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{t.returnImporter?.pendingTooltip || "Pendent d'identificar donant"}</TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3 space-y-1">
+                  {bulkReturnGroups.length > 0 ? (
+                    <>
+                      <p>
+                        {(t.returnImporter?.settlementsAutoProcess || '{n} liquidacions es processaran automaticament.')
+                          .replace('{n}', `<strong>${bulkAutoProcessCount}</strong>`)
+                          .split('<strong>').map((part, i) =>
+                            i === 0 ? part : <React.Fragment key={i}><strong>{part.split('</strong>')[0]}</strong>{part.split('</strong>')[1]}</React.Fragment>
+                          )}
+                      </p>
+                      {bulkReturnGroups.filter(g => g.status === 'needsReview').length > 0 && (
+                        <p className="text-orange-700">
+                          <AlertTriangle className="inline h-3 w-3 mr-1" />
+                          {(t.returnImporter?.settlementsNeedReview || '{n} liquidacions requereixen revisio manual (multiples candidats o fora de la finestra ±2 dies).')
+                            .replace('{n}', String(bulkReturnGroups.filter(g => g.status === 'needsReview').length))}
+                        </p>
+                      )}
+                      {bulkReturnGroups.filter(g => g.status === 'noMatch').length > 0 && (
+                        <p className="text-red-700">
+                          <X className="inline h-3 w-3 mr-1" />
+                          {(t.returnImporter?.settlementsNoMatch || '{n} liquidacions sense cap transaccio coincident.')
+                            .replace('{n}', String(bulkReturnGroups.filter(g => g.status === 'noMatch').length))}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p>
+                        {(t.returnImporter?.selectedCount || '{n} devolucions seleccionades per assignar.')
+                          .replace('{n}', `<strong>${selectedRows.size}</strong>`)
+                          .split('<strong>').map((part, i) =>
+                            i === 0 ? part : <React.Fragment key={i}><strong>{part.split('</strong>')[0]}</strong>{part.split('</strong>')[1]}</React.Fragment>
+                          )}
+                      </p>
+                      {stats.grouped > 0 && partialRemittanceStats.resolvedCount > 0 && (
+                        <p className="text-blue-700">
+                          <Layers className="inline h-3 w-3 mr-1" />
+                          {(t.returnImporter?.groupedAssignInfo || "Les {n} devolucions agrupades s'assignaran com a part d'una remesa.")
+                            .replace('{n}', String(partialRemittanceStats.resolvedCount))}
+                        </p>
+                      )}
+                      {partialRemittanceStats.pendingCount > 0 && (
+                        <p className="text-orange-700">
+                          <UserRoundX className="inline h-3 w-3 mr-1" />
+                          {(t.returnImporter?.pendingRemaining || "{n} devolucions quedaran pendents d'identificar. La remesa es marcara com a parcial fins que s'identifiquin tots els donants.")
+                            .replace('{n}', String(partialRemittanceStats.pendingCount))}
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
-                {/* Confirmació obligatòria si s'activa */}
-                {forceRecreateChildren && (
-                  <div className="flex items-center gap-2 ml-6 p-2 bg-red-100 rounded border border-red-400">
-                    <Checkbox
-                      id="confirmForceRecreate"
-                      checked={confirmForceRecreate}
-                      onCheckedChange={(checked) => setConfirmForceRecreate(checked === true)}
-                    />
-                    <Label htmlFor="confirmForceRecreate" className="text-red-900 text-sm cursor-pointer">
-                      {t.returnImporter?.forceRecreateConfirm || "Entenc el risc: les devolucions filles existents s'eliminaran permanentment"}
-                    </Label>
+
+                {isSuperAdmin && (
+                  <div className="space-y-2 p-3 rounded-lg border border-red-300 bg-red-50">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        id="forceRecreateChildren"
+                        checked={forceRecreateChildren}
+                        onCheckedChange={(checked) => {
+                          setForceRecreateChildren(checked === true);
+                          if (!checked) setConfirmForceRecreate(false);
+                        }}
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor="forceRecreateChildren" className="text-red-800 font-medium cursor-pointer">
+                          {t.returnImporter?.forceRecreateLabel || 'Forcar recreacio de devolucions (SuperAdmin)'}
+                        </Label>
+                        <p className="text-xs text-red-700 mt-0.5">
+                          {t.returnImporter?.forceRecreateDesc || "Elimina i recrea les filles de l'apunt pare seleccionat. Us nomes per migracions."}
+                        </p>
+                      </div>
+                    </div>
+                    {forceRecreateChildren && (
+                      <div className="flex items-center gap-2 ml-6 p-2 bg-red-100 rounded border border-red-400">
+                        <Checkbox
+                          id="confirmForceRecreate"
+                          checked={confirmForceRecreate}
+                          onCheckedChange={(checked) => setConfirmForceRecreate(checked === true)}
+                        />
+                        <Label htmlFor="confirmForceRecreate" className="text-red-900 text-sm cursor-pointer">
+                          {t.returnImporter?.forceRecreateConfirm || "Entenc el risc: les devolucions filles existents s'eliminaran permanentment"}
+                        </Label>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+            </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setStep('mapping')}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {t.returnImporter?.back || "Tornar"}
-              </Button>
-              {bulkReturnGroups.length > 0 ? (
-                // Mode BULK: botó per processar grups auto-matched
-                <Button
-                  onClick={handleProcess}
-                  disabled={isProcessing || bulkReturnGroups.filter(g => g.status === 'auto').length === 0 || (forceRecreateChildren && !confirmForceRecreate)}
-                >
-                  {isProcessing ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : null}
-                  {(t.returnImporter?.processSettlements || "Processar {n} liquidacions").replace('{n}', String(bulkReturnGroups.filter(g => g.status === 'auto').length))}
+            <div className="shrink-0 border-t px-6 py-4">
+              {previewActionMessage ? (
+                <p className="mb-3 text-sm text-muted-foreground">{previewActionMessage}</p>
+              ) : null}
+              <DialogFooter className="gap-2 sm:justify-between sm:space-x-0">
+                <Button variant="outline" onClick={() => setStep('mapping')}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  {t.returnImporter?.back || 'Tornar'}
                 </Button>
-              ) : partialRemittanceStats.allPending ? (
-                <span className="text-sm text-muted-foreground italic">
-                  {t.returnImporter?.identifyAtLeastOne || "Identifica almenys un donant per continuar"}
-                </span>
-              ) : (
-                <Button
-                  onClick={handleProcess}
-                  disabled={isProcessing || selectedRows.size === 0 || (forceRecreateChildren && !confirmForceRecreate)}
-                >
-                  {isProcessing ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : null}
-                  {t.returnImporter?.process || "Assignar"} {selectedRows.size} devolucions
-                </Button>
-              )}
-            </DialogFooter>
+                {bulkReturnGroups.length > 0 ? (
+                  <Button
+                    onClick={handleProcess}
+                    disabled={isProcessing || bulkAutoProcessCount === 0 || (forceRecreateChildren && !confirmForceRecreate)}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {(t.returnImporter?.processSettlements || 'Processar {n} liquidacions').replace('{n}', String(bulkAutoProcessCount))}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleProcess}
+                    disabled={isProcessing || !hasActionableReturns || selectedRows.size === 0 || (forceRecreateChildren && !confirmForceRecreate)}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {t.returnImporter?.process || 'Assignar'} {selectedRows.size} devolucions
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
           </>
         )}
 

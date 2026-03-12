@@ -1097,19 +1097,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           if (!open) handleMappingCancel();
         }}
       >
-        <DialogContent className="w-[95vw] max-h-[90vh] overflow-x-hidden overflow-y-auto p-4 sm:max-w-5xl sm:p-6">
-          <DialogHeader>
-            <DialogTitle>
-              {tr('importers.transaction.mapping.title', 'Configuració del mapeig')}
-            </DialogTitle>
-            <DialogDescription>
-              {tr(
-                'importers.transaction.mapping.description',
-                'Revisa la previsualització i indica quina columna correspon a cada camp.'
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
+        <DialogContent className="max-h-[85vh] w-full max-w-5xl flex flex-col overflow-hidden p-0">
           {mappingState && (
             <RemittanceStyleMappingStep
               fields={[
@@ -1163,11 +1151,19 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
               previewColumnCount={mappingState.previewColumnCount}
               previewStartRow={mappingState.headerRowIndex + 2}
               labels={{
+                title: tr('importers.transaction.mapping.title', 'Configuracio del mapeig'),
+                description: tr(
+                  'importers.transaction.mapping.description',
+                  'Indica primer els camps obligatoris i valida la mostra amb una previsualitzacio compacta.'
+                ),
                 previewTitle: tr('importers.transaction.mapping.previewTitle', 'Previsualització (primeres 8 files)'),
-                fieldMappingTitle: tr('importers.transaction.mapping.fieldMappingTitle', 'Mapejat de camps'),
+                requiredFieldsTitle: tr('importers.transaction.mapping.fieldMappingTitle', 'Camps obligatoris'),
+                optionalFieldsTitle: tr('importers.transaction.mapping.optionalFieldsTitle', 'Mes camps'),
+                optionalFieldsTrigger: tr('importers.transaction.mapping.optionalFieldsTrigger', 'Mostrar opcionals'),
                 columnOptionTemplate: tr('importers.transaction.mapping.columnOption', 'Columna {index}: {example}'),
                 columnHeaderPrefix: tr('importers.transaction.mapping.columnHeaderPrefix', 'Col.'),
                 notAvailable: tr('importers.transaction.mapping.notAvailable', 'No disponible'),
+                missingFieldTemplate: tr('importers.transaction.mapping.missingField', 'Falta assignar {field}.'),
                 back: tr('common.back', 'Tornar'),
                 continue: tr('common.continue', 'Continuar'),
               }}

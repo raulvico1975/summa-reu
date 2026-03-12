@@ -42,6 +42,7 @@ interface ContactComboboxProps {
   value: string | null;
   onSelect: (contactId: string | null) => void;
   onCreateNew: (type: 'donor' | 'supplier') => void;
+  disabled?: boolean;
   placeholder?: string;
   emptyText?: string;
   createDonorText?: string;
@@ -55,6 +56,7 @@ export const ContactCombobox = React.memo(function ContactCombobox({
   value,
   onSelect,
   onCreateNew,
+  disabled = false,
   placeholder,
   emptyText,
   createDonorText,
@@ -93,12 +95,14 @@ export const ContactCombobox = React.memo(function ContactCombobox({
   const hasResults = filteredDonors.length > 0 || filteredSuppliers.length > 0 || filteredWorkers.length > 0;
 
   const handleSelect = (contactId: string) => {
+    if (disabled) return;
     onSelect(contactId === value ? null : contactId);
     setOpen(false);
     setSearch('');
   };
 
   const handleUnlink = () => {
+    if (disabled) return;
     onSelect(null);
     setOpen(false);
     setSearch('');
@@ -111,12 +115,16 @@ export const ContactCombobox = React.memo(function ContactCombobox({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(nextOpen) => {
+      if (disabled && nextOpen) return;
+      setOpen(nextOpen);
+    }}>
       <PopoverTrigger asChild>
         {selectedContact ? (
           <Button
             variant="ghost"
             className="h-auto p-0 text-left font-normal flex items-center gap-1"
+            disabled={disabled}
           >
             {selectedContact.type === 'donor' ? (
               <Heart className="h-3 w-3 text-red-500 shrink-0" />
@@ -133,7 +141,7 @@ export const ContactCombobox = React.memo(function ContactCombobox({
             <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1" />
           </Button>
         ) : (
-          <Button variant="ghost" size="sm" className="text-muted-foreground text-[13px]">
+          <Button variant="ghost" size="sm" className="text-muted-foreground text-[13px]" disabled={disabled}>
             <UserPlus className="mr-2 h-4 w-4" />
             {placeholderText}
           </Button>

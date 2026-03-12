@@ -12,10 +12,14 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
   TableBody,
@@ -53,6 +57,7 @@ import {
   Download,
   FileCode,
   Copy,
+  ChevronDown,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFirebase } from '@/firebase';
@@ -367,6 +372,7 @@ export function RemittanceSplitter({
   // Selector expandit de donants per IBAN no trobat
   const [showDonorSelectorForRow, setShowDonorSelectorForRow] = React.useState<number | null>(null);
   const [donorSearchTerm, setDonorSearchTerm] = React.useState('');
+  const [isAdvancedMappingOpen, setIsAdvancedMappingOpen] = React.useState(false);
 
   // Refs i hooks
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -507,6 +513,17 @@ export function RemittanceSplitter({
     }
     return null;
   }, [transaction.isRemittance, parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
+
+  const remittanceDialogContentClassName =
+    step === 'mapping' || step === 'preview'
+      ? 'max-h-[85vh] w-full max-w-5xl flex flex-col overflow-hidden p-0'
+      : 'w-full max-w-md';
+
+  const mappingHasIdentifier = nameColumn !== null || taxIdColumn !== null || ibanColumn !== null;
+
+  const mappingMissingMessage = !mappingHasIdentifier
+    ? tr('movements.splitter.mappingMissingIdentifier', 'Assigna com a minim un camp d identificacio (IBAN, nom o DNI/NIF).')
+    : null;
 
   // Files visibles per al preview del mapejat
   const previewRows = React.useMemo(() => {
@@ -1867,11 +1884,7 @@ export function RemittanceSplitter({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={
-        step === 'mapping' ? "sm:max-w-5xl max-h-[90vh]" :
-        step === 'preview' ? "w-[95vw] max-w-[1400px] h-[90vh] max-h-[90vh] flex flex-col" :
-        "sm:max-w-md"
-      }>
+      <DialogContent className={remittanceDialogContentClassName}>
         
         {/* ═══════════════════════════════════════════════════════════════════
             STEP 1: UPLOAD
@@ -1942,258 +1955,282 @@ export function RemittanceSplitter({
             ═══════════════════════════════════════════════════════════════════ */}
         {step === 'mapping' && (
           <>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Settings2 className="h-5 w-5" />
-                {t.movements.splitter.configureMappingTitle}
-              </DialogTitle>
-              <DialogDescription>
-                {t.movements.splitter.configureMappingDescription}
-              </DialogDescription>
-            </DialogHeader>
-
-            {/* Configuracions guardades */}
-            {savedMappings && savedMappings.length > 0 && (
-              <div className="rounded-lg border p-3 bg-muted/50">
-                <Label className="text-sm font-medium">{t.movements.splitter.savedConfigurations}</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {savedMappings.map(mapping => (
-                    <div key={mapping.id} className="flex items-center gap-1">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleApplySavedMapping(mapping)}
-                      >
-                        {mapping.name}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-destructive"
-                        onClick={() => handleDeleteMapping(mapping.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Configuració de parsing */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {/* Delimitador només visible per CSV/TXT (quan tenim rawText) */}
-              {rawText && (
-                <div className="space-y-1">
-                  <Label className="text-xs">{t.movements.splitter.delimiter}</Label>
-                  <Select value={delimiter} onValueChange={(v) => {
-                    setDelimiter(v);
-                    const lines = rawText.split('\n').filter(line => line.trim());
-                    const rows = lines.map(line => line.split(v).map(cell => cell.trim()));
-                    setAllRows(rows);
-                  }}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value=";">{t.movements.splitter.semicolon}</SelectItem>
-                      <SelectItem value=",">{t.movements.splitter.comma}</SelectItem>
-                      <SelectItem value={"\t"}>{t.movements.splitter.tab}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div className="space-y-1">
-                <Label className="text-xs">{t.movements.splitter.startRow}</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={allRows.length - 1}
-                  value={startRow}
-                  onChange={(e) => setStartRow(parseInt(e.target.value) || 0)}
-                  className="h-8"
-                />
-              </div>
-              <div className="col-span-2 space-y-1">
-                <Label className="text-xs">{t.movements.splitter.totalRows}</Label>
-                <div className="h-8 flex items-center text-sm text-muted-foreground">
-                  {t.movements.splitter.totalRowsCount(allRows.length, allRows.length - startRow)}
-                </div>
-              </div>
+            <div className="shrink-0 border-b px-6 py-4">
+              <DialogHeader className="pr-8">
+                <DialogTitle className="flex items-center gap-2">
+                  <Settings2 className="h-5 w-5" />
+                  {t.movements.splitter.configureMappingTitle}
+                </DialogTitle>
+                <DialogDescription>
+                  {t.movements.splitter.configureMappingDescription}
+                </DialogDescription>
+              </DialogHeader>
             </div>
 
-            {/* Previsualització de les dades */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                {t.movements.splitter.preview(previewRows.length)}
-              </Label>
-              <ScrollArea className="h-[180px] rounded-md border border-border/80 bg-card">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12 text-xs">#</TableHead>
-                      {Array.from({ length: numColumns }, (_, i) => (
-                        <TableHead key={i} className="text-xs min-w-[100px]">
-                          {t.movements.splitter.columnPrefix(i)}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {previewRows.map((row, rowIdx) => (
-                      <TableRow key={rowIdx}>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {startRow + rowIdx + 1}
-                        </TableCell>
-                        {Array.from({ length: numColumns }, (_, colIdx) => (
-                          <TableCell
-                            key={colIdx}
-                            className={`text-xs truncate max-w-[150px] ${
-                              colIdx === amountColumn ? 'bg-green-100 dark:bg-green-900/30' :
-                              colIdx === nameColumn ? 'bg-blue-100 dark:bg-blue-900/30' :
-                              colIdx === taxIdColumn ? 'bg-purple-100 dark:bg-purple-900/30' :
-                              colIdx === ibanColumn ? 'bg-cyan-100 dark:bg-cyan-900/30' :
-                              ''
-                            }`}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-6">
+                {savedMappings && savedMappings.length > 0 && (
+                  <div className="rounded-lg border bg-muted/50 p-4">
+                    <Label className="text-sm font-medium">{t.movements.splitter.savedConfigurations}</Label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {savedMappings.map(mapping => (
+                        <div key={mapping.id} className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleApplySavedMapping(mapping)}
                           >
-                            {row[colIdx] || '-'}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            </div>
+                            {mapping.name}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-destructive"
+                            onClick={() => handleDeleteMapping(mapping.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {/* Mapejat de columnes */}
-            <div className="space-y-3 rounded-lg border border-border/80 bg-muted/20 p-4">
-              <Label className="font-medium">{t.movements.splitter.fieldMapping}</Label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-xs flex items-center gap-1">
-                    <span className="w-3 h-3 rounded bg-green-500"></span>
-                    {t.movements.splitter.amountMandatory}
-                  </Label>
-                  <Select
-                    value={String(amountColumn)}
-                    onValueChange={(v) => setAmountColumn(parseInt(v))}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: numColumns }, (_, i) => (
-                        <SelectItem key={i} value={String(i)}>
-                          Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="rounded-lg border p-4">
+                  <Label className="font-medium">{tr('movements.splitter.basicConfigTitle', 'Configuracio basica')}</Label>
+                  <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-4">
+                    {rawText && (
+                      <div className="space-y-1">
+                        <Label className="text-xs">{t.movements.splitter.delimiter}</Label>
+                        <Select value={delimiter} onValueChange={(v) => {
+                          setDelimiter(v);
+                          const lines = rawText.split('\n').filter(line => line.trim());
+                          const rows = lines.map(line => line.split(v).map(cell => cell.trim()));
+                          setAllRows(rows);
+                        }}>
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value=";">{t.movements.splitter.semicolon}</SelectItem>
+                            <SelectItem value=",">{t.movements.splitter.comma}</SelectItem>
+                            <SelectItem value={"\t"}>{t.movements.splitter.tab}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <Label className="text-xs">{t.movements.splitter.startRow}</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={allRows.length - 1}
+                        value={startRow}
+                        onChange={(e) => setStartRow(parseInt(e.target.value) || 0)}
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label className="text-xs">{t.movements.splitter.totalRows}</Label>
+                      <div className="flex h-8 items-center text-sm text-muted-foreground">
+                        {t.movements.splitter.totalRowsCount(allRows.length, allRows.length - startRow)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs flex items-center gap-1">
-                    <span className="w-3 h-3 rounded bg-blue-500"></span>
-                    {t.movements.splitter.name}
-                  </Label>
-                  <Select
-                    value={nameColumn !== null ? String(nameColumn) : 'none'}
-                    onValueChange={(v) => setNameColumn(v === 'none' ? null : parseInt(v))}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t.movements.splitter.notAvailable}</SelectItem>
-                      {Array.from({ length: numColumns }, (_, i) => (
-                        <SelectItem key={i} value={String(i)}>
-                          Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                <div className="space-y-3 rounded-lg border border-border/80 bg-muted/20 p-4">
+                  <Label className="font-medium">{t.movements.splitter.fieldMapping}</Label>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs flex items-center gap-1">
+                        <span className="w-3 h-3 rounded bg-green-500"></span>
+                        {t.movements.splitter.amountMandatory}
+                      </Label>
+                      <Select
+                        value={String(amountColumn)}
+                        onValueChange={(v) => setAmountColumn(parseInt(v))}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: numColumns }, (_, i) => (
+                            <SelectItem key={i} value={String(i)}>
+                              Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs flex items-center gap-1">
+                        <span className="w-3 h-3 rounded bg-cyan-500"></span>
+                        {t.movements.splitter.iban}
+                      </Label>
+                      <Select
+                        value={ibanColumn !== null ? String(ibanColumn) : 'none'}
+                        onValueChange={(v) => setIbanColumn(v === 'none' ? null : parseInt(v))}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{t.movements.splitter.notAvailable}</SelectItem>
+                          {Array.from({ length: numColumns }, (_, i) => (
+                            <SelectItem key={i} value={String(i)}>
+                              Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs flex items-center gap-1">
+                        <span className="w-3 h-3 rounded bg-blue-500"></span>
+                        {t.movements.splitter.name}
+                      </Label>
+                      <Select
+                        value={nameColumn !== null ? String(nameColumn) : 'none'}
+                        onValueChange={(v) => setNameColumn(v === 'none' ? null : parseInt(v))}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{t.movements.splitter.notAvailable}</SelectItem>
+                          {Array.from({ length: numColumns }, (_, i) => (
+                            <SelectItem key={i} value={String(i)}>
+                              Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs flex items-center gap-1">
-                    <span className="w-3 h-3 rounded bg-purple-500"></span>
-                    {t.movements.splitter.taxId}
+
+                <Collapsible open={isAdvancedMappingOpen} onOpenChange={setIsAdvancedMappingOpen} className="rounded-lg border p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <Label className="font-medium">{tr('movements.splitter.optionalFieldsTitle', 'Mes camps')}</Label>
+                    <CollapsibleTrigger asChild>
+                      <Button type="button" variant="ghost" size="sm" className="gap-2 px-2">
+                        {tr('movements.splitter.showOptionalFields', 'Mostrar opcionals')}
+                        <ChevronDown className={`h-4 w-4 transition-transform ${isAdvancedMappingOpen ? 'rotate-180' : ''}`} />
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                  <CollapsibleContent className="pt-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs flex items-center gap-1">
+                          <span className="w-3 h-3 rounded bg-purple-500"></span>
+                          {t.movements.splitter.taxId}
+                        </Label>
+                        <Select
+                          value={taxIdColumn !== null ? String(taxIdColumn) : 'none'}
+                          onValueChange={(v) => setTaxIdColumn(v === 'none' ? null : parseInt(v))}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t.movements.splitter.notAvailable}</SelectItem>
+                            {Array.from({ length: numColumns }, (_, i) => (
+                              <SelectItem key={i} value={String(i)}>
+                                Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Eye className="h-4 w-4" />
+                    {t.movements.splitter.preview(previewRows.length)}
                   </Label>
-                  <Select
-                    value={taxIdColumn !== null ? String(taxIdColumn) : 'none'}
-                    onValueChange={(v) => setTaxIdColumn(v === 'none' ? null : parseInt(v))}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t.movements.splitter.notAvailable}</SelectItem>
-                      {Array.from({ length: numColumns }, (_, i) => (
-                        <SelectItem key={i} value={String(i)}>
-                          Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="max-h-[240px] overflow-auto rounded-md border border-border/80 bg-card">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12 text-xs">#</TableHead>
+                          {Array.from({ length: numColumns }, (_, i) => (
+                            <TableHead key={i} className="text-xs min-w-[100px]">
+                              {t.movements.splitter.columnPrefix(i)}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {previewRows.map((row, rowIdx) => (
+                          <TableRow key={rowIdx}>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {startRow + rowIdx + 1}
+                            </TableCell>
+                            {Array.from({ length: numColumns }, (_, colIdx) => (
+                              <TableCell
+                                key={colIdx}
+                                className={`text-xs truncate max-w-[150px] ${
+                                  colIdx === amountColumn ? 'bg-green-100 dark:bg-green-900/30' :
+                                  colIdx === nameColumn ? 'bg-blue-100 dark:bg-blue-900/30' :
+                                  colIdx === taxIdColumn ? 'bg-purple-100 dark:bg-purple-900/30' :
+                                  colIdx === ibanColumn ? 'bg-cyan-100 dark:bg-cyan-900/30' :
+                                  ''
+                                }`}
+                              >
+                                {row[colIdx] || '-'}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs flex items-center gap-1">
-                    <span className="w-3 h-3 rounded bg-cyan-500"></span>
-                    {t.movements.splitter.iban}
-                  </Label>
-                  <Select
-                    value={ibanColumn !== null ? String(ibanColumn) : 'none'}
-                    onValueChange={(v) => setIbanColumn(v === 'none' ? null : parseInt(v))}
+
+                <div className="flex items-center gap-2 rounded-lg border p-4">
+                  <Input
+                    placeholder={t.movements.splitter.configName}
+                    value={newMappingName}
+                    onChange={(e) => setNewMappingName(e.target.value)}
+                    className="h-8 flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSaveMapping}
+                    disabled={!newMappingName.trim()}
                   >
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t.movements.splitter.notAvailable}</SelectItem>
-                      {Array.from({ length: numColumns }, (_, i) => (
-                        <SelectItem key={i} value={String(i)}>
-                          Columna {i}: {previewRows[0]?.[i]?.substring(0, 20) || '-'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <Save className="mr-1 h-3 w-3" />
+                    {t.movements.splitter.save}
+                  </Button>
                 </div>
               </div>
             </div>
 
-            {/* Guardar configuració */}
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder={t.movements.splitter.configName}
-                value={newMappingName}
-                onChange={(e) => setNewMappingName(e.target.value)}
-                className="flex-1 h-8"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSaveMapping}
-                disabled={!newMappingName.trim()}
-              >
-                <Save className="mr-1 h-3 w-3" />
-                {t.movements.splitter.save}
-              </Button>
+            <div className="shrink-0 border-t px-6 py-4">
+              {mappingMissingMessage ? (
+                <p className="mb-3 text-sm text-muted-foreground">{mappingMissingMessage}</p>
+              ) : null}
+              <DialogFooter className="gap-2 sm:justify-between sm:space-x-0">
+                <Button variant="outline" onClick={() => setStep('upload')}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  {t.movements.splitter.back}
+                </Button>
+                <Button onClick={handleContinueToPreview} disabled={isProcessing || !mappingHasIdentifier}>
+                  {isProcessing ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                  )}
+                  {t.movements.splitter.continue}
+                </Button>
+              </DialogFooter>
             </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setStep('upload')}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {t.movements.splitter.back}
-              </Button>
-              <Button onClick={handleContinueToPreview} disabled={isProcessing}>
-                {isProcessing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowRight className="mr-2 h-4 w-4" />
-                )}
-                {t.movements.splitter.continue}
-              </Button>
-            </DialogFooter>
           </>
         )}
 
@@ -2202,12 +2239,9 @@ export function RemittanceSplitter({
             ═══════════════════════════════════════════════════════════════════ */}
         {step === 'preview' && (
           <>
-            {/* ─────────────────────────────────────────────────────────────────
-                HEADER FIX: Títol + Resum compacte + Alertes
-                ───────────────────────────────────────────────────────────────── */}
-            <div className="flex-shrink-0 space-y-3 pb-3 border-b">
+            <div className="shrink-0 border-b px-6 py-4">
               {/* Títol i descripció */}
-              <DialogHeader className="pb-0">
+              <DialogHeader className="space-y-3 pr-8 pb-0">
                 <DialogTitle>
                   {isPaymentRemittance
                     ? t.movements.splitter.paymentsReviewTitle
@@ -2218,13 +2252,11 @@ export function RemittanceSplitter({
                     ? t.movements.splitter.paymentsReviewDescription
                     : t.movements.splitter.reviewDescription}
                 </DialogDescription>
-              </DialogHeader>
-
-              {/* P0: Header resum compacte - Format: "314 trobades · 3 pendents · Total 4.390,00 €" */}
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Mode IN: mostrar trobades per IBAN (totalFound) */}
-                {!isPaymentRemittance ? (
-                  <>
+                {/* P0: Header resum compacte - Format: "314 trobades · 3 pendents · Total 4.390,00 €" */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Mode IN: mostrar trobades per IBAN (totalFound) */}
+                  {!isPaymentRemittance ? (
+                    <>
                     {/* Trobades per IBAN (tots els estats: active, inactive, archived, deleted) */}
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-50 border border-green-200 text-sm">
                       <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
@@ -2332,42 +2364,46 @@ export function RemittanceSplitter({
                         <span className="text-orange-600">{t.movements.splitter.newWithoutTaxId}</span>
                       </div>
                     )}
-                  </>
-                )}
-
-                {/* Separador visual amb més contrast (el de 1px quedava massa subtil) */}
-                <div className="mx-1 h-5 w-[1.5px] shrink-0 bg-border/90" aria-hidden="true" />
-
-                {/* Import total compacte */}
-                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm ${
-                  Math.abs(validationDetails.deltaCents) <= 2 && (!stats.ambiguousIban || isPaymentRemittance)
-                    ? 'bg-green-50 border border-green-200'
-                    : 'bg-red-50 border border-red-200'
-                }`}>
-                  <CheckCircle2 className={`h-3.5 w-3.5 ${
-                    Math.abs(validationDetails.deltaCents) <= 2 && (!stats.ambiguousIban || isPaymentRemittance) ? 'text-green-600' : 'text-red-600'
-                  }`} />
-                  <span className="font-semibold">{formatCurrencyEU(totalAmount)}</span>
-                  <span className="text-muted-foreground">/ {formatCurrencyEU(Math.abs(transaction.amount))}</span>
-                  {validationDetails.deltaCents !== 0 && (
-                    <span className={`text-xs ml-1 ${Math.abs(validationDetails.deltaCents) <= 2 ? 'text-green-600' : 'text-red-600'}`}>
-                      (Δ {validationDetails.deltaCents > 0 ? '+' : ''}{(validationDetails.deltaCents / 100).toFixed(2)}€)
-                    </span>
+                    </>
                   )}
-                </div>
-              </div>
 
-              {/* Banner d'alerta quan delta > ±2 cèntims */}
-              {Math.abs(validationDetails.deltaCents) > 2 && (
-                <Alert variant="destructive" className="py-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle className="text-sm">Imports no quadren</AlertTitle>
-                  <AlertDescription className="text-xs">
-                    Diferència: {validationDetails.deltaCents > 0 ? '+' : ''}{(validationDetails.deltaCents / 100).toFixed(2)}€
-                    (màxim permès: ±0.02€). Revisa els imports o torna a importar el fitxer.
-                  </AlertDescription>
-                </Alert>
-              )}
+                  {/* Separador visual amb més contrast (el de 1px quedava massa subtil) */}
+                  <div className="mx-1 h-5 w-[1.5px] shrink-0 bg-border/90" aria-hidden="true" />
+
+                  {/* Import total compacte */}
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm ${
+                    Math.abs(validationDetails.deltaCents) <= 2 && (!stats.ambiguousIban || isPaymentRemittance)
+                      ? 'bg-green-50 border border-green-200'
+                      : 'bg-red-50 border border-red-200'
+                  }`}>
+                    <CheckCircle2 className={`h-3.5 w-3.5 ${
+                      Math.abs(validationDetails.deltaCents) <= 2 && (!stats.ambiguousIban || isPaymentRemittance) ? 'text-green-600' : 'text-red-600'
+                    }`} />
+                    <span className="font-semibold">{formatCurrencyEU(totalAmount)}</span>
+                    <span className="text-muted-foreground">/ {formatCurrencyEU(Math.abs(transaction.amount))}</span>
+                    {validationDetails.deltaCents !== 0 && (
+                      <span className={`text-xs ml-1 ${Math.abs(validationDetails.deltaCents) <= 2 ? 'text-green-600' : 'text-red-600'}`}>
+                        (Δ {validationDetails.deltaCents > 0 ? '+' : ''}{(validationDetails.deltaCents / 100).toFixed(2)}€)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </DialogHeader>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-4">
+                {/* Banner d'alerta quan delta > ±2 cèntims */}
+                {Math.abs(validationDetails.deltaCents) > 2 && (
+                  <Alert variant="destructive" className="py-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle className="text-sm">Imports no quadren</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      Diferència: {validationDetails.deltaCents > 0 ? '+' : ''}{(validationDetails.deltaCents / 100).toFixed(2)}€
+                      (màxim permès: ±0.02€). Revisa els imports o torna a importar el fitxer.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
               {/* Opcions per crear contactes - compacte */}
               {/* Per mode IN: mostra opcions de CP i checkboxes de creació de donants */}
@@ -2412,6 +2448,30 @@ export function RemittanceSplitter({
                 </div>
               )}
 
+              {isPaymentRemittance && parsedDonations.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+                  <span className="text-sm text-muted-foreground">
+                    {t.movements.splitter.exportSepaTooltip}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportSepa}
+                    disabled={isProcessing || !debtorBankAccount?.iban || !canProcess}
+                    title={
+                      !debtorBankAccount?.iban
+                        ? t.movements.splitter.configureIban
+                        : !canProcess
+                        ? blockReason || t.movements.splitter.validationFailed
+                        : t.movements.splitter.exportSepaTooltip
+                    }
+                  >
+                    <Download className="mr-1 h-3 w-3" />
+                    {t.movements.splitter.exportSepa}
+                  </Button>
+                </div>
+              )}
+
               {/* InfoBox informatiu: només si hi ha pendents i és remesa IN */}
               {stats.newWithoutTaxId > 0 && !isPaymentRemittance && (
                 <div className="px-3 py-3 rounded-md bg-orange-50 border border-orange-200 text-orange-900 text-sm">
@@ -2439,31 +2499,26 @@ export function RemittanceSplitter({
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* ─────────────────────────────────────────────────────────────────
-                TAULA PROTAGONISTA: Scroll independent, ocupa tot l'espai
-                ───────────────────────────────────────────────────────────────── */}
-            <div ref={tableContainerRef} className="flex-1 min-h-0 overflow-auto rounded-md border">
-              <Table>
-                <TableHeader className="sticky top-0 bg-background z-10">
-                  <TableRow>
-                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">
-                      {isPaymentRemittance ? t.movements.splitter.beneficiary : t.movements.splitter.name}
-                    </TableHead>
-                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.taxId}</TableHead>
-                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">IBAN</TableHead>
-                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-right">{t.movements.splitter.amount}</TableHead>
-                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.status}</TableHead>
-                    <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.inDatabase}</TableHead>
-                    {/* CP només per mode IN (donants) */}
-                    {!isPaymentRemittance && (
-                      <TableHead className="w-[100px] px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.zipCode}</TableHead>
-                    )}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {parsedDonations.map((donation, index) => (
+                <div ref={tableContainerRef} className="max-h-[420px] overflow-auto rounded-md border">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background z-10">
+                      <TableRow>
+                        <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">
+                          {isPaymentRemittance ? t.movements.splitter.beneficiary : t.movements.splitter.name}
+                        </TableHead>
+                        <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.taxId}</TableHead>
+                        <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">IBAN</TableHead>
+                        <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-right">{t.movements.splitter.amount}</TableHead>
+                        <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.status}</TableHead>
+                        <TableHead className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.inDatabase}</TableHead>
+                        {/* CP només per mode IN (donants) */}
+                        {!isPaymentRemittance && (
+                          <TableHead className="w-[100px] px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide">{t.movements.splitter.zipCode}</TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {parsedDonations.map((donation, index) => (
                     <TableRow
                       key={index}
                       data-status={donation.status}
@@ -2916,61 +2971,42 @@ export function RemittanceSplitter({
                         </TableCell>
                       )}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* ─────────────────────────────────────────────────────────────────
-                FOOTER FIX: Resum + Accions
-                ───────────────────────────────────────────────────────────────── */}
-            <div className="flex-shrink-0 pt-3 border-t">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {isPaymentRemittance
-                      ? t.movements.splitter.paymentsActionSummary(stats.toCreate, parsedDonations.length)
-                      : t.movements.splitter.actionSummary(stats.toCreate, parsedDonations.length)}
-                  </span>
-                  {/* Botó exportar SEPA només per mode OUT */}
-                  {isPaymentRemittance && parsedDonations.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExportSepa}
-                      disabled={isProcessing || !debtorBankAccount?.iban || !canProcess}
-                      title={
-                        !debtorBankAccount?.iban
-                          ? t.movements.splitter.configureIban
-                          : !canProcess
-                          ? blockReason || t.movements.splitter.validationFailed
-                          : t.movements.splitter.exportSepaTooltip
-                      }
-                    >
-                      <Download className="mr-1 h-3 w-3" />
-                      {t.movements.splitter.exportSepa}
-                    </Button>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep('mapping')}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    {t.movements.splitter.backToMapping}
-                  </Button>
-                  <Button
-                    onClick={handleProcess}
-                    disabled={isProcessing || !canProcess}
-                    title={blockReason || undefined}
-                  >
-                    {isProcessing ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    {isPaymentRemittance
-                      ? t.movements.splitter.processPayments(parsedDonations.length)
-                      : t.movements.splitter.processDonations(parsedDonations.length)}
-                  </Button>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
+            </div>
+
+            <div className="shrink-0 border-t px-6 py-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {isPaymentRemittance
+                    ? t.movements.splitter.paymentsActionSummary(stats.toCreate, parsedDonations.length)
+                    : t.movements.splitter.actionSummary(stats.toCreate, parsedDonations.length)}
+                </span>
+                {!canProcess && blockReason ? (
+                  <span className="text-sm text-muted-foreground">{blockReason}</span>
+                ) : null}
+              </div>
+              <DialogFooter className="gap-2 sm:justify-between sm:space-x-0">
+                <Button variant="outline" onClick={() => setStep('mapping')}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  {t.movements.splitter.backToMapping}
+                </Button>
+                <Button
+                  onClick={handleProcess}
+                  disabled={isProcessing || !canProcess}
+                  title={blockReason || undefined}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  {isPaymentRemittance
+                    ? t.movements.splitter.processPayments(parsedDonations.length)
+                    : t.movements.splitter.processDonations(parsedDonations.length)}
+                </Button>
+              </DialogFooter>
             </div>
           </>
         )}
