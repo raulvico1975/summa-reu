@@ -1136,6 +1136,24 @@ createdAt: string
 updatedAt: string
 ```
 
+#### Invariant canònic de filiació de remeses IN
+
+Per a Summa Social, la relació **pare-filla** d'una remesa es determina així:
+
+- `parentTransactionId` és el **criteri canònic** per saber si una transacció és filla del pare.
+- `transactionIds[]` al document `/remittances/{remittanceId}` és la **llista canònica de filles actives** de la remesa.
+- `remittanceId` és només una **metadada de vinculació** amb el document de remesa; **no és prova suficient** que un document sigui una filla, perquè el pare també el pot compartir.
+- Les filles arxivades (`archivedAt` informat) **no compten** per checks, sumes, recompte ni fiscalitat.
+- El pare s'ha d'**excloure sempre explícitament** de qualsevol fallback o recompte de filles.
+
+**Fallback legacy acceptable:**
+Si falta `transactionIds[]` o el document de remesa és incomplet, el sistema pot reconstruir filles actives amb:
+1. `parentTransactionId === parentTxId`
+2. i només en legacy, `isRemittanceItem === true` + `remittanceId` coincident
+3. excloent sempre el pare i qualsevol filla arxivada.
+
+Això és coherent amb el model actual del document: `parentTransactionId` al pare/doc remesa, `transactionIds[]` com a filles actives i `archivedAt` com a soft-delete.
+
 ### 3.3.5b Flux de Vida d'una Remesa IN
 
 El flux correcte per gestionar remeses IN és:
@@ -1176,7 +1194,10 @@ El flux correcte per gestionar remeses IN és:
 4. Marca doc remesa com `status: 'undone'`
 
 **Servidor (`/api/remittances/in/check`):**
-- Verifica consistència: filles actives = `transactionIds[]` (activa = `archivedAt` null/undefined/"")
+- Verifica consistència sobre **filles actives reals** de la remesa
+- Font primària: `transactionIds[]` del doc remesa
+- Fallback legacy: `parentTransactionId` i, només si cal, `isRemittanceItem === true` amb `remittanceId` coincident
+- `remittanceId` sol **no es pot usar** per decidir filles ni per comptar/sumar
 - Només per remeses IN (import positiu)
 - Retorna issues detectades (COUNT_MISMATCH, SUM_MISMATCH, etc.)
 

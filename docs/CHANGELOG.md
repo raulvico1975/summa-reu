@@ -10,6 +10,10 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-03-12
+
+- invariant documental de remeses IN: `parentTransactionId` canònic, `remittanceId` només metadada, checks sobre filles actives reals
+
 ### 2026-02-25
 
 - alineació del document mestre amb el contracte real d'import bancari
