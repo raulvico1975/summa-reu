@@ -1736,6 +1736,13 @@ Fitxer detall:     10€ + 20€ + 15€ + 10€ = 55€
 > - La fitxa del donant (returnCount)
 > - El Model 182 (resta de l'import net)
 
+#### Invariant d'activitat de filles
+
+- En remeses OUT de devolucions, una filla amb `archivedAt` informat **mai** compta com a filla activa.
+- Després d'un **Desfer**, el pare torna a l'estat original i les filles arxivades queden només com a històric.
+- En un **reprocessament**, si només existeixen filles arxivades per `parentTransactionId`, el sistema ha de partir de zero i crear filles noves.
+- El pare **no pot** quedar `remittanceStatus = 'complete'` si no hi ha cap filla activa.
+
 #### Model de dades (Remeses de devolucions)
 
 **Transacció pare:**

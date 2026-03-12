@@ -2,6 +2,17 @@
 
 Registre cronologic de desplegaments a produccio.
 
+## Notes operatives sense deploy
+
+### 2026-03-12 — Remeses OUT de devolucions
+
+- Branca preparada per merge complet: `codex/returns-undo-global-repair`
+- Invariant fixat: les filles arxivades no compten mai com a filles actives en remeses OUT de devolucions, ni en reprocess ni en calcul d'estat.
+- Verificacions guardades a `tmp/verification/2026-03-12-returns-out-*.log`
+- Detector global en lectura: 0 casos oberts
+- Script puntual Baruma en `dry-run`: `no-op`
+- Sense reparacio real de dades executada en aquesta integracio
+
 | Data | SHA | Risc | Fiscal | Fitxers | Resultat |
 |------|-----|------|--------|---------|----------|
 | 2026-02-11 19:07 | 771fa85 | ALT | Si | 31 | OK |
