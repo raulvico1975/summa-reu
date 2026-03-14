@@ -7,6 +7,7 @@ import {
   subscriptionRequiredResponse,
 } from "@/src/lib/auth/require-active-subscription";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
+import { canDeletePastMeeting } from "@/src/lib/meetings/get-owner-meetings";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 import { isTrustedSameOrigin } from "@/src/lib/security/request";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
@@ -40,6 +41,10 @@ export async function POST(request: NextRequest) {
 
     if (meeting.orgId !== owner.orgId) {
       return NextResponse.json({ error: i18n.errors.unauthorized }, { status: 403 });
+    }
+
+    if (!canDeletePastMeeting(meeting)) {
+      return NextResponse.json({ error: i18n.meeting.deleteOnlyPastError }, { status: 409 });
     }
 
     await deleteMeetingById(meeting.id);
