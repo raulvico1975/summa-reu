@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getStorage } from 'firebase-admin/storage'
 import { ai } from '@/ai/genkit'
 import { z } from 'genkit'
 import { verifyIdToken, getAdminDb, validateUserMembership, isSuperAdmin } from '@/lib/api/admin-sdk'
@@ -13,10 +14,10 @@ import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { loadKbCards, serializeKbCacheBustValue } from '@/lib/support/load-kb-runtime'
 import { incrementBotQuestionCounters, logBotQuestion, normalizeForHash } from '@/lib/support/bot-question-log'
-import { detectSmallTalkResponse, type KbLang } from '@/lib/support/bot-retrieval'
+import { debugRetrieveCard, detectSmallTalkResponse, type KbLang, type RetrievalTraceDiscard } from '@/lib/support/bot-retrieval'
 import { orchestrator } from '@/lib/support/engine/orchestrator'
 import { buildEmergencyFallback } from '@/lib/support/engine/renderer'
-import { extractOperationalSteps } from '@/lib/support/engine/policy'
+import { extractOperationalSteps, normalizeUiPathsAgainstCatalog } from '@/lib/support/engine/policy'
 import { clampTimeout, normalizeAssistantTone, normalizeLang, parseClarifyOptionIds, withTimeout } from '@/lib/support/engine/normalize'
 import type { ApiResponse, AssistantTone, InputLang } from '@/lib/support/engine/types'
 import guideProjectsCardRaw from '../../../../../docs/kb/cards/guides/guide-projects.json'
@@ -30,6 +31,7 @@ const DEFAULT_INTENT_TIMEOUT_MS = 1800
 const MIN_INTENT_TIMEOUT_MS = 800
 const MAX_INTENT_TIMEOUT_MS = 4000
 const MAX_INTENT_CANDIDATES = 14
+const BOT_TRACE_HEADER = 'x-summa-bot-trace'
 
 const CRITICAL_BUNDLED_CARDS = [
   {
@@ -100,6 +102,43 @@ type PreviousBotContext = {
   previousMode?: 'card' | 'fallback'
   previousClarifyOptionIds?: string[]
   previousWasClarify?: boolean
+}
+
+type BotDebugTrace = {
+  orgId: string
+  kbLang: KbLang
+  userRole: string | null
+  superAdmin: boolean
+  kbSource: 'storage' | 'filesystem'
+  version: number
+  storageVersion: number | null
+  cardsLoaded: number
+  cardsAfterCritical: number
+  cardsAfterSupportAccess: number
+  cardsFilteredOutByAccess: Array<{ cardId: string; reason: string }>
+  cardsConsidered: string[]
+  allowAiIntent: boolean
+  allowAiReformat: boolean
+  retrieval: ReturnType<typeof debugRetrieveCard>
+  policy: {
+    decisionReason?: string
+    confidenceBand?: string
+    intentType: string
+    questionDomain?: string
+    specificCaseDetected?: boolean
+    trustedOperationalCard: boolean
+    selectedAnswerMode: string | null
+    selectedCardIdOrFallbackId: string
+    selectedCardType: string | null
+    selectedCardUiPathsRaw: string[]
+    selectedCardUiPathsNormalized: string[]
+    invalidUiPath: boolean
+    stepsCount: number
+    discarded: RetrievalTraceDiscard[]
+    clarifyOptions: Array<{ index: 1 | 2 | 3; cardId: string; label: string }>
+    finalMode: 'card' | 'fallback'
+    finalUiPaths: string[]
+  }
 }
 
 const BotInputSchema = z.object({
@@ -364,6 +403,74 @@ function filterCardsForSupportAccess(cards: KBCard[], isSuperAdminUser: boolean)
   })
 }
 
+function shouldTraceBotRequest(request: NextRequest, superAdminUser: boolean): boolean {
+  return superAdminUser && request.headers.get(BOT_TRACE_HEADER) === '1'
+}
+
+async function resolveTraceKbSource(version: number, storageVersion: number | null): Promise<'storage' | 'filesystem'> {
+  const bucketName =
+    process.env.FIREBASE_STORAGE_BUCKET ||
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+
+  if (!bucketName) return 'filesystem'
+  if (storageVersion !== version) return 'filesystem'
+
+  try {
+    const bucket = getStorage().bucket(bucketName)
+    const file = bucket.file('support-kb/kb.json')
+    const [exists] = await file.exists()
+    return exists ? 'storage' : 'filesystem'
+  } catch {
+    return 'filesystem'
+  }
+}
+
+function getCardRawAnswer(card: KBCard | null | undefined, kbLang: KbLang): string {
+  if (!card) return ''
+  if (card.guideId) return loadGuideContent(card.guideId, kbLang)
+  return card.answer?.[kbLang] ?? card.answer?.ca ?? card.answer?.es ?? ''
+}
+
+function buildPolicyDiscards(input: {
+  decisionReason?: string
+  confidenceBand?: string
+  selectedCard: KBCard | null
+  selectedUiPathsRaw: string[]
+  selectedUiPathsNormalized: string[]
+  stepsCount: number
+}): RetrievalTraceDiscard[] {
+  const { decisionReason, confidenceBand, selectedCard, selectedUiPathsRaw, selectedUiPathsNormalized, stepsCount } = input
+  const selectedCardId = selectedCard?.id ?? 'runtime-fallback'
+  const discards: RetrievalTraceDiscard[] = []
+
+  if (selectedUiPathsRaw.length > 0 && selectedUiPathsNormalized.length === 0) {
+    discards.push({ cardId: selectedCardId, reason: 'invalid_uiPath' })
+  }
+
+  if (stepsCount === 0 && selectedCard?.type !== 'fallback') {
+    discards.push({ cardId: selectedCardId, reason: 'no_steps_renderitzables' })
+  }
+
+  if (confidenceBand && confidenceBand !== 'high') {
+    discards.push({ cardId: selectedCardId, reason: 'low_confidence' })
+  }
+
+  if (decisionReason?.includes('sensitive')) {
+    discards.push({ cardId: selectedCardId, reason: 'sensitive' })
+  }
+
+  if (decisionReason && (
+    decisionReason.includes('guardrail') ||
+    decisionReason.includes('fallback') ||
+    decisionReason.includes('clarify') ||
+    decisionReason.includes('navigation')
+  )) {
+    discards.push({ cardId: selectedCardId, reason: `policy:${decisionReason}` })
+  }
+
+  return discards
+}
+
 function normalizePreviousBotContext(body: Record<string, unknown>): PreviousBotContext {
   const previousQuestion = typeof body.previousQuestion === 'string' ? body.previousQuestion.trim() : undefined
   const previousCardId = typeof body.previousCardId === 'string' ? body.previousCardId.trim() : undefined
@@ -453,6 +560,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
     hasOperationalAccess = true
     const superAdminUser = await isSuperAdmin(authResult.uid)
+    const traceEnabled = shouldTraceBotRequest(request, superAdminUser)
 
     const smallTalk = detectSmallTalkResponse(message, kbLang)
     if (smallTalk) {
@@ -526,10 +634,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       console.error('[bot] loadKbCards error:', cardsError)
     }
 
-    const retrievableCards = filterCardsForSupportAccess(
-      ensureCriticalCardsPresent(cards),
-      superAdminUser
-    )
+    const criticalCards = ensureCriticalCardsPresent(cards)
+    const retrievableCards = filterCardsForSupportAccess(criticalCards, superAdminUser)
+    const cardsFilteredOutByAccess = traceEnabled
+      ? criticalCards
+        .filter(card => !retrievableCards.some(allowed => allowed.id === card.id))
+        .map(card => ({
+          cardId: card.id,
+          reason: HIDDEN_FOR_ORG_CARD_IDS.has(card.id)
+            ? 'role_org_filter:hidden_for_org_support_access'
+            : (card.domain ?? '').toLowerCase() === 'superadmin'
+              ? 'role_org_filter:superadmin_domain'
+              : (card.guardrail ?? '').toLowerCase() === 'b1_danger'
+                ? 'role_org_filter:danger_guardrail'
+                : 'role_org_filter:unknown',
+        }))
+      : []
 
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY
     const allowAiIntent = Boolean(apiKey) && aiIntentEnabled
@@ -550,6 +670,64 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         return output?.answer ?? input.rawAnswer
       },
     })
+
+    let responsePayload: ApiResponse | (ApiResponse & { debugTrace?: BotDebugTrace }) = result.response
+    if (traceEnabled) {
+      const kbSource = await resolveTraceKbSource(version, storageVersion)
+      const retrieval = debugRetrieveCard(message, kbLang, retrievableCards)
+      const selectedCard = retrievableCards.find(card => card.id === result.response.cardId) ?? null
+      const selectedUiPathsRaw = selectedCard?.uiPaths ?? []
+      const selectedUiPathsNormalized = normalizeUiPathsAgainstCatalog(selectedUiPathsRaw)
+      const stepsCount = extractOperationalSteps(getCardRawAnswer(selectedCard, kbLang)).length
+      const policyDiscards = buildPolicyDiscards({
+        decisionReason: result.meta.decisionReason,
+        confidenceBand: result.meta.confidenceBand,
+        selectedCard,
+        selectedUiPathsRaw,
+        selectedUiPathsNormalized,
+        stepsCount,
+      })
+
+      responsePayload = {
+        ...result.response,
+        debugTrace: {
+          orgId,
+          kbLang,
+          userRole: membership.role,
+          superAdmin: superAdminUser,
+          kbSource,
+          version,
+          storageVersion,
+          cardsLoaded: cards.length,
+          cardsAfterCritical: criticalCards.length,
+          cardsAfterSupportAccess: retrievableCards.length,
+          cardsFilteredOutByAccess,
+          cardsConsidered: retrievableCards.map(card => card.id),
+          allowAiIntent,
+          allowAiReformat,
+          retrieval,
+          policy: {
+            decisionReason: result.meta.decisionReason,
+            confidenceBand: result.meta.confidenceBand ?? result.meta.retrievalConfidence,
+            intentType: result.meta.intentType,
+            questionDomain: result.meta.questionDomain,
+            specificCaseDetected: result.meta.specificCaseDetected,
+            trustedOperationalCard: result.meta.trustedOperationalCard,
+            selectedAnswerMode: selectedCard?.answerMode ?? null,
+            selectedCardIdOrFallbackId: result.response.cardId,
+            selectedCardType: selectedCard?.type ?? null,
+            selectedCardUiPathsRaw: selectedUiPathsRaw,
+            selectedCardUiPathsNormalized: selectedUiPathsNormalized,
+            invalidUiPath: selectedUiPathsRaw.length > 0 && selectedUiPathsNormalized.length === 0,
+            stepsCount,
+            discarded: [...retrieval.discarded, ...policyDiscards],
+            clarifyOptions: result.response.clarifyOptions ?? [],
+            finalMode: result.response.mode,
+            finalUiPaths: result.response.uiPaths,
+          },
+        },
+      }
+    }
 
     const observabilityWrites: Promise<void>[] = []
     if (result.response.cardId === 'clarify-disambiguation') {
@@ -600,7 +778,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }).catch(e => console.error('[bot] log error:', e))
     void Promise.all(observabilityWrites).catch(e => console.error('[bot] observability error:', e))
 
-    return NextResponse.json(result.response)
+    return NextResponse.json(responsePayload as ApiResponse)
   } catch (error: unknown) {
     console.error('[API] support/bot error:', error)
 

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { loadAllCards, type KBCard } from '../support/load-kb'
-import { detectSmallTalkResponse, detectSpecificCase, inferQuestionDomain, retrieveCard, suggestKeywordsFromMessage } from '../support/bot-retrieval'
+import { debugRetrieveCard, detectSmallTalkResponse, detectSpecificCase, inferQuestionDomain, retrieveCard, suggestKeywordsFromMessage } from '../support/bot-retrieval'
 
 const cards = loadAllCards()
 
@@ -159,6 +159,14 @@ test('retrieveCard resolves undoing a processed remittance', () => {
   const result = retrieveCard('com desfer una remesa', 'ca', cards)
   assert.equal(result.card.id, 'howto-remittance-undo')
   assert.equal(result.mode, 'card')
+})
+
+test('debugRetrieveCard mirrors the donor update retrieval path', () => {
+  const debug = debugRetrieveCard("com actualitzo les dades d'un donant", 'ca', cards)
+  assert.equal(debug.predictedMode, 'card')
+  assert.equal(debug.predictedCardId, 'howto-donor-update-details')
+  assert.equal(debug.directIntent?.cardId, 'howto-donor-update-details')
+  assert.ok(debug.cardsConsidered.includes('howto-donor-update-details'))
 })
 
 test('retrieveCard resolves model 182 generation explicitly', () => {
