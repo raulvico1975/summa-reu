@@ -4,14 +4,14 @@ Generat: 2026-03-14 08:25
 Risc: ALT
 Backup curt: NO_REQUIRED
 SHA prod abans de publicar: 0820ea9
-SHA main a publicar: d7e3d6e
+SHA main a publicar: 62c2280
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
 git checkout main
-git revert d7e3d6e --no-edit
+git revert 62c2280 --no-edit
 git push origin main
 bash scripts/deploy.sh
 ```
