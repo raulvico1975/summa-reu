@@ -11,7 +11,7 @@ import { z } from 'genkit'
 import { verifyIdToken, getAdminDb, validateUserMembership, isSuperAdmin } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
-import { loadKbCards } from '@/lib/support/load-kb-runtime'
+import { loadKbCards, serializeKbCacheBustValue } from '@/lib/support/load-kb-runtime'
 import { incrementBotQuestionCounters, logBotQuestion, normalizeForHash } from '@/lib/support/bot-question-log'
 import { detectSmallTalkResponse, type KbLang } from '@/lib/support/bot-retrieval'
 import { orchestrator } from '@/lib/support/engine/orchestrator'
@@ -497,19 +497,23 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const deletedCardIds = supportSnap.exists && Array.isArray(supportSnap.data()?.deletedCardIds)
       ? (supportSnap.data()?.deletedCardIds as string[]).filter(item => typeof item === 'string')
       : []
-    const aiIntentEnabled = supportSnap.exists ? (supportSnap.data()?.aiIntentEnabled !== false) : true
-    const aiReformatEnabled = supportSnap.exists ? (supportSnap.data()?.aiReformatEnabled !== false) : true
-    const assistantTone: AssistantTone = normalizeAssistantTone(supportSnap.data()?.assistantTone)
+    const supportData = supportSnap.data() ?? {}
+    const aiIntentEnabled = supportSnap.exists ? (supportData.aiIntentEnabled !== false) : true
+    const aiReformatEnabled = supportSnap.exists ? (supportData.aiReformatEnabled !== false) : true
+    const assistantTone: AssistantTone = normalizeAssistantTone(supportData.assistantTone)
+    const publishedAtKey = serializeKbCacheBustValue(
+      supportData.publishedAt ?? supportData.updatedAt ?? supportData.storageUpdatedAt ?? null
+    )
 
     const intentTimeoutMs = clampTimeout(
-      supportSnap.data()?.intentTimeoutMs,
+      supportData.intentTimeoutMs,
       DEFAULT_INTENT_TIMEOUT_MS,
       MIN_INTENT_TIMEOUT_MS,
       MAX_INTENT_TIMEOUT_MS
     )
 
     const reformatTimeoutMs = clampTimeout(
-      supportSnap.data()?.reformatTimeoutMs,
+      supportData.reformatTimeoutMs,
       DEFAULT_REFORMAT_TIMEOUT_MS,
       MIN_REFORMAT_TIMEOUT_MS,
       MAX_REFORMAT_TIMEOUT_MS
@@ -517,7 +521,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     let cards: KBCard[] = []
     try {
-      cards = await loadKbCards(version, storageVersion, deletedCardIds)
+      cards = await loadKbCards(version, storageVersion, deletedCardIds, publishedAtKey)
     } catch (cardsError) {
       console.error('[bot] loadKbCards error:', cardsError)
     }

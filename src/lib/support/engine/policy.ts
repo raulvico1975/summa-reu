@@ -30,6 +30,18 @@ const OFFICIAL_UI_PATH_PREFIXES = [
   'Login',
 ] as const
 
+const DASHBOARD_ROUTE_UI_PATHS = [
+  { prefix: '/dashboard/manual', uiPath: 'Manual' },
+  { prefix: '/dashboard/movimientos', uiPath: 'Moviments' },
+  { prefix: '/dashboard/donants', uiPath: 'Donants' },
+  { prefix: '/dashboard/informes', uiPath: 'Informes' },
+  { prefix: '/dashboard/configuracion', uiPath: 'Configuració' },
+  { prefix: '/dashboard/project-module', uiPath: 'Projectes' },
+  { prefix: '/dashboard/proveidors', uiPath: 'Proveïdors' },
+  { prefix: '/dashboard/treballadors', uiPath: 'Treballadors' },
+  { prefix: '/dashboard', uiPath: 'Dashboard' },
+] as const
+
 export const SAFE_FALLBACK_PATHS: Record<KbLang, string[]> = {
   ca: [CONTEXT_HELP_UI_PATHS.ca, DEFAULT_MANUAL_UI_PATHS.ca],
   es: [CONTEXT_HELP_UI_PATHS.es, DEFAULT_MANUAL_UI_PATHS.es],
@@ -47,7 +59,23 @@ function isCatalogPath(path: string): boolean {
   return OFFICIAL_UI_PATH_PREFIXES.some(prefix => cleaned === prefix || cleaned.startsWith(`${prefix} > `))
 }
 
+function mapDashboardRouteToCatalogPath(path: string): string | null {
+  const cleaned = path
+    .trim()
+    .split('?')[0]
+    .split('#')[0]
+    .replace(/\/+$/, '')
+
+  if (!cleaned.startsWith('/')) return null
+
+  const match = DASHBOARD_ROUTE_UI_PATHS.find(entry => cleaned === entry.prefix || cleaned.startsWith(`${entry.prefix}/`))
+  return match?.uiPath ?? null
+}
+
 function normalizeUiPath(path: string): string {
+  const mappedPath = mapDashboardRouteToCatalogPath(path)
+  if (mappedPath) return mappedPath
+
   return path
     .trim()
     .replace(/\s*(->|→)\s*/g, ' > ')

@@ -14,13 +14,54 @@ import { runKbQualityGate } from './kb-quality-gate'
 import { CONTEXT_HELP_UI_PATHS } from '@/help/help-manual-links'
 
 type CachedKB = {
-  version: number
-  storageVersion: number | null
-  deletedSignature: string
+  signature: string
   cards: KBCard[]
 }
 
 let cached: CachedKB | null = null
+
+export function serializeKbCacheBustValue(value: unknown): string | null {
+  if (value == null) return null
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed || null
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  if (value instanceof Date) return value.toISOString()
+
+  if (typeof value === 'object') {
+    const maybeTimestamp = value as {
+      toMillis?: () => number
+      seconds?: number
+      nanoseconds?: number
+    }
+
+    if (typeof maybeTimestamp.toMillis === 'function') {
+      return String(maybeTimestamp.toMillis())
+    }
+
+    if (typeof maybeTimestamp.seconds === 'number') {
+      return `${maybeTimestamp.seconds}:${maybeTimestamp.nanoseconds ?? 0}`
+    }
+  }
+
+  return String(value)
+}
+
+export function buildKbRuntimeCacheSignature(input: {
+  version: number
+  storageVersion: number | null
+  deletedCardIds?: string[]
+  publishedAtKey?: string | null
+}): string {
+  const deletedSignature = (input.deletedCardIds ?? []).slice().sort().join('|')
+  return [
+    String(input.version),
+    String(input.storageVersion ?? 'null'),
+    deletedSignature,
+    input.publishedAtKey ?? 'no-published-at',
+  ].join('::')
+}
 
 function buildEmergencyFallbackCards(): KBCard[] {
   const base = {
@@ -111,16 +152,17 @@ function buildEmergencyFallbackCards(): KBCard[] {
 export async function loadKbCards(
   version: number,
   storageVersion: number | null = null,
-  deletedCardIds: string[] = []
+  deletedCardIds: string[] = [],
+  publishedAtKey: string | null = null
 ): Promise<KBCard[]> {
-  const deletedSignature = deletedCardIds.slice().sort().join('|')
+  const signature = buildKbRuntimeCacheSignature({
+    version,
+    storageVersion,
+    deletedCardIds,
+    publishedAtKey,
+  })
   // Cache hit: return if version hasn't changed
-  if (
-    cached &&
-    cached.version === version &&
-    cached.storageVersion === storageVersion &&
-    cached.deletedSignature === deletedSignature
-  ) {
+  if (cached && cached.signature === signature) {
     return cached.cards
   }
 
@@ -149,25 +191,25 @@ export async function loadKbCards(
       const fsFiltered = fsCards.filter(card => !deletedSet.has(card.id))
       const fsGate = fsFiltered.length > 0 ? runKbQualityGate(fsFiltered) : null
       if (fsGate?.ok) {
-        cached = { version, storageVersion, deletedSignature, cards: fsFiltered }
+        cached = { signature, cards: fsFiltered }
         return fsFiltered
       }
 
       const storageFiltered = (storageCards ?? []).filter(card => !deletedSet.has(card.id))
       const storageGate = storageFiltered.length > 0 ? runKbQualityGate(storageFiltered) : null
       if (storageGate?.ok) {
-        cached = { version, storageVersion, deletedSignature, cards: storageFiltered }
+        cached = { signature, cards: storageFiltered }
         return storageFiltered
       }
 
       const emergencyCards = buildEmergencyFallbackCards()
-      cached = { version, storageVersion, deletedSignature, cards: emergencyCards }
+      cached = { signature, cards: emergencyCards }
       return emergencyCards
     }
   }
 
   // 4. Cache per version
-  cached = { version, storageVersion, deletedSignature, cards: filtered }
+  cached = { signature, cards: filtered }
   return filtered
 }
 
