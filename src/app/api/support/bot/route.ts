@@ -14,7 +14,7 @@ import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { loadKbCards, serializeKbCacheBustValue } from '@/lib/support/load-kb-runtime'
 import { incrementBotQuestionCounters, logBotQuestion, normalizeForHash } from '@/lib/support/bot-question-log'
-import { debugRetrieveCard, detectSmallTalkResponse, type KbLang, type RetrievalTraceDiscard } from '@/lib/support/bot-retrieval'
+import { debugRetrieveCard, detectSmallTalkResponse, retrieveCard, type KbLang, type RetrievalResult, type RetrievalTraceDiscard } from '@/lib/support/bot-retrieval'
 import { orchestrator } from '@/lib/support/engine/orchestrator'
 import { buildEmergencyFallback } from '@/lib/support/engine/renderer'
 import { extractOperationalSteps, normalizeUiPathsAgainstCatalog } from '@/lib/support/engine/policy'
@@ -432,10 +432,46 @@ async function resolveTraceKbSource(version: number, storageVersion: number | nu
   }
 }
 
+async function loadPublishedStorageCardsDirect(version: number, storageVersion: number | null): Promise<KBCard[]> {
+  if (storageVersion !== version) return []
+
+  const bucketName =
+    process.env.FIREBASE_STORAGE_BUCKET ||
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+
+  if (!bucketName) return []
+
+  try {
+    const bucket = getStorage().bucket(bucketName)
+    const file = bucket.file('support-kb/kb.json')
+    const [exists] = await file.exists()
+    if (!exists) return []
+    const [data] = await file.download()
+    const parsed = JSON.parse(data.toString('utf-8'))
+    return Array.isArray(parsed) ? (parsed as KBCard[]) : []
+  } catch (error) {
+    console.error('[bot] direct storage KB rescue failed:', error)
+    return []
+  }
+}
+
 function getCardRawAnswer(card: KBCard | null | undefined, kbLang: KbLang): string {
   if (!card) return ''
   if (card.guideId) return loadGuideContent(card.guideId, kbLang)
   return card.answer?.[kbLang] ?? card.answer?.ca ?? card.answer?.es ?? ''
+}
+
+function hasOperationalKbCoverage(cards: KBCard[]): boolean {
+  return cards.some(card => card.type !== 'fallback')
+}
+
+function isBestCardMismatch(
+  deterministic: RetrievalResult,
+  selectedBestCardId: string | undefined
+): boolean {
+  const deterministicBestCardId = deterministic.bestCardId ?? deterministic.card?.id
+  if (!deterministicBestCardId || !selectedBestCardId) return false
+  return deterministicBestCardId !== selectedBestCardId
 }
 
 function buildPolicyDiscards(input: {
@@ -613,7 +649,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       ? (supportSnap.data()?.deletedCardIds as string[]).filter(item => typeof item === 'string')
       : []
     const supportData = supportSnap.data() ?? {}
-    const aiIntentEnabled = supportSnap.exists ? (supportData.aiIntentEnabled !== false) : true
     const aiReformatEnabled = supportSnap.exists ? (supportData.aiReformatEnabled !== false) : true
     const assistantTone: AssistantTone = normalizeAssistantTone(supportData.assistantTone)
     const publishedAtKey = serializeKbCacheBustValue(
@@ -641,6 +676,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       console.error('[bot] loadKbCards error:', cardsError)
     }
 
+    if (!hasOperationalKbCoverage(cards)) {
+      const rescuedCards = await loadPublishedStorageCardsDirect(version, storageVersion)
+      if (hasOperationalKbCoverage(rescuedCards)) {
+        console.warn('[bot] runtime KB recovered directly from published storage', {
+          version,
+          storageVersion,
+          rescuedCards: rescuedCards.length,
+        })
+        cards = rescuedCards
+      }
+    }
+
     const criticalCards = ensureCriticalCardsPresent(cards)
     const retrievableCards = filterCardsForSupportAccess(criticalCards, superAdminUser)
     const cardsFilteredOutByAccess = traceEnabled
@@ -658,11 +705,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         }))
       : []
 
+    const deterministicRetrieval = retrieveCard(message, kbLang, retrievableCards)
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY
-    const allowAiIntent = Boolean(apiKey) && aiIntentEnabled
+    const allowAiIntent = false
     const allowAiReformat = Boolean(apiKey) && aiReformatEnabled
 
-    const result = await orchestrator({
+    let result = await orchestrator({
       message,
       kbLang,
       cards: retrievableCards,
@@ -677,6 +725,45 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         return output?.answer ?? input.rawAnswer
       },
     })
+
+    if (isBestCardMismatch(deterministicRetrieval, result.meta.bestCardId)) {
+      console.error('[bot] deterministic retrieval mismatch', {
+        message: normalizeForHash(message),
+        deterministicBestCardId: deterministicRetrieval.bestCardId ?? deterministicRetrieval.card?.id ?? null,
+        selectedBestCardId: result.meta.bestCardId ?? null,
+        selectedCardId: result.response.cardId,
+        decisionReason: result.meta.decisionReason ?? null,
+      })
+
+      if (traceEnabled) {
+        return NextResponse.json(
+          { ok: false, code: 'AI_ERROR', message: 'Deterministic bot mismatch' },
+          { status: 500 }
+        )
+      }
+
+      const emergency = buildEmergencyFallback(kbLang)
+      result = {
+        response: emergency,
+        meta: {
+          intentType: result.meta.intentType,
+          retrievalConfidence: deterministicRetrieval.confidence,
+          confidenceBand: deterministicRetrieval.confidenceBand ?? deterministicRetrieval.confidence,
+          bestCardId: deterministicRetrieval.bestCardId ?? deterministicRetrieval.card?.id,
+          bestScore: deterministicRetrieval.bestScore,
+          secondCardId: deterministicRetrieval.secondCardId,
+          secondScore: deterministicRetrieval.secondScore,
+          decisionReason: 'deterministic_mismatch_guardrail',
+          specificCaseDetected: deterministicRetrieval.specificCaseDetected ?? false,
+          questionDomain: deterministicRetrieval.questionDomain,
+          selectedCardId: emergency.cardId,
+          usedClarification: false,
+          trustedOperationalCard: false,
+        },
+        selectedCard: null,
+        kbLang,
+      }
+    }
 
     let responsePayload: ApiResponse | (ApiResponse & { debugTrace?: BotDebugTrace }) = result.response
     if (traceEnabled) {
