@@ -44,6 +44,26 @@ Los tres puntos de ayuda reales son:
 
 ---
 
+## Remesas SEPA de cobro [id:6a-remeses-sepa-de-cobrament]
+
+1. Ve a **Donantes > Remesas de cobro**
+2. Comprueba que la cuenta tenga configurado el ICS
+3. Revisa la fecha y los socios incluidos
+4. Genera el XML `pain.008`
+5. Súbelo al banco fuera de Summa
+
+---
+
+## Liquidaciones de gastos de viaje [id:6c-liquidacions-de-despeses-de-viatge]
+
+1. Ve a **Movimientos > Liquidaciones**
+2. Crea o abre una liquidación
+3. Sube tickets y completa, si hace falta, el kilometraje
+4. Revisa pendientes antes de generar el PDF
+5. Genera el PDF final solo cuando todo cuadre
+
+---
+
 ## Dividir un payout de Stripe [id:stripe]
 
 1. Ve a **Movimientos** y busca el ingreso de Stripe

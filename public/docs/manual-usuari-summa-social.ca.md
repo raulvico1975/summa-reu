@@ -835,6 +835,34 @@ Si has processat una remesa incorrectament:
 
 ---
 
+## 6.a Remeses SEPA de cobrament [id:6a-remeses-sepa-de-cobrament]
+
+Per generar una remesa SEPA de cobrament:
+
+1. Ves a **Donants > Remeses de cobrament**
+2. Revisa que el compte bancari tingui l'ICS configurat
+3. Selecciona la data i comprova els socis inclosos
+4. Genera l'XML `pain.008`
+5. Puja el fitxer al banc fora de Summa
+
+> Important: aquesta pantalla genera la remesa de cobrament; no serveix per dividir remeses bancàries ja importades.
+
+---
+
+## 6c Liquidacions de despeses de viatge [id:6c-liquidacions-de-despeses-de-viatge]
+
+Per preparar una liquidació de despeses de viatge:
+
+1. Ves a **Moviments > Liquidacions**
+2. Crea o obre una liquidació
+3. Puja tiquets i completa, si cal, el quilometratge
+4. Revisa els pendents abans de generar el PDF
+5. Genera el PDF final només quan tot quadra
+
+> Aquesta pantalla és per liquidacions de viatge; no és una pantalla de remeses.
+
+---
+
 # 6b. Documents Pendents i Remeses SEPA OUT [id:6b-documents-pendents]
 
 **Aquesta secció t'ajudarà a...**

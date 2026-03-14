@@ -210,6 +210,38 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       'filtres',
     ],
   },
+  '/dashboard/movimientos/liquidacions': {
+    title: 'Aide · Liquidations',
+    intro:
+      'Cet écran sert à préparer les liquidations de frais de déplacement : tickets, kilométrage et PDF final. Ce n\'est pas l\'écran des remises.',
+    steps: [
+      'Créez ou ouvrez une liquidation et vérifiez la période avant de continuer.',
+      'Téléversez les tickets ou justificatifs et rattachez-les à la bonne liquidation.',
+      'Ajoutez le kilométrage seulement si nécessaire et validez les montants avant toute génération.',
+      'Vérifiez les éléments en attente avant de générer le PDF final.',
+      'Générez le PDF uniquement lorsque la liquidation est complète et cohérente.',
+    ],
+    tips: [
+      'Traitez une liquidation à la fois : mélanger les cas complique la revue.',
+      'Un ticket non vérifié n\'est pas une clôture : c\'est du travail en attente.',
+      'Si la question porte sur l\'affectation projet, continuez ensuite dans Affectation des dépenses.',
+    ],
+    extra: {
+      pitfalls: {
+        title: 'Erreurs fréquentes',
+        items: [
+          'Confondre les liquidations de voyage avec les remises ou le recouvrement de cotisations.',
+          'Générer le PDF sans avoir vérifié tous les tickets.',
+          'Mélanger kilométrage et autres frais sans valider les montants.',
+        ],
+      },
+      manual: {
+        label: 'Manuel utilisateur · Liquidations de frais de déplacement',
+        href: '/dashboard/manual#6c-liquidacions-de-despeses-de-viatge',
+      },
+    },
+    keywords: ['liquidations', 'voyage', 'tickets', 'kilométrage', 'pdf', 'frais'],
+  },
 
   '/dashboard/donants': {
     title: 'Aide · Donateurs',
@@ -280,6 +312,38 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       },
     },
     keywords: ['donateurs', 'adhérents', 'dni', 'cif', 'code postal', 'modèle 182', 'certificats', 'inactif', 'retours', 'qualité'],
+  },
+  '/dashboard/donants/remeses-cobrament': {
+    title: 'Aide · Remises de prélèvement',
+    intro:
+      'Cet écran sert à générer la remise SEPA de prélèvement des cotisations. Vous y préparez le XML pain.008 ; ce n\'est pas l\'écran pour scinder des remises bancaires déjà importées.',
+    steps: [
+      'Vérifiez d\'abord que le compte bancaire a bien l\'ICS configuré dans Configuration.',
+      'Sélectionnez le compte et la date de prélèvement avant de revoir les adhérents inclus.',
+      'Vérifiez les adhérents exclus ou avec avertissements avant de générer la remise.',
+      'Générez le XML uniquement lorsque le montant total et le nombre d\'adhérents sont cohérents.',
+      'Déposez ensuite le fichier à la banque hors de Summa : l\'app le génère mais ne l\'envoie pas automatiquement.',
+    ],
+    tips: [
+      'S\'il manque des adhérents, vérifiez IBAN, montant de cotisation et périodicité avant de forcer quoi que ce soit.',
+      'Un XML bien généré ne remplace pas la revue préalable de la liste.',
+      'Si le problème concerne une remise déjà traitée par la banque, ce n\'est pas cet écran.',
+    ],
+    extra: {
+      pitfalls: {
+        title: 'Erreurs fréquentes',
+        items: [
+          'Confondre cet écran avec le diviseur de remises des Mouvements.',
+          'Générer la remise sans ICS configuré sur le compte bancaire.',
+          'Ignorer les adhérents exclus et le découvrir seulement à la banque.',
+        ],
+      },
+      manual: {
+        label: 'Manuel utilisateur · Remises SEPA de prélèvement',
+        href: '/dashboard/manual#6a-remeses-sepa-de-cobrament',
+      },
+    },
+    keywords: ['remises', 'sepa', 'prélèvement', 'pain.008', 'cotisations', 'ics'],
   },
 
   '/dashboard/proveidors': {

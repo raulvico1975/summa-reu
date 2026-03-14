@@ -50,8 +50,10 @@ const EXTRA_SECTION_ICONS: Record<string, React.ReactNode> = {
 export const MANUAL_HREFS: Record<string, string> = {
   dashboard: '/dashboard/manual#14-entendre-el-dashboard',
   movimientos: '/dashboard/manual#5-gestio-de-moviments',
+  movimientos_liquidacions: '/dashboard/manual#6c-liquidacions-de-despeses-de-viatge',
   movimientos_pendents: '/dashboard/manual#6b-documents-pendents',
   donants: '/dashboard/manual#3-gestio-de-donants',
+  donants_remeses_cobrament: '/dashboard/manual#6a-remeses-sepa-de-cobrament',
   proveidors: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
   treballadors: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
   informes: '/dashboard/manual#9-informes-fiscals',

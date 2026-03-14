@@ -101,7 +101,6 @@ const SPECIFIC_CASE_PATTERNS = [
   /aquesta factura/,
   /el meu donant/,
   /no em quadra/,
-  /no quadra/,
   /a mi em surt/,
   /no em surt/,
   /aquesta transaccio/,
@@ -109,7 +108,6 @@ const SPECIFIC_CASE_PATTERNS = [
   /esta factura/,
   /mi donante/,
   /no me cuadra/,
-  /no cuadra/,
   /a mi me sale/,
   /no me sale/,
   /esta transaccion/,
@@ -532,6 +530,48 @@ function hasToken(tokens: Set<string>, ...candidates: string[]): boolean {
 function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   const set = new Set(tokens)
 
+  // "Com desfer una remesa?" / "Puc reprocessar una remesa?"
+  if (
+    hasToken(set, 'desfer', 'deshacer', 'reprocessar', 'reprocesar', 'undo') &&
+    hasToken(set, 'remesa')
+  ) {
+    return { cardId: 'howto-remittance-undo', minScore: 680 }
+  }
+
+  // "Com generar una remesa SEPA?"
+  if (
+    hasToken(set, 'generar', 'crear', 'creo', 'genera', 'treure', 'sacar') &&
+    hasToken(set, 'remesa') &&
+    hasToken(set, 'sepa', 'cobrament', 'cobro')
+  ) {
+    return { cardId: 'howto-remittance-create-sepa', minScore: 680 }
+  }
+
+  // "Com canvio la quota d'un soci?"
+  if (
+    hasToken(set, 'canviar', 'canvio', 'cambiar', 'modificar', 'modifico', 'editar', 'actualitzar', 'actualizar') &&
+    hasToken(set, 'quota', 'cuota', 'periodicitat', 'periodicidad') &&
+    hasToken(set, 'soci', 'donant', 'socio', 'donante')
+  ) {
+    return { cardId: 'howto-donor-update-fee', minScore: 680 }
+  }
+
+  // "Com trec/genero el model 182?"
+  if (
+    hasToken(set, '182') &&
+    hasToken(set, 'generar', 'genero', 'crear', 'presentar', 'treure', 'trec', 'sacar', 'exportar')
+  ) {
+    return { cardId: 'guide-model-182-generate', minScore: 680 }
+  }
+
+  // "No puc entrar"
+  if (
+    hasToken(set, 'entrar', 'accedir', 'login', 'sessio', 'sesion', 'contrasenya', 'contrasena', 'password') &&
+    !hasToken(set, 'projecte', 'proyecto')
+  ) {
+    return { cardId: 'manual-login-access', minScore: 660 }
+  }
+
   // "Tinc problemes per dividir una remesa"
   if (
     hasToken(set, 'dividir', 'separar', 'repartir') &&
@@ -577,7 +617,8 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   // "Com puc saber les quotes que un soci ha pagat?"
   if (
     hasToken(set, 'quote', 'quota', 'pagat', 'pagar', 'historial', 'aportacio') &&
-    hasToken(set, 'soci', 'donant')
+    hasToken(set, 'soci', 'donant') &&
+    !hasToken(set, 'canviar', 'cambiar', 'modificar', 'editar', 'actualitzar', 'actualizar')
   ) {
     return { cardId: 'manual-member-paid-quotas', minScore: 500 }
   }

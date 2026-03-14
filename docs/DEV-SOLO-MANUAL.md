@@ -906,7 +906,7 @@ El cercador usa **scoring determinista** (sense IA):
 | Text card | +10 |
 | Sinònim | +5 a +45 |
 
-**Sinònims**: L'usuari escriu "no veig moviments" → el sistema troba guies de "moviments" gràcies al diccionari de sinònims a `guides.search.syn.*`.
+**Sinònims**: L'usuari escriu "no veig moviments" → el sistema troba la capa editorial interna `guides.*` gràcies al diccionari de sinònims a `guides.search.syn.*`. Això ja no implica cap hub visible dins del producte.
 
 ### Fitxers clau
 

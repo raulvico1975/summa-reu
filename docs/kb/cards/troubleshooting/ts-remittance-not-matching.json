@@ -1,0 +1,60 @@
+{
+  "id": "ts-remittance-not-matching",
+  "type": "troubleshooting",
+  "domain": "remittances",
+  "risk": "guarded",
+  "guardrail": "b1_remittances",
+  "answerMode": "full",
+  "title": {
+    "ca": "Què revisar si una remesa no quadra",
+    "es": "Qué revisar si una remesa no cuadra"
+  },
+  "intents": {
+    "ca": [
+      "què faig si una remesa no quadra",
+      "la remesa no quadra",
+      "la remesa no em quadra",
+      "tinc una remesa que no quadra"
+    ],
+    "es": [
+      "qué hago si una remesa no cuadra",
+      "la remesa no cuadra",
+      "tengo una remesa que no cuadra"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Si una remesa no quadra:\n1. Ves a Moviments > Remeses i obre el detall de la remesa.\n2. Revisa si falten socis o si algun import no coincideix amb el fitxer.\n3. Si el problema és de dades del soci, corregeix IBAN, quota o periodicitat i torna-ho a revisar.\n4. Si la remesa ja s'ha processat amb un fitxer incorrecte, fes servir \"Desfer remesa\" abans de tornar-la a processar.\n\nNo tornis a processar-la per sobre sense desfer-la primer.",
+    "es": "Si una remesa no cuadra:\n1. Ve a Movimientos > Remesas y abre el detalle de la remesa.\n2. Revisa si faltan socios o si algún importe no coincide con el fichero.\n3. Si el problema es de datos del socio, corrige IBAN, cuota o periodicidad y vuelve a revisar.\n4. Si la remesa ya se procesó con un fichero incorrecto, usa \"Deshacer remesa\" antes de volver a procesarla.\n\nNo la vuelvas a procesar por encima sin deshacerla primero."
+  },
+  "uiPaths": [
+    "Moviments > Remeses",
+    "Moviments > Remeses > Detall > Desfer remesa"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "remesa",
+    "quadra",
+    "cuadra",
+    "imports",
+    "socis",
+    "iban",
+    "quota"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "6.4",
+    "6.7"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-remittance-low-members",
+    "howto-remittance-undo",
+    "howto-remittance-create-sepa"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

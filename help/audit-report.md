@@ -1,26 +1,26 @@
 # Audit capa Help
 
-- Data: 2026-03-14T05:56:56.103Z
+- Data: 2026-03-14T06:33:57.465Z
 - Anchors auditats (rutes): 14
-- Anchors auditats (hints bot/manual): 12
+- Anchors auditats (hints bot/manual): 14
 - Cards amb referències legacy a guides/hub: 0
 
 ## Manual públic per idioma
 
 | Idioma | Entrades TOC | Mida (bytes) | Observació |
 |---|---:|---:|---|
-| ca | 181 | 43053 | Base principal |
-| es | 6 | 2342 | Manual resumit: runtime ha de fer fallback a CA |
-| fr | 6 | 2393 | Manual resumit: runtime ha de fer fallback a CA |
+| ca | 183 | 43951 | Base principal |
+| es | 8 | 2913 | Manual amb estructura suficient |
+| fr | 8 | 3040 | Manual amb estructura suficient |
 
 ## Rutes HelpSheet -> Manual
 
 | Prefix de ruta | Anchor manual | Existeix a manual CA |
 |---|---|---|
-| /dashboard/movimientos/liquidacions | 6-divisor-de-remeses | SI |
+| /dashboard/movimientos/liquidacions | 6c-liquidacions-de-despeses-de-viatge | SI |
 | /dashboard/movimientos/pendents | 6b-documents-pendents | SI |
 | /dashboard/movimientos | 5-gestio-de-moviments | SI |
-| /dashboard/donants/remeses-cobrament | 6-divisor-de-remeses | SI |
+| /dashboard/donants/remeses-cobrament | 6a-remeses-sepa-de-cobrament | SI |
 | /dashboard/donants | 3-gestio-de-donants | SI |
 | /dashboard/proveidors | 4-gestio-de-proveidors-i-treballadors | SI |
 | /dashboard/treballadors | 4-gestio-de-proveidors-i-treballadors | SI |
@@ -39,6 +39,8 @@
 | 11-resolucio-de-problemes | SI | resolucio de problemes | resolucion de problemas | manual > problemes | manual > problemas |
 | 5-gestio-de-moviments | SI | manual > moviments | manual > movimientos |
 | 6-divisor-de-remeses | SI | manual > remeses | manual > remesas |
+| 6a-remeses-sepa-de-cobrament | SI | manual > remeses de cobrament | manual > remesas de cobro | manual > sepa cobraments | manual > sepa cobros |
+| 6c-liquidacions-de-despeses-de-viatge | SI | manual > liquidacions | manual > liquidaciones | manual > despeses de viatge | manual > gastos de viaje |
 | 7-gestio-de-devolucions | SI | manual > devolucions | manual > devoluciones |
 | 8-donacions-via-stripe | SI | manual > stripe | manual > donacions stripe | manual > donaciones stripe |
 | 9-informes-fiscals | SI | manual > informes | manual > fiscal |

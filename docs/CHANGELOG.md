@@ -22,7 +22,7 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ### 2026-02-14
 
-- millora del Hub de Guies / Assistent
+- millora de la capa editorial `guides.*` i de l'assistent d'ajuda
 - redisseny de Torre de Control a `/admin`
 - correccions operatives en resums i bypass SuperAdmin
 

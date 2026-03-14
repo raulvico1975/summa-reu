@@ -210,6 +210,38 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
       'filtros',
     ],
   },
+  '/dashboard/movimientos/liquidacions': {
+    title: 'Ayuda · Liquidaciones',
+    intro:
+      'Esta pantalla sirve para preparar liquidaciones de gastos de viaje: tickets, kilometraje y PDF final. No es la pantalla de remesas.',
+    steps: [
+      'Crea o abre una liquidación y revisa el periodo antes de continuar.',
+      'Sube tickets o justificantes y déjalos vinculados a la liquidación correcta.',
+      'Añade kilometraje solo cuando toque y valida importes antes de generar nada.',
+      'Revisa los pendientes antes de generar el PDF final.',
+      'Genera el PDF solo cuando la liquidación ya esté completa y coherente.',
+    ],
+    tips: [
+      'Trabaja una liquidación cada vez: mezclar casos complica la revisión.',
+      'Un ticket sin revisar no es cierre: es trabajo pendiente.',
+      'Si la duda es de imputación a proyecto, sigue luego en Asignación de gastos.',
+    ],
+    extra: {
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Confundir liquidaciones de viaje con remesas o cobro de cuotas.',
+          'Generar el PDF sin revisar todos los tickets.',
+          'Mezclar kilometraje y otros gastos sin validar importes.',
+        ],
+      },
+      manual: {
+        label: 'Manual de usuario · Liquidaciones de gastos de viaje',
+        href: '/dashboard/manual#6c-liquidacions-de-despeses-de-viatge',
+      },
+    },
+    keywords: ['liquidaciones', 'viaje', 'tickets', 'kilometraje', 'pdf', 'gastos'],
+  },
 
   '/dashboard/donants': {
     title: 'Ayuda · Donantes',
@@ -280,6 +312,38 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
       },
     },
     keywords: ['donantes', 'socios', 'dni', 'cif', 'código postal', 'modelo 182', 'certificados', 'baja', 'devoluciones', 'calidad'],
+  },
+  '/dashboard/donants/remeses-cobrament': {
+    title: 'Ayuda · Remesas de cobro',
+    intro:
+      'Esta pantalla sirve para generar la remesa SEPA de cobro de cuotas. Aquí preparas el XML pain.008; no es la pantalla para dividir remesas bancarias ya importadas.',
+    steps: [
+      'Comprueba primero que la cuenta bancaria tiene informado el ICS en Configuración.',
+      'Selecciona cuenta y fecha de cobro antes de revisar los socios incluidos.',
+      'Revisa los socios excluidos o con avisos antes de generar la remesa.',
+      'Genera el XML solo cuando el importe total y el número de socios sean coherentes.',
+      'Sube el fichero al banco fuera de Summa: la app lo genera pero no lo envía automáticamente.',
+    ],
+    tips: [
+      'Si faltan socios, revisa IBAN, cuota y periodicidad antes de forzar nada.',
+      'Un XML bien generado no sustituye la revisión previa del listado.',
+      'Si el problema es una remesa ya procesada del banco, no es esta pantalla.',
+    ],
+    extra: {
+      pitfalls: {
+        title: 'Errores habituales',
+        items: [
+          'Confundir esta pantalla con el divisor de remesas de Movimientos.',
+          'Generar la remesa sin ICS configurado en la cuenta bancaria.',
+          'Ignorar los socios excluidos y descubrirlo solo en el banco.',
+        ],
+      },
+      manual: {
+        label: 'Manual de usuario · Remesas SEPA de cobro',
+        href: '/dashboard/manual#6a-remeses-sepa-de-cobrament',
+      },
+    },
+    keywords: ['remesas', 'sepa', 'cobro', 'pain.008', 'cuotas', 'ics'],
   },
 
   '/dashboard/proveidors': {

@@ -14,13 +14,17 @@
       "com canvio els permisos d'un usuari",
       "com personalitzo permisos d'un membre",
       "permisos d'usuari",
-      "què pot veure un usuari"
+      "què pot veure un usuari",
+      "un usuari nomes pot mirar sense editar",
+      "nomes lectura per un usuari"
     ],
     "es": [
       "cómo cambio los permisos de un usuario",
       "cómo personalizo permisos de un miembro",
       "permisos de usuario",
-      "qué puede ver un usuario"
+      "qué puede ver un usuario",
+      "un usuario solo puede mirar sin editar",
+      "solo lectura para un usuario"
     ]
   },
   "guideId": null,
@@ -37,7 +41,10 @@
     "usuari",
     "membres",
     "seccions",
-    "accions crítiques"
+    "accions crítiques",
+    "lectura",
+    "mirar",
+    "editar"
   ],
   "source_faq": [],
   "source_manual": [

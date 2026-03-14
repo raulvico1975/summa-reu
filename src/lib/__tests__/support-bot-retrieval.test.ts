@@ -113,6 +113,36 @@ test('retrieveCard resolves member paid fees history question', () => {
   assert.equal(result.mode, 'card')
 })
 
+test('retrieveCard resolves changing a member fee without confusing it with history', () => {
+  const result = retrieveCard("com canvio la quota d'un soci", 'ca', cards)
+  assert.equal(result.card.id, 'howto-donor-update-fee')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves creating a SEPA collection remittance', () => {
+  const result = retrieveCard('com generar una remesa sepa', 'ca', cards)
+  assert.equal(result.card.id, 'howto-remittance-create-sepa')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves undoing a processed remittance', () => {
+  const result = retrieveCard('com desfer una remesa', 'ca', cards)
+  assert.equal(result.card.id, 'howto-remittance-undo')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves model 182 generation explicitly', () => {
+  const result = retrieveCard('com trec el model 182', 'ca', cards)
+  assert.equal(result.card.id, 'guide-model-182-generate')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves login/access question without drifting to projects', () => {
+  const result = retrieveCard('no puc entrar', 'ca', cards)
+  assert.equal(result.card.id, 'manual-login-access')
+  assert.equal(result.mode, 'card')
+})
+
 test('retrieveCard direct-intent maps project allocation question reliably', () => {
   const result = retrieveCard('com imputo una despesa a diversos projectes?', 'ca', cards)
   assert.equal(result.card.id, 'guide-projects')
@@ -163,6 +193,7 @@ test('inferQuestionDomain detects fiscal and remittances', () => {
 test('detectSpecificCase detects concrete data phrasing in ca and es', () => {
   assert.equal(detectSpecificCase('aquesta remesa no em quadra'), true)
   assert.equal(detectSpecificCase('esta factura no me cuadra'), true)
+  assert.equal(detectSpecificCase('què faig si una remesa no quadra'), false)
   assert.equal(detectSpecificCase('com genero el model 182'), false)
 })
 

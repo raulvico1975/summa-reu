@@ -27,7 +27,7 @@
     "es": "Para entrar en Summa Social:\n1. Abre https://summasocial.app\n2. Escribe email y contraseña.\n3. Haz clic en \"Iniciar sesión\".\n\nSi es tu primer acceso, busca el correo de invitación y sigue el alta. Si no lo encuentras, revisa spam o pide reenvío."
   },
   "uiPaths": [
-    "Pantalla de login"
+    "Pàgina de login"
   ],
   "needsSnapshot": false,
   "keywords": [

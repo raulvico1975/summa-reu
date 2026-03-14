@@ -12,6 +12,7 @@
   "intents": {
     "ca": [
       "com gestiono els accessos",
+      "no puc entrar",
       "canviar contrasenya",
       "rols d'usuari",
       "qui pot veure què",
@@ -19,12 +20,11 @@
       "com accedir a l'aplicacio",
       "com iniciar sessio",
       "la sessio es tanca sola",
-      "no trobo el correu d'invitacio",
-      "vull que algu de l'equip pugui entrar nomes per mirar",
-      "rol viewer nomes lectura"
+      "no trobo el correu d'invitacio"
     ],
     "es": [
       "cómo gestiono los accesos",
+      "no puedo entrar",
       "cambiar contraseña",
       "roles de usuario",
       "quién puede ver qué",
@@ -32,9 +32,7 @@
       "como acceder a la aplicacion",
       "como iniciar sesion",
       "la sesion se cierra sola",
-      "no encuentro el correo de invitacion",
-      "quiero que alguien del equipo pueda entrar solo para mirar",
-      "rol viewer solo lectura"
+      "no encuentro el correo de invitacion"
     ]
   },
   "guideId": "accessSecurity",

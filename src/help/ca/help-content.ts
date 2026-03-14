@@ -211,6 +211,38 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
       'filtres',
     ],
   },
+  '/dashboard/movimientos/liquidacions': {
+    title: 'Ajuda · Liquidacions',
+    intro:
+      'Aquesta pantalla serveix per preparar liquidacions de despeses de viatge: tiquets, quilometratge i PDF final. No és la pantalla de remeses.',
+    steps: [
+      'Crea o obre una liquidació i revisa el període abans de continuar.',
+      'Puja tiquets o justificants i deixa\'ls vinculats a la liquidació correcta.',
+      'Afegeix quilometratge només quan correspongui i valida imports abans de generar res.',
+      'Revisa els pendents de validació abans de generar el PDF final.',
+      'Genera el PDF només quan la liquidació ja està completa i coherent.',
+    ],
+    tips: [
+      'Treballa una liquidació cada cop: barrejar casos complica la revisió.',
+      'Els tiquets sense revisar no són tancament: són feina pendent.',
+      'Si el dubte és d\'imputació a projecte, continua després a Assignació de despeses.',
+    ],
+    extra: {
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          'Confondre liquidacions de viatge amb remeses o cobrament de quotes.',
+          'Generar el PDF sense haver revisat tots els tiquets.',
+          'Barrejar quilometratge i altres despeses sense validar imports.',
+        ],
+      },
+      manual: {
+        label: 'Manual d\'usuari · Liquidacions de despeses de viatge',
+        href: '/dashboard/manual#6c-liquidacions-de-despeses-de-viatge',
+      },
+    },
+    keywords: ['liquidacions', 'viatge', 'tiquets', 'quilometratge', 'pdf', 'despeses'],
+  },
   '/dashboard/donants': {
     title: 'Ajuda · Donants',
     intro:
@@ -280,6 +312,38 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
       },
     },
     keywords: ['donants', 'socis', 'dni', 'cif', 'codi postal', 'model 182', 'certificats', 'baixa', 'devolucions', 'qualitat'],
+  },
+  '/dashboard/donants/remeses-cobrament': {
+    title: 'Ajuda · Remeses de cobrament',
+    intro:
+      'Aquesta pantalla serveix per generar la remesa SEPA de cobrament de quotes. Aquí prepares l\'XML pain.008; no és la pantalla per dividir remeses bancàries ja importades.',
+    steps: [
+      'Comprova primer que el compte bancari té informat l\'ICS a Configuració.',
+      'Selecciona compte i data de cobrament abans de revisar els socis inclosos.',
+      'Revisa els socis exclosos o amb advertiments abans de generar la remesa.',
+      'Genera l\'XML només quan l\'import total i el nombre de socis siguin coherents.',
+      'Puja el fitxer al banc fora de Summa: l\'app el genera però no l\'envia automàticament.',
+    ],
+    tips: [
+      'Si falten socis, revisa IBAN, quota i periodicitat abans de forçar res.',
+      'Un XML ben generat no substitueix la revisió prèvia del llistat.',
+      'Si el problema és una remesa ja processada del banc, no és aquesta pantalla.',
+    ],
+    extra: {
+      pitfalls: {
+        title: 'Errors habituals',
+        items: [
+          'Confondre aquesta pantalla amb el divisor de remeses de Moviments.',
+          'Generar la remesa sense ICS configurat al compte bancari.',
+          'Ignorar els socis exclosos i descobrir-ho només al banc.',
+        ],
+      },
+      manual: {
+        label: 'Manual d\'usuari · Remeses SEPA de cobrament',
+        href: '/dashboard/manual#6a-remeses-sepa-de-cobrament',
+      },
+    },
+    keywords: ['remeses', 'sepa', 'cobrament', 'pain.008', 'quotes', 'ics'],
   },
   '/dashboard/proveidors': {
     title: 'Ajuda · Proveïdors',
