@@ -27,6 +27,35 @@ export type RetrievalResult = {
   questionDomain?: QuestionDomain
 }
 
+export type RetrievalTraceCandidate = {
+  cardId: string
+  score: number
+  type: KBCard['type']
+  answerMode: KBCard['answerMode']
+  reason: string
+}
+
+export type RetrievalTraceDiscard = {
+  cardId: string
+  score?: number
+  reason: string
+}
+
+export type RetrievalDebugTrace = {
+  normalizedMessage: string
+  tokens: string[]
+  questionDomain: QuestionDomain
+  specificCaseDetected: boolean
+  cardsConsidered: string[]
+  directIntent: { cardId: string; minScore: number } | null
+  topCandidates: RetrievalTraceCandidate[]
+  discarded: RetrievalTraceDiscard[]
+  predictedMode: RetrievalResult['mode']
+  predictedCardId: string
+  predictedDecisionReason?: string
+  predictedConfidence?: RetrievalConfidence
+}
+
 export type SmallTalkResponse = {
   cardId: string
   answer: string
@@ -822,4 +851,77 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
   }
 
   throw new Error('No KB cards available for retrieval')
+}
+
+export function debugRetrieveCard(message: string, lang: KbLang, cards: KBCard[]): RetrievalDebugTrace {
+  const tokens = normalize(message)
+  const normalizedMessage = normalizePlain(message)
+  const questionDomain = inferQuestionDomain(message)
+  const specificCaseDetected = detectSpecificCase(message)
+  const directIntent = specificCaseDetected ? null : detectDirectIntentMatch(tokens)
+  const regularCards = cards.filter(isRetrievableCard)
+  const ranked = regularCards
+    .map(card => ({
+      card,
+      score: scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang),
+    }))
+    .sort((a, b) => b.score - a.score)
+
+  const topCandidates = ranked.slice(0, 5).map((entry, index) => ({
+    cardId: entry.card.id,
+    score: entry.score,
+    type: entry.card.type,
+    answerMode: entry.card.answerMode,
+    reason: index === 0 ? 'best_ranked' : 'tie_break_loss',
+  }))
+
+  const discarded: RetrievalTraceDiscard[] = cards
+    .filter(card => !isRetrievableCard(card))
+    .map(card => ({
+      cardId: card.id,
+      reason: card.type === 'fallback'
+        ? 'policy:fallback_excluded_from_ranking'
+        : 'policy:guide_missing_guide_id',
+    }))
+
+  const result = retrieveCard(message, lang, cards)
+
+  if (directIntent) {
+    for (const entry of ranked.slice(0, 5)) {
+      if (entry.card.id !== directIntent.cardId) {
+        discarded.push({
+          cardId: entry.card.id,
+          score: entry.score,
+          reason: 'direct_intent_bypassed',
+        })
+      }
+    }
+  } else {
+    for (const entry of ranked.slice(0, 5)) {
+      if (entry.card.id !== result.card.id) {
+        discarded.push({
+          cardId: entry.card.id,
+          score: entry.score,
+          reason: entry.score < DIRECT_MATCH_THRESHOLD
+            ? 'low_confidence'
+            : 'tie_break_loss',
+        })
+      }
+    }
+  }
+
+  return {
+    normalizedMessage,
+    tokens,
+    questionDomain,
+    specificCaseDetected,
+    cardsConsidered: regularCards.map(card => card.id),
+    directIntent: directIntent ? { cardId: directIntent.cardId, minScore: directIntent.minScore ?? 999 } : null,
+    topCandidates,
+    discarded,
+    predictedMode: result.mode,
+    predictedCardId: result.card.id,
+    predictedDecisionReason: result.decisionReason,
+    predictedConfidence: result.confidenceBand ?? result.confidence,
+  }
 }
