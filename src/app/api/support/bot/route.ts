@@ -403,8 +403,15 @@ function filterCardsForSupportAccess(cards: KBCard[], isSuperAdminUser: boolean)
   })
 }
 
-function shouldTraceBotRequest(request: NextRequest, superAdminUser: boolean): boolean {
-  return superAdminUser && request.headers.get(BOT_TRACE_HEADER) === '1'
+function shouldTraceBotRequest(
+  request: NextRequest,
+  superAdminUser: boolean,
+  body: Record<string, unknown>
+): boolean {
+  if (!superAdminUser) return false
+  if (request.headers.get(BOT_TRACE_HEADER) === '1') return true
+  if (request.nextUrl.searchParams.get('trace') === '1') return true
+  return body.debugTrace === true
 }
 
 async function resolveTraceKbSource(version: number, storageVersion: number | null): Promise<'storage' | 'filesystem'> {
@@ -560,7 +567,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
     hasOperationalAccess = true
     const superAdminUser = await isSuperAdmin(authResult.uid)
-    const traceEnabled = shouldTraceBotRequest(request, superAdminUser)
+    const traceEnabled = shouldTraceBotRequest(request, superAdminUser, body)
 
     const smallTalk = detectSmallTalkResponse(message, kbLang)
     if (smallTalk) {
