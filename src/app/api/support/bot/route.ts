@@ -778,7 +778,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }).catch(e => console.error('[bot] log error:', e))
     void Promise.all(observabilityWrites).catch(e => console.error('[bot] observability error:', e))
 
-    return NextResponse.json(responsePayload as ApiResponse)
+    if (traceEnabled) {
+      console.info('[bot-trace]', JSON.stringify((responsePayload as ApiResponse & { debugTrace?: BotDebugTrace }).debugTrace ?? null))
+    }
+
+    return NextResponse.json(responsePayload as ApiResponse, {
+      headers: traceEnabled
+        ? {
+            'x-summa-bot-trace': 'enabled',
+          }
+        : undefined,
+    })
   } catch (error: unknown) {
     console.error('[API] support/bot error:', error)
 
