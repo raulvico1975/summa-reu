@@ -41,7 +41,7 @@ export const ca = {
     featurePrivacyBody: "Accés intern segur i participació pública acotada a cada votació.",
     ctaAccess: "Accés entitat",
     ctaSignup: "Vull organitzar una reunió ara",
-    paymentHint: "L'alta d'entitat inclou pagament previ per activar l'espai.",
+    paymentHint: "L'alta d'entitat inclou pagament previ per activar l'espai. Verificacio desplegament temporal.",
   },
   login: {
     title: "Accés entitat",
