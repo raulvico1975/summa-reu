@@ -80,6 +80,8 @@ export const ca = {
     results: "Resultats",
     manage: "Gestionar",
     createdLabel: "Creada",
+    pastMeetings: "Reunions passades",
+    noPastMeetings: "No hi ha reunions passades.",
   },
   poll: {
     sectionVoting: "Votació",
@@ -233,6 +235,7 @@ export const ca = {
     deleting: "Eliminant...",
     deleteConfirm: "Vols eliminar aquesta reunió? Aquesta acció no es pot desfer.",
     deleteError: "No s'ha pogut eliminar la reunió.",
+    deleteOnlyPastError: "Només es poden eliminar reunions passades i no actives.",
   },
   errors: {
     unauthorized: "No autoritzat.",

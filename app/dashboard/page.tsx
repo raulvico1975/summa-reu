@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
+import { DeleteMeetingButton } from "@/src/components/meetings/delete-meeting-button";
 import { StatusBadge } from "@/src/components/ui/status-badge";
 import { listPollsByOrg } from "@/src/lib/db/repo";
 import { formatDateTime } from "@/src/lib/dates";
+import { getOwnerMeetings } from "@/src/lib/meetings/get-owner-meetings";
 import { requireOwnerPage } from "@/src/lib/ui/owner-page";
 import { getRequestI18n } from "@/src/i18n/server";
 import { withLocalePath } from "@/src/i18n/routing";
@@ -10,10 +12,14 @@ import { withLocalePath } from "@/src/i18n/routing";
 export default async function DashboardPage() {
   const { locale, i18n } = await getRequestI18n();
   const owner = await requireOwnerPage();
-  const polls = await listPollsByOrg(owner.orgId);
+  const [polls, pastMeetings] = await Promise.all([
+    listPollsByOrg(owner.orgId),
+    getOwnerMeetings(owner.orgId),
+  ]);
+  const dashboardHref = withLocalePath(locale, "/dashboard");
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
           {i18n.dashboard.title}
@@ -57,6 +63,38 @@ export default async function DashboardPage() {
           </Card>
         ))
       )}
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">{i18n.dashboard.pastMeetings}</h2>
+          <p className="mt-1 text-sm text-slate-600">{i18n.meeting.deleteDescription}</p>
+        </div>
+
+        {pastMeetings.length === 0 ? (
+          <Card>
+            <CardContent className="py-6 text-sm text-slate-600">{i18n.dashboard.noPastMeetings}</CardContent>
+          </Card>
+        ) : (
+          pastMeetings.map((meeting) => (
+            <Card key={meeting.id}>
+              <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 space-y-1">
+                  <Link
+                    href={withLocalePath(locale, `/owner/meetings/${meeting.id}`)}
+                    className="block break-words text-base font-semibold text-slate-900 hover:underline"
+                  >
+                    {meeting.title || i18n.meeting.title}
+                  </Link>
+                  <p className="text-xs text-slate-500">
+                    {i18n.meeting.meetingDateLabel}: {formatDateTime(meeting.scheduledAt, locale)}
+                  </p>
+                </div>
+                <DeleteMeetingButton meetingId={meeting.id} redirectHref={dashboardHref} />
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </section>
     </div>
   );
 }
