@@ -30,6 +30,22 @@ test('detecta Stripe pel concepte encara que source sigui bank', () => {
   assert.equal(canSplitStripeRemittance(tx), true);
 });
 
+test('detecta Stripe amb variants reals de descripcio bancaria', () => {
+  const transferTx = makeTransaction({
+    source: 'bank',
+    description: 'Transferencia de Stripe payout setmanal',
+  });
+  const paymentsTx = makeTransaction({
+    source: 'bank',
+    description: 'STRIPE PAYMENTS 2026-03-15',
+  });
+
+  assert.equal(hasStripeKeyword(transferTx.description), true);
+  assert.equal(isStripeLikeTransaction(transferTx), true);
+  assert.equal(hasStripeKeyword(paymentsTx.description), true);
+  assert.equal(canSplitStripeRemittance(paymentsTx), true);
+});
+
 test('no tracta com Stripe un ingrés bancari sense keyword', () => {
   const tx = makeTransaction({
     source: 'bank',

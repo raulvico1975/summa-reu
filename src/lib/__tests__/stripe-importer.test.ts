@@ -58,6 +58,21 @@ ch_124,2024-01-15 11:00:00,50.00,1.75,48.25,succeeded,po_abc,another@example.com
     assert.strictEqual(result.rows[0].transfer, 'po_abc');
   });
 
+  it('should accept Paid status and parse comma decimals from real Stripe CSV', () => {
+    const csvContent = `id,Created date (UTC),Amount,Fee,Net,Status,Transfer,Customer Email,Amount Refunded
+ch_123,2024-01-15 10:30:00,"12,00","0,43","11,57",Paid,,donor@example.com,0
+ch_124,2024-01-15 11:00:00,"10,00","0,40","9,60",paid,po_abc,another@example.com,0`;
+
+    const result = parseStripeCsv(csvContent);
+
+    assert.strictEqual(result.rows.length, 2);
+    assert.strictEqual(result.rows[0].status, 'Paid');
+    assert.strictEqual(result.rows[0].amount, 12);
+    assert.strictEqual(result.rows[0].fee, 0.43);
+    assert.strictEqual(result.rows[0].transfer, '');
+    assert.strictEqual(result.rows[1].fee, 0.4);
+  });
+
   it('should exclude refunded payments and add warning', () => {
     const csvContent = `id,Created date (UTC),Amount,Fee,Net,Status,Transfer,Customer Email,Amount Refunded
 ch_123,2024-01-15 10:30:00,100.00,3.20,96.80,succeeded,po_abc,donor@example.com,0
@@ -193,6 +208,52 @@ describe('groupStripeRowsByTransfer', () => {
     assert.strictEqual(groups[0].net, 48);
   });
 
+  it('should ignore pending rows without transfer and keep payout matching by net amount', () => {
+    const rows: StripeRow[] = [
+      {
+        id: 'ch_pending',
+        createdDate: '2024-01-15',
+        amount: 12,
+        fee: 0.43,
+        customerEmail: 'pending@example.com',
+        status: 'Paid',
+        transfer: '',
+        description: null,
+      },
+      {
+        id: 'ch_settled_1',
+        createdDate: '2024-01-15',
+        amount: 10,
+        fee: 0.4,
+        customerEmail: 'settled1@example.com',
+        status: 'succeeded',
+        transfer: 'po_abc',
+        description: null,
+      },
+      {
+        id: 'ch_settled_2',
+        createdDate: '2024-01-15',
+        amount: 5,
+        fee: 0.25,
+        customerEmail: 'settled2@example.com',
+        status: 'paid',
+        transfer: 'po_abc',
+        description: null,
+      },
+    ];
+
+    const groups = groupStripeRowsByTransfer(rows);
+    const matches = findAllMatchingPayoutGroups(groups, 14.35);
+
+    assert.strictEqual(groups.length, 1);
+    assert.strictEqual(groups[0].rows.length, 2);
+    assert.strictEqual(groups[0].gross, 15);
+    assert.strictEqual(groups[0].fees, 0.65);
+    assert.strictEqual(groups[0].net, 14.35);
+    assert.strictEqual(matches.length, 1);
+    assert.strictEqual(matches[0].transferId, 'po_abc');
+  });
+
   it('should throw error if no row has transfer', () => {
     const rows: StripeRow[] = [
       {
@@ -210,6 +271,35 @@ describe('groupStripeRowsByTransfer', () => {
     assert.throws(() => {
       groupStripeRowsByTransfer(rows);
     }, /ERR_NO_PAYOUT_ROWS/);
+  });
+
+  it('should throw the no payout rows error when all payments are still pending payout', () => {
+    const rows: StripeRow[] = [
+      {
+        id: 'ch_1',
+        createdDate: '2024-01-15',
+        amount: 12,
+        fee: 0.43,
+        customerEmail: 'test@example.com',
+        status: 'Paid',
+        transfer: '',
+        description: null,
+      },
+      {
+        id: 'ch_2',
+        createdDate: '2024-01-15',
+        amount: 10,
+        fee: 0.4,
+        customerEmail: 'test2@example.com',
+        status: 'paid',
+        transfer: '   ',
+        description: null,
+      },
+    ];
+
+    assert.throws(() => {
+      groupStripeRowsByTransfer(rows);
+    }, /ERR_NO_PAYOUT_ROWS: Aquest export de Stripe encara no conté cap payout conciliable amb el banc\./);
   });
 });
 

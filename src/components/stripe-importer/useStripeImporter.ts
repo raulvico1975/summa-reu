@@ -273,15 +273,16 @@ export function parseStripeCsv(text: string): ParseResult {
     };
 
     const status = getValue('Status');
-    const statusLower = status.trim().toLowerCase();
     const amountRefundedStr = getValue('Amount Refunded') || '0';
     const amountRefunded = parseStripeAmount(amountRefundedStr);
-
-    // Stripe exports poden venir com "Paid" (p.ex. unified_payments.csv)
-    const ALLOWED_STATUSES = new Set(['succeeded', 'paid']);
+    const isSuccessful =
+      status === 'succeeded' ||
+      status === 'paid' ||
+      status === 'Paid' ||
+      status.trim().toLowerCase() === 'paid';
 
     // Filtrar: Status no acceptat → excloure silenciosament
-    if (!ALLOWED_STATUSES.has(statusLower)) {
+    if (!isSuccessful) {
       continue;
     }
 
@@ -336,8 +337,7 @@ export function groupStripeRowsByTransfer(rows: StripeRow[]): StripePayoutGroup[
   const rowsWithTransfer = rows.filter(r => r.transfer && r.transfer.trim() !== '');
   if (rowsWithTransfer.length === 0) {
     throw new Error(
-      "ERR_NO_PAYOUT_ROWS: Aquest export de Stripe encara no conté cap payout. " +
-      "Torna a exportar-lo més tard quan Stripe hagi generat la transferència al banc."
+      "ERR_NO_PAYOUT_ROWS: Aquest export de Stripe encara no conté cap payout conciliable amb el banc."
     );
   }
 

@@ -13,6 +13,13 @@ type StripeLikeTransaction = Pick<
   | 'transactionType'
 >;
 
+const STRIPE_PATTERNS = [
+  'stripe',
+  'transf de stripe',
+  'transferencia de stripe',
+  'stripe payments',
+];
+
 function normalizeDescription(value: string | null | undefined): string {
   return (value ?? '')
     .normalize('NFD')
@@ -21,7 +28,8 @@ function normalizeDescription(value: string | null | undefined): string {
 }
 
 export function hasStripeKeyword(description: string | null | undefined): boolean {
-  return /\bstripe\b/.test(normalizeDescription(description));
+  const normalizedDescription = normalizeDescription(description);
+  return STRIPE_PATTERNS.some(pattern => normalizedDescription.includes(pattern));
 }
 
 export function isStripeLikeTransaction(tx: StripeLikeTransaction): boolean {

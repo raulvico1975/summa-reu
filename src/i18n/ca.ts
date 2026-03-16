@@ -951,8 +951,8 @@ export const ca = {
 
       errors: {
         processingFile: "Error al processar el fitxer",
-        noValidRows: "El CSV no conté donacions vàlides (succeeded i no reemborsades).",
-        noPayoutRows: "Aquest export de Stripe encara no conté cap payout. Torna a exportar-lo més tard quan Stripe hagi generat la transferència al banc.",
+        noValidRows: "El CSV no conté pagaments vàlids de Stripe (succeeded o paid, i no reemborsats).",
+        noPayoutRows: "Aquest export de Stripe encara no conté cap payout conciliable amb el banc.",
         noMatch: (amount: string) => `No s'ha trobat cap payout que coincideixi amb l'import ${amount}`,
         noBankFeesCategory: "No s'ha trobat la categoria de despeses bancàries a aquesta organització.",
         tooManyRows: (count: number) => `El payout té ${count} donacions. Màxim permès: 449.`,

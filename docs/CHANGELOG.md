@@ -12,7 +12,7 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ### 2026-03-16
 
-- importador Stripe: CSV mixt permès; les files sense `Transfer` s'ignoren fins que existeixi payout i el document mestre queda alineat amb el codi
+- importador Stripe: suport per `paid`/`Paid`, parsing d'imports amb coma decimal, files sense `Transfer` ignorades fins que existeixi payout i detecció bancària ampliada amb patrons reals de Stripe
 
 ### 2026-03-12
 
