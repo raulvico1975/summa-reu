@@ -6,44 +6,53 @@
   "guardrail": "b1_remittances",
   "answerMode": "full",
   "title": {
-    "ca": "Dividir una remesa en quotes individuals",
-    "es": "Dividir una remesa en cuotas individuales"
+    "ca": "Dividir remesa",
+    "es": "Dividir remesa"
   },
   "intents": {
     "ca": [
-      "com divideixo una remesa",
-      "separar remesa en quotes",
-      "split de remesa",
-      "dividir pagament de quotes",
-      "dividir rebuts de socis",
-      "he dividit una remesa i m'he equivocat",
-      "es pot desfer una remesa dividida",
-      "desagregar i conciliar una remesa",
-      "vista agrupada de remeses",
-      "remesa out n pagaments"
+      "dividir remesa",
+      "com dividir una remesa",
+      "separar remesa",
+      "dividir quotes d una remesa"
     ],
     "es": [
-      "cómo divido una remesa",
-      "separar remesa en cuotas",
-      "split de remesa",
-      "dividir pago de cuotas",
-      "dividir recibos de socios",
-      "he dividido una remesa y me he equivocado",
-      "se puede deshacer una remesa dividida",
-      "desagregar y conciliar una remesa",
-      "vista agrupada de remesas",
-      "remesa out n pagos"
+      "dividir remesa",
+      "cómo dividir una remesa",
+      "separar remesa",
+      "dividir cuotas de una remesa"
     ]
   },
-  "guideId": "splitRemittance",
-  "answer": null,
-  "uiPaths": ["Moviments > Seleccionar remesa > Dividir"],
+  "guideId": null,
+  "answer": {
+    "ca": "Per dividir remesa:\n1. Ves a Moviments i obre el detall de la remesa.\n2. Clica Dividir remesa i puja el fitxer de detall del banc si cal.\n3. Revisa el matching abans de processar.\n4. Confirma només quan vegis clar quines línies quedaran a cada remesa.\n\nComprovació final: veus la remesa dividida i cada línia queda al bloc correcte.",
+    "es": "Para dividir remesa:\n1. Ve a Movimientos y abre el detalle de la remesa.\n2. Haz clic en Dividir remesa y sube el fichero de detalle del banco si hace falta.\n3. Revisa el matching antes de procesar.\n4. Confirma solo cuando tengas claro qué líneas quedarán en cada remesa.\n\nComprobación final: ves la remesa dividida y cada línea queda en el bloque correcto."
+  },
+  "uiPaths": [
+    "Moviments > Detall de remesa > Dividir remesa"
+  ],
   "needsSnapshot": false,
-  "keywords": ["dividir", "remesa", "split", "quotes", "individuals", "desfer", "equivocat", "undo", "desagregar", "conciliar", "agrupada"],
-  "source_faq": ["Q42", "Q43"],
-  "source_manual": ["6.3", "6.5", "6b.4"],
-  "source_guides": ["splitRemittance"],
-  "related": ["guide-remittances", "guide-returns"],
+  "keywords": [
+    "dividir remesa",
+    "split remesa",
+    "quotes",
+    "recibos",
+    "matching"
+  ],
+  "source_faq": [
+    "Q42",
+    "Q43"
+  ],
+  "source_manual": [
+    "6.3"
+  ],
+  "source_guides": [],
+  "related": [
+    "howto-remittance-undo"
+  ],
   "error_key": null,
-  "symptom": { "ca": null, "es": null }
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
 }

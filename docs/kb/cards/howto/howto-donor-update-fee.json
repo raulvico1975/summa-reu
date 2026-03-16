@@ -6,47 +6,47 @@
   "guardrail": "none",
   "answerMode": "full",
   "title": {
-    "ca": "Canviar la quota d'un soci",
-    "es": "Cambiar la cuota de un socio"
+    "ca": "Canviar quota d'un soci",
+    "es": "Cambiar cuota de un socio"
   },
   "intents": {
     "ca": [
-      "com canvio la quota d'un soci",
-      "com modifico la quota d'un soci",
-      "canviar import de quota",
-      "canviar periodicitat d'un soci"
+      "canviar quota d un soci",
+      "modificar quota soci",
+      "canviar import quota",
+      "canviar periodicitat soci"
     ],
     "es": [
-      "cómo cambio la cuota de un socio",
-      "cómo modifico la cuota de un socio",
-      "cambiar importe de cuota",
-      "cambiar periodicidad de un socio"
+      "cambiar cuota de un socio",
+      "modificar cuota socio",
+      "cambiar importe cuota",
+      "cambiar periodicidad socio"
     ]
   },
   "guideId": null,
   "answer": {
-    "ca": "Per canviar la quota:\n1. Ves a Donants.\n2. Obre la fitxa del soci i clica \"Editar\".\n3. A \"Modalitat\", comprova que el soci està com a \"Soci/a\".\n4. Actualitza \"Import de quota (per cobrament)\" i, si cal, \"Periodicitat\".\n5. Clica \"Guardar Donant\".\n\nSi deixes l'import a 0, el soci no es podrà incloure a la remesa de cobrament.",
-    "es": "Para cambiar la cuota:\n1. Ve a Donantes.\n2. Abre la ficha del socio y haz clic en \"Editar\".\n3. En \"Modalidad\", comprueba que el socio está como \"Socio/a\".\n4. Actualiza \"Importe de cuota (por cobro)\" y, si hace falta, \"Periodicidad\".\n5. Haz clic en \"Guardar Donante\".\n\nSi dejas el importe en 0, el socio no se podrá incluir en la remesa de cobro."
+    "ca": "Per canviar quota d'un soci:\n1. Ves a Donants i obre la fitxa del soci.\n2. Clica Editar i comprova que la modalitat és Soci/a.\n3. Actualitza Import de quota (per cobrament) i, si cal, Periodicitat.\n4. Desa i revisa que la fitxa mostra la nova quota.\n\nComprovació final: el soci queda preparat per a futures remeses amb l'import actualitzat.",
+    "es": "Para cambiar la cuota de un socio:\n1. Ve a Donantes y abre la ficha del socio.\n2. Haz clic en Editar y comprueba que la modalidad es Socio/a.\n3. Actualiza Importe de cuota (por cobro) y, si hace falta, Periodicidad.\n4. Guarda y revisa que la ficha muestra la nueva cuota.\n\nComprobación final: el socio queda preparado para futuras remesas con el importe actualizado."
   },
   "uiPaths": [
-    "Donants > Nom del donant > Editar"
+    "Donants > Fitxa del donant > Editar"
   ],
   "needsSnapshot": false,
   "keywords": [
     "quota",
+    "cuota",
     "periodicitat",
+    "periodicidad",
     "soci",
-    "import"
+    "socio"
   ],
   "source_faq": [],
   "source_manual": [
-    "3.2",
-    "6.a"
+    "3.6"
   ],
   "source_guides": [],
   "related": [
-    "howto-member-create",
-    "howto-remittance-create-sepa"
+    "howto-donor-edit"
   ],
   "error_key": null,
   "symptom": {

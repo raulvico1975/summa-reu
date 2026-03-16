@@ -11,35 +11,51 @@
   },
   "intents": {
     "ca": [
-      "com importo l'extracte",
-      "pujar extracte bancari",
-      "importar moviments",
-      "carregar fitxer del banc",
-      "importar CSV del banc",
-      "com passo els moviments del banc",
-      "com se quants moviments s'han importat correctament",
-      "resum de la importacio de moviments"
+      "importar extracte bancari",
+      "com importar extracte bancari",
+      "pujar extracte del banc",
+      "importar moviments del banc"
     ],
     "es": [
-      "cómo importo el extracto",
-      "subir extracto bancario",
-      "importar movimientos",
-      "cargar archivo del banco",
-      "importar CSV del banco",
-      "cómo paso los movimientos del banco",
-      "como se cuantos movimientos se han importado correctamente",
-      "resumen de la importacion de movimientos"
+      "importar extracto bancario",
+      "cómo importar extracto bancario",
+      "subir extracto del banco",
+      "importar movimientos del banco"
     ]
   },
-  "guideId": "importMovements",
-  "answer": null,
-  "uiPaths": ["Moviments > Importar"],
+  "guideId": null,
+  "answer": {
+    "ca": "Per importar extracte bancari:\n1. Ves a Moviments > Importar.\n2. Selecciona el compte bancari correcte abans de pujar el fitxer.\n3. Carrega el CSV o Excel tal com surt del banc.\n4. Revisa la previsualització i confirma la importació només si les dates, imports i descripcions quadren.\n\nComprovació final: els moviments nous apareixen al llistat sense errors de format.",
+    "es": "Para importar extracto bancario:\n1. Ve a Movimientos > Importar.\n2. Selecciona la cuenta bancaria correcta antes de subir el fichero.\n3. Carga el CSV o Excel tal como sale del banco.\n4. Revisa la previsualización y confirma la importación solo si fechas, importes y descripciones cuadran.\n\nComprobación final: los movimientos nuevos aparecen en el listado sin errores de formato."
+  },
+  "uiPaths": [
+    "Moviments > Importar extracte bancari"
+  ],
   "needsSnapshot": false,
-  "keywords": ["importar", "extracte", "bancari", "CSV", "Excel", "moviments", "banc", "resum", "importacio", "resultat"],
-  "source_faq": ["Q28", "Q29"],
-  "source_manual": ["5.1"],
-  "source_guides": ["importMovements"],
-  "related": ["guide-movements", "guide-attach-document", "guide-bulk-categorize"],
+  "keywords": [
+    "importar extracte bancari",
+    "extracte",
+    "banc",
+    "csv",
+    "excel",
+    "moviments"
+  ],
+  "source_faq": [
+    "Q9",
+    "Q10",
+    "Q11",
+    "Q15"
+  ],
+  "source_manual": [
+    "5.1"
+  ],
+  "source_guides": [],
+  "related": [
+    "howto-import-safe-duplicates"
+  ],
   "error_key": null,
-  "symptom": { "ca": null, "es": null }
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
 }

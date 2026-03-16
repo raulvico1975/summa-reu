@@ -472,15 +472,34 @@ A la llista de donants (filtra per "Baixes"), clica la icona de **fletxa circula
 
 ---
 
-## 3.6 La fitxa del donant
+## 3.6 Editar dades d'un donant i canviar quota d'un soci
 
-Clica el **nom** de qualsevol donant per obrir la seva fitxa lateral. Hi trobaràs:
+### Què és
 
-- Dades personals completes
-- Historial de donacions
-- Historial de devolucions
-- Resum per any
-- Accions: Editar, Generar certificat
+La fitxa del donant és el lloc on mantens al dia les dades que afecten operativa, remeses i fiscalitat. Des d'aquí edites la fitxa i, si és soci, també la quota.
+
+### Quan s'utilitza
+
+- Quan ha canviat una dada del donant (nom, DNI/CIF, codi postal, email, telèfon o IBAN)
+- Quan un soci canvia la quota o la periodicitat
+- Quan vols corregir una dada abans d'una remesa o del Model 182
+
+### Pas a pas
+
+1. Ves a ❤️ **Donants** i obre la fitxa del donant.
+2. Clica **"Editar"**.
+3. Actualitza només les dades que hagin canviat.
+4. Si és soci, revisa **Import de quota (per cobrament)** i **Periodicitat**.
+5. Clica **"Guardar Donant"**.
+
+### Errors habituals
+
+- Crear un donant nou quan el correcte era editar el registre existent
+- Canviar la quota sense revisar IBAN o dades fiscals abans d'una remesa o del Model 182
+
+### On trobar-ho a Summa
+
+**Donants > Fitxa del donant > Editar**
 
 ---
 
@@ -540,26 +559,34 @@ La bona notícia és que Summa Social fa gran part de la feina automàticament. 
 
 ---
 
-## 5.1 Importar l'extracte del banc
+## 5.1 Importar extracte bancari
 
-### Formats suportats
+### Què és
 
-- CSV (.csv, .txt)
-- Excel (.xlsx, .xls)
+És el flux per carregar nous moviments del banc a Summa sense crear duplicats ni barrejar comptes.
+
+### Quan s'utilitza
+
+- Quan descarregues un CSV o Excel del banc
+- Quan necessites carregar un període nou a **Moviments**
+- Quan vols validar si un fitxer ja s'havia importat
 
 ### Pas a pas
 
-1. Descarrega l'extracte del teu banc (des de la banca online)
-2. Ves a 💰 **Moviments**
-3. Clica **"Importar"**
-4. Arrossega el fitxer o clica per seleccionar-lo
-5. Revisa les columnes detectades (Data, Descripció, Import)
-6. Si tens més d'un compte bancari, selecciona'l
-7. Clica **"Importar X moviments"**
+1. Descarrega l'extracte del banc en **CSV** o **Excel**.
+2. Ves a 💰 **Moviments** i clica **"Importar"**.
+3. Selecciona el compte bancari correcte abans de pujar el fitxer.
+4. Revisa la previsualització i el bloc de **duplicats segurs** abans de confirmar.
+5. Importa només quan dates, imports i descripcions quadrin.
 
-### Sobre els duplicats
+### Errors habituals
 
-El sistema **detecta automàticament** els moviments que ja existeixen. Pots importar el mateix extracte diverses vegades sense por de duplicar dades.
+- Confirmar la importació sense revisar compte, previsualització o duplicats
+- Obrir i desar el CSV amb Excel si això altera separadors o decimals
+
+### On trobar-ho a Summa
+
+**Moviments > Importar extracte bancari**
 
 ---
 
@@ -740,47 +767,34 @@ Sense dividir:
 
 ---
 
-## 6.3 Com dividir una remesa pas a pas
+## 6.3 Dividir remesa
 
-### Pas 1: Localitzar la remesa
+### Què és
 
-1. Ves a 💰 **Moviments**
-2. Busca un ingrés gran amb concepte tipus "REMESA RECIBOS..."
+És el flux posterior a la banca per separar una remesa operativa en línies individuals dins de **Moviments**.
 
-### Pas 2: Obrir el divisor
+### Quan s'utilitza
 
-1. Clica el menú **⋮** a la dreta de la fila
-2. Selecciona **"Dividir remesa"**
+- Quan has importat un ingrés gran que agrupa moltes quotes o rebuts
+- Quan necessites identificar cada línia abans de continuar treballant
+- Quan encara no has processat la remesa
 
-### Pas 3: Pujar el fitxer de detall
+### Pas a pas
 
-Arrossega el fitxer CSV o Excel del banc.
+1. Ves a 💰 **Moviments** i obre el detall de la remesa.
+2. Clica **"Dividir remesa"**.
+3. Puja el fitxer de detall del banc si cal i revisa el mapeig.
+4. Revisa el matching abans de processar.
+5. Confirma només quan vegis clar quines línies quedaran a cada remesa.
 
-### Pas 4: Mapejar les columnes
+### Errors habituals
 
-El sistema intentarà detectar-les automàticament, però revisa:
+- Assignar contacte o categoria al moviment pare abans de dividir la remesa
+- Processar tota la remesa sense revisar el matching ni els rebuts que s'han de separar
 
-| Columna | Obligatori? | Descripció |
-|---------|:-----------:|------------|
-| 🟢 **Import** | ✅ | Quantitat de cada quota |
-| 🔵 **Nom** | Recomanat | Nom del titular |
-| 🟣 **DNI/CIF** | Recomanat | Per identificar millor |
-| 🔷 **IBAN** | Recomanat | Per identificar millor |
+### On trobar-ho a Summa
 
-### Pas 5: Revisar el matching
-
-El sistema intenta trobar cada soci:
-
-| Color | Significat |
-|-------|------------|
-| 🟢 Verd | Soci trobat |
-| 🟠 Taronja | Soci de baixa (pots reactivar-lo) |
-| 🔵 Blau | Soci nou (es crearà) |
-| 🟡 Groc | No identificat (falta DNI) |
-
-### Pas 6: Processar
-
-Clica **"Processar"** i es creen les quotes individuals.
+**Moviments > Detall de remesa > Dividir remesa**
 
 ---
 
@@ -824,14 +838,34 @@ La propera vegada es detectarà automàticament.
 
 ---
 
-## 6.7 Què fer si surt malament
+## 6.7 Desfer remesa
 
-Si has processat una remesa incorrectament:
+### Què és
 
-1. Obre el moviment pare de la remesa
-2. Clica **"Desfer remesa processada"**
-3. Revisa la informació mostrada i confirma
-4. La remesa es restaura i pots tornar-la a processar
+És el flux d'undo per tornar una remesa processada al punt anterior i poder-la revisar o reprocessar bé.
+
+### Quan s'utilitza
+
+- Quan la remesa s'ha processat amb el fitxer equivocat
+- Quan el matching o la separació han quedat malament
+- Quan necessites tornar a l'estat original abans de repetir el procés
+
+### Pas a pas
+
+1. Ves a **Moviments** i localitza la remesa processada.
+2. Obre'n el detall des del moviment pare o des del badge.
+3. Clica **"Desfer remesa"**.
+4. Revisa la informació mostrada i confirma.
+5. Quan torni a l'estat original, ja la podràs tornar a processar correctament.
+
+### Errors habituals
+
+- Reprocessar la remesa per sobre sense haver fet abans **Desfer remesa**
+- Pensar que cal esborrar línies a mà en lloc de tornar al punt anterior
+
+### On trobar-ho a Summa
+
+**Moviments > Detall de remesa > Desfer remesa**
 
 ---
 
@@ -1058,36 +1092,34 @@ Quan tens poques devolucions o saps de qui són:
 
 ---
 
-## 7.4 Importar fitxer de devolucions del banc
+## 7.4 Importar devolucions del banc
 
-Quan tens moltes devolucions:
+### Què és
 
-### Bancs suportats
+És el flux per carregar el fitxer de detall de devolucions i assignar cada retorn al donant correcte.
 
-| Banc | Format |
-|------|--------|
-| **Santander** | Excel (.xlsx) |
-| **Triodos** | CSV o XLS |
-| **Altres** | Detecció automàtica |
+### Quan s'utilitza
+
+- Quan el banc t'ha retornat rebuts i tens el fitxer de detall
+- Quan hi ha massa devolucions per assignar-les una a una
+- Quan vols que les devolucions quedin ben imputades abans d'informes fiscals
 
 ### Pas a pas
 
-1. Localitza una devolució a 💰 **Moviments**
-2. Clica la icona **📄** (pujar fitxer)
-3. Puja el fitxer CSV o Excel del banc
-4. Mapeja les columnes (IBAN és la prioritària)
-5. Revisa els resultats
-6. Clica **"Processar"**
+1. Ves a 💰 **Moviments** i obre **"Importar devolucions del banc"**.
+2. Puja el fitxer CSV o Excel que t'ha donat el banc.
+3. Revisa el matching abans de confirmar cada assignació.
+4. Processa només quan les devolucions resoltes tinguin el donant correcte.
+5. Deixa les no resoltes com a pendents conscients per revisar-les després.
 
-### Com fa el matching
+### Errors habituals
 
-| Ordre | Criteri |
-|:-----:|---------|
-| 1 | IBAN (exacte) |
-| 2 | DNI (exacte) |
-| 3 | Nom (exacte) |
+- Confirmar el procés sense revisar el matching
+- Assignar la devolució al pare de la remesa en lloc del donant correcte
 
-> ⚠️ **Important:** NO es fa matching aproximat. Si no coincideix exactament, no s'assigna.
+### On trobar-ho a Summa
+
+**Moviments > Importar devolucions del banc**
 
 ---
 
@@ -1225,34 +1257,34 @@ Tot el treball de categorització i gestió de devolucions que has fet durant l'
 
 ---
 
-## 9.1 Model 182 — Declaració de Donacions
+## 9.1 Generar el Model 182
 
 ### Què és
 
-El Model 182 és la declaració informativa de donatius rebuts. És obligatori si la teva entitat rep donacions.
+És el flux per generar el fitxer del **Model 182** a partir de les dades fiscals i dels moviments correctament resolts.
 
-### Termini
+### Quan s'utilitza
 
-**31 de gener** de l'any següent
-
-### Requisits per donant
-
-| Dada | Si falta... |
-|------|-------------|
-| **Nom** | No apareix al model |
-| **DNI/CIF** | No apareix al model |
-| **Codi postal** | Error de província |
+- Quan estàs preparant el tancament fiscal anual
+- Quan la gestoria et demana el fitxer del 182
+- Quan vols verificar que el total net per donant és correcte
 
 ### Pas a pas
 
-1. Ves a 📄 **Informes > Model 182**
-2. Selecciona l'any
-3. Revisa les alertes (donants amb dades incompletes)
-4. Corregeix els errors
-5. Clica **"Generar Excel"**
-6. Envia el fitxer a la teva gestoria
+1. Ves a 📄 **Informes > Model 182** i selecciona l'any fiscal.
+2. Revisa les alertes abans d'exportar, sobretot donants sense dades fiscals i devolucions pendents.
+3. Corregeix el que falti a **Donants** o **Moviments** i torna a **Informes**.
+4. Genera el fitxer només quan els totals siguin coherents.
+5. Descarrega'l i envia'l a la gestoria.
 
-> 💡 Les devolucions es resten automàticament.
+### Errors habituals
+
+- Generar el Model 182 amb donants sense **DNI/CIF** o **codi postal**
+- Exportar mentre encara hi ha devolucions pendents o estàs revisant un altre any
+
+### On trobar-ho a Summa
+
+**Informes > Model 182**
 
 ---
 

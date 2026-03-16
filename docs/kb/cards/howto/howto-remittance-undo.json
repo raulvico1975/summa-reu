@@ -6,40 +6,37 @@
   "guardrail": "b1_remittances",
   "answerMode": "full",
   "title": {
-    "ca": "Desfer una remesa processada",
-    "es": "Deshacer una remesa procesada"
+    "ca": "Desfer remesa",
+    "es": "Deshacer remesa"
   },
   "intents": {
     "ca": [
+      "desfer remesa",
       "com desfer una remesa",
-      "puc reprocessar una remesa ja processada",
-      "com tornar a processar una remesa",
-      "he processat una remesa incorrectament"
+      "remesa mal processada",
+      "reprocessar remesa correctament"
     ],
     "es": [
+      "deshacer remesa",
       "cómo deshacer una remesa",
-      "puedo reprocesar una remesa ya procesada",
-      "cómo volver a procesar una remesa",
-      "he procesado una remesa incorrectamente"
+      "remesa mal procesada",
+      "reprocesar remesa correctamente"
     ]
   },
   "guideId": null,
   "answer": {
-    "ca": "Per desfer una remesa processada:\n1. Ves a Moviments i localitza la remesa processada.\n2. Obre el detall de la remesa des del badge o el detall del moviment pare.\n3. Clica \"Desfer remesa\".\n4. Revisa la informació que es mostrarà i confirma.\n5. Quan la remesa torni a l'estat original, ja la podràs tornar a processar amb el fitxer correcte.\n\nImportant: primer desfés la remesa; no intentis dividir-la o processar-la una segona vegada per sobre.",
-    "es": "Para deshacer una remesa procesada:\n1. Ve a Movimientos y localiza la remesa procesada.\n2. Abre el detalle de la remesa desde el badge o el detalle del movimiento padre.\n3. Haz clic en \"Deshacer remesa\".\n4. Revisa la información que se mostrará y confirma.\n5. Cuando la remesa vuelva al estado original, ya podrás procesarla de nuevo con el fichero correcto.\n\nImportante: primero deshaz la remesa; no intentes dividirla o procesarla una segunda vez por encima."
+    "ca": "Per desfer remesa:\n1. Ves a Moviments i localitza la remesa processada.\n2. Obre'n el detall des del moviment pare o des del badge.\n3. Clica Desfer remesa i revisa la informació abans de confirmar.\n4. Quan torni a l'estat original, ja la podràs tornar a processar correctament.\n\nComprovació final: la remesa deixa de constar com a processada i torna al punt anterior.",
+    "es": "Para deshacer remesa:\n1. Ve a Movimientos y localiza la remesa procesada.\n2. Abre su detalle desde el movimiento padre o desde el badge.\n3. Haz clic en Deshacer remesa y revisa la información antes de confirmar.\n4. Cuando vuelva al estado original, ya podrás procesarla otra vez correctamente.\n\nComprobación final: la remesa deja de constar como procesada y vuelve al punto anterior."
   },
   "uiPaths": [
-    "Moviments > Remeses > Detall > Desfer remesa"
+    "Moviments > Detall de remesa > Desfer remesa"
   ],
   "needsSnapshot": false,
   "keywords": [
-    "desfer",
-    "deshacer",
-    "reprocessar",
-    "reprocesar",
-    "remesa",
-    "processada",
-    "undo"
+    "desfer remesa",
+    "deshacer remesa",
+    "undo remesa",
+    "reprocessar"
   ],
   "source_faq": [],
   "source_manual": [
@@ -47,9 +44,7 @@
   ],
   "source_guides": [],
   "related": [
-    "guide-split-remittance",
-    "guide-remittances",
-    "guide-remittance-low-members"
+    "guide-split-remittance"
   ],
   "error_key": null,
   "symptom": {

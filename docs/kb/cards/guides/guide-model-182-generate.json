@@ -11,27 +11,49 @@
   },
   "intents": {
     "ca": [
-      "com genero el Model 182",
-      "com presento el 182",
-      "generar fitxer per hisenda",
-      "exportar Model 182"
+      "generar el model 182",
+      "com generar el model 182",
+      "exportar model 182",
+      "fitxer model 182"
     ],
     "es": [
-      "cómo genero el Modelo 182",
-      "cómo presento el 182",
-      "generar archivo para hacienda",
-      "exportar Modelo 182"
+      "generar el modelo 182",
+      "cómo generar el modelo 182",
+      "exportar modelo 182",
+      "archivo modelo 182"
     ]
   },
-  "guideId": "model182",
-  "answer": null,
-  "uiPaths": ["Informes > Model 182"],
+  "guideId": null,
+  "answer": {
+    "ca": "Per generar el Model 182:\n1. Ves a Informes > Model 182 i selecciona l'any fiscal.\n2. Revisa les alertes abans d'exportar, sobretot dades fiscals i devolucions pendents.\n3. Corregeix el que falti a Donants o Moviments i torna a Informes.\n4. Genera el fitxer només quan els totals siguin coherents i no quedin alertes crítiques.\n\nComprovació final: descarregues el fitxer del 182 sense errors bloquejants.",
+    "es": "Para generar el Modelo 182:\n1. Ve a Informes > Modelo 182 y selecciona el año fiscal.\n2. Revisa las alertas antes de exportar, sobre todo datos fiscales y devoluciones pendientes.\n3. Corrige lo que falte en Donantes o Movimientos y vuelve a Informes.\n4. Genera el archivo solo cuando los totales sean coherentes y no queden alertas críticas.\n\nComprobación final: descargas el fichero del 182 sin errores bloqueantes."
+  },
+  "uiPaths": [
+    "Informes > Model 182"
+  ],
   "needsSnapshot": false,
-  "keywords": ["generar", "182", "model", "AEAT", "exportar", "txt"],
-  "source_faq": ["Q69", "Q70"],
-  "source_manual": ["9.1"],
-  "source_guides": ["model182"],
-  "related": ["guide-model-182", "guide-reports", "guide-donor-certificate"],
+  "keywords": [
+    "model 182",
+    "modelo 182",
+    "informes",
+    "aeat",
+    "exportar"
+  ],
+  "source_faq": [
+    "Q69",
+    "Q70"
+  ],
+  "source_manual": [
+    "9.1"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-model-182",
+    "guide-reports"
+  ],
   "error_key": null,
-  "symptom": { "ca": null, "es": null }
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
 }

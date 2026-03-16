@@ -6,48 +6,48 @@
   "guardrail": "none",
   "answerMode": "full",
   "title": {
-    "ca": "Editar les dades d'un soci",
-    "es": "Editar los datos de un socio"
+    "ca": "Editar dades d'un donant",
+    "es": "Editar datos de un donante"
   },
   "intents": {
     "ca": [
-      "com edito les dades d'un soci",
-      "com modifico un soci",
-      "editar fitxa d'un soci",
-      "canviar dades d'un soci"
+      "editar dades d un donant",
+      "com edito un donant",
+      "modificar fitxa donant",
+      "canviar dades donant"
     ],
     "es": [
-      "cómo edito los datos de un socio",
-      "cómo modifico un socio",
-      "editar ficha de un socio",
-      "cambiar datos de un socio"
+      "editar datos de un donante",
+      "cómo edito un donante",
+      "modificar ficha donante",
+      "cambiar datos donante"
     ]
   },
   "guideId": null,
   "answer": {
-    "ca": "Per editar un soci:\n1. Ves a Donants.\n2. Clica el nom del soci per obrir la fitxa lateral.\n3. Clica \"Editar\".\n4. Actualitza els camps necessaris de la fitxa.\n5. Clica \"Guardar Donant\".\n\nComprovació final: en tornar a la fitxa lateral, ja hi veus les dades actualitzades.",
-    "es": "Para editar un socio:\n1. Ve a Donantes.\n2. Haz clic en el nombre del socio para abrir la ficha lateral.\n3. Haz clic en \"Editar\".\n4. Actualiza los campos necesarios de la ficha.\n5. Haz clic en \"Guardar Donante\".\n\nComprobación final: al volver a la ficha lateral ya ves los datos actualizados."
+    "ca": "Per editar dades d'un donant:\n1. Ves a Donants i obre la fitxa del donant.\n2. Clica Editar.\n3. Actualitza només les dades que hagin canviat (nom, DNI/CIF, codi postal, contacte o IBAN).\n4. Desa i comprova que la fitxa lateral ja mostra els canvis.\n\nComprovació final: el mateix registre queda actualitzat i no has creat cap duplicat.",
+    "es": "Para editar datos de un donante:\n1. Ve a Donantes y abre la ficha del donante.\n2. Haz clic en Editar.\n3. Actualiza solo los datos que hayan cambiado (nombre, DNI/CIF, código postal, contacto o IBAN).\n4. Guarda y comprueba que la ficha lateral ya muestra los cambios.\n\nComprobación final: el mismo registro queda actualizado y no has creado ningún duplicado."
   },
   "uiPaths": [
-    "Donants > Nom del donant > Editar"
+    "Donants > Fitxa del donant > Editar"
   ],
   "needsSnapshot": false,
   "keywords": [
     "editar",
+    "donant",
+    "donante",
     "fitxa",
-    "soci",
-    "donant"
+    "iban",
+    "dni"
   ],
   "source_faq": [],
   "source_manual": [
-    "3.5",
     "3.6"
   ],
   "source_guides": [],
   "related": [
-    "guide-donors",
-    "howto-donor-update-iban",
-    "howto-donor-update-fee"
+    "howto-donor-update-fee",
+    "howto-donor-update-iban"
   ],
   "error_key": null,
   "symptom": {

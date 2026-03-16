@@ -6,43 +6,44 @@
   "guardrail": "none",
   "answerMode": "full",
   "title": {
-    "ca": "Revisar duplicats en importar un extracte",
-    "es": "Revisar duplicados al importar un extracto"
+    "ca": "Detectar duplicats en importar",
+    "es": "Detectar duplicados al importar"
   },
   "intents": {
     "ca": [
+      "detectar duplicats en importar",
+      "he importat l extracte dues vegades",
       "duplicats extracte bancari",
-      "com detecto duplicats d'un extracte",
-      "he importat l'extracte dues vegades",
-      "moviments duplicats a la importació"
+      "moviments duplicats importacio"
     ],
     "es": [
-      "duplicados extracto bancario",
-      "cómo detecto duplicados de un extracto",
+      "detectar duplicados al importar",
       "he importado el extracto dos veces",
-      "movimientos duplicados en la importación"
+      "duplicados extracto bancario",
+      "movimientos duplicados importacion"
     ]
   },
   "guideId": null,
   "answer": {
-    "ca": "Quan importes un extracte:\n1. Revisa el \"Resum pre-importació\".\n2. Si Summa detecta moviments ja existents, veuràs el bloc \"Duplicats segurs\".\n3. Clica \"Veure quins moviments ja existien\".\n4. Si cal, obre \"Veure per què\" per entendre si el duplicat s'ha detectat per referència bancària, coincidència completa o línia repetida al fitxer.\n\nAquests moviments no s'importaran de nou.",
-    "es": "Cuando importas un extracto:\n1. Revisa el \"Resumen preimportación\".\n2. Si Summa detecta movimientos ya existentes, verás el bloque \"Duplicados seguros\".\n3. Haz clic en \"Ver qué movimientos ya existían\".\n4. Si hace falta, abre \"Ver por qué\" para entender si el duplicado se ha detectado por referencia bancaria, coincidencia completa o línea repetida en el fichero.\n\nEsos movimientos no se volverán a importar."
+    "ca": "Per detectar duplicats en importar:\n1. Obre la importació i mira el Resum pre-importació abans de confirmar.\n2. Revisa el bloc Duplicats segurs per veure quins moviments ja existien.\n3. Si cal, obre Veure per què per validar la coincidència detectada.\n4. Importa només quan tinguis clar que el resum separa bé nous moviments i duplicats.\n\nComprovació final: els duplicats queden fora i no es creen línies repetides.",
+    "es": "Para detectar duplicados al importar:\n1. Abre la importación y mira el Resumen preimportación antes de confirmar.\n2. Revisa el bloque Duplicados seguros para ver qué movimientos ya existían.\n3. Si hace falta, abre Ver por qué para validar la coincidencia detectada.\n4. Importa solo cuando tengas claro que el resumen separa bien movimientos nuevos y duplicados.\n\nComprobación final: los duplicados quedan fuera y no se crean líneas repetidas."
   },
   "uiPaths": [
-    "Moviments > Importar"
+    "Moviments > Importar extracte bancari"
   ],
   "needsSnapshot": false,
   "keywords": [
     "duplicats",
-    "extracte",
     "duplicados",
+    "importar",
+    "extracte",
     "resum pre-importació"
   ],
   "source_faq": [
     "Q9"
   ],
   "source_manual": [
-    "11.2"
+    "5.1"
   ],
   "source_guides": [],
   "related": [

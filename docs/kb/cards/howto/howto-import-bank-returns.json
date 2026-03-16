@@ -1,0 +1,59 @@
+{
+  "id": "howto-import-bank-returns",
+  "type": "howto",
+  "domain": "remittances",
+  "risk": "guarded",
+  "guardrail": "b1_remittances",
+  "answerMode": "full",
+  "title": {
+    "ca": "Importar devolucions del banc",
+    "es": "Importar devoluciones del banco"
+  },
+  "intents": {
+    "ca": [
+      "importar devolucions del banc",
+      "com importar devolucions del banc",
+      "pujar fitxer de devolucions",
+      "identificar devolucions del banc"
+    ],
+    "es": [
+      "importar devoluciones del banco",
+      "cómo importar devoluciones del banco",
+      "subir fichero de devoluciones",
+      "identificar devoluciones del banco"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per importar devolucions del banc:\n1. Ves a Moviments i obre Importar devolucions del banc.\n2. Puja el fitxer de detall que t'ha donat el banc.\n3. Revisa el matching abans de confirmar cada assignació.\n4. Processa només quan les devolucions resoltes tinguin el donant correcte i la resta quedin pendents conscients.\n\nComprovació final: les devolucions queden registrades i les resoltes ja resten al donant correcte.",
+    "es": "Para importar devoluciones del banco:\n1. Ve a Movimientos y abre Importar devoluciones del banco.\n2. Sube el fichero de detalle que te ha dado el banco.\n3. Revisa el matching antes de confirmar cada asignación.\n4. Procesa solo cuando las devoluciones resueltas tengan el donante correcto y el resto queden como pendientes conscientes.\n\nComprobación final: las devoluciones quedan registradas y las resueltas ya descuentan al donante correcto."
+  },
+  "uiPaths": [
+    "Moviments > Importar devolucions del banc"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "devolucions",
+    "devoluciones",
+    "fitxer banc",
+    "returns",
+    "matching"
+  ],
+  "source_faq": [
+    "Q54",
+    "Q55"
+  ],
+  "source_manual": [
+    "7.4"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-returns",
+    "guide-model-182-generate"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}
