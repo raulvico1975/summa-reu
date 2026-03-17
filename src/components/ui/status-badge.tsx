@@ -11,6 +11,7 @@ type Status =
   | "pending"
   | "none"
   | "recording"
+  | "stopping"
   | "ready";
 
 const styleByStatus: Record<Status, string> = {
@@ -23,6 +24,7 @@ const styleByStatus: Record<Status, string> = {
   pending: "border-slate-300 bg-slate-100 text-slate-700",
   none: "border-slate-300 bg-slate-100 text-slate-700",
   recording: "border-rose-200 bg-rose-50 text-rose-700",
+  stopping: "border-amber-200 bg-amber-50 text-amber-700",
   ready: "border-emerald-200 bg-emerald-50 text-emerald-700",
 };
 

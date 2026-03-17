@@ -28,6 +28,7 @@ export const esCore: I18nEsCore = {
     pending: "Pendiente",
     none: "Sin grabación",
     recording: "Grabando",
+    stopping: "Detenida pendiente de Daily",
     ready: "Preparado",
   },
   home: {

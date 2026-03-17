@@ -28,9 +28,11 @@ export default async function OwnerMeetingPage({
   const minutesDraft = meeting.minutesDraft ?? meeting.minutes[0]?.minutesMarkdown ?? "";
   const minutesId = meeting.minutes[0]?.id ?? "daily";
   const recordingStatus = meeting.recordingStatus ?? "none";
-  const showRefresh = recordingStatus === "processing";
+  const showRefresh = recordingStatus === "stopping" || recordingStatus === "processing";
   const latestIngestJob = meeting.latestIngestJob;
   const showProcessingError = recordingStatus === "error" || latestIngestJob?.status === "error";
+  const isAwaitingDailyConfirmation = recordingStatus === "stopping";
+  const isProcessing = latestIngestJob?.status === "processing" || recordingStatus === "processing";
   const dailyRoomUrl = meeting.dailyRoomUrl ?? meeting.meetingUrl ?? null;
   const deleteRedirectHref = meeting.poll
     ? withLocalePath(locale, `/polls/${meeting.poll.id}`)
@@ -73,7 +75,10 @@ export default async function OwnerMeetingPage({
               <p>{i18n.meeting.processingErrorAction}</p>
             </div>
           ) : null}
-          {latestIngestJob?.status === "processing" || recordingStatus === "processing" ? (
+          {isAwaitingDailyConfirmation ? (
+            <p className="text-sm text-slate-500">{i18n.meeting.recordingPendingWebhook}</p>
+          ) : null}
+          {isProcessing ? (
             <p className="text-sm text-slate-500">{i18n.meeting.recordingReady}</p>
           ) : null}
           <MeetingLiveRefresh enabled={showRefresh} />
@@ -96,6 +101,8 @@ export default async function OwnerMeetingPage({
             <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
               {transcript}
             </pre>
+          ) : isAwaitingDailyConfirmation ? (
+            <p className="text-sm text-slate-500">{i18n.meeting.transcriptPendingWebhook}</p>
           ) : recordingStatus === "processing" ? (
             <p className="text-sm text-slate-500">{i18n.meeting.transcriptProcessing}</p>
           ) : showProcessingError ? (
@@ -122,6 +129,8 @@ export default async function OwnerMeetingPage({
         <CardContent>
           {minutesDraft ? (
             <MinutesEditor meetingId={meeting.id} minutesId={minutesId} initialMarkdown={minutesDraft} />
+          ) : isAwaitingDailyConfirmation ? (
+            <p className="text-sm text-slate-500">{i18n.meeting.minutesPendingWebhook}</p>
           ) : recordingStatus === "processing" ? (
             <p className="text-sm text-slate-500">{i18n.meeting.minutesProcessing}</p>
           ) : showProcessingError ? (

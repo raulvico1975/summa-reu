@@ -97,6 +97,7 @@ export const esExtra: DeepPartial<I18nCa> = {
     stepStartRecording: "[2] Iniciar grabación",
     stepMeetingOpened: "✓ Reunión abierta",
     stepRecordingActive: "● Grabación en curso",
+    stepRecordingStopped: "✓ Grabación detenida",
     meetingOpenedBannerTitle: "La reunión se ha abierto en una nueva pestaña.",
     meetingOpenedBannerBody: "Vuelve aquí para controlar la grabación.",
     roomStatusLabel: "Sala",
@@ -104,6 +105,7 @@ export const esExtra: DeepPartial<I18nCa> = {
     roomStatusUnavailable: "no disponible",
     contextNone: "1. Abre la reunión. 2. Cuando estés dentro de la sala, vuelve aquí e inicia la grabación.",
     contextRecording: "Grabación en curso",
+    contextStopping: "Grabación detenida. Esperando confirmación de Daily para iniciar el procesamiento.",
     contextProcessing: "Procesando grabación...",
     contextReady: "Acta disponible",
     contextError: "Ha habido un problema con la grabación",
@@ -114,6 +116,8 @@ export const esExtra: DeepPartial<I18nCa> = {
     recordingStatusLabel: "Estado de la grabación",
     startRecording: "Iniciar grabación",
     stopRecording: "Detener grabación",
+    recordingPendingWebhook:
+      "La grabación se ha detenido. Summa espera la confirmación de Daily antes de iniciar la transcripción y el borrador de acta.",
     recordingReady: "La grabación se ha cerrado. Summa está generando la transcripción y el borrador de acta.",
     processingErrorTitle: "No se ha podido procesar la grabación.",
     processingErrorAction: "Vuelve a intentarlo con una nueva grabación o revisa la configuración.",
@@ -130,7 +134,11 @@ export const esExtra: DeepPartial<I18nCa> = {
     missingMeetingUrl: "La reunión todavía no tiene una URL operativa.",
     roomCreateError:
       "No se ha podido crear la sala de reunión. Puedes seguir con la reunión y subir después la grabación o el texto.",
+    transcriptPendingWebhook:
+      "La grabación se ha detenido. Falta la confirmación final de Daily para generar la transcripción.",
     transcriptProcessing: "La transcripción se está generando.",
+    minutesPendingWebhook:
+      "La grabación se ha detenido. Falta la confirmación final de Daily para generar el borrador de acta.",
     minutesProcessing: "El borrador de acta se está generando.",
     rawText: "Notas o texto base (opcional)",
     upload: "Subir y procesar",
@@ -152,7 +160,8 @@ export const esExtra: DeepPartial<I18nCa> = {
       "Grabación registrada. El procesamiento está en marcha y esta página se actualizará automáticamente.",
     processingInProgress: "Esta grabación ya se está procesando.",
     processingAlreadyDone: "Esta grabación ya estaba procesada.",
-    autoRefreshActive: "Actualización automática activa cada 5 segundos mientras haya procesamiento.",
+    autoRefreshActive:
+      "Actualización automática activa cada 5 segundos mientras esperamos confirmación de Daily o haya procesamiento.",
     emptyRecordings: "Todavía no hay grabaciones.",
     emptyTranscript: "Todavía no hay transcripción.",
     emptyMinutes: "Todavía no hay acta generada.",

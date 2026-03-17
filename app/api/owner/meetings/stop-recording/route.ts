@@ -73,13 +73,13 @@ export async function POST(request: NextRequest) {
 
     await updateMeetingRecordingState({
       meetingId: meeting.id,
-      recordingStatus: "processing",
+      recordingStatus: "stopping",
     });
 
     console.info("meeting_recording_stopped", {
       meetingId: meeting.id,
       orgId: meeting.orgId,
-      status: "processing",
+      status: "stopping",
       reason: "owner_request",
     });
 

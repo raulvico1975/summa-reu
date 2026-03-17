@@ -15,6 +15,12 @@ function StepIndicator({
   recordingStatus: MeetingRecordingStatus;
 }) {
   const { i18n } = useI18n();
+  const recordingStepLabel =
+    recordingStatus === "recording"
+      ? i18n.meeting.stepRecordingActive
+      : recordingStatus === "stopping" || recordingStatus === "processing" || recordingStatus === "ready"
+        ? i18n.meeting.stepRecordingStopped
+        : i18n.meeting.stepStartRecording;
 
   return (
     <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-2">
@@ -24,11 +30,7 @@ function StepIndicator({
         </p>
       </div>
       <div className="rounded-lg bg-white px-3 py-3">
-        <p className="font-medium text-slate-900">
-          {recordingStatus === "recording"
-            ? i18n.meeting.stepRecordingActive
-            : i18n.meeting.stepStartRecording}
-        </p>
+        <p className="font-medium text-slate-900">{recordingStepLabel}</p>
       </div>
     </div>
   );
@@ -70,6 +72,8 @@ function buildContextMessage(i18n: ReturnType<typeof useI18n>["i18n"], recording
   switch (recordingStatus) {
     case "recording":
       return i18n.meeting.contextRecording;
+    case "stopping":
+      return i18n.meeting.contextStopping;
     case "processing":
       return i18n.meeting.contextProcessing;
     case "ready":

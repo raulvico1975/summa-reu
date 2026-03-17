@@ -6,8 +6,14 @@ export type TranscriptStatus = "pending" | "processing" | "done" | "error";
 export type MinutesTaskStatus = "todo" | "doing" | "done";
 export type OrgSubscriptionStatus = "none" | "pending" | "active" | "past_due" | "canceled";
 export type OrgPlan = "basic";
-// Meeting recording state machine: none -> recording -> processing -> ready | error
-export type MeetingRecordingStatus = "none" | "recording" | "processing" | "ready" | "error";
+// Meeting recording state machine: none -> recording -> stopping -> processing -> ready | error
+export type MeetingRecordingStatus =
+  | "none"
+  | "recording"
+  | "stopping"
+  | "processing"
+  | "ready"
+  | "error";
 export type MeetingIngestJobStatus = "queued" | "processing" | "completed" | "error";
 
 export type OrgDoc = {
