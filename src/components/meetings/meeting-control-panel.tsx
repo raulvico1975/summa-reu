@@ -15,6 +15,12 @@ function StepIndicator({
   recordingStatus: MeetingRecordingStatus;
 }) {
   const { i18n } = useI18n();
+  const recordingStepLabel =
+    recordingStatus === "recording"
+      ? i18n.meeting.stepRecordingActive
+      : recordingStatus === "stopping" || recordingStatus === "processing" || recordingStatus === "ready"
+        ? i18n.meeting.stepRecordingStopped
+        : i18n.meeting.stepStartRecording;
 
   return (
     <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-2">
@@ -24,25 +30,20 @@ function StepIndicator({
         </p>
       </div>
       <div className="rounded-lg bg-white px-3 py-3">
-        <p className="font-medium text-slate-900">
-          {recordingStatus === "recording"
-            ? i18n.meeting.stepRecordingActive
-            : i18n.meeting.stepStartRecording}
-        </p>
+        <p className="font-medium text-slate-900">{recordingStepLabel}</p>
       </div>
     </div>
   );
 }
 
 function MeetingStatus({
-  meetingUsable,
+  meetingAvailable,
   recordingStatus,
 }: {
-  meetingUsable: boolean;
+  meetingAvailable: boolean;
   recordingStatus: MeetingRecordingStatus;
 }) {
   const { i18n } = useI18n();
-  const displayRecordingStatus = recordingStatus === "stopping" ? "processing" : recordingStatus;
 
   return (
     <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm sm:grid-cols-2">
@@ -51,7 +52,7 @@ function MeetingStatus({
           {i18n.meeting.roomStatusLabel}
         </p>
         <p className="mt-2 text-base font-semibold text-slate-900">
-          {meetingUsable ? i18n.meeting.roomStatusAvailable : i18n.meeting.roomStatusUnavailable}
+          {meetingAvailable ? i18n.meeting.roomStatusAvailable : i18n.meeting.roomStatusUnavailable}
         </p>
       </div>
       <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
@@ -60,7 +61,7 @@ function MeetingStatus({
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <code className="rounded bg-slate-900 px-2 py-1 text-xs font-medium text-white">{recordingStatus}</code>
-          <StatusBadge status={displayRecordingStatus} labels={i18n.status} />
+          <StatusBadge status={recordingStatus} labels={i18n.status} />
         </div>
       </div>
     </div>
@@ -72,6 +73,7 @@ function buildContextMessage(i18n: ReturnType<typeof useI18n>["i18n"], recording
     case "recording":
       return i18n.meeting.contextRecording;
     case "stopping":
+      return i18n.meeting.contextStopping;
     case "processing":
       return i18n.meeting.contextProcessing;
     case "ready":
@@ -96,7 +98,7 @@ export function MeetingControlPanel({
   const { i18n } = useI18n();
   const [openedMeeting, setOpenedMeeting] = useState(false);
 
-  const meetingUsable = Boolean(meetingUrl);
+  const meetingAvailable = Boolean(meetingUrl);
   const hasOpenedMeeting = openedMeeting || recordingStatus !== "none";
   const contextMessage = buildContextMessage(i18n, recordingStatus);
 
@@ -139,7 +141,7 @@ export function MeetingControlPanel({
           </div>
         ) : null}
 
-        {!meetingUsable ? (
+        {!meetingAvailable ? (
           <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {i18n.meeting.roomCreateError}
           </div>
@@ -152,7 +154,7 @@ export function MeetingControlPanel({
         recordingStatus={recordingStatus}
       />
 
-      <MeetingStatus meetingUsable={meetingUsable} recordingStatus={recordingStatus} />
+      <MeetingStatus meetingAvailable={meetingAvailable} recordingStatus={recordingStatus} />
     </div>
   );
 }

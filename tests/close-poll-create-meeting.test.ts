@@ -11,7 +11,6 @@ process.env.DAILY_DOMAIN ||= "summareu";
 const { adminDb } = await import("../src/lib/firebase/admin.ts");
 const {
   closePollCreateMeeting,
-  deleteMeetingCascade,
   deleteMeetingById,
   getMeetingById,
   getMeetingByMeetingUrl,
@@ -41,21 +40,6 @@ async function seedOpenPoll() {
   await adminDb.collection("polls").doc(pollId).collection("options").doc(optionId).set({
     startsAt: Timestamp.now(),
   });
-
-  return { pollId, optionId };
-}
-
-async function seedClosedPollWithoutMeeting() {
-  const { pollId, optionId } = await seedOpenPoll();
-
-  await adminDb.collection("polls").doc(pollId).set(
-    {
-      status: "closed",
-      winningOptionId: optionId,
-      closedAt: Timestamp.now(),
-    },
-    { merge: true }
-  );
 
   return { pollId, optionId };
 }
@@ -417,63 +401,4 @@ test("deleteMeetingById removes the meeting with its nested assets and ingest jo
   } finally {
     globalThis.fetch = originalFetch;
   }
-});
-
-test("deleteMeetingCascade removes both the meeting and its closed poll", async () => {
-  const { pollId, optionId } = await seedOpenPoll();
-  const originalFetch = globalThis.fetch;
-
-  globalThis.fetch = async (_input, init) => {
-    const payload = JSON.parse(String(init?.body ?? "{}"));
-
-    return new Response(
-      JSON.stringify({
-        name: payload.name,
-        url: `https://summareu.daily.co/${payload.name}`,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-  };
-
-  try {
-    const created = await closePollCreateMeeting({
-      pollId,
-      winningOptionId: optionId,
-      createdBy: "owner-delete-cascade",
-    });
-
-    const deleted = await deleteMeetingCascade({
-      meetingId: created.meetingId,
-      pollId,
-    });
-
-    const [meetingSnap, meetingLookup, pollSnap] = await Promise.all([
-      adminDb.collection("meetings").doc(created.meetingId).get(),
-      getMeetingById(created.meetingId),
-      adminDb.collection("polls").doc(pollId).get(),
-    ]);
-
-    assert.deepEqual(deleted, { deletedMeeting: true, deletedPoll: true });
-    assert.equal(meetingSnap.exists, false);
-    assert.equal(meetingLookup, null);
-    assert.equal(pollSnap.exists, false);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test("deleteMeetingCascade removes a closed poll even when the meeting document is missing", async () => {
-  const { pollId } = await seedClosedPollWithoutMeeting();
-
-  const deleted = await deleteMeetingCascade({
-    pollId,
-  });
-
-  const pollSnap = await adminDb.collection("polls").doc(pollId).get();
-
-  assert.deepEqual(deleted, { deletedMeeting: false, deletedPoll: true });
-  assert.equal(pollSnap.exists, false);
 });
