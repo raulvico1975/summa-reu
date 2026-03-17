@@ -8,6 +8,8 @@ export const esExtra: DeepPartial<I18nCa> = {
     results: "Resultados",
     manage: "Gestionar",
     createdLabel: "Creada",
+    pastMeetings: "Reuniones pasadas",
+    noPastMeetings: "No hay reuniones pasadas.",
   },
   poll: {
     sectionVoting: "Votación",
@@ -170,5 +172,6 @@ export const esExtra: DeepPartial<I18nCa> = {
     deleting: "Eliminando...",
     deleteConfirm: "¿Quieres eliminar esta reunión? Esta acción no se puede deshacer.",
     deleteError: "No se ha podido eliminar la reunión.",
+    deleteOnlyPastError: "Solo se pueden eliminar reuniones pasadas y no activas.",
   },
 };
