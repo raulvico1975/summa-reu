@@ -13,6 +13,8 @@ import { getAdminDb, verifyIdToken } from '@/lib/api/admin-sdk';
 import { generateModel182AEATFile } from '@/lib/model182-aeat';
 import { buildModel182Candidates } from '@/lib/model182-aggregation';
 import type { Organization, Transaction, AnyContact } from '@/lib/data';
+import type { Donation } from '@/lib/types/donations';
+import { donationToTransactionLike } from '@/lib/types/donations';
 
 export async function POST(request: NextRequest) {
   // 1. Autenticació
@@ -52,9 +54,10 @@ export async function POST(request: NextRequest) {
   }
 
   // 4. Llegir dades des de Firestore (server recompute — invariant A2)
-  const [orgSnap, txSnap, contactsSnap] = await Promise.all([
+  const [orgSnap, txSnap, donationsSnap, contactsSnap] = await Promise.all([
     db.doc(`organizations/${orgId}`).get(),
     db.collection(`organizations/${orgId}/transactions`).get(),
+    db.collection(`organizations/${orgId}/donations`).get(),
     db.collection(`organizations/${orgId}/contacts`).get(),
   ]);
 
@@ -64,10 +67,13 @@ export async function POST(request: NextRequest) {
 
   const organization = { id: orgId, ...orgSnap.data() } as Organization;
   const transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Transaction[];
+  const donations = donationsSnap.docs.map((d) =>
+    donationToTransactionLike({ id: d.id, ...(d.data() as Donation) })
+  );
   const contacts = contactsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as AnyContact[];
 
   // 5. Filtrar transaccions actives (invariant A2: mateix hotfix que el component)
-  const activeTxs = transactions.filter(tx => !tx.archivedAt);
+  const activeTxs = [...transactions, ...donations].filter(tx => !tx.archivedAt);
 
   // 6. Computar candidats i generar fitxer (amb libs existents, sense canvis)
   const candidates = buildModel182Candidates(activeTxs, contacts, year);

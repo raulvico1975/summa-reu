@@ -6,6 +6,8 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import Link from 'next/link';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import type { Transaction, Donor, Organization } from '@/lib/data';
+import type { Donation } from '@/lib/types/donations';
+import { donationToTransactionLike } from '@/lib/types/donations';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +21,7 @@ import {
   isDrawerDonationCandidate,
   type DonorSummaryResult,
 } from '@/lib/fiscal/calculateDonorSummary';
+import { ContactDonations } from '@/components/contacts/ContactDonations';
 
 // UI Components
 import {
@@ -136,11 +139,14 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
 
   // Transaccions del donant - usar onSnapshot per gestionar errors de permisos
   const [transactions, setTransactions] = React.useState<Transaction[] | null>(null);
+  const [stripeDonations, setStripeDonations] = React.useState<Transaction[] | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [permissionError, setPermissionError] = React.useState(false);
 
   React.useEffect(() => {
     if (!organizationId || !donor || !open) {
+      setTransactions(null);
+      setStripeDonations(null);
       setIsLoading(false);
       return;
     }
@@ -160,6 +166,21 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       orderBy('date', 'desc'),
       limit(1000)
     );
+    const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
+    const donationsQuery = query(
+      donationsRef,
+      where('contactId', '==', donor.id),
+      orderBy('date', 'desc'),
+      limit(1000)
+    );
+
+    let txReady = false;
+    let donationsReady = false;
+    const resolveLoading = () => {
+      if (txReady && donationsReady) {
+        setIsLoading(false);
+      }
+    };
 
     const unsubscribe = onSnapshot(
       txQuery,
@@ -169,65 +190,93 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
           .map(doc => ({ id: doc.id, ...doc.data() } as Transaction))
           .filter(tx => !tx.archivedAt);
         setTransactions(donorTxs);
-        setIsLoading(false);
         setPermissionError(false);
+        txReady = true;
+        resolveLoading();
       },
       (error) => {
         console.warn('Donor transactions not available:', error.message);
-        setIsLoading(false);
         setPermissionError(true);
         setTransactions([]);
+        txReady = true;
+        resolveLoading();
       }
     );
 
-    return () => unsubscribe();
+    const unsubscribeDonations = onSnapshot(
+      donationsQuery,
+      (snapshot) => {
+        const donorStripeDonations = snapshot.docs
+          .map((doc) => donationToTransactionLike({ id: doc.id, ...(doc.data() as Donation) }))
+          .filter((tx) => !tx.archivedAt);
+        setStripeDonations(donorStripeDonations);
+        donationsReady = true;
+        resolveLoading();
+      },
+      (error) => {
+        console.warn('Donor stripe donations not available:', error.message);
+        setStripeDonations([]);
+        donationsReady = true;
+        resolveLoading();
+      }
+    );
+
+    return () => {
+      unsubscribe();
+      unsubscribeDonations();
+    };
   }, [firestore, organizationId, donor?.id, open]);
+
+  const allTransactions = React.useMemo(() => {
+    const merged = [...(transactions ?? []), ...(stripeDonations ?? [])];
+    return merged.sort((a, b) => b.date.localeCompare(a.date));
+  }, [stripeDonations, transactions]);
 
   // Anys disponibles (dels quals hi ha transaccions)
   const availableYears = React.useMemo(() => {
-    if (!transactions) return [String(currentYear)];
+    if (allTransactions.length === 0) return [String(currentYear)];
     const years = new Set<string>();
-    transactions.forEach(tx => {
+    allTransactions.forEach(tx => {
       const year = tx.date.substring(0, 4);
       years.add(year);
     });
     // Afegir any actual si no hi és
     years.add(String(currentYear));
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
-  }, [transactions, currentYear]);
+  }, [allTransactions, currentYear]);
 
   // Calcular resum fiscal (font única de veritat)
   const summary = React.useMemo<DonorSummaryResult>(() => {
     if (!donor) {
       return createEmptyDonorSummary({
-        transactions: transactions ?? [],
+        transactions: allTransactions,
         donorId: '',
         year: selectedYearNumber,
       });
     }
 
     return calculateDonorSummary({
-      transactions: transactions ?? [],
+      transactions: allTransactions,
       donorId: donor.id,
       year: selectedYearNumber,
     });
-  }, [transactions, selectedYearNumber, donor]);
+  }, [allTransactions, selectedYearNumber, donor]);
 
   // Per defecte: historial obert si <= 5 donacions
   React.useEffect(() => {
-    if (transactions && transactions.length > 0) {
-      const donationsCount = transactions.filter(isDrawerDonationCandidate).length;
+    if (allTransactions.length > 0) {
+      const donationsCount = allTransactions.filter(isDrawerDonationCandidate).length;
       setIsHistoryOpen(donationsCount <= 5);
     }
-  }, [transactions]);
+  }, [allTransactions]);
 
   // Filtrar transaccions per any i estat
   const effectiveReturnIdSet = React.useMemo(() => new Set(summary.effectiveReturnIds), [summary.effectiveReturnIds]);
 
   const filteredTransactions = React.useMemo(() => {
-    if (!transactions) return [];
+    if (allTransactions.length === 0) return [];
 
-    return transactions.filter(tx => {
+    return allTransactions.filter(tx => {
       // Filtrar per any
       if (!tx.date.startsWith(selectedYear)) return false;
       const txKey = getDonorSummaryTransactionKey(tx);
@@ -240,7 +289,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       // 'all': mostrar donacions vàlides i devolucions
       return isDrawerDonationCandidate(tx) || isEffectiveReturn;
     });
-  }, [transactions, selectedYear, filterStatus, effectiveReturnIdSet]);
+  }, [allTransactions, selectedYear, filterStatus, effectiveReturnIdSet]);
 
   // Paginació
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
@@ -507,7 +556,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   };
 
   const resolveAnnualCertificateScope = (year: string) => {
-    if (!donor || !transactions) return null;
+    if (!donor || allTransactions.length === 0) return null;
 
     const parsedYear = Number.parseInt(year, 10);
     if (!Number.isFinite(parsedYear)) {
@@ -529,7 +578,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     }
 
     const expectedFingerprint = buildDonorSummaryDatasetFingerprint({
-      transactions,
+      transactions: allTransactions,
       donorId: donor.id,
       year: parsedYear,
     });
@@ -1634,8 +1683,11 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                               <TableCell className="text-sm">
                                 {formatDate(tx.date)}
                               </TableCell>
-                              <TableCell className="max-w-[150px] truncate text-sm">
-                                {tx.note || tx.description}
+                              <TableCell className="max-w-[220px] text-sm">
+                                <div className="flex items-center">
+                                  <span className="truncate">{tx.note || tx.description}</span>
+                                  <ContactDonations source={tx.source} />
+                                </div>
                               </TableCell>
                               <TableCell className={`text-right font-mono ${isReturn ? 'text-orange-600' : 'text-green-600'}`}>
                                 {isReturn && <Undo2 className="inline h-3 w-3 mr-1" />}

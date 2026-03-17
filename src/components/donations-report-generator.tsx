@@ -42,6 +42,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { Donor, Transaction, AnyContact } from '@/lib/data';
+import type { Donation } from '@/lib/types/donations';
+import { donationToTransactionLike } from '@/lib/types/donations';
 import { formatCurrencyEU, normalizeTaxId, removeAccents } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
 import { encodeLatin1, type AEATExcludedDonor, type AEATExportResult } from '@/lib/model182-aeat';
@@ -190,11 +192,18 @@ export function DonationsReportGenerator() {
       : null,
     [firestore, organizationId]
   );
+  const donationsQuery = useMemoFirebase(
+    () => organizationId
+      ? collection(firestore, 'organizations', organizationId, 'donations')
+      : null,
+    [firestore, organizationId]
+  );
   const contactsQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
   );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
+  const { data: donations } = useCollection<Donation>(donationsQuery);
   const { data: contacts } = useCollection<AnyContact>(contactsQuery);
 
   // Filtrar només els donants
@@ -221,9 +230,12 @@ export function DonationsReportGenerator() {
 
   // HOTFIX: Filtre client-side tolerant (inclou null, undefined, "")
   const activeTxs = React.useMemo(() => {
-    if (!transactions) return [];
-    return transactions.filter(tx => !tx.archivedAt);
-  }, [transactions]);
+    const activeTransactions = (transactions ?? []).filter(tx => !tx.archivedAt);
+    const activeDonations = (donations ?? [])
+      .map(donationToTransactionLike)
+      .filter(tx => !tx.archivedAt);
+    return [...activeTransactions, ...activeDonations];
+  }, [donations, transactions]);
 
   const availableYears = React.useMemo(() => {
     if (!activeTxs.length) return [];

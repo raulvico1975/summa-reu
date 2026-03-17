@@ -62,7 +62,7 @@ import { formatCurrencyEU } from '@/lib/normalize';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useToast } from '@/hooks/use-toast';
 import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
-import { StripeImporter } from '@/components/stripe-importer';
+import { StripeImputationModal } from '@/components/stripe/StripeImputationModal';
 import { SplitAmountDialog } from '@/components/transactions/split-amount-dialog';
 import { SplitDetailDialog } from '@/components/transactions/split-detail-dialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -617,11 +617,6 @@ export function TransactionsTable({
   // Memoized contacts for ContactCombobox to prevent re-renders
   const comboboxContacts = React.useMemo(() =>
     availableContacts?.map(c => ({ id: c.id, name: c.name, type: c.type })) || [],
-  [availableContacts]);
-
-  // Memoized donors for DonorSelector (StripeImporter)
-  const comboboxDonors = React.useMemo(() =>
-    availableContacts?.filter(c => c.type === 'donor').map(c => ({ id: c.id, name: c.name, type: 'donor' as const })) || [],
   [availableContacts]);
 
   const projectMap = React.useMemo(() =>
@@ -2133,7 +2128,7 @@ export function TransactionsTable({
     splitAmount: tr('movements.split.action'),
     splitRemittance: t.movements.table.splitRemittance,
     splitPaymentRemittance: t.movements.table.splitPaymentRemittance,
-    splitStripeRemittance: t.movements.table.splitStripeRemittance,
+    splitStripeRemittance: 'Imputar Stripe',
     delete: t.movements.table.delete,
     deleteBlocked: tr('movements.split.deleteBlocked'),
     deleteBlockedParentRemittance: tr('movements.delete.blocked.parentRemittance'),
@@ -3037,33 +3032,22 @@ export function TransactionsTable({
         />
       )}
 
-      {/* Stripe Importer Modal */}
+      {/* Stripe Imputation Modal */}
       {stripeTransactionToSplit && (
-        <StripeImporter
+        <StripeImputationModal
           open={isStripeImporterOpen}
-          onOpenChange={setIsStripeImporterOpen}
+          onOpenChange={(open) => {
+            setIsStripeImporterOpen(open);
+            if (!open) setStripeTransactionToSplit(null);
+          }}
           bankTransaction={{
             id: stripeTransactionToSplit.id,
             amount: stripeTransactionToSplit.amount,
             date: stripeTransactionToSplit.date,
             description: stripeTransactionToSplit.description,
-            bankAccountId: stripeTransactionToSplit.bankAccountId ?? null,
           }}
-          lookupDonorByEmail={async (email: string) => {
-            // Match per email (case-insensitive, exact)
-            const normalizedEmail = email.toLowerCase().trim();
-            const matchedDonor = donors.find(d => d.email?.toLowerCase().trim() === normalizedEmail);
-            if (matchedDonor) {
-              return {
-                id: matchedDonor.id,
-                name: matchedDonor.name,
-                defaultCategoryId: matchedDonor.defaultCategoryId || null,
-              };
-            }
-            return null;
-          }}
-          donors={comboboxDonors}
-          onImportDone={handleStripeImportDone}
+          donors={donors}
+          onComplete={handleStripeImportDone}
         />
       )}
 

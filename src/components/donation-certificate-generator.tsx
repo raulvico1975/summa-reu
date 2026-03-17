@@ -5,6 +5,8 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import type { Transaction, Donor, Organization } from '@/lib/data';
+import type { Donation } from '@/lib/types/donations';
+import { donationToTransactionLike } from '@/lib/types/donations';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -331,13 +333,23 @@ export function DonationCertificateGenerator() {
       const donors: Donor[] = donorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donor));
 
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
+      const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
       const transactionsQuery = query(
         transactionsRef,
         where('date', '>=', yearStart),
         where('date', '<=', yearEnd)
       );
+      const donationsQuery = query(
+        donationsRef,
+        where('date', '>=', yearStart),
+        where('date', '<=', yearEnd)
+      );
       const transactionsSnapshot = await getDocs(transactionsQuery);
-      const allTransactions: Transaction[] = transactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      const donationsSnapshot = await getDocs(donationsQuery);
+      const allTransactions: Transaction[] = [
+        ...transactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)),
+        ...donationsSnapshot.docs.map(doc => donationToTransactionLike({ id: doc.id, ...(doc.data() as Donation) })),
+      ];
       
       // Criteri fiscal únic: només transactionType='donation' (helper unificat)
       const yearDonations = allTransactions.filter(tx => {

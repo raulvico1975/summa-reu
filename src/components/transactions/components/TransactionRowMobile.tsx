@@ -452,7 +452,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             {canSplitStripeRemittance && onSplitStripeRemittance && (
               <DropdownMenuItem onClick={handleSplitStripeRemittance}>
                 <GitMerge className="h-4 w-4 mr-2 text-purple-600" />
-                {t.splitStripeRemittance || 'Dividir Remesa Stripe'}
+                {t.splitStripeRemittance || 'Imputar Stripe'}
               </DropdownMenuItem>
             )}
             {canSplitAmount && onSplitAmount && (
