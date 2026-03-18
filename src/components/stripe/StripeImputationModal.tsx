@@ -40,7 +40,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Loader2, AlertTriangle, CheckCircle2, Plus, RotateCcw, Trash2, Upload } from 'lucide-react';
-import { collection, doc, getDocs, query, where, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
@@ -51,6 +51,7 @@ import {
   ERR_STRIPE_DUPLICATE_PAYMENT,
   type StripePaymentInput,
 } from '@/lib/stripe/createStripeDonations';
+import { persistStripeImputationWrites } from '@/lib/stripe/commitStripeImputationWrites';
 import {
   assertNoActiveStripeImputationByParentTransactionId,
   ERR_STRIPE_PARENT_ALREADY_IMPUTED,
@@ -424,33 +425,14 @@ export function StripeImputationModal({
         findDonationByStripePaymentId,
       });
 
-      const batch = writeBatch(firestore);
-      const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
-      const parentTransactionRef = doc(
+      await persistStripeImputationWrites({
         firestore,
-        'organizations',
         organizationId,
-        'transactions',
-        parentTxId
-      );
-
-      donations.forEach((donation) => {
-        const ref = doc(donationsRef);
-        batch.set(ref, donation);
+        parentTransactionId: parentTxId,
+        donations,
+        adjustment,
+        stripeTransferId: csvImportState?.selectedTransferId ?? null,
       });
-
-      if (adjustment) {
-        const ref = doc(donationsRef);
-        batch.set(ref, adjustment);
-      }
-
-      if (csvImportState?.selectedTransferId) {
-        batch.update(parentTransactionRef, {
-          stripeTransferId: csvImportState.selectedTransferId,
-        });
-      }
-
-      await batch.commit();
 
       toast({
         title: 'Imputació Stripe completada',
