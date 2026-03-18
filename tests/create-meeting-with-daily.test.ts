@@ -208,3 +208,12 @@ test("meeting control panel and i18n copy reflect processing, ready and error st
   assert.equal(esSource.includes("minutesReadyOnly"), true);
   assert.equal(esSource.includes("resultsReadyHint"), true);
 });
+
+test("daily recording webhook accepts the real payload shape that sends type", async () => {
+  const source = await fs.readFile("app/api/webhooks/daily/recording-complete/route.ts", "utf8");
+
+  assert.equal(source.includes("type?: string;"), true);
+  assert.equal(source.includes("body.event ?? body.type ?? body.payload?.event ?? body.payload?.type ?? \"\""), true);
+  assert.equal(source.includes("event === \"recording.ready-to-download\""), true);
+  assert.equal(source.includes("event === \"recording.completed\""), true);
+});

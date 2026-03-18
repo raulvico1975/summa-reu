@@ -19,20 +19,23 @@ export const runtime = "nodejs";
 
 type DailyWebhookPayload = {
   event?: string;
+  type?: string;
   room_name?: string;
   recording_id?: string;
   download_link?: string;
   payload?: {
+    event?: string;
+    type?: string;
     room_name?: string;
     recording_id?: string;
     download_link?: string;
   };
 };
 
-function resolveWebhookValue(
+export function resolveWebhookValue(
   body: DailyWebhookPayload
 ): { event: string; roomName: string; recordingId: string | null; recordingUrl: string | null } {
-  const event = body.event ?? "";
+  const event = body.event ?? body.type ?? body.payload?.event ?? body.payload?.type ?? "";
   const roomName = body.payload?.room_name ?? body.room_name ?? "";
   const recordingId = body.payload?.recording_id ?? body.recording_id ?? null;
   const recordingUrl = body.payload?.download_link ?? body.download_link ?? null;
