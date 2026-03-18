@@ -73,3 +73,27 @@ Current status:
 - phase 1 validated functionally
 - phase 1 deployed
 - phase 1 configuration consolidated at the stable App Hosting layer
+
+2026-03-18
+Main product cycle validated end-to-end in production.
+Meeting: bIaKdVmveHGN0TPOLky5
+Ingest job: bIaKdVmveHGN0TPOLky5__23d7a130-350b-4c72-8acc-7520e2d67d46
+Final validation:
+- recordingStatus: ready
+- meeting_ingest_job.status: completed
+- transcript created
+- minutes created
+- error: null
+Operational issues discovered and resolved during final validation:
+- Daily webhook was initially missing at account level and later accepted after reading the real event field from the Daily payload
+- production runtime was initially missing GEMINI_API_KEY
+- automatic model selection reached a retired Gemini model for a new account
+Stable deploy consolidation:
+- apphosting.yaml now declares GEMINI_API_KEY as a runtime secret
+- apphosting.yaml now fixes GEMINI_MODEL to gemini-2.5-flash-lite
+- backend runtime has secret access granted for GEMINI_API_KEY
+Current status:
+- phase 1 resolved
+- phase 2 resolved
+- block 3A resolved
+- full happy path validated in production
