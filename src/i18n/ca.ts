@@ -171,6 +171,9 @@ export const ca = {
     stepMeetingOpened: "✓ Reunió oberta",
     stepRecordingActive: "● Gravació en curs",
     stepRecordingStopped: "✓ Gravació aturada",
+    stepProcessing: "⟳ Resultat en preparació",
+    stepResultReady: "✓ Resultat disponible",
+    stepResultError: "Error de processament",
     meetingOpenedBannerTitle: "La reunió s'ha obert en una nova pestanya.",
     meetingOpenedBannerBody: "Torna aquí per controlar la gravació.",
     roomStatusLabel: "Sala",
@@ -193,10 +196,13 @@ export const ca = {
       "La gravació s'ha aturat. Summa espera la confirmació de Daily abans d'iniciar la transcripció i l'esborrany d'acta.",
     recordingReady: "La gravació s'ha tancat. Summa està generant la transcripció i l'esborrany d'acta.",
     processingErrorTitle: "No s'ha pogut processar la gravació.",
-    processingErrorAction: "Torna-ho a provar amb una nova gravació o revisa la configuració.",
+    processingErrorAction:
+      "El resultat final encara no està disponible. Revisa la configuració de Daily i de la reunió abans de continuar.",
     recordingStartError: "No s'ha pogut iniciar la gravació.",
     recordingStartHint:
       "La gravació només estarà disponible quan hi hagi almenys una persona dins la reunió. Primer entra a la reunió i després torna aquí per iniciar la gravació.",
+    recordingStopHint:
+      "La gravació està en marxa. Quan acabi la reunió, atura-la per iniciar la transcripció i l'esborrany d'acta.",
     recordingStartRequiresParticipant:
       "No s'ha pogut iniciar la gravació perquè la sala encara no té participants actius. Entra a la reunió i torna a provar-ho.",
     recordingStopError: "No s'ha pogut aturar la gravació.",
@@ -209,9 +215,12 @@ export const ca = {
       "No s'ha pogut crear la sala de reunió. Pots continuar amb la reunió i pujar després la gravació o el text.",
     transcriptPendingWebhook: "La gravació s'ha aturat. Falta la confirmació final de Daily per generar la transcripció.",
     transcriptProcessing: "La transcripció s'està generant.",
+    transcriptReadyOnly: "La transcripció només estarà disponible quan el processament s'hagi completat.",
     minutesPendingWebhook:
       "La gravació s'ha aturat. Falta la confirmació final de Daily per generar l'esborrany d'acta.",
     minutesProcessing: "L'esborrany d'acta s'està generant.",
+    minutesReadyOnly: "L'acta només estarà disponible quan el processament s'hagi completat.",
+    resultsReadyHint: "La transcripció i l'acta ja estan disponibles en aquesta mateixa pàgina.",
     rawText: "Notes o text base (opcional)",
     upload: "Pujar i processar",
     uploadAndProcess: "Pujar i processar",

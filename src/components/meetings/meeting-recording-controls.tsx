@@ -61,33 +61,50 @@ export function MeetingRecordingControls({
     }
   }
 
-  const canStartRecording = recordingStatus === "none";
-  const canStopRecording = recordingStatus === "recording";
+  const showStartRecordingButton = recordingStatus === "none";
+  const showStopRecordingButton = recordingStatus === "recording";
+
+  let stateHint = i18n.meeting.recordingStartHint;
+  if (recordingStatus === "recording") {
+    stateHint = i18n.meeting.recordingStopHint;
+  } else if (recordingStatus === "stopping") {
+    stateHint = i18n.meeting.recordingPendingWebhook;
+  } else if (recordingStatus === "processing") {
+    stateHint = i18n.meeting.recordingReady;
+  } else if (recordingStatus === "ready") {
+    stateHint = i18n.meeting.resultsReadyHint;
+  } else if (recordingStatus === "error") {
+    stateHint = i18n.meeting.processingErrorAction;
+  }
 
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button
-          type="button"
-          onClick={() => post("/api/owner/meetings/start-recording")}
-          disabled={state.loading || !meetingUrl || !canStartRecording}
-          className="w-full sm:w-auto"
-        >
-          {i18n.meeting.startRecording}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => post("/api/owner/meetings/stop-recording")}
-          disabled={state.loading || !meetingUrl || !canStopRecording}
-          className="w-full sm:w-auto"
-        >
-          {i18n.meeting.stopRecording}
-        </Button>
-      </div>
-      {recordingStatus === "none" ? (
-        <p className="text-sm text-slate-600">{i18n.meeting.recordingStartHint}</p>
+      {showStartRecordingButton || showStopRecordingButton ? (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {showStartRecordingButton ? (
+            <Button
+              type="button"
+              onClick={() => post("/api/owner/meetings/start-recording")}
+              disabled={state.loading || !meetingUrl}
+              className="w-full sm:w-auto"
+            >
+              {i18n.meeting.startRecording}
+            </Button>
+          ) : null}
+          {showStopRecordingButton ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => post("/api/owner/meetings/stop-recording")}
+              disabled={state.loading || !meetingUrl}
+              className="w-full sm:w-auto"
+            >
+              {i18n.meeting.stopRecording}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
+      <p className="text-sm text-slate-600">{stateHint}</p>
       {state.error ? <p className="break-words text-sm text-red-600">{state.error}</p> : null}
     </div>
   );

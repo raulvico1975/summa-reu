@@ -24,10 +24,13 @@ export default async function OwnerMeetingPage({
     notFound();
   }
 
-  const transcript = meeting.transcript ?? meeting.transcripts[0]?.text ?? "";
-  const minutesDraft = meeting.minutesDraft ?? meeting.minutes[0]?.minutesMarkdown ?? "";
-  const minutesId = meeting.minutes[0]?.id ?? "daily";
   const recordingStatus = meeting.recordingStatus ?? "none";
+  const canShowFinalArtifacts = recordingStatus === "ready";
+  const transcript = canShowFinalArtifacts ? (meeting.transcript ?? meeting.transcripts[0]?.text ?? "") : "";
+  const minutesDraft = canShowFinalArtifacts
+    ? (meeting.minutesDraft ?? meeting.minutes[0]?.minutesMarkdown ?? "")
+    : "";
+  const minutesId = meeting.minutes[0]?.id ?? "daily";
   const showRefresh = recordingStatus === "stopping" || recordingStatus === "processing";
   const latestIngestJob = meeting.latestIngestJob;
   const showProcessingError = recordingStatus === "error" || latestIngestJob?.status === "error";
@@ -97,7 +100,7 @@ export default async function OwnerMeetingPage({
               src={meeting.recordingUrl}
             />
           ) : null}
-          {transcript ? (
+          {canShowFinalArtifacts && transcript ? (
             <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
               {transcript}
             </pre>
@@ -110,8 +113,10 @@ export default async function OwnerMeetingPage({
               <p>{i18n.meeting.processingErrorTitle}</p>
               <p>{i18n.meeting.processingErrorAction}</p>
             </div>
-          ) : (
+          ) : canShowFinalArtifacts ? (
             <p className="text-sm text-slate-500">{i18n.meeting.emptyTranscript}</p>
+          ) : (
+            <p className="text-sm text-slate-500">{i18n.meeting.transcriptReadyOnly}</p>
           )}
         </CardContent>
       </Card>
@@ -119,15 +124,17 @@ export default async function OwnerMeetingPage({
       <Card className="border-slate-300 shadow-sm">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-base font-semibold">{i18n.meeting.sectionMinutes}</h2>
-          <a
-            href={`/api/owner/minutes/export?meetingId=${meeting.id}`}
-            className="rounded-md border border-slate-300 px-3 py-2 text-center text-sm font-medium transition-colors hover:bg-slate-50"
-          >
-            {i18n.meeting.exportMinutesMd}
-          </a>
+          {canShowFinalArtifacts ? (
+            <a
+              href={`/api/owner/minutes/export?meetingId=${meeting.id}`}
+              className="rounded-md border border-slate-300 px-3 py-2 text-center text-sm font-medium transition-colors hover:bg-slate-50"
+            >
+              {i18n.meeting.exportMinutesMd}
+            </a>
+          ) : null}
         </CardHeader>
         <CardContent>
-          {minutesDraft ? (
+          {canShowFinalArtifacts && minutesDraft ? (
             <MinutesEditor meetingId={meeting.id} minutesId={minutesId} initialMarkdown={minutesDraft} />
           ) : isAwaitingDailyConfirmation ? (
             <p className="text-sm text-slate-500">{i18n.meeting.minutesPendingWebhook}</p>
@@ -138,8 +145,10 @@ export default async function OwnerMeetingPage({
               <p>{i18n.meeting.processingErrorTitle}</p>
               <p>{i18n.meeting.processingErrorAction}</p>
             </div>
-          ) : (
+          ) : canShowFinalArtifacts ? (
             <p className="text-sm text-slate-500">{i18n.meeting.emptyMinutes}</p>
+          ) : (
+            <p className="text-sm text-slate-500">{i18n.meeting.minutesReadyOnly}</p>
           )}
         </CardContent>
       </Card>

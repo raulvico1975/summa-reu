@@ -151,3 +151,60 @@ test("owner meeting page rejects meetings that are not usable", async () => {
 
   assert.equal(source.includes("!meeting || meeting.orgId !== owner.orgId || !isMeetingUsable(meeting)"), true);
 });
+
+test("owner meeting page only exposes final artifacts when recordingStatus is ready", async () => {
+  const source = await fs.readFile("app/owner/meetings/[meetingId]/page.tsx", "utf8");
+
+  assert.equal(source.includes("const canShowFinalArtifacts = recordingStatus === \"ready\";"), true);
+  assert.equal(source.includes("const transcript = canShowFinalArtifacts ?"), true);
+  assert.equal(source.includes("const minutesDraft = canShowFinalArtifacts"), true);
+  assert.equal(source.includes("{canShowFinalArtifacts ? ("), true);
+  assert.equal(source.includes("{canShowFinalArtifacts && minutesDraft ? ("), true);
+  assert.equal(source.includes("i18n.meeting.transcriptReadyOnly"), true);
+  assert.equal(source.includes("i18n.meeting.minutesReadyOnly"), true);
+});
+
+test("owner meeting page keeps stopping, processing and error states visible without exposing results", async () => {
+  const source = await fs.readFile("app/owner/meetings/[meetingId]/page.tsx", "utf8");
+
+  assert.equal(source.includes("const showRefresh = recordingStatus === \"stopping\" || recordingStatus === \"processing\";"), true);
+  assert.equal(source.includes("const isAwaitingDailyConfirmation = recordingStatus === \"stopping\";"), true);
+  assert.equal(source.includes("const isProcessing = latestIngestJob?.status === \"processing\" || recordingStatus === \"processing\";"), true);
+  assert.equal(source.includes("const showProcessingError = recordingStatus === \"error\" || latestIngestJob?.status === \"error\";"), true);
+  assert.equal(source.includes("i18n.meeting.transcriptPendingWebhook"), true);
+  assert.equal(source.includes("i18n.meeting.transcriptProcessing"), true);
+  assert.equal(source.includes("i18n.meeting.processingErrorTitle"), true);
+});
+
+test("meeting recording controls only show real actions for none and recording", async () => {
+  const source = await fs.readFile("src/components/meetings/meeting-recording-controls.tsx", "utf8");
+
+  assert.equal(source.includes("const showStartRecordingButton = recordingStatus === \"none\";"), true);
+  assert.equal(source.includes("const showStopRecordingButton = recordingStatus === \"recording\";"), true);
+  assert.equal(source.includes("{showStartRecordingButton || showStopRecordingButton ? ("), true);
+  assert.equal(source.includes("{showStartRecordingButton ? ("), true);
+  assert.equal(source.includes("{showStopRecordingButton ? ("), true);
+  assert.equal(source.includes("recordingStatus === \"stopping\""), true);
+  assert.equal(source.includes("recordingStatus === \"processing\""), true);
+});
+
+test("meeting control panel and i18n copy reflect processing, ready and error states", async () => {
+  const [panelSource, caSource, esSource] = await Promise.all([
+    fs.readFile("src/components/meetings/meeting-control-panel.tsx", "utf8"),
+    fs.readFile("src/i18n/ca.ts", "utf8"),
+    fs.readFile("src/i18n/es.extra.ts", "utf8"),
+  ]);
+
+  assert.equal(panelSource.includes("recordingStatus === \"processing\""), true);
+  assert.equal(panelSource.includes("i18n.meeting.stepProcessing"), true);
+  assert.equal(panelSource.includes("i18n.meeting.stepResultReady"), true);
+  assert.equal(panelSource.includes("i18n.meeting.stepResultError"), true);
+
+  assert.equal(caSource.includes("transcriptReadyOnly"), true);
+  assert.equal(caSource.includes("minutesReadyOnly"), true);
+  assert.equal(caSource.includes("resultsReadyHint"), true);
+
+  assert.equal(esSource.includes("transcriptReadyOnly"), true);
+  assert.equal(esSource.includes("minutesReadyOnly"), true);
+  assert.equal(esSource.includes("resultsReadyHint"), true);
+});

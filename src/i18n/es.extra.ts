@@ -98,6 +98,9 @@ export const esExtra: DeepPartial<I18nCa> = {
     stepMeetingOpened: "✓ Reunión abierta",
     stepRecordingActive: "● Grabación en curso",
     stepRecordingStopped: "✓ Grabación detenida",
+    stepProcessing: "⟳ Resultado en preparación",
+    stepResultReady: "✓ Resultado disponible",
+    stepResultError: "Error de procesamiento",
     meetingOpenedBannerTitle: "La reunión se ha abierto en una nueva pestaña.",
     meetingOpenedBannerBody: "Vuelve aquí para controlar la grabación.",
     roomStatusLabel: "Sala",
@@ -120,10 +123,13 @@ export const esExtra: DeepPartial<I18nCa> = {
       "La grabación se ha detenido. Summa espera la confirmación de Daily antes de iniciar la transcripción y el borrador de acta.",
     recordingReady: "La grabación se ha cerrado. Summa está generando la transcripción y el borrador de acta.",
     processingErrorTitle: "No se ha podido procesar la grabación.",
-    processingErrorAction: "Vuelve a intentarlo con una nueva grabación o revisa la configuración.",
+    processingErrorAction:
+      "El resultado final todavía no está disponible. Revisa la configuración de Daily y de la reunión antes de continuar.",
     recordingStartError: "No se ha podido iniciar la grabación.",
     recordingStartHint:
       "La grabación solo estará disponible cuando haya al menos una persona dentro de la reunión. Primero entra en la reunión y luego vuelve aquí para iniciar la grabación.",
+    recordingStopHint:
+      "La grabación está en marcha. Cuando termine la reunión, deténla para iniciar la transcripción y el borrador de acta.",
     recordingStartRequiresParticipant:
       "No se ha podido iniciar la grabación porque la sala aún no tiene participantes activos. Entra en la reunión y vuelve a intentarlo.",
     recordingStopError: "No se ha podido detener la grabación.",
@@ -137,9 +143,12 @@ export const esExtra: DeepPartial<I18nCa> = {
     transcriptPendingWebhook:
       "La grabación se ha detenido. Falta la confirmación final de Daily para generar la transcripción.",
     transcriptProcessing: "La transcripción se está generando.",
+    transcriptReadyOnly: "La transcripción solo estará disponible cuando el procesamiento se haya completado.",
     minutesPendingWebhook:
       "La grabación se ha detenido. Falta la confirmación final de Daily para generar el borrador de acta.",
     minutesProcessing: "El borrador de acta se está generando.",
+    minutesReadyOnly: "El acta solo estará disponible cuando el procesamiento se haya completado.",
+    resultsReadyHint: "La transcripción y el acta ya están disponibles en esta misma página.",
     rawText: "Notas o texto base (opcional)",
     upload: "Subir y procesar",
     uploadAndProcess: "Subir y procesar",

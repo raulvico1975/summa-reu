@@ -15,12 +15,19 @@ function StepIndicator({
   recordingStatus: MeetingRecordingStatus;
 }) {
   const { i18n } = useI18n();
-  const recordingStepLabel =
-    recordingStatus === "recording"
-      ? i18n.meeting.stepRecordingActive
-      : recordingStatus === "stopping" || recordingStatus === "processing" || recordingStatus === "ready"
-        ? i18n.meeting.stepRecordingStopped
-        : i18n.meeting.stepStartRecording;
+  let recordingStepLabel = i18n.meeting.stepStartRecording;
+
+  if (recordingStatus === "recording") {
+    recordingStepLabel = i18n.meeting.stepRecordingActive;
+  } else if (recordingStatus === "stopping") {
+    recordingStepLabel = i18n.meeting.stepRecordingStopped;
+  } else if (recordingStatus === "processing") {
+    recordingStepLabel = i18n.meeting.stepProcessing;
+  } else if (recordingStatus === "ready") {
+    recordingStepLabel = i18n.meeting.stepResultReady;
+  } else if (recordingStatus === "error") {
+    recordingStepLabel = i18n.meeting.stepResultError;
+  }
 
   return (
     <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-2">
