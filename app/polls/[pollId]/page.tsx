@@ -127,6 +127,8 @@ export default async function PollManagePage({
             <ClosePollForm
               pollId={poll.id}
               options={options}
+              initialWinningOptionId={poll.winningOptionId ?? options[0]?.id ?? ""}
+              lockOptionSelection={showRetryRoomCreation && !!poll.winningOptionId}
               submitLabel={showRetryRoomCreation ? i18n.poll.retryRoomCreation : undefined}
               loadingLabel={showRetryRoomCreation ? i18n.poll.retryingRoomCreation : undefined}
               helperText={showRetryRoomCreation ? i18n.poll.retryRoomCreationHint : undefined}

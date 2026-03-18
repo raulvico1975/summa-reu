@@ -14,19 +14,23 @@ type Option = {
 export function ClosePollForm({
   pollId,
   options,
+  initialWinningOptionId,
+  lockOptionSelection,
   submitLabel,
   loadingLabel,
   helperText,
 }: {
   pollId: string;
   options: Option[];
+  initialWinningOptionId?: string;
+  lockOptionSelection?: boolean;
   submitLabel?: string;
   loadingLabel?: string;
   helperText?: string;
 }) {
   const { locale, i18n } = useI18n();
   const router = useRouter();
-  const [winningOptionId, setWinningOptionId] = useState(options[0]?.id ?? "");
+  const [winningOptionId, setWinningOptionId] = useState(initialWinningOptionId ?? options[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +65,7 @@ export function ClosePollForm({
       <select
         value={winningOptionId}
         onChange={(event) => setWinningOptionId(event.target.value)}
+        disabled={lockOptionSelection}
         className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
       >
         {options.map((option) => (

@@ -98,21 +98,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: i18n.errors.dailyWebhookInvalid }, { status: 400 });
     }
 
-    await updateMeetingRecordingState({
-      meetingId: meeting.id,
-      recordingStatus: "processing",
-      recordingUrl: resolvedRecordingUrl,
-      processingDeadlineAt: buildMeetingProcessingDeadline(),
-      recoveryState: null,
-      recoveryReason: null,
-      lastWebhookAt: Date.now(),
-    });
-
-    console.info("DAILY_RECORDING_COMPLETE", {
-      meetingId: meeting.id,
-      recordingId: recordingId ?? null,
-    });
-
     // Idempotency key: one ingest job per meetingId + recordingId.
     const enqueued = await enqueueMeetingIngestJob({
       meetingId: meeting.id,
@@ -131,6 +116,21 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json({ ok: true, duplicate: true });
     }
+
+    await updateMeetingRecordingState({
+      meetingId: meeting.id,
+      recordingStatus: "processing",
+      recordingUrl: resolvedRecordingUrl,
+      processingDeadlineAt: buildMeetingProcessingDeadline(),
+      recoveryState: null,
+      recoveryReason: null,
+      lastWebhookAt: Date.now(),
+    });
+
+    console.info("DAILY_RECORDING_COMPLETE", {
+      meetingId: meeting.id,
+      recordingId: recordingId ?? null,
+    });
 
     console.info("meeting_recording_webhook_accepted", {
       meetingId: meeting.id,

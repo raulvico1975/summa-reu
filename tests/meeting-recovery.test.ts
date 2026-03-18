@@ -162,6 +162,27 @@ test("retry room creation keeps provisioning_failed when Daily still fails", asy
   }
 });
 
+test("retry room creation keeps the previously chosen winning option in the retry UI", async () => {
+  const [pollSource, formSource] = await Promise.all([
+    fs.readFile("app/polls/[pollId]/page.tsx", "utf8"),
+    fs.readFile("src/components/polls/close-poll-form.tsx", "utf8"),
+  ]);
+
+  assert.equal(
+    pollSource.includes('initialWinningOptionId={poll.winningOptionId ?? options[0]?.id ?? ""}'),
+    true
+  );
+  assert.equal(
+    pollSource.includes("lockOptionSelection={showRetryRoomCreation && !!poll.winningOptionId}"),
+    true
+  );
+  assert.equal(
+    formSource.includes("useState(initialWinningOptionId ?? options[0]?.id ?? \"\")"),
+    true
+  );
+  assert.equal(formSource.includes("disabled={lockOptionSelection}"), true);
+});
+
 test("retry ingest over error moves the meeting back to processing and can reach ready", async () => {
   const seeded = await seedMeetingWithFailedIngest({ recordingStatus: "error" });
   const retry = await startMeetingIngestRetry({ meetingId: seeded.meetingId });
@@ -217,6 +238,21 @@ test("retry ingest only unlocks processing meetings after the deadline expires",
 
   const retried = await startMeetingIngestRetry({ meetingId: blocked.meetingId });
   assert.equal(retried.ok, true);
+});
+
+test("duplicate webhook keeps the current error state until a new ingest job is accepted", async () => {
+  const source = await fs.readFile("app/api/webhooks/daily/recording-complete/route.ts", "utf8");
+
+  const enqueueIndex = source.indexOf("const enqueued = await enqueueMeetingIngestJob");
+  const duplicateReturnIndex = source.indexOf("return NextResponse.json({ ok: true, duplicate: true });");
+  const processingUpdateIndex = source.indexOf("await updateMeetingRecordingState({");
+
+  assert.equal(enqueueIndex >= 0, true);
+  assert.equal(duplicateReturnIndex >= 0, true);
+  assert.equal(processingUpdateIndex >= 0, true);
+  assert.equal(enqueueIndex < duplicateReturnIndex, true);
+  assert.equal(duplicateReturnIndex < processingUpdateIndex, true);
+  assert.equal(source.includes("recoveryState: null"), true);
 });
 
 test("phase 3A surfaces retry room creation and retry ingest only where they belong", async () => {
