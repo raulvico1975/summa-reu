@@ -40,7 +40,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Loader2, AlertTriangle, CheckCircle2, Plus, RotateCcw, Trash2, Upload } from 'lucide-react';
-import { collection, doc, getDocs, query, where, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
@@ -51,10 +51,16 @@ import {
   ERR_STRIPE_DUPLICATE_PAYMENT,
   type StripePaymentInput,
 } from '@/lib/stripe/createStripeDonations';
+import { persistStripeImputationWrites } from '@/lib/stripe/commitStripeImputationWrites';
 import {
   assertNoActiveStripeImputationByParentTransactionId,
   ERR_STRIPE_PARENT_ALREADY_IMPUTED,
 } from '@/lib/stripe/activeStripeImputation';
+import {
+  acquireProcessLock,
+  getLockFailureMessage,
+  releaseProcessLock,
+} from '@/lib/fiscal/processLocks';
 import {
   calculateEditableStripeImputationSummary,
   createManualEditableStripeImputationLine,
@@ -111,7 +117,7 @@ export function StripeImputationModal({
   donors,
   onComplete,
 }: StripeImputationModalProps) {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const [isParsing, setIsParsing] = React.useState(false);
@@ -366,12 +372,38 @@ export function StripeImputationModal({
   const handleConfirm = React.useCallback(async () => {
     if (!organizationId || !canConfirm) return;
 
+    const userId = user?.uid;
+    const parentTxId = bankTransaction.id;
+    let lockAcquired = false;
+
     setIsSaving(true);
     try {
+      if (!userId) {
+        throw new Error('AUTH_REQUIRED');
+      }
+
+      const lockResult = await acquireProcessLock({
+        firestore,
+        orgId: organizationId,
+        parentTxId,
+        operation: 'stripeSplit',
+        uid: userId,
+      });
+
+      if (!lockResult.ok) {
+        toast({
+          variant: 'destructive',
+          title: 'Error a la imputació Stripe',
+          description: getLockFailureMessage(lockResult),
+        });
+        return;
+      }
+      lockAcquired = true;
+
       await assertNoActiveStripeImputationByParentTransactionId({
         firestore,
         organizationId,
-        parentTransactionId: bankTransaction.id,
+        parentTransactionId: parentTxId,
       });
 
       const payments: StripePaymentInput[] = editableLines.map((line) => ({
@@ -386,40 +418,21 @@ export function StripeImputationModal({
       }));
 
       const { donations, adjustment } = await createStripeDonations({
-        parentTransactionId: bankTransaction.id,
+        parentTransactionId: parentTxId,
         payments,
         bankAmount: bankTransaction.amount,
         adjustmentDate: bankTransaction.date,
         findDonationByStripePaymentId,
       });
 
-      const batch = writeBatch(firestore);
-      const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
-      const parentTransactionRef = doc(
+      await persistStripeImputationWrites({
         firestore,
-        'organizations',
         organizationId,
-        'transactions',
-        bankTransaction.id
-      );
-
-      donations.forEach((donation) => {
-        const ref = doc(donationsRef);
-        batch.set(ref, donation);
+        parentTransactionId: parentTxId,
+        donations,
+        adjustment,
+        stripeTransferId: csvImportState?.selectedTransferId ?? null,
       });
-
-      if (adjustment) {
-        const ref = doc(donationsRef);
-        batch.set(ref, adjustment);
-      }
-
-      if (csvImportState?.selectedTransferId) {
-        batch.update(parentTransactionRef, {
-          stripeTransferId: csvImportState.selectedTransferId,
-        });
-      }
-
-      await batch.commit();
 
       toast({
         title: 'Imputació Stripe completada',
@@ -436,6 +449,8 @@ export function StripeImputationModal({
         description = 'Aquest pagament Stripe ja ha estat imputat.';
       } else if (message === ERR_STRIPE_PARENT_ALREADY_IMPUTED) {
         description = 'Aquest moviment ja té una imputació Stripe activa. Cal desfer-la abans de crear-ne una de nova.';
+      } else if (message === 'AUTH_REQUIRED') {
+        description = 'No s\'ha pogut validar la sessió. Torna-ho a provar.';
       }
 
       toast({
@@ -444,9 +459,16 @@ export function StripeImputationModal({
         description,
       });
     } finally {
+      if (lockAcquired) {
+        await releaseProcessLock({
+          firestore,
+          orgId: organizationId,
+          parentTxId,
+        });
+      }
       setIsSaving(false);
     }
-  }, [bankTransaction.amount, bankTransaction.date, bankTransaction.id, canConfirm, csvImportState, editableLines, findDonationByStripePaymentId, firestore, onComplete, onOpenChange, organizationId, toast]);
+  }, [bankTransaction.amount, bankTransaction.date, bankTransaction.id, canConfirm, csvImportState, editableLines, findDonationByStripePaymentId, firestore, onComplete, onOpenChange, organizationId, toast, user]);
 
   return (
     <>
