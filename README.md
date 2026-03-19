@@ -96,3 +96,10 @@ Gestors, administradors i tresorers d'entitats sense ànim de lucre que necessit
 - [Catàleg de funcionalitats](docs/CATALEG-FUNCIONALITATS.md) — Referència ràpida
 - [Manual d'usuari](docs/manual-usuari-summa-social.md) — Per a usuaris finals
 - [Changelog](docs/CHANGELOG.md) — Historial de canvis
+
+## Blog públic
+
+- Variables d'entorn requerides: `BLOG_ORG_ID`, `BLOG_PUBLISH_SECRET`
+- Endpoint publicació: `POST /api/blog/publish`
+- Payload mínim: `title`, `slug`, `seoTitle`, `metaDescription`, `excerpt`, `contentHtml`, `tags`, `category`, `publishedAt` i `coverImageUrl` opcional
+- Errors esperats: `401` sense auth vàlida, `400` per payload invàlid, `409` per `slug` duplicat

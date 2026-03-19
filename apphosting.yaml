@@ -26,3 +26,7 @@ env:
     secret: GOOGLE_API_KEY
   - variable: RESEND_API_KEY
     secret: RESEND_API_KEY
+  - variable: BLOG_ORG_ID
+    secret: BLOG_ORG_ID
+  - variable: BLOG_PUBLISH_SECRET
+    secret: BLOG_PUBLISH_SECRET

@@ -1,0 +1,146 @@
+import { NextResponse, type NextRequest } from 'next/server'
+import { getAdminDb } from '@/lib/api/admin-sdk'
+import {
+  assertBlogOrganizationExists,
+  buildBlogUrl,
+  getBlogOrgId,
+  getBlogPostsCollectionPath,
+} from '@/lib/blog/firestore'
+import type { BlogPost } from '@/lib/blog/types'
+import { validateBlogPost } from '@/lib/blog/validateBlogPost'
+
+type PublishBlogSuccessResponse = {
+  success: true
+  url: string
+}
+
+type PublishBlogErrorResponse = {
+  success: false
+  error: string
+  details?: string[]
+}
+
+export type PublishBlogResponse = PublishBlogSuccessResponse | PublishBlogErrorResponse
+
+type RequestLike = Pick<NextRequest, 'headers' | 'json'>
+
+export interface PublishBlogDeps {
+  getAdminDbFn: typeof getAdminDb
+  nowIsoFn: () => string
+  getPublishSecretFn: () => string | null
+  getBlogOrgIdFn: () => string
+  assertBlogOrganizationExistsFn: (db?: ReturnType<typeof getAdminDb>, orgId?: string) => Promise<void>
+}
+
+const DEFAULT_DEPS: PublishBlogDeps = {
+  getAdminDbFn: getAdminDb,
+  nowIsoFn: () => new Date().toISOString(),
+  getPublishSecretFn: () => process.env.BLOG_PUBLISH_SECRET?.trim() || null,
+  getBlogOrgIdFn: getBlogOrgId,
+  assertBlogOrganizationExistsFn: assertBlogOrganizationExists,
+}
+
+function safeCompare(a: string, b: string) {
+  if (a.length !== b.length) return false
+
+  let result = 0
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+
+  return result === 0
+}
+
+function extractBearerToken(request: RequestLike): string | null {
+  const authHeader = request.headers.get('Authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null
+  }
+
+  const token = authHeader.slice('Bearer '.length).trim()
+  return token || null
+}
+
+function isSafeSlug(slug: string): boolean {
+  if (!slug) return false
+  if (slug.includes('/') || slug.includes('..')) return false
+  if (/\s/.test(slug)) return false
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)
+}
+
+function hasValidAuthorization(request: RequestLike, secret: string | null): boolean {
+  if (!secret) return false
+  const token = extractBearerToken(request)
+  if (!token) return false
+  return safeCompare(token, secret)
+}
+
+export async function handleBlogPublish(
+  request: RequestLike,
+  deps: PublishBlogDeps = DEFAULT_DEPS
+): Promise<NextResponse<PublishBlogResponse>> {
+  try {
+    const publishSecret = deps.getPublishSecretFn()
+    if (!publishSecret || !hasValidAuthorization(request, publishSecret)) {
+      return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 })
+    }
+
+    let rawBody: unknown
+    try {
+      rawBody = await request.json()
+    } catch {
+      return NextResponse.json({ success: false, error: 'invalid_payload' }, { status: 400 })
+    }
+
+    const validation = validateBlogPost(rawBody)
+    if (!validation.ok) {
+      return NextResponse.json(
+        { success: false, error: 'invalid_payload', details: validation.errors },
+        { status: 400 }
+      )
+    }
+
+    const db = deps.getAdminDbFn()
+    const orgId = deps.getBlogOrgIdFn()
+    await deps.assertBlogOrganizationExistsFn(db, orgId)
+
+    const slug = validation.value.slug
+    if (!isSafeSlug(slug)) {
+      return NextResponse.json({ success: false, error: 'invalid_payload' }, { status: 400 })
+    }
+
+    const postRef = db.doc(`${getBlogPostsCollectionPath(orgId)}/${slug}`)
+    const existingPost = await postRef.get()
+    if (existingPost.exists) {
+      return NextResponse.json({ success: false, error: 'duplicate_slug' }, { status: 409 })
+    }
+
+    const now = deps.nowIsoFn()
+    const blogPost: BlogPost = {
+      id: slug,
+      ...validation.value,
+      publishedAt: validation.value.publishedAt,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    try {
+      await postRef.create(blogPost)
+    } catch (error) {
+      const duplicateCheck = await postRef.get()
+      if (duplicateCheck.exists) {
+        return NextResponse.json({ success: false, error: 'duplicate_slug' }, { status: 409 })
+      }
+
+      throw error
+    }
+
+    return NextResponse.json({
+      success: true,
+      url: buildBlogUrl(slug),
+    })
+  } catch (error) {
+    console.error('[blog/publish] error:', error)
+    return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 })
+  }
+}
