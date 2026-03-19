@@ -56,3 +56,4 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 - Símptomes visibles: `fallback-no-answer` en consultes basiques de moviments/remeses i resolucio incorrecta o sense desti navegable en el cas de donants.
 - Resolucio final de codi: `592364c` (`fix(support-bot): invalida cache de KB publicada`).
 - Validacio esperada: nou deploy verificat amb smoke real del bot a produccio, sense text residual de `Hub de Guies` i amb respostes operatives per importacio banc, desfer remesa i actualitzacio de dades d'un donant.
+| 2026-03-19 11:28 | Verificacions | ALT | 22acb1a1 | 6f1cbdfa | BLOCKED_SAFE | La verificacio local no ha passat. | Pendent |

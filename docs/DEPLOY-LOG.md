@@ -4,6 +4,12 @@ Registre cronologic de desplegaments a produccio.
 
 ## Notes operatives sense deploy
 
+### 2026-03-19 — Stripe fiscal UI post-merge
+
+- PR #21 mergejada a `main` (`22acb1a`).
+- Verificacio post-merge OK del cablejat UI Stripe: menu desktop/mobile, obertura de `StripeImputationModal` i undo via `undoProcessing`.
+- Sense deploy en aquest intent: `npm run publica` bloquejat a `verify-local.sh` per variables de build absents (`NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_API_KEY`).
+
 ### 2026-03-16 — Stripe importer contract alignment
 
 - Stripe importer validat amb `typecheck`, `npm test` i prova manual dels 4 casos clau.
