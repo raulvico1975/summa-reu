@@ -4,6 +4,12 @@ Registre cronologic de desplegaments a produccio.
 
 ## Notes operatives sense deploy
 
+### 2026-03-19 — Deploy completat després de tancar el ritual
+
+- SHA main del contingut publicat: `28c1930`.
+- SHA final a `prod`: `541d479`.
+- Abast publicat: bloc de 14 fitxers amb ajustos de `stripe-importer` i `stripe-detection`, `donor-search-combobox`, `docs/QA-FISCAL.md`, `docs/CHANGELOG.md`, `firestore.indexes.json`, traduccions `i18n` i tests associats.
+
 ### 2026-03-19 — Stripe fiscal UI post-merge
 
 - PR #21 mergejada a `main` (`22acb1a`).
