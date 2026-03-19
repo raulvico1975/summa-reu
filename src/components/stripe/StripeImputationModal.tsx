@@ -625,7 +625,6 @@ export function StripeImputationModal({
                           <TableCell className="align-top min-w-[260px]">
                             <DonorSearchCombobox
                               donors={sortedDonors}
-                              badgesByDonorId={donorBadgesById}
                               value={line.contactId}
                               onSelect={(donorId) => handleSetLineContact(line.localId, donorId)}
                               placeholder="Assigna donant"

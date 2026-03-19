@@ -10,13 +10,15 @@ import {
   type StripePayoutGroup,
 } from './useStripeImporter';
 import { formatCurrencyEU } from '@/lib/normalize';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, doc, query, where, getDocs, getDoc, writeBatch, deleteField } from 'firebase/firestore';
-import type { Transaction, Category } from '@/lib/data';
+import { collection, doc, query, where, getDocs, getDoc } from 'firebase/firestore';
+import type { Transaction } from '@/lib/data';
+import type { Donation } from '@/lib/types/donations';
 import { useToast } from '@/hooks/use-toast';
-import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
 import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
+import { createStripeDonations, ERR_STRIPE_DUPLICATE_PAYMENT, ERR_STRIPE_CONTACT_REQUIRED } from '@/lib/stripe/createStripeDonations';
+import { persistStripeImputationWrites } from '@/lib/stripe/commitStripeImputationWrites';
 
 // UI Components
 import {
@@ -46,18 +48,6 @@ import { useTranslations } from '@/i18n';
 import { addDocumentNonBlocking } from '@/firebase';
 import { findExistingContact, addRole, needsRoleUpdate } from '@/lib/contact-matching';
 import { updateContactViaApi } from '@/services/contacts';
-import { STRIPE_IMPORT_CHILD_CHUNK_SIZE } from '@/lib/stripe/import-chunking';
-
-// ════════════════════════════════════════════════════════════════════════════
-// CONSTANTS
-// ════════════════════════════════════════════════════════════════════════════
-
-/**
- * Clau interna de la categoria de despeses bancàries.
- * NOTE: Category.name emmagatzema la clau interna (nameKey), no el label visible.
- * Les categories per defecte es creen amb { name: nameKey, type } a default-data.ts.
- */
-const BANK_FEES_KEY = 'bankFees';
 
 // ════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -113,13 +103,6 @@ export function StripeImporter({
   const userId = user?.uid;
   const { toast } = useToast();
   const { t } = useTranslations();
-
-  // Categories de l'organització (per obtenir bankFees)
-  const categoriesCollection = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
-    [firestore, organizationId]
-  );
-  const { data: categories } = useCollection<Category>(categoriesCollection);
 
   // Estats
   const [isLoading, setIsLoading] = React.useState(false);
@@ -365,40 +348,40 @@ export function StripeImporter({
     setErrorMessage(null);
 
     try {
-      // 1. Obtenir categoria bankFees
-      const bankFeesCategory = categories?.find(c => c.name === BANK_FEES_KEY && c.type === 'expense');
-      if (!bankFeesCategory) {
-        throw new Error(t.importers.stripeImporter.errors.noBankFeesCategory);
-      }
-
-      // 2. Validar límits
+      // 1. Validar límits
       const stripeIds = selectedGroup.rows.map(r => r.id);
 
-      // 2a. Massa files per un sol batch (Firestore limit ~500 ops/batch, deixem marge)
-      if (stripeIds.length + 1 > 450) {
+      // 1a. Massa files per un sol batch (reservem marge)
+      if (stripeIds.length + 2 > 450) {
         throw new Error(t.importers.stripeImporter.errors.tooManyRows(stripeIds.length));
       }
 
-      // 2b. Cap fila vàlida
+      // 1b. Cap fila vàlida
       if (stripeIds.length === 0) {
         throw new Error(t.importers.stripeImporter.errors.noValidRows);
       }
 
-      // 3. Validar idempotència: comprovar si ja existeixen transaccions amb aquests stripePaymentId
+      // 2. Validar idempotència: comprovar si ja existeixen registres legacy o donations
       const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
+      const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
 
       // Firestore 'in' té límit de 30, fer en batches si cal
       const existingIds: string[] = [];
       const batchSize = 30;
       for (let i = 0; i < stripeIds.length; i += batchSize) {
         const batch = stripeIds.slice(i, i + batchSize);
-        const q = query(transactionsRef, where('stripePaymentId', 'in', batch));
-        const snapshot = await getDocs(q);
-        snapshot.forEach(doc => {
+        const [legacySnapshot, donationsSnapshot] = await Promise.all([
+          getDocs(query(transactionsRef, where('stripePaymentId', 'in', batch))),
+          getDocs(query(donationsRef, where('stripePaymentId', 'in', batch))),
+        ]);
+
+        legacySnapshot.forEach(doc => {
           const data = doc.data() as Transaction;
-          if (data.stripePaymentId) {
-            existingIds.push(data.stripePaymentId);
-          }
+          if (data.stripePaymentId) existingIds.push(data.stripePaymentId);
+        });
+        donationsSnapshot.forEach(doc => {
+          const data = doc.data() as Donation;
+          if (data.stripePaymentId && !data.archivedAt) existingIds.push(data.stripePaymentId);
         });
       }
 
@@ -409,195 +392,66 @@ export function StripeImporter({
         );
       }
 
-      // 3. Preparar escriptures chunkades <= 50 operacions
-      const childWrites: Array<{
-        ref: ReturnType<typeof doc>;
-        data: Omit<Transaction, 'id'>;
-      }> = [];
       const parentTxRef = doc(transactionsRef, bankTransaction.id);
       const importStartedAt = new Date().toISOString();
-
-      // 3a. Crear N transaccions d'ingrés (donacions)
-      for (const row of selectedGroup.rows) {
+      const payments = selectedGroup.rows.map((row) => {
         const match = donorMatches[row.id];
-        const newTxRef = doc(transactionsRef);
-
-        // Assegurar que la descripció conté "Stripe" per cercabilitat
         const baseDesc = row.description || `Donació - ${row.customerEmail}`;
         const descUpper = baseDesc.toUpperCase();
         const finalDesc = descUpper.includes('STRIPE') ? baseDesc : `${baseDesc} (via Stripe)`;
 
-        const txData: Omit<Transaction, 'id'> = {
-          date: row.createdDate,
-          description: finalDesc,
-          amount: row.amount,
-          category: match?.defaultCategoryId || 'donations',
-          document: null,
-          contactId: match?.contactId || null,
-          ...(match ? { contactType: 'donor' as const } : {}),
-          // CAMPS OBLIGATORIS STRIPE
-          source: 'stripe',
-          transactionType: 'donation',
-          parentTransactionId: bankTransaction.id,
+        return {
           stripePaymentId: row.id,
-          stripeTransferId: selectedGroup.transferId,
-          // Heretar bankAccountId del pare
-          bankAccountId: bankTransaction.bankAccountId ?? null,
+          amount: row.amount,
+          fee: row.fee,
+          contactId: match?.contactId ?? null,
+          date: row.createdDate,
+          customerEmail: row.customerEmail,
+          description: finalDesc,
+          imputationOrigin: 'csv' as const,
         };
-
-        // P0: Validar invariants fiscals abans d'escriure
-        // Nota: Stripe donations contactId és opcional (excepció controlada A1)
-        assertFiscalTxCanBeSaved(
-          {
-            transactionType: txData.transactionType,
-            amount: txData.amount,
-            contactId: txData.contactId,
-            source: txData.source,
-          },
-          {
-            firestore,
-            orgId: organizationId,
-            operation: 'stripeImport',
-            route: '/stripe-importer',
-          }
-        );
-
-        childWrites.push({ ref: newTxRef, data: txData });
-      }
-
-      // 3b. Crear 1 transacció de despesa (comissions agregades)
-      if (selectedGroup.fees > 0) {
-        const feeTxRef = doc(transactionsRef);
-        const feeDate = bankTransaction.date || new Date().toISOString().split('T')[0];
-
-        const feeTxData: Omit<Transaction, 'id'> = {
-          date: feeDate,
-          description: `Comissions Stripe - ${selectedGroup.rows.length} donacions`,
-          amount: -selectedGroup.fees,
-          category: bankFeesCategory.id,
-          document: null,
-          contactId: null,
-          // CAMPS OBLIGATORIS STRIPE
-          source: 'stripe',
-          transactionType: 'fee',
-          parentTransactionId: bankTransaction.id,
-          stripeTransferId: selectedGroup.transferId,
-          // Heretar bankAccountId del pare
-          bankAccountId: bankTransaction.bankAccountId ?? null,
-        };
-
-        // P0: Validar invariants fiscals abans d'escriure
-        // Nota: Fees mai han de tenir contactId (A1) i amount ha de ser negatiu (A2)
-        assertFiscalTxCanBeSaved(
-          {
-            transactionType: feeTxData.transactionType,
-            amount: feeTxData.amount,
-            contactId: feeTxData.contactId,
-            source: feeTxData.source,
-          },
-          {
-            firestore,
-            orgId: organizationId,
-            operation: 'stripeImport',
-            route: '/stripe-importer',
-          }
-        );
-
-        childWrites.push({ ref: feeTxRef, data: feeTxData });
-      }
-
-      // 3c. Conservar el pare bancari i marcar-lo com a Stripe ja processat
-      const committedChildRefs: Array<ReturnType<typeof doc>> = [];
-      let parentMarked = false;
-
-      for (let i = 0; i < childWrites.length; i += STRIPE_IMPORT_CHILD_CHUNK_SIZE) {
-        const chunk = childWrites.slice(i, i + STRIPE_IMPORT_CHILD_CHUNK_SIZE);
-        const batch = writeBatch(firestore);
-        const isLastChunk = i + STRIPE_IMPORT_CHILD_CHUNK_SIZE >= childWrites.length;
-
-        for (const item of chunk) {
-          batch.set(item.ref, item.data);
-        }
-
-        if (isLastChunk) {
-          batch.update(parentTxRef, {
-            stripeTransferId: selectedGroup.transferId,
-            updatedAt: importStartedAt,
-          });
-        }
-
-        try {
-          await batch.commit();
-          committedChildRefs.push(...chunk.map((item) => item.ref));
-          if (isLastChunk) {
-            parentMarked = true;
-          }
-        } catch (commitError) {
-          if (committedChildRefs.length > 0 || parentMarked) {
-            try {
-              for (let j = 0; j < committedChildRefs.length; j += 50) {
-                const rollbackBatch = writeBatch(firestore);
-                const rollbackChunk = committedChildRefs.slice(j, j + 50);
-                for (const ref of rollbackChunk) {
-                  rollbackBatch.delete(ref);
-                }
-                await rollbackBatch.commit();
-              }
-
-              if (parentMarked) {
-                const resetBatch = writeBatch(firestore);
-                resetBatch.update(parentTxRef, {
-                  stripeTransferId: deleteField(),
-                  updatedAt: new Date().toISOString(),
-                });
-                await resetBatch.commit();
-              }
-            } catch (rollbackError) {
-              console.error('[stripe-importer] Rollback error after chunk failure:', rollbackError);
-            }
-          }
-
-          throw commitError;
-        }
-      }
-
-      // VERIFICACIÓ POST-COMMIT OBLIGATÒRIA
-      const q = query(
-        transactionsRef,
-        where('parentTransactionId', '==', bankTransaction.id)
-      );
-      const snap = await getDocs(q);
-
-      // Comptar donacions i comissions
-      let donationCount = 0;
-      let feeCount = 0;
-      const errors: string[] = [];
-
-      snap.forEach(doc => {
-        const tx = doc.data() as Transaction;
-
-        if (tx.transactionType === 'donation') {
-          donationCount++;
-          if (!tx.source || tx.source !== 'stripe') errors.push(`Donation ${doc.id} missing source='stripe'`);
-          if (!tx.stripePaymentId) errors.push(`Donation ${doc.id} missing stripePaymentId`);
-          if (!tx.stripeTransferId) errors.push(`Donation ${doc.id} missing stripeTransferId`);
-        } else if (tx.transactionType === 'fee') {
-          feeCount++;
-          if (!tx.source || tx.source !== 'stripe') errors.push(`Fee ${doc.id} missing source='stripe'`);
-          if (!tx.stripeTransferId) errors.push(`Fee ${doc.id} missing stripeTransferId`);
-          if (tx.amount >= 0) errors.push(`Fee ${doc.id} has non-negative amount: ${tx.amount}`);
-        }
       });
 
-      // REGLES D'INTEGRITAT
-      const expectedDonations = selectedGroup.rows.length;
-      const expectedFees = selectedGroup.fees > 0 ? 1 : 0;
+      const { donations, adjustment } = await createStripeDonations({
+        parentTransactionId: bankTransaction.id,
+        payments,
+        bankAmount: bankTransaction.amount,
+        adjustmentDate: bankTransaction.date || new Date().toISOString().split('T')[0],
+        findDonationByStripePaymentId: async (stripePaymentId: string) => {
+          const snapshot = await getDocs(query(donationsRef, where('stripePaymentId', '==', stripePaymentId)));
+          const firstDoc = snapshot.docs[0];
+          if (!firstDoc) return null;
+          return { id: firstDoc.id, ...(firstDoc.data() as Donation) };
+        },
+      });
 
-      if (donationCount < expectedDonations) {
-        errors.push(`Expected ${expectedDonations} donations, got ${donationCount}`);
+      await persistStripeImputationWrites({
+        firestore,
+        organizationId,
+        parentTransactionId: bankTransaction.id,
+        donations: donations.map((donation) => ({
+          ...donation,
+          stripeTransferId: selectedGroup.transferId,
+        })),
+        adjustment: adjustment ? { ...adjustment, stripeTransferId: selectedGroup.transferId } : null,
+        stripeTransferId: selectedGroup.transferId,
+      });
+
+      const verificationSnapshot = await getDocs(
+        query(donationsRef, where('parentTransactionId', '==', bankTransaction.id))
+      );
+      const activeDonations = verificationSnapshot.docs.filter((docSnap) => {
+        const donation = docSnap.data() as Donation;
+        return !donation.archivedAt;
+      });
+
+      const errors: string[] = [];
+      const expectedCount = donations.length + (adjustment ? 1 : 0);
+      if (activeDonations.length !== expectedCount) {
+        errors.push(`Expected ${expectedCount} donation docs, got ${activeDonations.length}`);
       }
-      if (feeCount !== expectedFees) {
-        errors.push(`Expected ${expectedFees} fee transaction, got ${feeCount}`);
+      if (activeDonations.filter((docSnap) => (docSnap.data() as Donation).type === 'donation').length !== donations.length) {
+        errors.push(`Expected ${donations.length} donation docs`);
       }
 
       const parentSnap = await getDoc(parentTxRef);
@@ -611,26 +465,6 @@ export function StripeImporter({
       }
 
       if (errors.length > 0) {
-        try {
-          for (let i = 0; i < childWrites.length; i += 50) {
-            const rollbackBatch = writeBatch(firestore);
-            const rollbackChunk = childWrites.slice(i, i + 50);
-            for (const item of rollbackChunk) {
-              rollbackBatch.delete(item.ref);
-            }
-            await rollbackBatch.commit();
-          }
-
-          const resetBatch = writeBatch(firestore);
-          resetBatch.update(parentTxRef, {
-            stripeTransferId: deleteField(),
-            updatedAt: new Date().toISOString(),
-          });
-          await resetBatch.commit();
-        } catch (rollbackError) {
-          console.error('[stripe-importer] Rollback error after post-commit validation failure:', rollbackError);
-        }
-
         throw new Error(`Validació post-commit fallida: ${errors.join('; ')}`);
       }
 
@@ -671,10 +505,7 @@ export function StripeImporter({
       // Toast d'èxit actualitzat
       toast({
         title: t.importers.stripeImporter.success.title,
-        description: `${t.importers.stripeImporter.success.description(
-          selectedGroup.rows.length,
-          selectedGroup.fees > 0 ? 1 : 0
-        )} ${t.importers.stripeImporter.success.reviewHint}`,
+        description: `${selectedGroup.rows.length} donacions Stripe imputades i alineades fiscalment. ${t.importers.stripeImporter.success.reviewHint}`,
       });
 
       // Wait for Firestore listeners to sync before closing modal
@@ -690,7 +521,13 @@ export function StripeImporter({
 
     } catch (err) {
       const message = err instanceof Error ? err.message : t.importers.stripeImporter.errors.processingFile;
-      setErrorMessage(message);
+      const normalizedMessage =
+        message === ERR_STRIPE_DUPLICATE_PAYMENT
+          ? 'Aquest pagament Stripe ja existeix a legacy o a donations.'
+          : message === ERR_STRIPE_CONTACT_REQUIRED
+            ? 'Totes les donacions Stripe han de tenir donant assignat.'
+            : message;
+      setErrorMessage(normalizedMessage);
       // En cas d'error, també tanquem la confirmació per permetre reintent
       setPendingConfirmation(null);
     } finally {

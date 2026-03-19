@@ -79,7 +79,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE } from '@/lib/ui/mobile-actions';
-import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
+import { calculateTransactionNetAmount } from '@/lib/model182';
+import { getUnifiedFiscalDonationsWithClient } from '@/lib/fiscal/getUnifiedFiscalDonations';
 
 let jsPdfModulePromise: Promise<typeof import('jspdf')> | null = null;
 
@@ -330,53 +331,25 @@ export function DonationCertificateGenerator() {
       const donorsSnapshot = await getDocs(donorsQuery);
       const donors: Donor[] = donorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donor));
 
-      const transactionsRef = collection(firestore, 'organizations', organizationId, 'transactions');
-      const transactionsQuery = query(
-        transactionsRef,
-        where('date', '>=', yearStart),
-        where('date', '<=', yearEnd)
-      );
-      const transactionsSnapshot = await getDocs(transactionsQuery);
-      const allTransactions: Transaction[] = transactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-      
-      // Criteri fiscal únic: només transactionType='donation' (helper unificat)
-      const yearDonations = allTransactions.filter(tx => {
-        const txDate = tx.date.substring(0, 10);
-        return tx.amount > 0 &&
-               isFiscalDonationCandidate(tx) &&
-               tx.contactId &&
-               tx.contactType === 'donor' &&
-               txDate >= yearStart &&
-               txDate <= yearEnd;
-      });
-
-      // CRITERI CONSERVADOR: totes les devolucions del donant dins l'any
-      // Inclou:
-      // - transactionType==='return' (amount negatiu)
-      // - donationStatus==='returned' (neutralitza donació positiva)
-      // Exclou return_fee.
-      const yearReturns = allTransactions.filter(tx => {
-        const txDate = tx.date.substring(0, 10);
-        return (
-               (tx.amount < 0 && tx.transactionType === 'return') ||
-               (tx.amount > 0 && tx.donationStatus === 'returned')
-               ) &&
-               tx.contactId &&
-               tx.contactType === 'donor' &&
-               txDate >= yearStart &&
-               txDate <= yearEnd &&
-               tx.archivedAt == null;
+      const allTransactions = await getUnifiedFiscalDonationsWithClient({
+        firestore,
+        organizationId,
+        filters: {
+          dateFrom: yearStart,
+          dateTo: yearEnd,
+        },
       });
 
       const summaries: DonorSummary[] = [];
       let globalReturnsCount = 0;
       
       for (const donor of donors) {
-        const donorDonations = yearDonations.filter(tx => tx.contactId === donor.id);
-        const donorReturns = yearReturns.filter(tx => tx.contactId === donor.id);
-        
-        const grossAmount = donorDonations.reduce((sum, tx) => sum + tx.amount, 0);
-        const returnedAmount = donorReturns.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+        const donorTransactions = allTransactions.filter(tx => tx.contactId === donor.id);
+        const donorDonations = donorTransactions.filter(tx => calculateTransactionNetAmount(tx) > 0);
+        const donorReturns = donorTransactions.filter(tx => calculateTransactionNetAmount(tx) < 0);
+
+        const grossAmount = donorDonations.reduce((sum, tx) => sum + calculateTransactionNetAmount(tx), 0);
+        const returnedAmount = donorReturns.reduce((sum, tx) => sum + Math.abs(calculateTransactionNetAmount(tx)), 0);
         const netAmount = Math.max(0, grossAmount - returnedAmount);
         
         if (netAmount > 0) {

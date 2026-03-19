@@ -14,6 +14,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import type { Transaction } from '../data';
+import type { Donation } from '../types/donations';
 import { isFiscallyRelevantTransaction } from './softDeleteTransaction';
 import { acquireProcessLock, releaseProcessLock, type LockOperation } from './processLocks';
 import {
@@ -39,6 +40,12 @@ export interface UndoResult {
   childrenArchived: number;
   childrenDeleted: number;
   error?: string;
+}
+
+export function filterActiveStripeDonationsForUndo<T extends Pick<Donation, 'archivedAt'>>(
+  donations: T[]
+): T[] {
+  return donations.filter((donation) => !donation.archivedAt);
 }
 
 // =============================================================================
@@ -207,6 +214,14 @@ export async function countChildTransactions(
     byParentSnap.docs.map((d) => ({ ...(d.data() as Transaction), id: d.id }))
   ).length;
 
+  const donationsRef = collection(firestore, 'organizations', orgId, 'donations');
+  const donationSnap = await getDocs(
+    query(donationsRef, where('parentTransactionId', '==', parentTxId))
+  );
+  const activeDonationCount = filterActiveStripeDonationsForUndo(
+    donationSnap.docs.map((docSnap) => docSnap.data() as Donation)
+  ).length;
+
   // Mètode 2: remittanceId (remeses legacy)
   let remittanceDocIds: string[] = [];
   if (remittanceId && byParentCount === 0) {
@@ -218,7 +233,7 @@ export async function countChildTransactions(
     remittanceDocIds = filterActiveChildDocsForParent(byRemittanceSnap.docs, parentTxId).map((d) => d.id);
   }
 
-  count = resolveUndoChildCount(byParentCount, remittanceDocIds, parentTxId, remittanceId);
+  count = resolveUndoChildCount(byParentCount + activeDonationCount, remittanceDocIds, parentTxId, remittanceId);
   return count;
 }
 
@@ -259,6 +274,7 @@ export async function executeUndo(
   try {
     const BATCH_SIZE = 50;
     const transactionsRef = collection(firestore, 'organizations', orgId, 'transactions');
+    const donationsRef = collection(firestore, 'organizations', orgId, 'donations');
     const now = new Date().toISOString();
 
     // Buscar totes les filles
@@ -339,7 +355,7 @@ export async function executeUndo(
       }
 
       // Afegir reset pare i delete remesa NOMÉS a l'últim batch
-      if (cursor >= children.length) {
+      if (cursor >= children.length && operationType !== 'stripe') {
         // Eliminar document de remesa si existeix
         if (parentTx.remittanceId) {
           const remittanceRef = doc(firestore, 'organizations', orgId, 'remittances', parentTx.remittanceId);
@@ -368,6 +384,65 @@ export async function executeUndo(
       }
 
       await batch.commit();
+    }
+
+    if (operationType === 'stripe') {
+      const donationSnapshot = await getDocs(
+        query(donationsRef, where('parentTransactionId', '==', parentTxId))
+      );
+      const activeDonationIds = new Set(
+        filterActiveStripeDonationsForUndo(
+          donationSnapshot.docs.map((docSnap) => ({
+            id: docSnap.id,
+            ...(docSnap.data() as Donation),
+          }))
+        ).map((donation) => donation.id)
+      );
+      const activeDonations = donationSnapshot.docs.filter((docSnap) => activeDonationIds.has(docSnap.id));
+
+      for (let index = 0; index < activeDonations.length; index += BATCH_SIZE) {
+        const batch = writeBatch(firestore);
+        const chunk = activeDonations.slice(index, index + BATCH_SIZE);
+
+        for (const donationDoc of chunk) {
+          batch.update(donationDoc.ref, {
+            archivedAt: now,
+            archivedByUid: userId,
+            archivedReason: 'undo_process',
+            archivedFromAction: 'undo_stripe',
+          });
+          archivedCount++;
+        }
+
+        await batch.commit();
+      }
+
+      if (children.length > 0) {
+        const batch = writeBatch(firestore);
+
+        if (parentTx.remittanceId) {
+          const remittanceRef = doc(firestore, 'organizations', orgId, 'remittances', parentTx.remittanceId);
+          batch.delete(remittanceRef);
+        }
+
+        batch.update(doc(transactionsRef, parentTxId), {
+          isRemittance: deleteField(),
+          remittanceId: deleteField(),
+          remittanceItemCount: deleteField(),
+          remittanceResolvedCount: deleteField(),
+          remittancePendingCount: deleteField(),
+          remittancePendingTotalAmount: deleteField(),
+          remittanceType: deleteField(),
+          remittanceDirection: deleteField(),
+          remittanceStatus: deleteField(),
+          pendingReturns: deleteField(),
+          stripeTransferId: deleteField(),
+          stripePayoutId: deleteField(),
+          updatedAt: now,
+        });
+
+        await batch.commit();
+      }
     }
 
     // Cas edge: 0 filles (només reset pare)

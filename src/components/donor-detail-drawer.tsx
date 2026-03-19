@@ -1,11 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import Link from 'next/link';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import type { Transaction, Donor, Organization } from '@/lib/data';
+import type { Donation } from '@/lib/types/donations';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +20,7 @@ import {
   isDrawerDonationCandidate,
   type DonorSummaryResult,
 } from '@/lib/fiscal/calculateDonorSummary';
+import { mergeUnifiedFiscalDonations } from '@/lib/fiscal/getUnifiedFiscalDonations';
 
 // UI Components
 import {
@@ -104,6 +106,8 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
   const { t, language } = useTranslations();
   const { toast } = useToast();
+  const stripeIndividualCertificateBlockedMessage =
+    "Certificat individual no disponible per donacions Stripe fins que quedi alineat amb la font fiscal unificada.";
 
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = React.useState<string>(String(currentYear));
@@ -134,8 +138,13 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     };
   };
 
+  const isStripeIndividualCertificateBlocked = React.useCallback((tx: Transaction): boolean => {
+    return tx.source === 'stripe' || !!tx.stripePaymentId;
+  }, []);
+
   // Transaccions del donant - usar onSnapshot per gestionar errors de permisos
   const [transactions, setTransactions] = React.useState<Transaction[] | null>(null);
+  const [stripeDonations, setStripeDonations] = React.useState<Donation[] | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [permissionError, setPermissionError] = React.useState(false);
 
@@ -154,23 +163,24 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     // HOTFIX: Treure where('archivedAt','==',null) de query perquè moltes tx legacy
     // no tenen el camp archivedAt. Filtrem client-side amb tolerància (!tx.archivedAt).
     const txRef = collection(firestore, 'organizations', organizationId, 'transactions');
+    const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
     const txQuery = query(
       txRef,
       where('contactId', '==', donor.id),
       orderBy('date', 'desc'),
       limit(1000)
     );
+    const donationsQuery = query(
+      donationsRef,
+      where('contactId', '==', donor.id),
+      limit(1000)
+    );
 
-    const unsubscribe = onSnapshot(
+    const unsubscribeTransactions = onSnapshot(
       txQuery,
       (snapshot) => {
-        // HOTFIX: Filtre client-side tolerant (inclou null, undefined, "")
-        const donorTxs = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as Transaction))
-          .filter(tx => !tx.archivedAt);
+        const donorTxs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
         setTransactions(donorTxs);
-        setIsLoading(false);
-        setPermissionError(false);
       },
       (error) => {
         console.warn('Donor transactions not available:', error.message);
@@ -180,54 +190,80 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       }
     );
 
-    return () => unsubscribe();
+    const unsubscribeDonations = onSnapshot(
+      donationsQuery,
+      (snapshot) => {
+        const donorDonations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donation));
+        setStripeDonations(donorDonations);
+        setIsLoading(false);
+        setPermissionError(false);
+      },
+      (error) => {
+        console.warn('Donor Stripe donations not available:', error.message);
+        setIsLoading(false);
+        setPermissionError(true);
+        setStripeDonations([]);
+      }
+    );
+
+    return () => {
+      unsubscribeTransactions();
+      unsubscribeDonations();
+    };
   }, [firestore, organizationId, donor?.id, open]);
+
+  const fiscalTransactions = React.useMemo(() => {
+    return mergeUnifiedFiscalDonations({
+      transactions: transactions ?? [],
+      donations: stripeDonations ?? [],
+    });
+  }, [stripeDonations, transactions]);
 
   // Anys disponibles (dels quals hi ha transaccions)
   const availableYears = React.useMemo(() => {
-    if (!transactions) return [String(currentYear)];
+    if (fiscalTransactions.length === 0) return [String(currentYear)];
     const years = new Set<string>();
-    transactions.forEach(tx => {
+    fiscalTransactions.forEach(tx => {
       const year = tx.date.substring(0, 4);
       years.add(year);
     });
     // Afegir any actual si no hi és
     years.add(String(currentYear));
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
-  }, [transactions, currentYear]);
+  }, [fiscalTransactions, currentYear]);
 
   // Calcular resum fiscal (font única de veritat)
   const summary = React.useMemo<DonorSummaryResult>(() => {
     if (!donor) {
       return createEmptyDonorSummary({
-        transactions: transactions ?? [],
+        transactions: fiscalTransactions,
         donorId: '',
         year: selectedYearNumber,
       });
     }
 
     return calculateDonorSummary({
-      transactions: transactions ?? [],
+      transactions: fiscalTransactions,
       donorId: donor.id,
       year: selectedYearNumber,
     });
-  }, [transactions, selectedYearNumber, donor]);
+  }, [fiscalTransactions, selectedYearNumber, donor]);
 
   // Per defecte: historial obert si <= 5 donacions
   React.useEffect(() => {
-    if (transactions && transactions.length > 0) {
-      const donationsCount = transactions.filter(isDrawerDonationCandidate).length;
+    if (fiscalTransactions.length > 0) {
+      const donationsCount = fiscalTransactions.filter(isDrawerDonationCandidate).length;
       setIsHistoryOpen(donationsCount <= 5);
     }
-  }, [transactions]);
+  }, [fiscalTransactions]);
 
   // Filtrar transaccions per any i estat
   const effectiveReturnIdSet = React.useMemo(() => new Set(summary.effectiveReturnIds), [summary.effectiveReturnIds]);
 
   const filteredTransactions = React.useMemo(() => {
-    if (!transactions) return [];
+    if (fiscalTransactions.length === 0) return [];
 
-    return transactions.filter(tx => {
+    return fiscalTransactions.filter(tx => {
       // Filtrar per any
       if (!tx.date.startsWith(selectedYear)) return false;
       const txKey = getDonorSummaryTransactionKey(tx);
@@ -240,7 +276,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       // 'all': mostrar donacions vàlides i devolucions
       return isDrawerDonationCandidate(tx) || isEffectiveReturn;
     });
-  }, [transactions, selectedYear, filterStatus, effectiveReturnIdSet]);
+  }, [effectiveReturnIdSet, fiscalTransactions, filterStatus, selectedYear]);
 
   // Paginació
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
@@ -305,6 +341,14 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   // Generar certificat individual
   const generateCertificate = async (tx: Transaction) => {
     if (!donor || !organization) return;
+    if (isStripeIndividualCertificateBlocked(tx)) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: stripeIndividualCertificateBlockedMessage,
+      });
+      return;
+    }
 
     setIsGeneratingPdf(true);
     try {
@@ -507,7 +551,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   };
 
   const resolveAnnualCertificateScope = (year: string) => {
-    if (!donor || !transactions) return null;
+    if (!donor) return null;
 
     const parsedYear = Number.parseInt(year, 10);
     if (!Number.isFinite(parsedYear)) {
@@ -529,7 +573,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     }
 
     const expectedFingerprint = buildDonorSummaryDatasetFingerprint({
-      transactions,
+      transactions: fiscalTransactions,
       donorId: donor.id,
       year: parsedYear,
     });
@@ -834,6 +878,14 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   // Enviar certificat individual per email
   const sendCertificateByEmail = async (tx: Transaction) => {
     if (!donor || !organization) return;
+    if (isStripeIndividualCertificateBlocked(tx)) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: stripeIndividualCertificateBlockedMessage,
+      });
+      return;
+    }
 
     if (!donor.email) {
       toast({
@@ -1628,6 +1680,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                         {paginatedTransactions.map((tx, index) => {
                           const isReturn = tx.transactionType === 'return';
                           const isReturned = tx.donationStatus === 'returned';
+                          const isStripeCertificateBlocked = isStripeIndividualCertificateBlocked(tx);
 
                           return (
                             <TableRow key={tx.id || `tx-${index}`} className={isReturn ? 'bg-orange-50/50' : ''}>
@@ -1661,7 +1714,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                                 {!isReturn && !isReturned && (
                                   <div className="flex justify-end gap-1">
                                     {/* Descarregar certificat individual */}
-                                    {donor.taxId ? (
+                                    {donor.taxId && !isStripeCertificateBlocked ? (
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button
@@ -1695,12 +1748,14 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                                           </span>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                          {t.donorDetail.certificate.needsTaxId}
+                                          {isStripeCertificateBlocked
+                                            ? stripeIndividualCertificateBlockedMessage
+                                            : t.donorDetail.certificate.needsTaxId}
                                         </TooltipContent>
                                       </Tooltip>
                                     )}
                                     {/* Enviar certificat individual per email */}
-                                    {donor.taxId && donor.email ? (
+                                    {donor.taxId && donor.email && !isStripeCertificateBlocked ? (
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button
@@ -1734,7 +1789,9 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                                           </span>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                          {t.certificates.email.errorNoEmail}
+                                          {isStripeCertificateBlocked
+                                            ? stripeIndividualCertificateBlockedMessage
+                                            : t.certificates.email.errorNoEmail}
                                         </TooltipContent>
                                       </Tooltip>
                                     ) : null}

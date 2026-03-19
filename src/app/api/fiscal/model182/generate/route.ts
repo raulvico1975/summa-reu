@@ -12,7 +12,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, verifyIdToken } from '@/lib/api/admin-sdk';
 import { generateModel182AEATFile } from '@/lib/model182-aeat';
 import { buildModel182Candidates } from '@/lib/model182-aggregation';
-import type { Organization, Transaction, AnyContact } from '@/lib/data';
+import { getUnifiedFiscalDonationsWithAdmin } from '@/lib/fiscal/getUnifiedFiscalDonations';
+import type { Organization, AnyContact } from '@/lib/data';
 
 export async function POST(request: NextRequest) {
   // 1. Autenticació
@@ -52,10 +53,13 @@ export async function POST(request: NextRequest) {
   }
 
   // 4. Llegir dades des de Firestore (server recompute — invariant A2)
-  const [orgSnap, txSnap, contactsSnap] = await Promise.all([
+  const [orgSnap, contactsSnap, activeTxs] = await Promise.all([
     db.doc(`organizations/${orgId}`).get(),
-    db.collection(`organizations/${orgId}/transactions`).get(),
     db.collection(`organizations/${orgId}/contacts`).get(),
+    getUnifiedFiscalDonationsWithAdmin({
+      db,
+      organizationId: orgId,
+    }),
   ]);
 
   if (!orgSnap.exists) {
@@ -63,11 +67,7 @@ export async function POST(request: NextRequest) {
   }
 
   const organization = { id: orgId, ...orgSnap.data() } as Organization;
-  const transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() })) as Transaction[];
   const contacts = contactsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as AnyContact[];
-
-  // 5. Filtrar transaccions actives (invariant A2: mateix hotfix que el component)
-  const activeTxs = transactions.filter(tx => !tx.archivedAt);
 
   // 6. Computar candidats i generar fitxer (amb libs existents, sense canvis)
   const candidates = buildModel182Candidates(activeTxs, contacts, year);
