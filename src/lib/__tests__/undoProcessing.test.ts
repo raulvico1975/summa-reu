@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   detectUndoOperationType,
+  getUndoChildMutation,
   getUndoConfirmationText,
   getUndoDialogDescription,
   getUndoDialogTitle,
@@ -99,7 +100,16 @@ describe('undo UI texts', () => {
     const paymentsText = getUndoDialogDescription('payments', 1);
 
     assert.notEqual(returnsText, paymentsText);
-    assert.equal(returnsText.includes('NO esborra'), true);
+    assert.equal(returnsText.includes('s\'eliminaran'), true);
     assert.equal(paymentsText.includes('ELIMINARÀ permanentment'), true);
+  });
+});
+
+describe('getUndoChildMutation', () => {
+  it('uses hard-delete for returns OUT', () => {
+    assert.equal(
+      getUndoChildMutation('returns', makeParentTx({ amount: -25, transactionType: 'return' })),
+      'delete',
+    );
   });
 });

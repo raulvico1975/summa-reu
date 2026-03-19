@@ -2031,9 +2031,12 @@ export function TransactionsTable({
       });
 
       if (result.success) {
+        const description = opType === 'returns'
+          ? `S'han eliminat ${result.childrenDeleted} devolucions filles. Pots processar de nou.`
+          : `S'han arxivat ${result.childrenArchived} transaccions fiscals${result.childrenDeleted > 0 ? ` i eliminat ${result.childrenDeleted} no fiscals` : ''}. Pots processar de nou.`;
         toast({
           title: 'Processament desfet',
-          description: `S'han arxivat ${result.childrenArchived} transaccions fiscals${result.childrenDeleted > 0 ? ` i eliminat ${result.childrenDeleted} no fiscals` : ''}. Pots processar de nou.`,
+          description,
         });
         setIsUndoDialogOpen(false);
         setUndoTransaction(null);
