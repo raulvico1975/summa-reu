@@ -963,7 +963,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             {canSplitStripeRemittanceCandidate(tx) && onSplitStripeRemittance && (
               <DropdownMenuItem onClick={handleSplitStripeRemittance}>
                 <GitMerge className="mr-2 h-4 w-4 text-purple-600" />
-                {t.splitStripeRemittance}
+                {'Imputar Stripe'}
               </DropdownMenuItem>
             )}
             {canSplitAmount && (
@@ -994,7 +994,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             {(tx.isRemittance || hasStripeChildren) && onUndoRemittance && (
               <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
                 <Undo2 className="mr-2 h-4 w-4" />
-                {t.undoRemittance || 'Desfer remesa'}
+                {hasStripeChildren ? 'Desfer imputacio Stripe' : (t.undoRemittance || 'Desfer remesa')}
               </DropdownMenuItem>
             )}
             {canShowUndoSplitAction(tx) && onUndoSplit && (

@@ -452,7 +452,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             {canSplitStripeRemittance && onSplitStripeRemittance && (
               <DropdownMenuItem onClick={handleSplitStripeRemittance}>
                 <GitMerge className="h-4 w-4 mr-2 text-purple-600" />
-                {t.splitStripeRemittance || 'Dividir Remesa Stripe'}
+                {'Imputar Stripe'}
               </DropdownMenuItem>
             )}
             {canSplitAmount && onSplitAmount && (
@@ -482,7 +482,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             {(tx.isRemittance || hasStripeChildren) && onUndoRemittance && (
               <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
                 <Undo2 className="h-4 w-4 mr-2" />
-                {t.undoRemittance || 'Desfer remesa'}
+                {hasStripeChildren ? 'Desfer imputacio Stripe' : (t.undoRemittance || 'Desfer remesa')}
               </DropdownMenuItem>
             )}
             {deleteBlockedMessage ? (
