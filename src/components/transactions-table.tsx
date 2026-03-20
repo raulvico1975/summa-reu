@@ -53,6 +53,7 @@ import {
   Check,
   Undo2,
   Download,
+  Plus,
   X,
   Trash2,
 } from 'lucide-react';
@@ -666,11 +667,24 @@ export function TransactionsTable({
     setReturnLinkedTxId,
     donorDonations,
     isLoadingDonations,
+    returnMode,
+    setReturnMode,
+    splitRows,
+    addSplitRow,
+    updateSplitRow,
+    removeSplitRow,
+    splitValidationError,
+    canUseManualSplit,
+    parentReturnTotal,
+    isSavingReturn,
+    canSaveReturn,
     handleOpenReturnDialog,
     handleSaveReturn,
   } = useReturnManagement({
     transactionsCollection,
     contactsCollection,
+    organizationId,
+    userId: user?.uid ?? null,
     donors,
     contactMap,
   });
@@ -2806,14 +2820,18 @@ export function TransactionsTable({
 
       {/* Return Assignment Dialog */}
       <Dialog open={isReturnDialogOpen} onOpenChange={(open) => !open && handleCloseReturnDialog()}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader className="min-w-0 pr-8">
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <Undo2 className="h-5 w-5" />
-              {t.movements.table.assignAffectedDonor}
+              {canUseManualSplit
+                ? (t.movements.table.manageReturn || 'Gestionar devolució')
+                : t.movements.table.assignAffectedDonor}
             </DialogTitle>
             <DialogDescription>
-              {t.movements.table.assignAffectedDonorDescription}
+              {canUseManualSplit
+                ? 'Assignació simple o múltiple dins del mateix modal. La suma de les filles ha de quadrar exactament amb el pare.'
+                : t.movements.table.assignAffectedDonorDescription}
             </DialogDescription>
           </DialogHeader>
           
@@ -2829,58 +2847,151 @@ export function TransactionsTable({
                 <p className="text-xs text-red-500">{formatDate(returnTransaction.date)}</p>
               </div>
 
-              {/* Selector de donant amb cerca */}
-              <div className="space-y-2">
-                <Label>{t.movements.table.affectedDonor}</Label>
-                <DonorSearchCombobox
-                  className="min-w-0"
-                  donors={donors}
-                  value={returnDonorId}
-                  onSelect={(donorId) => {
-                    setReturnDonorId(donorId);
-                    setReturnLinkedTxId(null); // Reset linked tx when donor changes
-                  }}
-                />
-              </div>
-
-              {/* Selector de donació original */}
-              {returnDonorId && (
-                <div className="space-y-2">
-                  <Label>{t.movements.table.originalDonation}</Label>
-                  {isLoadingDonations ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {t.movements.table.loadingDonations}
-                    </div>
-                  ) : donorDonations.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t.movements.table.noDonationsFound}
-                    </p>
-                  ) : (
-                    <Select
-                      value={returnLinkedTxId || 'none'}
-                      onValueChange={(v) => setReturnLinkedTxId(v === 'none' ? null : v)}
+              {canUseManualSplit && (
+                <div className="space-y-3 rounded-lg border p-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant={returnMode === 'single' ? 'default' : 'outline'}
+                      onClick={() => setReturnMode('single')}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t.movements.table.linkToDonation} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">{t.movements.table.noLink}</SelectItem>
-                        {donorDonations.filter(d => d.id).map(donation => (
-                          <SelectItem key={donation.id} value={donation.id}>
-                            {formatDate(donation.date)} - {formatCurrencyEU(donation.amount)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {returnLinkedTxId && (
-                    <p className="text-xs text-green-600 flex items-center gap-1">
-                      <Check className="h-3 w-3" />
-                      {t.movements.table.linkedDonationInfo}
-                    </p>
-                  )}
+                      Assignació simple
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={returnMode === 'multi' ? 'default' : 'outline'}
+                      onClick={() => setReturnMode('multi')}
+                    >
+                      Assignació múltiple
+                    </Button>
+                  </div>
                 </div>
+              )}
+
+              {returnMode === 'multi' && canUseManualSplit ? (
+                <div className="space-y-3 rounded-lg border p-3">
+                  <div className="grid grid-cols-[minmax(0,1fr)_140px_48px] gap-2 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <span>Soci</span>
+                    <span>Import</span>
+                    <span className="text-right">Acció</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {splitRows.map((row, index) => (
+                      <div
+                        key={`split-row-${index}`}
+                        className="grid grid-cols-[minmax(0,1fr)_140px_48px] gap-2"
+                      >
+                        <DonorSearchCombobox
+                          className="min-w-0"
+                          donors={donors}
+                          value={row.contactId}
+                          onSelect={(contactId) => updateSplitRow(index, { contactId })}
+                        />
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          min="0"
+                          value={Number.isFinite(row.amount) && row.amount !== 0 ? row.amount : ''}
+                          onChange={(event) => {
+                            const rawValue = event.target.value.replace(',', '.');
+                            updateSplitRow(index, {
+                              amount: rawValue === '' ? Number.NaN : Number(rawValue),
+                            });
+                          }}
+                          placeholder="0,00"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeSplitRow(index)}
+                          aria-label={`Eliminar fila ${index + 1}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <Button type="button" variant="outline" onClick={addSplitRow}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Afegir soci
+                    </Button>
+
+                    <div className="text-right text-sm">
+                      <p className="text-muted-foreground">
+                        Suma: {formatCurrencyEU(
+                          splitRows.reduce((sum, row) => sum + (Number.isFinite(row.amount) ? row.amount : 0), 0)
+                        )} / {formatCurrencyEU(parentReturnTotal)}
+                      </p>
+                      {splitValidationError ? (
+                        <p className="font-medium text-red-600">{splitValidationError}</p>
+                      ) : (
+                        <p className="flex items-center justify-end gap-1 font-medium text-green-600">
+                          <Check className="h-4 w-4" />
+                          Suma correcta
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label>{t.movements.table.affectedDonor}</Label>
+                    <DonorSearchCombobox
+                      className="min-w-0"
+                      donors={donors}
+                      value={returnDonorId}
+                      onSelect={(donorId) => {
+                        setReturnDonorId(donorId);
+                        setReturnLinkedTxId(null);
+                      }}
+                    />
+                  </div>
+
+                  {returnDonorId && (
+                    <div className="space-y-2">
+                      <Label>{t.movements.table.originalDonation}</Label>
+                      {isLoadingDonations ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {t.movements.table.loadingDonations}
+                        </div>
+                      ) : donorDonations.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          {t.movements.table.noDonationsFound}
+                        </p>
+                      ) : (
+                        <Select
+                          value={returnLinkedTxId || 'none'}
+                          onValueChange={(v) => setReturnLinkedTxId(v === 'none' ? null : v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={t.movements.table.linkToDonation} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{t.movements.table.noLink}</SelectItem>
+                            {donorDonations.filter(d => d.id).map(donation => (
+                              <SelectItem key={donation.id} value={donation.id}>
+                                {formatDate(donation.date)} - {formatCurrencyEU(donation.amount)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {returnLinkedTxId && (
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <Check className="h-3 w-3" />
+                          {t.movements.table.linkedDonationInfo}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -2891,8 +3002,9 @@ export function TransactionsTable({
             </DialogClose>
             <Button 
               onClick={handleSaveReturn}
-              disabled={!returnDonorId}
+              disabled={!canSaveReturn}
             >
+              {isSavingReturn ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {t.common.save}
             </Button>
           </DialogFooter>

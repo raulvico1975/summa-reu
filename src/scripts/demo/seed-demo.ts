@@ -781,8 +781,13 @@ export async function runDemoSeed(
     // Cas especial 4: Stripe payout (1 pare + 6 donacions + 1 fee)
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Seleccionar 6 donants deterministes (9-14, no coincideixen amb SEPA)
-    const stripeDonors = donors.slice(8, 14);
+    // Seleccionar 6 donants deterministes.
+    // El primer ha de ser el donant oracle perquè demo_tx_stripe_don_001
+    // continuï sent la donació Stripe legacy del check fiscal.
+    const stripeDonors = [
+      workDonor,
+      ...donors.filter((donor) => donor.id !== workDonor.id).slice(8, 13),
+    ];
     const stripeDonationAmounts = [25, 50, 75, 100, 150, 200]; // Imports variats (total 600€)
     const stripeDonationsTotal = stripeDonationAmounts.reduce((sum, a) => sum + a, 0);
     const stripeFeeAmount = -18; // Fee negatiu (3% de 600€)

@@ -41,19 +41,6 @@ if [ -z "$GIT_COMMON_DIR" ]; then
   exit 1
 fi
 CONTROL_REPO_DIR="${WORKFLOW_CONTROL_REPO_DIR:-$(cd "$GIT_COMMON_DIR/.." && pwd)}"
-WORKFLOW_STATE_DIR="$GIT_COMMON_DIR/workflow-state"
-INTEGRATION_LOCK_DIR="$WORKFLOW_STATE_DIR/integration.lock"
-INTEGRATION_LOCK_HELD=false
-
-cleanup_integration_lock_on_exit() {
-  if [ "$INTEGRATION_LOCK_HELD" != "true" ]; then
-    return
-  fi
-  rm -rf "$INTEGRATION_LOCK_DIR" 2>/dev/null || true
-  INTEGRATION_LOCK_HELD=false
-}
-
-trap cleanup_integration_lock_on_exit EXIT
 
 say() {
   printf '%s\n' "$1"
@@ -66,91 +53,6 @@ sanitize_area_slug() {
     | tr '/[:space:]' '-' \
     | tr -cd '[:alnum:]_.-' \
     | sed -E 's/[._]+/-/g; s/^-+//; s/-+$//'
-}
-
-ensure_workflow_state_dir() {
-  mkdir -p "$WORKFLOW_STATE_DIR"
-}
-
-cleanup_stale_integration_lock_if_needed() {
-  if [ ! -d "$INTEGRATION_LOCK_DIR" ]; then
-    return
-  fi
-
-  local pid_file pid
-  pid_file="$INTEGRATION_LOCK_DIR/pid"
-  pid="$(cat "$pid_file" 2>/dev/null || true)"
-
-  if [ -z "$pid" ]; then
-    rm -rf "$INTEGRATION_LOCK_DIR" 2>/dev/null || true
-    return
-  fi
-
-  if kill -0 "$pid" >/dev/null 2>&1; then
-    return
-  fi
-
-  rm -rf "$INTEGRATION_LOCK_DIR" 2>/dev/null || true
-}
-
-acquire_integration_lock() {
-  local branch="$1"
-  local wait_seconds elapsed start_ts notice_bucket last_notice_bucket active_branch
-
-  ensure_workflow_state_dir
-  wait_seconds="${INTEGRATION_LOCK_WAIT_SECONDS:-300}"
-  if ! [[ "$wait_seconds" =~ ^[0-9]+$ ]]; then
-    wait_seconds=300
-  fi
-
-  start_ts="$(date +%s)"
-  last_notice_bucket=-1
-
-  while true; do
-    if mkdir "$INTEGRATION_LOCK_DIR" 2>/dev/null; then
-      printf '%s\n' "$$" > "$INTEGRATION_LOCK_DIR/pid"
-      printf '%s\n' "$branch" > "$INTEGRATION_LOCK_DIR/branch"
-      INTEGRATION_LOCK_HELD=true
-      return 0
-    fi
-
-    cleanup_stale_integration_lock_if_needed
-    if mkdir "$INTEGRATION_LOCK_DIR" 2>/dev/null; then
-      printf '%s\n' "$$" > "$INTEGRATION_LOCK_DIR/pid"
-      printf '%s\n' "$branch" > "$INTEGRATION_LOCK_DIR/branch"
-      INTEGRATION_LOCK_HELD=true
-      return 0
-    fi
-
-    elapsed=$(( $(date +%s) - start_ts ))
-    if [ "$elapsed" -ge "$wait_seconds" ]; then
-      active_branch="$(cat "$INTEGRATION_LOCK_DIR/branch" 2>/dev/null || true)"
-      say "BLOCKED_SAFE"
-      if [ -n "$active_branch" ]; then
-        say "Hi ha una altra integració en curs: $active_branch"
-      else
-        say "Hi ha una altra integració en curs."
-      fi
-      say "Torna a dir 'Acabat' en uns minuts."
-      return 1
-    fi
-
-    notice_bucket=$((elapsed / 15))
-    if [ "$notice_bucket" -ne "$last_notice_bucket" ]; then
-      say "Esperant torn d'integració..."
-      last_notice_bucket="$notice_bucket"
-    fi
-
-    sleep 2
-  done
-}
-
-release_integration_lock() {
-  if [ "$INTEGRATION_LOCK_HELD" != "true" ]; then
-    return
-  fi
-  rm -rf "$INTEGRATION_LOCK_DIR" 2>/dev/null || true
-  INTEGRATION_LOCK_HELD=false
 }
 
 git_control() {
@@ -295,18 +197,40 @@ emit_guidance_for_status() {
   emit_next_step_block "Pots començar dient: Inicia o Implementa"
 }
 
-current_branch() {
-  git rev-parse --abbrev-ref HEAD
-}
+emit_worktree_warning_if_needed() {
+  local worktree_count
+  worktree_count="$(git worktree list | wc -l | tr -d ' ')"
 
-head_needs_integration_on_control_main() {
-  local head_sha="$1"
-
-  if git_control merge-base --is-ancestor "$head_sha" main 2>/dev/null; then
-    return 1
+  if ! [[ "$worktree_count" =~ ^[0-9]+$ ]]; then
+    return
   fi
 
-  return 0
+  if [ "$worktree_count" -le 20 ]; then
+    return
+  fi
+
+  say ""
+  say "WARNING"
+  say "- worktrees actius: $worktree_count"
+  say "- hi ha més de 20 worktrees; revisa si en pots tancar algun abans de continuar"
+}
+
+emit_acabat_completion() {
+  local branch="$1"
+
+  say ""
+  say "ESTAT"
+  say "- branca: $branch"
+  say "- commit pujat: SI"
+  say "- llest per integració: SI"
+  say ""
+  say "SEGÜENT PAS RECOMANAT"
+  say "- aquesta feina està llesta però NO integrada a main"
+  say "- per integrar: executar npm run integra"
+}
+
+current_branch() {
+  git rev-parse --abbrev-ref HEAD
 }
 
 refresh_origin() {
@@ -603,57 +527,6 @@ ensure_control_repo_for_deploy_or_merge() {
   fi
 }
 
-dry_run_integrate_to_main() {
-  local branch="$1"
-
-  ensure_control_repo_for_deploy_or_merge
-
-  if ! git_control pull --ff-only origin main >/dev/null 2>&1; then
-    say "$STATUS_NO"
-    say "No s'ha pogut actualitzar main al repositori de control."
-    return 1
-  fi
-
-  if ! git_control merge --no-commit --no-ff "$branch" >/dev/null 2>&1; then
-    git_control merge --abort >/dev/null 2>&1 || git_control reset --merge >/dev/null 2>&1 || true
-    return 1
-  fi
-
-  git_control merge --abort >/dev/null 2>&1 || git_control reset --merge >/dev/null 2>&1 || true
-  return 0
-}
-
-integrate_to_main() {
-  local branch="$1"
-
-  if [ "$branch" = "main" ]; then
-    say "$STATUS_NO"
-    say "No es pot tancar una tasca directament des de main."
-    exit 1
-  fi
-
-  ensure_control_repo_for_deploy_or_merge
-
-  if ! git_control pull --ff-only origin main; then
-    say "$STATUS_NO"
-    say "No s'ha pogut actualitzar main al repositori de control."
-    exit 1
-  fi
-
-  if ! git_control merge --no-ff "$branch" -m "chore(merge): integra $branch"; then
-    git_control merge --abort || true
-    say "$STATUS_NO"
-    say "Hi ha conflicte d'integració. El canvi queda guardat a $branch."
-    exit 1
-  fi
-
-  if ! git_control push origin main; then
-    say "$STATUS_NO"
-    say "No s'ha pogut pujar main després de la integració."
-    exit 1
-  fi
-}
-
 compute_repo_status() {
   refresh_origin
 
@@ -740,14 +613,13 @@ run_inicia() {
 
 run_acabat() {
   local legacy_arg="${1:-}"
-  local final_status branch control_branch control_main_ref control_main_sha ahead_count
-  local changed_files risk
+  local branch changed_files risk
   branch="$(current_branch)"
 
-  if [ -n "$legacy_arg" ] && [ "$legacy_arg" != "--allow-main-merge" ]; then
+  if [ -n "$legacy_arg" ]; then
     say "BLOCKED_SAFE"
     say "Argument no reconegut per 'acabat': $legacy_arg"
-    say "No cal cap opció manual per integrar."
+    say "La integració ara és explícita i es fa amb: npm run integra"
     exit 1
   fi
 
@@ -763,18 +635,28 @@ run_acabat() {
     exit 1
   fi
 
-  if [ "$branch" = "main" ] && ! is_control_repo; then
-    say "$STATUS_NO"
-    say "Aquest worktree no pot treballar directament a main."
+  if [ "$branch" = "main" ]; then
+    say "BLOCKED_SAFE"
+    say "No es pot executar 'acabat' directament des de main."
+    say "Mou la feina a una branca codex/* i integra després amb npm run integra."
     exit 1
   fi
+
+  if [[ "$branch" != codex/* ]]; then
+    say "BLOCKED_SAFE"
+    say "La branca actual no segueix el flux segur de tasques."
+    say "Executa 'acabat' només des d'una branca codex/*."
+    exit 1
+  fi
+
+  emit_worktree_warning_if_needed
 
   changed_files="$(collect_changed_files)"
   if [ -n "$changed_files" ]; then
     risk="$(classify_risk "$changed_files")"
     if ! run_checks; then
       say "BLOCKED_SAFE"
-      say "Les comprovacions automàtiques han fallat. Cal corregir abans d'integrar."
+      say "Les comprovacions automàtiques han fallat. Cal corregir abans de marcar la branca com a llesta."
       exit 1
     fi
 
@@ -786,69 +668,18 @@ run_acabat() {
     guard_no_prohibited_staged_paths
 
     commit_changes "$risk"
-    say "Canvis validats i desats per tancar la tasca."
+    say "Canvis validats i desats a la branca de feina."
+  else
+    say "No hi ha canvis locals nous; es revisarà només la pujada de la branca."
   fi
 
-  if ! git_control fetch origin --quiet >/dev/null 2>&1; then
+  if ! push_branch "$branch"; then
     say "BLOCKED_SAFE"
-    say "No s'ha pogut actualitzar el repositori de control des d'origin."
+    say "No s'ha pogut pujar la branca $branch a origin."
     exit 1
   fi
 
-  control_branch="$(git_control branch --show-current)"
-  if [ "$control_branch" != "main" ]; then
-    say "BLOCKED_SAFE"
-    say "El repositori de control no és a main. Ves a $CONTROL_REPO_DIR i posa'l a main per integrar."
-    exit 1
-  fi
-
-  control_main_ref="main"
-  if ! git_control rev-parse --verify "$control_main_ref" >/dev/null 2>&1; then
-    say "BLOCKED_SAFE"
-    say "No s'ha trobat la referència $control_main_ref per calcular integració."
-    exit 1
-  fi
-
-  control_main_sha="$(git_control rev-parse "$control_main_ref")"
-  ahead_count="$(git rev-list --count "${control_main_sha}..HEAD")"
-  if [ "$ahead_count" -eq 0 ]; then
-    final_status="$(compute_repo_status)"
-    say "$final_status"
-    say "No hi ha canvis nous per tancar."
-    emit_guidance_for_status "$final_status"
-    return
-  fi
-
-  if [ "$branch" = "main" ]; then
-    say "BLOCKED_SAFE"
-    say "No es permeten passos destructius des de main."
-    exit 1
-  fi
-
-  say "No hi ha canvis locals nous, pero la branca te commits pendents d'integrar."
-  push_branch "$branch"
-
-  if ! acquire_integration_lock "$branch"; then
-    exit 1
-  fi
-
-  if ! dry_run_integrate_to_main "$branch"; then
-    release_integration_lock
-    say "BLOCKED_SAFE"
-    say "S'ha detectat un solapament amb canvis recents a main."
-    say "El teu canvi queda guardat a $branch fins resoldre la integració."
-    exit 1
-  fi
-
-  integrate_to_main "$branch"
-  release_integration_lock
-
-  final_status="$(compute_repo_status)"
-  say "$final_status"
-  emit_guidance_for_status "$final_status"
-  say ""
-  say "PREGUNTA OPERATIVA"
-  say "- Vols tancar aquest worktree de tasca ara? (recomanat: npm run worktree:close)"
+  emit_acabat_completion "$branch"
 }
 
 run_publica() {

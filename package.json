@@ -44,6 +44,7 @@
     "inicia": "bash scripts/workflow.sh inicia",
     "implementa": "bash scripts/workflow.sh implementa",
     "acabat": "bash scripts/workflow.sh acabat",
+    "integra": "bash scripts/integrate.sh",
     "publica": "bash scripts/workflow.sh publica",
     "estat": "bash scripts/workflow.sh estat",
     "worktree:list": "bash scripts/worktree.sh list",

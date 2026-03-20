@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { formatBlogDate, getBlogPostBySlug } from '@/lib/blog/firestore'
 
@@ -7,7 +8,31 @@ type PageProps = {
   params: Promise<{ slug: string }>
 }
 
+function isBlogConfigured() {
+  return Boolean(process.env.BLOG_ORG_ID?.trim())
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  if (!isBlogConfigured()) {
+    return {
+      title: 'Blog | Summa Social',
+      robots: {
+        index: false,
+        follow: false,
+      },
+    }
+  }
+
+  return {
+    title: 'Blog | Summa Social',
+  }
+}
+
 export default async function BlogPostPage({ params }: PageProps) {
+  if (!isBlogConfigured()) {
+    notFound()
+  }
+
   const { slug } = await params
   const post = await getBlogPostBySlug(slug)
 

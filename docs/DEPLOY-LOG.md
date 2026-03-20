@@ -4,6 +4,12 @@ Registre cronologic de desplegaments a produccio.
 
 ## Notes operatives sense deploy
 
+### 2026-03-19 — Deploy completat després de tancar el ritual
+
+- SHA main del contingut publicat: `28c1930`.
+- SHA final a `prod`: `541d479`.
+- Abast publicat: bloc de 14 fitxers amb ajustos de `stripe-importer` i `stripe-detection`, `donor-search-combobox`, `docs/QA-FISCAL.md`, `docs/CHANGELOG.md`, `firestore.indexes.json`, traduccions `i18n` i tests associats.
+
 ### 2026-03-19 — Stripe fiscal UI post-merge
 
 - PR #21 mergejada a `main` (`22acb1a`).
@@ -207,6 +213,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-03-16 09:09 | 77f4257 | MITJA | No | 25 | OK |
 | 2026-03-16 15:46 | 7a2c52d | MITJA | No | 15 | OK |
 | 2026-03-16 16:25 | 54d93d2 | MITJA | No | 10 | OK |
+| 2026-03-19 12:12 | 28c1930 | MITJA | Si | 14 | OK |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
