@@ -58,3 +58,7 @@ Resultat esperat:
 - Si falla `acabat`: la branca continua al worktree i no s'integra res.
 - Si falla `integra`: `main` queda intacta i el resum ha d'indicar el bloqueig real.
 - Si falla `publica`: `prod` no s'ha d'actualitzar i el bloqueig queda registrat.
+
+## Verificació operativa
+
+- Smoke del 2026-03-20: worktree creat amb `.env.local`, `.env.demo` i `node_modules` enllaçats automàticament, sense passos manuals extra.
