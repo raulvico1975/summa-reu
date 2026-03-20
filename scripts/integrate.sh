@@ -8,7 +8,7 @@ REQUIRED_CONTROL_REPO="/Users/raulvico/Documents/summa-social"
 RESULT_STATUS="OK"
 TYPECHECK_STATUS="KO"
 TEST_NODE_STATUS="KO"
-MAIN_READY="NO"
+MAIN_UPDATED="NO"
 INTEGRATED_BRANCHES=()
 CONFLICT_ITEMS=()
 PENDING_BRANCHES=()
@@ -31,6 +31,10 @@ print_list_or_empty() {
 }
 
 print_summary() {
+  local pending_count integrated_count
+  pending_count="$(count_remaining_pending_branches)"
+  integrated_count="${#INTEGRATED_BRANCHES[@]}"
+
   say ""
   say "RESULTAT: INTEGRACIÓ $RESULT_STATUS"
   say ""
@@ -52,8 +56,14 @@ print_summary() {
   say "- typecheck: $TYPECHECK_STATUS"
   say "- test:node: $TEST_NODE_STATUS"
   say ""
-  say "ESTAT"
-  say "- main preparada per deploy: $MAIN_READY"
+  say "ESTAT FINAL"
+  say "- main actualitzada: $MAIN_UPDATED"
+  say "- branques integrades: $integrated_count"
+  say "- pendent d'integrar: $pending_count"
+  say ""
+  say "RECOMANACIÓ"
+  say "- si aquest bloc és coherent -> pots fer deploy"
+  say "- si no -> continuar integrant en blocs"
 }
 
 fail_with_message() {
@@ -66,6 +76,47 @@ fail_with_message() {
 
 trim_branch_line() {
   printf '%s' "$1" | sed -E 's/^[*+] //; s/^  //'
+}
+
+array_contains() {
+  local needle="$1"
+  shift
+
+  local item
+  for item in "$@"; do
+    if [ "$item" = "$needle" ]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+branch_description() {
+  local branch="$1"
+  local subject
+
+  subject="$(git log -1 --pretty=format:%s "origin/$branch" 2>/dev/null || true)"
+  if [ -n "$subject" ]; then
+    printf '%s' "$subject"
+    return 0
+  fi
+
+  printf '%s' "sense descripció inferible"
+}
+
+count_remaining_pending_branches() {
+  local branch remaining_count
+  remaining_count=0
+
+  for branch in "${PENDING_BRANCHES[@]}"; do
+    if array_contains "$branch" "${INTEGRATED_BRANCHES[@]}"; then
+      continue
+    fi
+    remaining_count=$((remaining_count + 1))
+  done
+
+  printf '%s' "$remaining_count"
 }
 
 discover_pending_branches() {
@@ -89,9 +140,9 @@ discover_pending_branches() {
 }
 
 show_pending_branches() {
-  local branch subject index
+  local branch description index
 
-  say "BRANQUES CODEX PENDENTS"
+  say "BRANQUES DISPONIBLES"
   if [ "${#PENDING_BRANCHES[@]}" -eq 0 ]; then
     say "- cap"
     return
@@ -99,18 +150,26 @@ show_pending_branches() {
 
   index=1
   for branch in "${PENDING_BRANCHES[@]}"; do
-    subject="$(git log -1 --pretty=format:%s "origin/$branch" 2>/dev/null || true)"
-    if [ -n "$subject" ]; then
-      say "- [$index] $branch :: $subject"
-    else
-      say "- [$index] $branch"
-    fi
+    description="$(branch_description "$branch")"
+    say "- [$index] $branch -> $description"
     index=$((index + 1))
   done
+
+  say ""
+  say "RECOMANACIÓ"
+  say "- pots integrar totes o seleccionar un subconjunt coherent"
+  say "- evita barrejar canvis no relacionats"
+
+  if [ "${#PENDING_BRANCHES[@]}" -gt 3 ]; then
+    say ""
+    say "AVÍS"
+    say "Estàs integrant moltes branques alhora."
+    say "Recomanat: integrar en blocs petits i coherents."
+  fi
 }
 
 select_branches_to_integrate() {
-  local selection trimmed branch index
+  local selection trimmed branch index token normalized_tokens selected_branch
 
   if [ "${#PENDING_BRANCHES[@]}" -eq 0 ]; then
     return 0
@@ -118,7 +177,8 @@ select_branches_to_integrate() {
 
   say ""
   say "SELECCIÓ"
-  say "- escriu un número, el nom complet d'una branca o 'all' per integrar-les totes en ordre"
+  say "- mode selectiu (per defecte): escriu un o més números o noms de branca separats per espais o comes"
+  say "- mode totes: escriu exactament 'all'"
   printf '> '
   IFS= read -r selection || selection=""
   trimmed="$(printf '%s' "$selection" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
@@ -132,23 +192,37 @@ select_branches_to_integrate() {
     return 0
   fi
 
-  if [[ "$trimmed" =~ ^[0-9]+$ ]]; then
-    index=$((trimmed - 1))
-    if [ "$index" -lt 0 ] || [ "$index" -ge "${#PENDING_BRANCHES[@]}" ]; then
-      fail_with_message "Selecció no vàlida: $trimmed"
-    fi
-    SELECTED_BRANCHES=("${PENDING_BRANCHES[$index]}")
-    return 0
-  fi
+  normalized_tokens="$(printf '%s' "$trimmed" | tr ',' ' ')"
+  for token in $normalized_tokens; do
+    [ -z "$token" ] && continue
+    selected_branch=""
 
-  for branch in "${PENDING_BRANCHES[@]}"; do
-    if [ "$branch" = "$trimmed" ]; then
-      SELECTED_BRANCHES=("$branch")
-      return 0
+    if [[ "$token" =~ ^[0-9]+$ ]]; then
+      index=$((token - 1))
+      if [ "$index" -lt 0 ] || [ "$index" -ge "${#PENDING_BRANCHES[@]}" ]; then
+        fail_with_message "Selecció no vàlida: $token"
+      fi
+      selected_branch="${PENDING_BRANCHES[$index]}"
+    else
+      for branch in "${PENDING_BRANCHES[@]}"; do
+        if [ "$branch" = "$token" ]; then
+          selected_branch="$branch"
+          break
+        fi
+      done
+      if [ -z "$selected_branch" ]; then
+        fail_with_message "Selecció no vàlida: $token"
+      fi
+    fi
+
+    if ! array_contains "$selected_branch" "${SELECTED_BRANCHES[@]}"; then
+      SELECTED_BRANCHES+=("$selected_branch")
     fi
   done
 
-  fail_with_message "Selecció no vàlida: $trimmed"
+  if [ "${#SELECTED_BRANCHES[@]}" -eq 0 ]; then
+    fail_with_message "Integració cancel·lada: no s'ha seleccionat cap branca."
+  fi
 }
 
 merge_selected_branches() {
@@ -182,6 +256,7 @@ EOF
     fi
 
     INTEGRATED_BRANCHES+=("$branch")
+    MAIN_UPDATED="SI"
   done
 
   return 0
@@ -202,9 +277,7 @@ run_post_integrations_validations() {
     RESULT_STATUS="KO"
   fi
 
-  if [ "$RESULT_STATUS" = "OK" ]; then
-    MAIN_READY="SI"
-  fi
+  return 0
 }
 
 main() {
