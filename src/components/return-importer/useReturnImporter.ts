@@ -16,6 +16,10 @@ import {
   parseReturnCsvBuffer,
 } from '@/lib/returns/import-csv';
 import {
+  buildReturnChildDraft,
+  createReturnChild,
+} from '@/lib/returns/createReturnSplit';
+import {
   deriveReturnRemittanceStatus,
 } from '@/lib/remittances/returns-remittance-state';
 import { assertNoActiveReturnChildren } from '@/lib/returns/process-guards';
@@ -1433,54 +1437,21 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           // P0: usar camp canònic resolvedDonorId + mapa donorsById
           const donorId = ret.resolvedDonorId!;
           const donor = donorsById.get(donorId);
-          const donorName = donor?.name ?? 'Donant';
-          const childTxData = {
-            // Camps de la filla
-            source: 'remittance',
-            parentTransactionId: group.originalTransaction.id,
-            isRemittanceItem: true,
-            amount: -Math.abs(ret.amount),  // Import SEMPRE negatiu (devolució)
-            date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
-            transactionType: 'return',
-            description: ret.returnReason || group.originalTransaction.description || 'Devolució',
-            // Donant assignat: contactId + contactType + contactName + legacy
+          const childTxData = buildReturnChildDraft({
+            parentTransaction: group.originalTransaction,
             contactId: donorId,
-            contactType: 'donor',
-            contactName: donorName,
-            // Compat legacy (pantalles que llegeixen emisor*)
-            emisorId: donorId,
-            emisorName: donorName,
-            // Heretar bankAccountId del pare
-            bankAccountId: group.originalTransaction.bankAccountId ?? null,
-          };
+            donorName: donor?.name ?? 'Donant',
+            amount: ret.amount,
+            date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
+            description: ret.returnReason || group.originalTransaction.description || 'Devolució',
+          });
 
-          // P0: Validar invariants fiscals abans d'escriure
-          assertFiscalTxCanBeSaved(
-            {
-              transactionType: childTxData.transactionType as 'return',
-              amount: childTxData.amount,
-              contactId: childTxData.contactId,
-              source: childTxData.source as 'remittance',
-            },
-            {
-              firestore,
-              orgId: organizationId,
-              operation: 'createReturn',
-              route: '/return-importer',
-            }
-          );
-
-          await addDoc(
-            collection(firestore, 'organizations', organizationId, 'transactions'),
-            childTxData
-          );
-
-          // Actualitzar donant (P0: usar resolvedDonorId)
-          const donorRef = doc(firestore, 'organizations', organizationId, 'contacts', ret.resolvedDonorId!);
-          await updateDoc(donorRef, {
-            returnCount: increment(1),
-            lastReturnDate: ret.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-            status: 'pending_return',
+          await createReturnChild({
+            transactionsCollection: collection(firestore, 'organizations', organizationId, 'transactions'),
+            contactsCollection: collection(firestore, 'organizations', organizationId, 'contacts'),
+            organizationId,
+            childData: childTxData,
+            route: '/return-importer',
           });
 
           processedGrouped++;
