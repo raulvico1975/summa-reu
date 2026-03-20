@@ -173,6 +173,7 @@ Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOC
 11. Post-deploy check automàtic (SHA remot + smoke amb URLs resoltes automàticament)
 12. **Check post-producció automàtic de 3 minuts** (login, flux principal, informe/export)
 13. Registre a `docs/DEPLOY-LOG.md` + incidències a `docs/DEPLOY-INCIDENTS.md` si hi ha bloqueig
+14. Sincronització final de `main` amb `origin/main` si els logs han creat commits nous
 
 ### Autorització
 
@@ -205,6 +206,7 @@ Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOC
 - Quan el CEO respon `Autoritzo deploy`, Codex executa publicació en silenci.
 - Si tot va bé, la resposta final és només: `Ja a producció.`
 - Si alguna verificació falla, no es publica i Codex explica el bloqueig en una frase clara.
+- Després de `publica`, `main` i `origin/main` han de quedar alineades o el resultat s'ha de marcar explícitament com a `PENDENT`.
 
 ### Pràctiques operatives automàtiques (sense passos manuals del CEO)
 

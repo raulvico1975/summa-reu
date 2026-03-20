@@ -240,6 +240,7 @@ Si no vols reservar àrea, usa `npm run inicia` / `npm run implementa` sense arg
 8. Fa el merge i push (main→prod)
 9. Fa post-check automàtic (SHA remot + smoke amb URL auto-resolta)
 10. Registra el deploy a `docs/DEPLOY-LOG.md` (inclou avís guiat si n'hi ha)
+11. Sincronitza `main` amb `origin/main` si el mateix deploy ha creat commits nous de registre
 
 Per defecte, si no es defineixen URLs de comprovació, el sistema intenta deduir-les automàticament a partir de `DEPLOY_BASE_URL` o de la URL publicada detectada a `firebase.json`.
 
@@ -247,6 +248,7 @@ Per defecte, si no es defineixen URLs de comprovació, el sistema intenta deduir
 - Solapament detectat a `integra` (prova prèvia de merge) → el canvi queda guardat a la teva branca; `main` no es toca.
 - Conflicte de merge → el script aborta i torna a `main`. Resol el conflicte manualment.
 - Verificació falla → corregeix els errors i torna a executar `npm run publica`.
+- Si `prod` queda publicada però `origin/main` no es pot sincronitzar al final, el resultat s'ha de marcar com `PENDENT`, no com `OK`.
 - En risc ALT residual, el sistema t'avisa amb llenguatge de negoci i recomanació clara.
 - Mode estricte opcional: `DEPLOY_REQUIRE_MANUAL_CONFIRMATION_ON_RESIDUAL_ALT=1` (sí bloqueja risc ALT residual).
 
