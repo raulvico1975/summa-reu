@@ -263,7 +263,10 @@ EOF
 }
 
 run_post_integrations_validations() {
-  if PATH=/usr/local/bin:$PATH npm run typecheck; then
+  if ! PATH=/usr/local/bin:$PATH ./node_modules/.bin/next typegen >/dev/null 2>&1; then
+    TYPECHECK_STATUS="KO"
+    RESULT_STATUS="KO"
+  elif PATH=/usr/local/bin:$PATH npm run typecheck; then
     TYPECHECK_STATUS="OK"
   else
     TYPECHECK_STATUS="KO"

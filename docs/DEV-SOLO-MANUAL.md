@@ -188,6 +188,13 @@ En cas de test intern del mecanisme, pot ser necessari utilitzar `git add -f` pe
 4. `main` queda apte per esperar deploy, però sense desplegar encara.
 5. Millora estructural pendent:
    - portar cerca i filtres de Moviments a backend
+
+**Incidència operativa oberta — ritual `npm run integra` (2026-03-20)**
+1. `npm run integra` pot acabar en fals `KO`.
+2. Causa detectada: el `typecheck` s'executa abans de regenerar els artefactes de tipus de Next (`.next/types`).
+3. Estat real del cas detectat el 2026-03-20: el merge a `main` era correcte tot i que el ritual va informar `KO`.
+4. Validació manual posterior sobre `main`: `i18n:validate-help` OK, `typecheck` OK, `test:node` OK i `build` OK dues vegades seguides.
+5. Seguiment obligatori: corregir l'ordre del ritual perquè el resultat d'`integra` reflecteixi l'estat real del merge.
    - evitar haver de completar el dataset al client per resoldre filtres
 
 Guia ràpida d'execució: [scripts/verify-fiscal.md](../scripts/verify-fiscal.md)
