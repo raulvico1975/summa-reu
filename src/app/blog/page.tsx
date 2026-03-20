@@ -1,9 +1,49 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { formatBlogDate, listBlogPosts } from '@/lib/blog/firestore'
 
 export const revalidate = 60
 
+function isBlogConfigured() {
+  return Boolean(process.env.BLOG_ORG_ID?.trim())
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  if (!isBlogConfigured()) {
+    return {
+      title: 'Blog | Summa Social',
+      robots: {
+        index: false,
+        follow: false,
+      },
+    }
+  }
+
+  return {
+    title: 'Blog | Summa Social',
+  }
+}
+
 export default async function BlogPage() {
+  if (!isBlogConfigured()) {
+    return (
+      <main className="min-h-screen bg-background">
+        <div className="mx-auto max-w-5xl px-6 py-16">
+          <header className="mb-6 space-y-3">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              Blog
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">Articles i novetats</h1>
+          </header>
+
+          <p className="max-w-2xl text-base leading-7 text-muted-foreground">
+            El blog no està configurat en aquest entorn.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
   const posts = await listBlogPosts()
 
   return (
