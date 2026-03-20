@@ -47,9 +47,11 @@ Resultat esperat:
 - fa preflight git, verificacions i classificació de risc
 - prepara rollback i registra el resultat a `docs/DEPLOY-LOG.md`
 - fa el merge `main -> prod`, push i post-check automàtic
+- si els logs de deploy creen commits nous a `main`, els sincronitza també a `origin/main`
 
 Resultat esperat:
 - `prod` actualitzada
+- `main` alineada amb `origin/main`
 - post-check automàtic confirmat o marcat com `PENDENT`
 - registre escrit a `docs/DEPLOY-LOG.md`
 

@@ -33,6 +33,7 @@ INCIDENT_RECORDED=false
 DEPLOY_SUCCESS=0
 DEPLOY_CONTENT_SHA=""
 DEPLOY_PROD_BEFORE_SHA=""
+MAIN_REMOTE_SYNC_STATUS="NO CAL"
 POSTDEPLOY_URLS_READY=false
 RESOLVED_DEPLOY_BASE_URL=""
 RESOLVED_SMOKE_PUBLIC_URL=""
@@ -1227,6 +1228,39 @@ commit_deploy_logs_if_needed() {
   echo ""
 }
 
+sync_main_after_deploy_logs() {
+  CURRENT_PHASE="Sincronitzar main remot"
+  echo "[9c/9] Sincronitzant main amb origin/main..."
+  echo ""
+
+  git checkout main --quiet
+
+  local local_main_sha remote_main_sha
+  local_main_sha=$(git rev-parse HEAD)
+  remote_main_sha=$(git rev-parse refs/remotes/origin/main 2>/dev/null || true)
+
+  if [ -n "$remote_main_sha" ] && [ "$local_main_sha" = "$remote_main_sha" ]; then
+    MAIN_REMOTE_SYNC_STATUS="SI"
+    echo "  main ja estava alineada amb origin/main."
+    echo ""
+    return
+  fi
+
+  if git push origin main; then
+    MAIN_REMOTE_SYNC_STATUS="SI"
+    MAIN_SHA=$(git rev-parse --short HEAD)
+    echo "  origin/main actualitzada."
+    echo ""
+    return
+  fi
+
+  MAIN_REMOTE_SYNC_STATUS="NO"
+  DEPLOY_RESULT="PENDENT"
+  DEPLOY_BLOCK_REASON="Prod publicada però origin/main no s'ha sincronitzat amb els logs de deploy."
+  echo "  PENDENT: prod publicada, pero origin/main no s'ha pogut sincronitzar."
+  echo ""
+}
+
 # ============================================================
 # MAIN
 # ============================================================
@@ -1257,8 +1291,10 @@ main() {
   prepare_rollback_plan
   append_deploy_log          # Pas 9
   commit_deploy_logs_if_needed
+  sync_main_after_deploy_logs
   DEPLOY_SUCCESS=1
 
+  echo "  main alineada amb origin/main: $MAIN_REMOTE_SYNC_STATUS"
   echo "  DEPLOY COMPLETAT ($DEPLOY_RESULT)."
   echo ""
 }
