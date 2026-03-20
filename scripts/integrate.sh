@@ -15,7 +15,7 @@ ORIGIN_MAIN_STATUS="NO"
 MAIN_CLEAN_STATUS="NO"
 declare -a INTEGRATED_BRANCHES=()
 declare -a CONFLICT_ITEMS=()
-declare -a PENDING_BRANCHES=()
+declare -a READY_BRANCHES=()
 declare -a SELECTED_BRANCHES=()
 VALIDATION_WORKTREE=""
 CONTROL_ORIGIN_MAIN_SHA=""
@@ -96,7 +96,7 @@ refresh_control_repo_flags() {
 print_summary() {
   local pending_count integrated_count
   refresh_control_repo_flags
-  pending_count="$(count_remaining_pending_branches)"
+  pending_count="$(count_remaining_ready_branches)"
   integrated_count="$(array_length INTEGRATED_BRANCHES)"
 
   say ""
@@ -213,36 +213,38 @@ count_remaining_pending_branches() {
       continue
     fi
     remaining_count=$((remaining_count + 1))
-  done < <(array_values PENDING_BRANCHES)
+  done < <(array_values READY_BRANCHES)
 
   printf '%s' "$remaining_count"
 }
 
-discover_pending_branches() {
-  local raw branch remote_ref
-
-  while IFS= read -r raw; do
-    branch="$(trim_branch_line "$raw")"
-    [ -z "$branch" ] && continue
-
-    remote_ref="origin/$branch"
-    if ! git show-ref --verify --quiet "refs/remotes/$remote_ref"; then
-      continue
-    fi
-
-    if git merge-base --is-ancestor "$remote_ref" main >/dev/null 2>&1; then
-      continue
-    fi
-
-    PENDING_BRANCHES+=("$branch")
-  done < <(git branch --list "codex/*")
+count_remaining_ready_branches() {
+  count_remaining_pending_branches
 }
 
-show_pending_branches() {
+discover_ready_branches() {
+  eval "$(bash "$PROJECT_DIR/scripts/worktree.sh" report --format shell)"
+
+  local normalized branch
+  normalized="${WORKTREE_READY_BRANCHES:-}"
+  if [ -z "$normalized" ]; then
+    return 0
+  fi
+
+  IFS=',' read -r -a READY_BRANCHES <<< "$normalized"
+  local kept=()
+  for branch in "${READY_BRANCHES[@]}"; do
+    [ -z "$branch" ] && continue
+    kept+=("$branch")
+  done
+  READY_BRANCHES=("${kept[@]}")
+}
+
+show_ready_branches() {
   local branch description index
 
-  say "BRANQUES DISPONIBLES"
-  if [ "$(array_length PENDING_BRANCHES)" -eq 0 ]; then
+  say "BRANQUES LLESTES PER INTEGRAR"
+  if [ "$(array_length READY_BRANCHES)" -eq 0 ]; then
     say "- cap"
     return
   fi
@@ -253,73 +255,27 @@ show_pending_branches() {
     description="$(branch_description "$branch")"
     say "- [$index] $branch -> $description"
     index=$((index + 1))
-  done < <(array_values PENDING_BRANCHES)
+  done < <(array_values READY_BRANCHES)
 
   say ""
   say "RECOMANACIÓ"
-  say "- integra només un bloc coherent"
-  say "- evita barrejar canvis no relacionats"
+  say "- el sistema només admet una branca llesta per integrar cada vegada"
 }
 
-select_branches_to_integrate() {
-  local selection trimmed branch index token normalized_tokens selected_branch
+select_branch_to_integrate() {
+  local branch
 
-  if [ "$(array_length PENDING_BRANCHES)" -eq 0 ]; then
+  if [ "$(array_length READY_BRANCHES)" -eq 0 ]; then
     return 0
   fi
 
-  say ""
-  say "SELECCIÓ"
-  say "- mode selectiu (per defecte): escriu un o més números o noms de branca separats per espais o comes"
-  say "- mode totes: escriu exactament 'all'"
-  printf '> '
-  IFS= read -r selection || selection=""
-  trimmed="$(printf '%s' "$selection" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
-
-  if [ -z "$trimmed" ]; then
-    fail_with_message "Integració cancel·lada: no s'ha seleccionat cap branca."
+  if [ "$(array_length READY_BRANCHES)" -gt 1 ]; then
+    fail_with_message "Hi ha més d'una branca llesta per integrar. Redueix-ho a una sola veritat de treball."
   fi
 
-  if [ "$trimmed" = "all" ]; then
-    while IFS= read -r branch; do
-      [ -z "$branch" ] && continue
-      SELECTED_BRANCHES+=("$branch")
-    done < <(array_values PENDING_BRANCHES)
-    return 0
-  fi
-
-  normalized_tokens="$(printf '%s' "$trimmed" | tr ',' ' ')"
-  for token in $normalized_tokens; do
-    [ -z "$token" ] && continue
-    selected_branch=""
-
-    if [[ "$token" =~ ^[0-9]+$ ]]; then
-      index=$((token - 1))
-      if [ "$index" -lt 0 ] || [ "$index" -ge "$(array_length PENDING_BRANCHES)" ]; then
-        fail_with_message "Selecció no vàlida: $token"
-      fi
-      selected_branch="$(array_values PENDING_BRANCHES | sed -n "$((index + 1))p")"
-    else
-      while IFS= read -r branch; do
-        [ -z "$branch" ] && continue
-        if [ "$branch" = "$token" ]; then
-          selected_branch="$branch"
-          break
-        fi
-      done < <(array_values PENDING_BRANCHES)
-      if [ -z "$selected_branch" ]; then
-        fail_with_message "Selecció no vàlida: $token"
-      fi
-    fi
-
-    if [ "$(array_length SELECTED_BRANCHES)" -eq 0 ] || ! array_contains "$selected_branch" $(array_values SELECTED_BRANCHES); then
-      SELECTED_BRANCHES+=("$selected_branch")
-    fi
-  done
-
-  if [ "$(array_length SELECTED_BRANCHES)" -eq 0 ]; then
-    fail_with_message "Integració cancel·lada: no s'ha seleccionat cap branca."
-  fi
+  branch="$(array_values READY_BRANCHES | sed -n '1p')"
+  [ -n "$branch" ] || fail_with_message "No s'ha pogut determinar la branca llesta per integrar."
+  SELECTED_BRANCHES=("$branch")
 }
 
 prepare_validation_runtime() {
@@ -470,7 +426,7 @@ push_validated_head_to_main() {
 }
 
 main() {
-  local status_output initial_cwd
+  local status_output initial_cwd gate_message
 
   initial_cwd="$(pwd -P)"
 
@@ -497,15 +453,20 @@ main() {
   git pull --ff-only origin main >/dev/null 2>&1
   CONTROL_ORIGIN_MAIN_SHA="$(git rev-parse refs/remotes/origin/main 2>/dev/null || true)"
 
-  discover_pending_branches
-  show_pending_branches
+  gate_message="$(bash "$PROJECT_DIR/scripts/status.sh" gate integra 2>&1 || true)"
+  if [ -n "$gate_message" ]; then
+    fail_with_message "$gate_message"
+  fi
 
-  if [ "$(array_length PENDING_BRANCHES)" -eq 0 ]; then
+  discover_ready_branches
+  show_ready_branches
+
+  if [ "$(array_length READY_BRANCHES)" -eq 0 ]; then
     print_summary
     exit 0
   fi
 
-  select_branches_to_integrate
+  select_branch_to_integrate
 
   if ! validate_selected_branches; then
     say ""

@@ -59,7 +59,17 @@ Aquesta classificació determina els requisits de validació (secció 4).
    ```
 4. `npm run acabat` des del worktree: checks + commit + push de la branca `codex/*`
 5. `npm run integra` des del repositori de control: prova de merge en worktree temporal + validacions + actualització d'`origin/main` + sincronització de `main`
-6. Un cop integrat, si el worktree ja no fa falta: `npm run worktree:close`
+6. El tancament del worktree deixa de ser un pas mental del flux: `worktree:gc` es pot executar automàticament i `publica` només accepta estat sense residus
+
+### Estats operatius admesos
+
+El sistema només admet 3 veritats operatives:
+
+1. `WORK`: una sola branca de feina (`codex/*` o, excepcionalment, `hotfix/*`)
+2. `MAIN`: integrat i alineat amb `origin/main`
+3. `PROD`: publicat i alineat amb `main`
+
+Tot el que no encaixa aquí es considera `BLOQUEJAT`, no “estat vàlid a interpretar”.
 
 ---
 
@@ -129,6 +139,7 @@ npm run implementa # equivalent a inicia
 npm run acabat    # tanca tasca des del worktree (checks + commit + push)
 npm run integra   # integra a main des del repositori de control
 npm run publica   # publica main -> prod (només des del repositori de control)
+npm run status    # font única d'estat operatiu
 npm run worktree:list
 npm run worktree:close
 npm run worktree:gc
@@ -152,12 +163,13 @@ Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOC
 
 `npm run integra` (`scripts/integrate.sh`) fa aquests passos:
 1. Verifica que el repositori de control és `main` i està net
-2. Detecta les branques `codex/*` pendents i deixa seleccionar un bloc coherent
+2. Detecta l'única branca de worktree realment llesta per integrar
 3. Fa una **prova de merge en worktree temporal**, sense tocar `main`
 4. Regenera `.next/types` al worktree temporal i executa `typecheck` + `test:node`
 5. Si tot és correcte, actualitza `origin/main` amb el cap validat
 6. Sincronitza `main` local amb `origin/main`
 7. Mostra un resum inequívoc de què ha entrat, si `main` és neta i si queda pendent decidir deploy
+8. Si hi ha més d'una veritat de treball, worktrees residuals o feina sense pujar, bloqueja abans de tocar `main`
 
 `npm run publica` executa `scripts/deploy.sh`, que fa:
 1. Preflight git al **repositori de control** (branca=main, working tree net, pull ff-only)
@@ -175,6 +187,7 @@ Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOC
 13. Registre a `docs/DEPLOY-LOG.md` + incidències a `docs/DEPLOY-INCIDENTS.md` si hi ha bloqueig
 14. Sincronització final de `main` amb `origin/main` si els logs han creat commits nous
 15. Si només falla la propagació immediata del SHA remot però la resta de comprovacions passen, el resultat final es considera `OK`
+16. Si hi ha worktrees actius o residuals, o si `prod` conté commits fora de `main`, bloqueja abans de publicar
 
 ### Autorització
 
@@ -218,6 +231,8 @@ Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOC
 - Si no hi ha URLs de smoke definides, el sistema prova automàticament amb `DEPLOY_BASE_URL` o amb la URL publicada detectada a `firebase.json`.
 - Prova prèvia de merge a `integra` en worktree temporal per detectar solapaments abans de tocar `main`.
 - `worktree:gc` neteja automàticament worktrees integrats nets i branques `codex/*` fusionades que ja no tenen worktree.
+- límit operatiu: màxim 2 worktrees de tasca actius alhora (`codex/*` + `hotfix/*` si cal)
+- `npm run status` és la font única d'estat global; si diu `BLOQUEJAT`, ni `integra` ni `publica` poden continuar
 - `check-doc-sync` en mode flexible per defecte (warnings). Si cal bloqueig estricte de documentació: `DOC_SYNC_STRICT=1`.
 
 ### Missatge de commit

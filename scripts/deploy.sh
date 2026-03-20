@@ -292,8 +292,17 @@ LOW_RISK_PATTERNS=(
 # ============================================================
 preflight_git_checks() {
   CURRENT_PHASE="Preflight git"
+  local gate_message=""
   echo ""
   echo "[1/9] Comprovacions previes de git..."
+
+  bash "$SCRIPT_DIR/worktree.sh" gc --quiet >/dev/null 2>&1 || true
+  gate_message="$(bash "$SCRIPT_DIR/status.sh" gate publica 2>&1 || true)"
+  if [ -n "$gate_message" ]; then
+    DEPLOY_BLOCK_REASON="$gate_message"
+    echo "ERROR: $DEPLOY_BLOCK_REASON"
+    exit 1
+  fi
 
   # 1a. Branca actual ha de ser main
   local branch
@@ -344,6 +353,13 @@ preflight_git_checks() {
 
   MAIN_SHA=$(git rev-parse --short HEAD)
   PROD_SHA=$(git rev-parse --short prod)
+
+  if ! git merge-base --is-ancestor refs/remotes/origin/prod refs/heads/main >/dev/null 2>&1; then
+    DEPLOY_BLOCK_REASON="Prod conté commits fora de main."
+    echo "ERROR: prod conté commits fora de main."
+    echo "  El model main -> prod ha quedat desalineat i cal resoldre-ho abans de publicar."
+    exit 1
+  fi
 
   echo "  Comprovacions OK."
   echo ""

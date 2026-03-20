@@ -227,7 +227,6 @@ emit_acabat_completion() {
   say "SEGÜENT PAS RECOMANAT"
   say "- aquesta feina està llesta però NO integrada a main"
   say "- per integrar: executar npm run integra"
-  say "- després d'integrar, pots tancar el worktree amb npm run worktree:close $branch"
 }
 
 current_branch() {
@@ -590,6 +589,8 @@ run_inicia() {
 
   say "$STATUS_NO"
 
+  bash "$SCRIPT_DIR/worktree.sh" gc --quiet >/dev/null 2>&1 || true
+
   if [ -n "$area_slug" ] && [ "$area_slug" != "general" ]; then
     busy_branch="$(find_active_branch_for_area "$area_slug")"
     if [ -n "$busy_branch" ]; then
@@ -684,8 +685,6 @@ run_acabat() {
 }
 
 run_publica() {
-  local final_status
-
   if ! is_control_repo; then
     say "$STATUS_NO"
     say "La publicació només es pot executar des del repositori de control: $CONTROL_REPO_DIR"
@@ -699,19 +698,13 @@ run_publica() {
   fi
 
   guard_no_prohibited_staged_paths
-  require_clean_tree_for_publica
-  ensure_control_repo_for_deploy_or_merge
-
-  if ! git pull --ff-only origin main; then
+  if ! bash "$SCRIPT_DIR/status.sh" gate publica; then
     say "$STATUS_NO"
-    say "No s'ha pogut actualitzar main abans de publicar."
     exit 1
   fi
 
   if ! bash "$SCRIPT_DIR/deploy.sh"; then
-    final_status="$(compute_repo_status)"
-    say "$final_status"
-    emit_guidance_for_status "$final_status"
+    bash "$SCRIPT_DIR/status.sh"
     exit 1
   fi
 
@@ -720,22 +713,7 @@ run_publica() {
 }
 
 run_estat() {
-  local final_status changed_files risk
-  final_status="$(compute_repo_status)"
-  say "$final_status"
-
-  if has_local_changes; then
-    changed_files="$(collect_changed_files)"
-    risk="$(classify_risk "$changed_files")"
-    if emit_pre_acabat_summary "$changed_files" "$risk"; then
-      emit_next_step_block "Si aquest resum és correcte, pots dir: Acabat"
-    else
-      emit_next_step_block "Continua implementació fins que l'impacte sigui clar."
-    fi
-    return
-  fi
-
-  emit_guidance_for_status "$final_status"
+  bash "$SCRIPT_DIR/status.sh"
 }
 
 main() {

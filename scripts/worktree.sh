@@ -15,7 +15,7 @@ fi
 CONTROL_REPO_DIR="${WORKFLOW_CONTROL_REPO_DIR:-$(cd "$GIT_COMMON_DIR/.." && pwd)}"
 DEFAULT_WORKTREE_ROOT="${WORKTREE_ROOT_DIR:-$(cd "$CONTROL_REPO_DIR/.." && pwd)/summa-social-worktrees}"
 TTL_DAYS_DEFAULT=14
-MAX_ACTIVE_WORKTREES=12
+MAX_ACTIVE_WORKTREES=2
 
 say() {
   printf '%s\n' "$1"
@@ -308,7 +308,43 @@ worktree_records() {
 
 is_task_branch_name() {
   local branch="$1"
-  [[ "$branch" == codex/* ]]
+  [[ "$branch" == codex/* || "$branch" == hotfix/* ]]
+}
+
+join_by() {
+  local delimiter="$1"
+  shift || true
+  local first=true
+  local item
+  for item in "$@"; do
+    if [ "$first" = true ]; then
+      printf '%s' "$item"
+      first=false
+    else
+      printf '%s%s' "$delimiter" "$item"
+    fi
+  done
+}
+
+join_array_var() {
+  local name="$1"
+  local had_nounset=0
+  local joined=""
+
+  case $- in
+    *u*)
+      had_nounset=1
+      set +u
+      ;;
+  esac
+
+  eval "joined=\$(join_by ',' \"\${$name[@]}\")"
+
+  if [ "$had_nounset" -eq 1 ]; then
+    set -u
+  fi
+
+  printf '%s' "$joined"
 }
 
 unpushed_commit_count_for_repo() {
@@ -509,6 +545,142 @@ print_worktree_detail() {
   say ""
 }
 
+report_cmd() {
+  local format="text"
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --format)
+        format="${2:-}"
+        shift 2
+        ;;
+      *)
+        say "Paràmetre desconegut: $1"
+        return 1
+        ;;
+    esac
+  done
+
+  if [ "$format" != "text" ] && [ "$format" != "shell" ]; then
+    say "Format no suportat: $format"
+    return 1
+  fi
+
+  local control_abs wt_path wt_branch wt_detached wt_prunable wt_abs
+  local local_changes_label unpushed_count integrated_to_main
+  local active_count residue_count dirty_count unpushed_total ready_count integrated_open_count
+  local active_codex_count active_hotfix_count
+  local active_branch="" active_branch_count=0
+  local -a active_branches=() ready_branches=() dirty_branches=() unpushed_branches=() residue_items=()
+
+  control_abs="$(cd "$CONTROL_REPO_DIR" && pwd -P)"
+  active_count=0
+  residue_count=0
+  dirty_count=0
+  unpushed_total=0
+  ready_count=0
+  integrated_open_count=0
+  active_codex_count=0
+  active_hotfix_count=0
+
+  while IFS=$'\t' read -r wt_path wt_branch wt_detached wt_prunable; do
+    wt_abs="$(safe_abs_path_if_exists "$wt_path")"
+
+    if [ "$wt_abs" = "$control_abs" ]; then
+      continue
+    fi
+
+    if [ -n "$wt_prunable" ] || [ ! -d "$wt_path" ]; then
+      residue_count=$((residue_count + 1))
+      residue_items+=("$wt_path")
+      continue
+    fi
+
+    if [ "$wt_detached" = "yes" ]; then
+      residue_count=$((residue_count + 1))
+      residue_items+=("$wt_path")
+      continue
+    fi
+
+    if ! is_task_branch_name "$wt_branch"; then
+      residue_count=$((residue_count + 1))
+      residue_items+=("$wt_path")
+      continue
+    fi
+
+    local_changes_label="$(worktree_local_changes_label "$wt_abs")"
+    unpushed_count="$(unpushed_commit_count_for_repo "$wt_abs" "$wt_branch")"
+    integrated_to_main=false
+    if is_branch_integrated_to_main "$wt_branch"; then
+      integrated_to_main=true
+    fi
+
+    if [ "$local_changes_label" = "SI" ] || [ "$unpushed_count" -gt 0 ] 2>/dev/null || [ "$integrated_to_main" != true ]; then
+      active_count=$((active_count + 1))
+      active_branches+=("$wt_branch")
+      if [[ "$wt_branch" == codex/* ]]; then
+        active_codex_count=$((active_codex_count + 1))
+      elif [[ "$wt_branch" == hotfix/* ]]; then
+        active_hotfix_count=$((active_hotfix_count + 1))
+      fi
+
+      if [ "$local_changes_label" = "SI" ]; then
+        dirty_count=$((dirty_count + 1))
+        dirty_branches+=("$wt_branch")
+      fi
+
+      if [ "$unpushed_count" -gt 0 ] 2>/dev/null; then
+        unpushed_total=$((unpushed_total + 1))
+        unpushed_branches+=("$wt_branch")
+      fi
+
+      if [ "$local_changes_label" = "NO" ] && [ "$unpushed_count" -eq 0 ] 2>/dev/null; then
+        ready_count=$((ready_count + 1))
+        ready_branches+=("$wt_branch")
+      fi
+      continue
+    fi
+
+    integrated_open_count=$((integrated_open_count + 1))
+    residue_count=$((residue_count + 1))
+    residue_items+=("$wt_branch")
+  done < <(worktree_records)
+
+  if [ "$active_count" -eq 1 ] && [ "${#active_branches[@]}" -eq 1 ]; then
+    active_branch="${active_branches[0]}"
+  elif [ "$active_count" -eq 0 ]; then
+    active_branch="-"
+  else
+    active_branch="MULTIPLE"
+  fi
+
+  if [ "$format" = "shell" ]; then
+    printf 'WORKTREE_ACTIVE_COUNT=%q\n' "$active_count"
+    printf 'WORKTREE_RESIDUE_COUNT=%q\n' "$residue_count"
+    printf 'WORKTREE_DIRTY_COUNT=%q\n' "$dirty_count"
+    printf 'WORKTREE_UNPUSHED_COUNT=%q\n' "$unpushed_total"
+    printf 'WORKTREE_READY_COUNT=%q\n' "$ready_count"
+    printf 'WORKTREE_ACTIVE_CODEX_COUNT=%q\n' "$active_codex_count"
+    printf 'WORKTREE_ACTIVE_HOTFIX_COUNT=%q\n' "$active_hotfix_count"
+    printf 'WORKTREE_INTEGRATED_OPEN_COUNT=%q\n' "$integrated_open_count"
+    printf 'WORKTREE_ACTIVE_BRANCH=%q\n' "$active_branch"
+    printf 'WORKTREE_ACTIVE_BRANCHES=%q\n' "$(join_array_var active_branches)"
+    printf 'WORKTREE_READY_BRANCHES=%q\n' "$(join_array_var ready_branches)"
+    printf 'WORKTREE_DIRTY_BRANCHES=%q\n' "$(join_array_var dirty_branches)"
+    printf 'WORKTREE_UNPUSHED_BRANCHES=%q\n' "$(join_array_var unpushed_branches)"
+    printf 'WORKTREE_RESIDUE_ITEMS=%q\n' "$(join_array_var residue_items)"
+    return 0
+  fi
+
+  say "WORKTREE REPORT"
+  say "- actius: $active_count"
+  say "- residus: $residue_count"
+  say "- dirty: $dirty_count"
+  say "- unpushed: $unpushed_total"
+  say "- ready: $ready_count"
+  say "- branca activa: $active_branch"
+}
+
 create_cmd() {
   local branch=""
 
@@ -570,15 +742,17 @@ print_control_repo_status() {
 }
 
 list_cmd() {
-  local active_count
+  local active_count residue_count
   local closable_count review_count active_items_count
-  active_count="$(active_worktree_count)"
+  eval "$(report_cmd --format shell)"
+  active_count="${WORKTREE_ACTIVE_COUNT:-0}"
+  residue_count="${WORKTREE_RESIDUE_COUNT:-0}"
   closable_count=0
   review_count=0
   active_items_count=0
 
   say "ROOT TASQUES: $DEFAULT_WORKTREE_ROOT"
-  say "WORKTREES ACTIUS: $active_count/$MAX_ACTIVE_WORKTREES"
+  say "WORKTREES DE TASCA: $active_count actius, $residue_count residus (límit $MAX_ACTIVE_WORKTREES actius)"
   say ""
   print_control_repo_status
   say "WORKTREES DE TASCA"
@@ -620,7 +794,9 @@ list_cmd() {
   say "- actius: $active_items_count"
   say ""
   say "SEGÜENT PAS RECOMANAT"
-  if [ "$closable_count" -gt 0 ]; then
+  if [ "$residue_count" -gt 0 ] || [ "$active_count" -gt "$MAX_ACTIVE_WORKTREES" ] 2>/dev/null; then
+    say "- redueix el parc fins a un màxim de $MAX_ACTIVE_WORKTREES worktrees actius i 0 residus abans d'integrar o publicar"
+  elif [ "$closable_count" -gt 0 ]; then
     say "- tanca els worktrees integrats amb 'npm run worktree:close <branca>' o executa 'npm run worktree:gc'"
   else
     say "- si tot està al dia, continua només als worktrees marcats com ACTIU"
@@ -761,12 +937,17 @@ close_cmd() {
 
 gc_cmd() {
   local ttl_days="$TTL_DAYS_DEFAULT"
+  local quiet=false
 
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --ttl-days)
         ttl_days="${2:-}"
         shift 2
+        ;;
+      --quiet)
+        quiet=true
+        shift
         ;;
       *)
         say "Paràmetre desconegut: $1"
@@ -864,6 +1045,10 @@ gc_cmd() {
     fi
   done < <(git_control for-each-ref --format='%(refname:short)' refs/heads/codex)
 
+  if [ "$quiet" = true ]; then
+    return 0
+  fi
+
   say "RESUM GC WORKTREES"
   say "- TTL de revisió: ${ttl_days} dies"
   say ""
@@ -887,11 +1072,12 @@ gc_cmd() {
 }
 
 usage() {
-  say "Us: bash scripts/worktree.sh [create|list|close|gc]"
-  say "  create [--branch codex/xxx]"
+  say "Us: bash scripts/worktree.sh [create|list|close|gc|report]"
+  say "  create [--branch codex/xxx|hotfix/xxx]"
   say "  list"
   say "  close [--confirm-discard] [<branch|path>]"
-  say "  gc [--ttl-days 14]"
+  say "  gc [--ttl-days 14] [--quiet]"
+  say "  report [--format text|shell]"
 }
 
 main() {
@@ -910,6 +1096,9 @@ main() {
       ;;
     gc)
       gc_cmd "$@"
+      ;;
+    report)
+      report_cmd "$@"
       ;;
     *)
       usage

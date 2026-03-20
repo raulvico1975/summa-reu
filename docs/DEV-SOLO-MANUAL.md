@@ -150,16 +150,22 @@ El hook Husky (`.husky/pre-commit`) bloqueja `git commit` si estàs a la branca 
 3. Implementar dins del worktree nou
 4. Tancar amb `npm run acabat` des del worktree (checks + commit/push)
 5. Integrar amb `npm run integra` des del repositori de control
-6. Si el worktree ja no cal: `npm run worktree:close`
+6. El worktree integrat no és un estat operatiu nou: s'ha de tancar o netejar perquè `status`, `integra` i `publica` només treballen sense residus
 
 **Reserva d'àrea (opcional, recomanada):**
 - Pots iniciar amb àrea per evitar solapaments: `npm run inicia -- remeses` (també vàlid amb `implementa`).
 - Si ja hi ha una tasca activa de la mateixa àrea, el sistema bloqueja l'inici (`BLOCKED_SAFE`).
 
 **Operacions de manteniment:**
+- Estat global únic: `npm run status`
 - Llistar worktrees: `npm run worktree:list`
 - Tancar worktree actual o indicat: `npm run worktree:close`
 - Neteja automàtica segura (TTL 14 dies + integrats nets): `npm run worktree:gc`
+
+**Regla nova de simplicitat:**
+- només hi ha 3 estats mentals vàlids: `WORK`, `MAIN`, `PROD`
+- si `npm run status` diu `BLOQUEJAT`, no interpretis res: primer resol el bloqueig
+- màxim operatiu: `main` + 1 `codex/*` actiu + 1 `hotfix/*` si cal
 
 ### Bloqueig d’artefactes
 
