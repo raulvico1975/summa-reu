@@ -66,6 +66,10 @@ import {
   canSplitStripeRemittance as canSplitStripeRemittanceCandidate,
   isStripeLikeTransaction,
 } from '@/lib/transactions/stripe-detection';
+import {
+  formatStripeImputationStatus,
+  type StripeImputationSummary,
+} from '@/lib/stripe/activeStripeImputation';
 
 // =============================================================================
 // HELPERS
@@ -89,6 +93,7 @@ interface TransactionRowProps {
   transaction: Transaction;
   contactName: string | null;
   contactType: ContactType | null;
+  stripeImputationSummary?: StripeImputationSummary | null;
   projectName: string | null;
   relevantCategories: Category[];
   isLegacyCategory?: boolean;
@@ -120,6 +125,7 @@ interface TransactionRowProps {
   onSplitRemittance: (tx: Transaction) => void;
   onSplitAmount: (tx: Transaction) => void;
   onSplitStripeRemittance?: (tx: Transaction) => void;
+  onOpenStripeImputationDetail?: (tx: Transaction) => void;
   onOpenSplitDetail?: (txId: string) => void;
   onUndoSplit?: (txId: string) => void;
   onViewRemittanceDetail: (txId: string, parentTx?: Transaction) => void;
@@ -180,6 +186,9 @@ interface TransactionRowProps {
     undoRemittance?: string;
     splitProcessedLabel?: string;
     undoSplit?: string;
+    stripeImputed?: string;
+    viewStripeImputationDetail?: string;
+    undoStripeImputation?: string;
     reconcileSepa?: string;
     moreOptionsAriaLabel?: string;
     legacyCategory?: string;
@@ -201,6 +210,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   transaction: tx,
   contactName,
   projectName,
+  stripeImputationSummary,
   relevantCategories,
   isLegacyCategory,
   categoryTranslations,
@@ -227,6 +237,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   onSplitRemittance,
   onSplitAmount,
   onSplitStripeRemittance,
+  onOpenStripeImputationDetail,
   onOpenSplitDetail,
   onUndoSplit,
   onViewRemittanceDetail,
@@ -281,7 +292,8 @@ export const TransactionRow = React.memo(function TransactionRow({
   // Detecta transaccions via Stripe (donations, fees)
   const isFromStripe = tx.source === 'stripe';
   const showStripeBadge = isStripeLikeTransaction(tx);
-  const hasStripeChildren = !!tx.stripeTransferId;
+  const hasStripeImputation = !!stripeImputationSummary;
+  const hasStripeChildren = !!tx.stripeTransferId || hasStripeImputation;
   const canSplitAmount =
     tx.amount > 0 &&
     !tx.isRemittance &&
@@ -292,6 +304,7 @@ export const TransactionRow = React.memo(function TransactionRow({
     !showStripeBadge &&
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
+  const stripeStatusText = stripeImputationSummary ? formatStripeImputationStatus(stripeImputationSummary) : null;
 
   // Stable callbacks using useCallback to prevent child re-renders
   const handleSelectContact = React.useCallback((contactId: string | null) => {
@@ -409,6 +422,17 @@ export const TransactionRow = React.memo(function TransactionRow({
       onSplitStripeRemittance(tx);
     }, 100);
   }, [tx, onSplitStripeRemittance]);
+
+  const handleOpenStripeDetail = React.useCallback(() => {
+    if (!onOpenStripeImputationDetail) return;
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onOpenStripeImputationDetail(tx);
+    }, 100);
+  }, [onOpenStripeImputationDetail, tx]);
 
   const handleViewRemittanceDetail = React.useCallback(() => {
     onViewRemittanceDetail(tx.id, tx);
@@ -638,7 +662,16 @@ export const TransactionRow = React.memo(function TransactionRow({
             <p className={`text-[13px] truncate max-w-[320px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
               {tx.description}
             </p>
-            {showStripeBadge && (
+            {hasStripeImputation && stripeStatusText && onOpenStripeImputationDetail && (
+              <Badge
+                variant="outline"
+                className="cursor-pointer border-blue-300 bg-blue-50 text-[10px] text-blue-700 hover:bg-blue-100"
+                onClick={handleOpenStripeDetail}
+              >
+                {t.stripeImputed || 'Stripe imputat'}
+              </Badge>
+            )}
+            {showStripeBadge && !hasStripeImputation && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
                 Stripe
               </Badge>
@@ -654,7 +687,15 @@ export const TransactionRow = React.memo(function TransactionRow({
           <div className="lg:hidden mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
             <span className="truncate max-w-[120px]">{getCategoryDisplayName(tx.category) || 'Sense categoria'}{isLegacyCategory && <span className="text-amber-600 ml-0.5" title={t.legacyCategory ?? 'Cal recategoritzar'}>⚠</span>}</span>
             <span className="text-muted-foreground/50">·</span>
-            {contactName ? (
+            {hasStripeImputation && stripeStatusText ? (
+              <button
+                type="button"
+                onClick={handleOpenStripeDetail}
+                className="max-w-[220px] truncate text-left text-blue-700 hover:text-blue-800"
+              >
+                {stripeStatusText}
+              </button>
+            ) : contactName ? (
               <SummaTooltip content={contactName}>
                 <span className="max-w-[180px]">
                   {middleEllipsis(contactName)}
@@ -727,6 +768,19 @@ export const TransactionRow = React.memo(function TransactionRow({
         ) : isProcessedDonationRemittance ? (
           // Cas 2: Remesa de donacions processada - NO té contacte, mostrar "—"
           <span className="text-muted-foreground text-sm">{t.remittanceNotApplicable}</span>
+        ) : hasStripeImputation && stripeStatusText ? (
+          <button
+            type="button"
+            onClick={handleOpenStripeDetail}
+            className="flex max-w-full flex-col items-start text-left"
+          >
+            <Badge variant="outline" className="border-blue-300 bg-blue-50 text-xs text-blue-700">
+              {t.stripeImputed || 'Stripe imputat'}
+            </Badge>
+            <span className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground">
+              {stripeStatusText}
+            </span>
+          </button>
         ) : isReturn && !tx.contactId ? (
           // Cas 3: Devolució individual pendent (NO és pare de remesa)
           <div className="flex items-center gap-1">
@@ -960,7 +1014,13 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.deleteDocument}
               </DropdownMenuItem>
             )}
-            {canSplitStripeRemittanceCandidate(tx) && onSplitStripeRemittance && (
+            {hasStripeImputation && onOpenStripeImputationDetail && (
+              <DropdownMenuItem onClick={handleOpenStripeDetail}>
+                <Eye className="mr-2 h-4 w-4 text-blue-600" />
+                {t.viewStripeImputationDetail || 'Veure detall Stripe'}
+              </DropdownMenuItem>
+            )}
+            {!hasStripeImputation && canSplitStripeRemittanceCandidate(tx) && onSplitStripeRemittance && (
               <DropdownMenuItem onClick={handleSplitStripeRemittance}>
                 <GitMerge className="mr-2 h-4 w-4 text-purple-600" />
                 {'Imputar Stripe'}
@@ -994,7 +1054,9 @@ export const TransactionRow = React.memo(function TransactionRow({
             {(tx.isRemittance || hasStripeChildren) && onUndoRemittance && (
               <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
                 <Undo2 className="mr-2 h-4 w-4" />
-                {hasStripeChildren ? 'Desfer imputacio Stripe' : (t.undoRemittance || 'Desfer remesa')}
+                {hasStripeImputation
+                  ? (t.undoStripeImputation || 'Desfer imputació Stripe')
+                  : (t.undoRemittance || 'Desfer remesa')}
               </DropdownMenuItem>
             )}
             {canShowUndoSplitAction(tx) && onUndoSplit && (

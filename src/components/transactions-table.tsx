@@ -64,6 +64,7 @@ import { trackUX } from '@/lib/ux/trackUX';
 import { useToast } from '@/hooks/use-toast';
 import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
 import { StripeImputationModal } from '@/components/stripe/StripeImputationModal';
+import { StripeImputationDetailDialog } from '@/components/stripe/StripeImputationDetailDialog';
 import { SplitAmountDialog } from '@/components/transactions/split-amount-dialog';
 import { SplitDetailDialog } from '@/components/transactions/split-detail-dialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -121,6 +122,11 @@ import {
   buildContactInlineUpdate,
   matchesInlineReactiveFilter,
 } from '@/lib/transactions/inline-update-state';
+import type { Donation } from '@/lib/types/donations';
+import {
+  summarizeActiveStripeImputationsByParent,
+  type StripeImputationSummary,
+} from '@/lib/stripe/activeStripeImputation';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -348,6 +354,17 @@ export function TransactionsTable({
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'contacts') : null,
     [firestore, organizationId]
   );
+  const stripeDonationsQuery = useMemoFirebase(
+    () => (
+      organizationId
+        ? query(
+            collection(firestore, 'organizations', organizationId, 'donations'),
+            where('source', '==', 'stripe')
+          )
+        : null
+    ),
+    [firestore, organizationId]
+  );
   const projectsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'projects') : null,
     [firestore, organizationId]
@@ -355,6 +372,7 @@ export function TransactionsTable({
   
   const { data: availableCategories } = useCollection<Category>(categoriesCollection);
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
+  const { data: stripeDonations } = useCollection<Donation>(stripeDonationsQuery, [organizationId]);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
 
   const missionTransferCategoryId = React.useMemo(
@@ -562,6 +580,7 @@ export function TransactionsTable({
 
   // Modal imputacio Stripe
   const [isStripeImputationOpen, setIsStripeImputationOpen] = React.useState(false);
+  const [isStripeImputationDetailOpen, setIsStripeImputationDetailOpen] = React.useState(false);
 
   // Modal SEPA reconcile
   const [sepaReconcileTx, setSepaReconcileTx] = React.useState<Transaction | null>(null);
@@ -570,6 +589,7 @@ export function TransactionsTable({
   // Cache de remeses pre-banc detectades per transacció (txId -> remittance)
   const [detectedSepaRemittances, setDetectedSepaRemittances] = React.useState<Map<string, PrebankRemittance>>(new Map());
   const [stripeTransactionToSplit, setStripeTransactionToSplit] = React.useState<Transaction | null>(null);
+  const [selectedStripeImputationParentTx, setSelectedStripeImputationParentTx] = React.useState<Transaction | null>(null);
 
   // Modal undo processament
   const [isUndoDialogOpen, setIsUndoDialogOpen] = React.useState(false);
@@ -586,6 +606,17 @@ export function TransactionsTable({
       return acc;
     }, {} as Record<string, { name: string; type: ContactType }>) || {},
   [availableContacts]);
+
+  const stripeImputationSummaryByParentId = React.useMemo<Record<string, StripeImputationSummary>>(
+    () =>
+      summarizeActiveStripeImputationsByParent({
+        donations: stripeDonations ?? [],
+        donorNameById: Object.fromEntries(
+          Object.entries(contactMap).map(([contactId, contact]) => [contactId, contact.name])
+        ),
+      }),
+    [contactMap, stripeDonations]
+  );
 
   const donors = React.useMemo(() =>
     filterActiveContacts(availableContacts?.filter(c => c.type === 'donor') as Donor[] || []),
@@ -1910,6 +1941,18 @@ export function TransactionsTable({
     setIsRemittanceDetailOpen(true);
   };
 
+  const resolveUndoOperationType = React.useCallback((transaction: Transaction) => {
+    if (stripeImputationSummaryByParentId[transaction.id]) {
+      return 'stripe' as const;
+    }
+    return detectUndoOperationType(transaction);
+  }, [stripeImputationSummaryByParentId]);
+
+  const handleOpenStripeImputationDetail = React.useCallback((transaction: Transaction) => {
+    setSelectedStripeImputationParentTx(transaction);
+    setIsStripeImputationDetailOpen(true);
+  }, []);
+
   // Desfer remesa/Stripe: obre diàleg de confirmació
   const handleUndoRemittance = async (transaction: Transaction) => {
     if (!organizationId) {
@@ -1922,7 +1965,7 @@ export function TransactionsTable({
     }
 
     // Detectar el tipus d'operació
-    const opType = detectUndoOperationType(transaction);
+    const opType = resolveUndoOperationType(transaction);
     if (!opType) {
       toast({
         variant: 'destructive',
@@ -1959,7 +2002,7 @@ export function TransactionsTable({
   const handleUndoConfirm = async () => {
     if (!undoTransaction || !organizationId || !user?.uid) return;
 
-    const opType = detectUndoOperationType(undoTransaction);
+    const opType = resolveUndoOperationType(undoTransaction);
     if (!opType) return;
 
     setIsUndoProcessing(true);
@@ -2159,6 +2202,9 @@ export function TransactionsTable({
       (t.movements.table as typeof t.movements.table & { undoRemittance?: string }).undoRemittance ||
       'Desfer remesa',
     undoSplit: 'Desfer desglossament',
+    stripeImputed: 'Stripe imputat',
+    viewStripeImputationDetail: 'Veure detall Stripe',
+    undoStripeImputation: 'Desfer imputació Stripe',
     moreOptionsAriaLabel: t.movements.table.moreOptionsAriaLabel,
     legacyCategory: t.movements?.table?.legacyCategory ?? 'Cal recategoritzar',
     noContact: t.movements.table.noContact,
@@ -2512,12 +2558,14 @@ export function TransactionsTable({
               transaction={tx}
               contactName={tx.contactId ? contactMap[tx.contactId]?.name || null : null}
               contactType={tx.contactId ? contactMap[tx.contactId]?.type || null : null}
+              stripeImputationSummary={stripeImputationSummaryByParentId[tx.id] ?? null}
               categoryDisplayName={getCategoryDisplayName(tx.category)}
               onEdit={handleEditClick}
               onDelete={handleDeleteWithSplitGuard}
               onSplitRemittance={handleSplitRemittance}
               onSplitAmount={handleSplitAmount}
               onSplitStripeRemittance={handleSplitStripeRemittance}
+              onOpenStripeImputationDetail={handleOpenStripeImputationDetail}
               onOpenSplitDetail={handleOpenSplitDetail}
               onUndoSplit={handleUndoSplit}
               onUndoRemittance={handleUndoRemittance}
@@ -2613,6 +2661,7 @@ export function TransactionsTable({
                   transaction={tx}
                   contactName={tx.contactId ? contactMap[tx.contactId]?.name || null : null}
                   contactType={tx.contactId ? contactMap[tx.contactId]?.type || null : null}
+                  stripeImputationSummary={stripeImputationSummaryByParentId[tx.id] ?? null}
                   projectName={tx.projectId ? projectMap[tx.projectId] || null : null}
                   relevantCategories={tx.amount > 0 ? categoriesByType.income : categoriesByType.expense}
                   isLegacyCategory={!!tx.category && !availableCategories?.some(c => c.id === tx.category)}
@@ -2642,6 +2691,7 @@ export function TransactionsTable({
                   onSplitAmount={handleSplitAmount}
                   onSplitRemittance={handleSplitRemittance}
                   onSplitStripeRemittance={handleSplitStripeRemittance}
+                  onOpenStripeImputationDetail={handleOpenStripeImputationDetail}
                   onOpenSplitDetail={handleOpenSplitDetail}
                   onUndoSplit={handleUndoSplit}
                   onViewRemittanceDetail={handleViewRemittanceDetail}
@@ -3166,6 +3216,23 @@ export function TransactionsTable({
         />
       )}
 
+      <StripeImputationDetailDialog
+        open={isStripeImputationDetailOpen}
+        onOpenChange={(open) => {
+          setIsStripeImputationDetailOpen(open);
+          if (!open) {
+            setSelectedStripeImputationParentTx(null);
+          }
+        }}
+        parentTransaction={selectedStripeImputationParentTx}
+        summary={
+          selectedStripeImputationParentTx
+            ? stripeImputationSummaryByParentId[selectedStripeImputationParentTx.id] ?? null
+            : null
+        }
+        onUndo={handleUndoRemittance}
+      />
+
       {/* SEPA Reconcile Modal */}
       <SepaReconcileModal
         open={!!sepaReconcileTx}
@@ -3190,7 +3257,7 @@ export function TransactionsTable({
           }
         }}
         transaction={undoTransaction}
-        operationType={undoTransaction ? detectUndoOperationType(undoTransaction) : null}
+        operationType={undoTransaction ? resolveUndoOperationType(undoTransaction) : null}
         childCount={undoChildCount}
         isProcessing={isUndoProcessing}
         onConfirm={handleUndoConfirm}

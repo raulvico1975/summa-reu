@@ -21,6 +21,10 @@ import {
   type DonorSummaryResult,
 } from '@/lib/fiscal/calculateDonorSummary';
 import { mergeUnifiedFiscalDonations } from '@/lib/fiscal/getUnifiedFiscalDonations';
+import {
+  getIndividualDonationCertificateBlockMessage,
+  getIndividualDonationCertificateBlockReason,
+} from '@/lib/fiscal/individual-donation-certificate';
 
 // UI Components
 import {
@@ -106,8 +110,6 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
   const { t, language } = useTranslations();
   const { toast } = useToast();
-  const stripeIndividualCertificateBlockedMessage =
-    "Certificat individual no disponible per donacions Stripe fins que quedi alineat amb la font fiscal unificada.";
 
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = React.useState<string>(String(currentYear));
@@ -138,9 +140,18 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     };
   };
 
-  const isStripeIndividualCertificateBlocked = React.useCallback((tx: Transaction): boolean => {
-    return tx.source === 'stripe' || !!tx.stripePaymentId;
-  }, []);
+  const getIndividualCertificateBlockReason = React.useCallback((tx: Transaction, mode: 'download' | 'email') => {
+    return getIndividualDonationCertificateBlockReason({
+      transaction: tx,
+      donorHasTaxId: Boolean(donor?.taxId),
+      donorHasEmail: mode === 'email' ? Boolean(donor?.email) : true,
+    });
+  }, [donor?.email, donor?.taxId]);
+
+  const getIndividualCertificateBlockMessage = React.useCallback((tx: Transaction, mode: 'download' | 'email') => {
+    const reason = getIndividualCertificateBlockReason(tx, mode);
+    return reason ? getIndividualDonationCertificateBlockMessage(reason) : null;
+  }, [getIndividualCertificateBlockReason]);
 
   // Transaccions del donant - usar onSnapshot per gestionar errors de permisos
   const [transactions, setTransactions] = React.useState<Transaction[] | null>(null);
@@ -341,11 +352,12 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   // Generar certificat individual
   const generateCertificate = async (tx: Transaction) => {
     if (!donor || !organization) return;
-    if (isStripeIndividualCertificateBlocked(tx)) {
+    const blockedMessage = getIndividualCertificateBlockMessage(tx, 'download');
+    if (blockedMessage) {
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: stripeIndividualCertificateBlockedMessage,
+        description: blockedMessage,
       });
       return;
     }
@@ -878,11 +890,12 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   // Enviar certificat individual per email
   const sendCertificateByEmail = async (tx: Transaction) => {
     if (!donor || !organization) return;
-    if (isStripeIndividualCertificateBlocked(tx)) {
+    const blockedMessage = getIndividualCertificateBlockMessage(tx, 'email');
+    if (blockedMessage) {
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: stripeIndividualCertificateBlockedMessage,
+        description: blockedMessage,
       });
       return;
     }
@@ -1680,7 +1693,10 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                         {paginatedTransactions.map((tx, index) => {
                           const isReturn = tx.transactionType === 'return';
                           const isReturned = tx.donationStatus === 'returned';
-                          const isStripeCertificateBlocked = isStripeIndividualCertificateBlocked(tx);
+                          const downloadBlockedMessage = getIndividualCertificateBlockMessage(tx, 'download');
+                          const emailBlockedMessage = getIndividualCertificateBlockMessage(tx, 'email');
+                          const canDownloadCertificate = !downloadBlockedMessage;
+                          const canSendCertificateByEmail = !emailBlockedMessage;
 
                           return (
                             <TableRow key={tx.id || `tx-${index}`} className={isReturn ? 'bg-orange-50/50' : ''}>
@@ -1714,7 +1730,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                                 {!isReturn && !isReturned && (
                                   <div className="flex justify-end gap-1">
                                     {/* Descarregar certificat individual */}
-                                    {donor.taxId && !isStripeCertificateBlocked ? (
+                                    {canDownloadCertificate ? (
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button
@@ -1748,14 +1764,12 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                                           </span>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                          {isStripeCertificateBlocked
-                                            ? stripeIndividualCertificateBlockedMessage
-                                            : t.donorDetail.certificate.needsTaxId}
+                                          {downloadBlockedMessage}
                                         </TooltipContent>
                                       </Tooltip>
                                     )}
                                     {/* Enviar certificat individual per email */}
-                                    {donor.taxId && donor.email && !isStripeCertificateBlocked ? (
+                                    {canSendCertificateByEmail ? (
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button
@@ -1775,7 +1789,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                                           {t.certificates.email.sendOne}
                                         </TooltipContent>
                                       </Tooltip>
-                                    ) : donor.taxId ? (
+                                    ) : (
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <span>
@@ -1789,12 +1803,10 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                                           </span>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                          {isStripeCertificateBlocked
-                                            ? stripeIndividualCertificateBlockedMessage
-                                            : t.certificates.email.errorNoEmail}
+                                          {emailBlockedMessage}
                                         </TooltipContent>
                                       </Tooltip>
-                                    ) : null}
+                                    )}
                                   </div>
                                 )}
                               </TableCell>

@@ -55,6 +55,7 @@ import { persistStripeImputationWrites } from '@/lib/stripe/commitStripeImputati
 import {
   assertNoActiveStripeImputationByParentTransactionId,
   ERR_STRIPE_PARENT_ALREADY_IMPUTED,
+  getStripeParentAlreadyImputedMessage,
 } from '@/lib/stripe/activeStripeImputation';
 import {
   acquireProcessLock,
@@ -448,7 +449,7 @@ export function StripeImputationModal({
       if (message === ERR_STRIPE_DUPLICATE_PAYMENT) {
         description = 'Aquest pagament Stripe ja ha estat imputat.';
       } else if (message === ERR_STRIPE_PARENT_ALREADY_IMPUTED) {
-        description = 'Aquest moviment ja té una imputació Stripe activa. Cal desfer-la abans de crear-ne una de nova.';
+        description = getStripeParentAlreadyImputedMessage();
       } else if (message === 'AUTH_REQUIRED') {
         description = 'No s\'ha pogut validar la sessió. Torna-ho a provar.';
       }
@@ -473,16 +474,16 @@ export function StripeImputationModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex max-h-[90vh] max-w-5xl flex-col overflow-hidden">
-          <DialogHeader className="shrink-0 pr-6">
+        <DialogContent className="flex h-[90vh] max-h-[90vh] w-[min(96vw,1200px)] max-w-[1200px] flex-col overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b bg-background px-6 py-4 pr-12">
             <DialogTitle>Imputar Stripe</DialogTitle>
             <DialogDescription>
               Pots carregar un CSV de Stripe o completar la imputació manualment. La taula final sempre és editable abans de confirmar.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
               <Alert className="border-primary/20 bg-primary/5">
                 <AlertTitle>Abonament bancari</AlertTitle>
                 <AlertDescription>
@@ -577,9 +578,9 @@ export function StripeImputationModal({
                 </Alert>
               )}
 
-              <div className="overflow-x-auto rounded-md border">
-                <Table>
-                  <TableHeader>
+              <div className="min-h-0 overflow-auto rounded-md border">
+                <Table className="min-w-[820px]">
+                  <TableHeader className="sticky top-0 z-10 bg-background">
                     <TableRow>
                       <TableHead>Origen</TableHead>
                       <TableHead>Referència</TableHead>
@@ -622,7 +623,7 @@ export function StripeImputationModal({
                               placeholder="0.00"
                             />
                           </TableCell>
-                          <TableCell className="align-top min-w-[260px]">
+                          <TableCell className="min-w-[320px] align-top">
                             <DonorSearchCombobox
                               donors={sortedDonors}
                               value={line.contactId}
@@ -717,7 +718,7 @@ export function StripeImputationModal({
               )}
             </div>
 
-            <DialogFooter className="shrink-0 border-t bg-background pt-4">
+            <DialogFooter className="shrink-0 border-t bg-background py-4">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
                 Cancel·lar
               </Button>
