@@ -9,6 +9,7 @@ export type BlogPost = {
   tags: string[]
   category: string
   coverImageUrl?: string | null
+  coverImageAlt?: string | null
   publishedAt: string
   createdAt: string
   updatedAt: string

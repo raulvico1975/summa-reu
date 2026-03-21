@@ -1,0 +1,102 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+import type { BlogPost } from '@/lib/blog/types'
+
+type LocalStoreOrganization = {
+  id: string
+  createdAt: string
+}
+
+type LocalBlogPublishStore = {
+  organizations: Record<string, LocalStoreOrganization>
+  posts: Record<string, Record<string, BlogPost>>
+}
+
+const DEFAULT_STORE: LocalBlogPublishStore = {
+  organizations: {},
+  posts: {},
+}
+
+function getStoreFilePath(): string {
+  const customPath = process.env.BLOG_PUBLISH_LOCAL_STORE_FILE?.trim()
+  if (customPath) return customPath
+
+  return path.join(process.cwd(), 'tmp', 'blog-publish-local-store.json')
+}
+
+function sanitizeBlogPost(post: BlogPost): BlogPost {
+  return Object.fromEntries(
+    Object.entries(post).filter(([, value]) => value !== undefined)
+  ) as BlogPost
+}
+
+async function readStore(): Promise<LocalBlogPublishStore> {
+  try {
+    const raw = await readFile(getStoreFilePath(), 'utf8')
+    const parsed = JSON.parse(raw) as Partial<LocalBlogPublishStore>
+
+    return {
+      organizations: parsed.organizations ?? {},
+      posts: parsed.posts ?? {},
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { ...DEFAULT_STORE }
+    }
+
+    throw error
+  }
+}
+
+async function writeStore(store: LocalBlogPublishStore): Promise<void> {
+  const filePath = getStoreFilePath()
+  await mkdir(path.dirname(filePath), { recursive: true })
+  await writeFile(filePath, JSON.stringify(store, null, 2))
+}
+
+export function isLocalBlogPublishStorageEnabled(): boolean {
+  const mode = process.env.BLOG_PUBLISH_STORAGE_MODE?.trim().toLowerCase()
+  if (mode === 'firestore') return false
+  if (mode === 'local' || mode === 'local-file') return true
+  return process.env.NODE_ENV !== 'production'
+}
+
+export function getLocalBlogPublishStoreFilePath(): string {
+  return getStoreFilePath()
+}
+
+export async function ensureLocalBlogOrganization(orgId: string): Promise<void> {
+  const store = await readStore()
+  if (store.organizations[orgId]) return
+
+  store.organizations[orgId] = {
+    id: orgId,
+    createdAt: new Date().toISOString(),
+  }
+  await writeStore(store)
+}
+
+export async function getLocalBlogPost(orgId: string, slug: string): Promise<BlogPost | null> {
+  const store = await readStore()
+  return store.posts[orgId]?.[slug] ?? null
+}
+
+export async function createLocalBlogPost(orgId: string, post: BlogPost): Promise<void> {
+  const store = await readStore()
+  const postsByOrg = store.posts[orgId] ?? {}
+
+  if (postsByOrg[post.slug]) {
+    throw new Error('duplicate_slug')
+  }
+
+  store.posts[orgId] = {
+    ...postsByOrg,
+    [post.slug]: sanitizeBlogPost(post),
+  }
+
+  await writeStore(store)
+}
+
+export async function readLocalBlogPublishStore(): Promise<LocalBlogPublishStore> {
+  return readStore()
+}

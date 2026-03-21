@@ -3,6 +3,7 @@ import { getAdminDb } from '@/lib/api/admin-sdk'
 import type { BlogPost } from '@/lib/blog/types'
 
 const BLOG_SITE_URL = 'https://summasocial.app'
+const LOCAL_BLOG_ORG_ID = 'local-blog'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -24,7 +25,9 @@ function normalizeStringArray(value: unknown): string[] | null {
 }
 
 export function getBlogOrgId(): string {
-  const orgId = process.env.BLOG_ORG_ID?.trim()
+  const orgId =
+    process.env.BLOG_ORG_ID?.trim() ||
+    (process.env.NODE_ENV !== 'production' ? LOCAL_BLOG_ORG_ID : '')
   if (!orgId) {
     throw new Error('Missing BLOG_ORG_ID')
   }
@@ -36,7 +39,13 @@ export function getBlogPostsCollectionPath(orgId: string = getBlogOrgId()): stri
 }
 
 export function buildBlogUrl(slug: string): string {
-  return `${BLOG_SITE_URL}/blog/${slug}`
+  const baseUrl =
+    process.env.BLOG_PUBLISH_BASE_URL?.trim() ||
+    process.env.BLOG_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    BLOG_SITE_URL
+
+  return `${baseUrl.replace(/\/+$/, '')}/blog/${slug}`
 }
 
 export function formatBlogDate(iso: string): string {
@@ -85,6 +94,10 @@ function mapBlogPost(docId: string, value: unknown): BlogPost | null {
     value.coverImageUrl === null || value.coverImageUrl === undefined
       ? value.coverImageUrl
       : normalizeString(value.coverImageUrl)
+  const coverImageAlt =
+    value.coverImageAlt === null || value.coverImageAlt === undefined
+      ? value.coverImageAlt
+      : normalizeString(value.coverImageAlt)
 
   return {
     id: docId,
@@ -97,6 +110,7 @@ function mapBlogPost(docId: string, value: unknown): BlogPost | null {
     tags,
     category,
     coverImageUrl: coverImageUrl ?? null,
+    coverImageAlt: coverImageAlt ?? null,
     publishedAt,
     createdAt,
     updatedAt,
@@ -117,10 +131,34 @@ export async function assertBlogOrganizationExists(
   db: Firestore = getAdminDb(),
   orgId: string = getBlogOrgId()
 ): Promise<void> {
-  const orgSnap = await db.doc(`organizations/${orgId}`).get()
-  if (!orgSnap.exists) {
-    throw new Error(`BLOG_ORG_ID does not match an existing organization: ${orgId}`)
+  const orgRef = db.doc(`organizations/${orgId}`)
+  const orgSnap = await orgRef.get()
+  if (orgSnap.exists) {
+    return
   }
+
+  if (process.env.NODE_ENV !== 'production' && orgId === LOCAL_BLOG_ORG_ID) {
+    const now = new Date().toISOString()
+
+    try {
+      await orgRef.create({
+        id: orgId,
+        name: 'Local Blog',
+        slug: orgId,
+        status: 'active',
+        createdAt: now,
+        createdBy: 'local-blog-bootstrap',
+      })
+      return
+    } catch {
+      const retrySnap = await orgRef.get()
+      if (retrySnap.exists) {
+        return
+      }
+    }
+  }
+
+  throw new Error(`BLOG_ORG_ID does not match an existing organization: ${orgId}`)
 }
 
 export async function getBlogPostBySlug(

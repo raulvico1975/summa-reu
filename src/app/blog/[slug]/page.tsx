@@ -71,7 +71,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         {post.coverImageUrl ? (
           <img
             src={post.coverImageUrl}
-            alt={post.title}
+            alt={post.coverImageAlt || post.title}
             className="mb-10 h-auto w-full rounded-2xl border border-border object-cover"
           />
         ) : null}

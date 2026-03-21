@@ -66,6 +66,24 @@ function normalizeOptionalCoverImageUrl(
   }
 }
 
+function normalizeOptionalCoverImageAlt(
+  value: unknown,
+  errors: string[]
+): string | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null) return null
+
+  if (typeof value !== 'string') {
+    errors.push('coverImageAlt must be a string, null or undefined')
+    return undefined
+  }
+
+  const normalized = value.trim()
+  if (!normalized) return null
+
+  return normalized
+}
+
 function normalizeTags(value: unknown, errors: string[]): string[] {
   if (!Array.isArray(value)) {
     errors.push('tags must be an array')
@@ -146,29 +164,43 @@ export function validateBlogPost(payload: unknown): BlogPostValidationResult {
   const category = normalizeRequiredString(payload.category, 'category', errors)
   const tags = normalizeTags(payload.tags, errors)
   const coverImageUrl = normalizeOptionalCoverImageUrl(payload.coverImageUrl, errors)
+  const coverImageAlt = normalizeOptionalCoverImageAlt(payload.coverImageAlt, errors)
   const publishedAt = normalizeIsoDate(payload.publishedAt, 'publishedAt', errors)
 
   if (slug && !URL_SAFE_SLUG_PATTERN.test(slug)) {
     errors.push('slug must be URL-safe')
   }
 
+  if (coverImageAlt && !coverImageUrl) {
+    errors.push('coverImageAlt requires coverImageUrl')
+  }
+
   if (errors.length > 0) {
     return { ok: false, errors }
   }
 
+  const value: BlogPostPublishInput = {
+    title,
+    slug,
+    seoTitle,
+    metaDescription,
+    excerpt,
+    contentHtml,
+    tags,
+    category,
+    publishedAt,
+  }
+
+  if (coverImageUrl !== undefined) {
+    value.coverImageUrl = coverImageUrl
+  }
+
+  if (coverImageAlt !== undefined) {
+    value.coverImageAlt = coverImageAlt
+  }
+
   return {
     ok: true,
-    value: {
-      title,
-      slug,
-      seoTitle,
-      metaDescription,
-      excerpt,
-      contentHtml,
-      tags,
-      category,
-      coverImageUrl,
-      publishedAt,
-    },
+    value,
   }
 }

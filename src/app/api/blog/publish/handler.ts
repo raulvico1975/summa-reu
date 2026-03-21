@@ -6,6 +6,12 @@ import {
   getBlogOrgId,
   getBlogPostsCollectionPath,
 } from '@/lib/blog/firestore'
+import {
+  createLocalBlogPost,
+  ensureLocalBlogOrganization,
+  getLocalBlogPost,
+  isLocalBlogPublishStorageEnabled,
+} from '@/lib/blog/publish-local-store'
 import type { BlogPost } from '@/lib/blog/types'
 import { validateBlogPost } from '@/lib/blog/validateBlogPost'
 
@@ -32,10 +38,18 @@ export interface PublishBlogDeps {
   assertBlogOrganizationExistsFn: (db?: ReturnType<typeof getAdminDb>, orgId?: string) => Promise<void>
 }
 
+function getPublishSecretFromEnv(): string | null {
+  if (isLocalBlogPublishStorageEnabled()) {
+    return process.env.BLOG_PUBLISH_LOCAL_SECRET?.trim() || 'local-blog-publish-secret'
+  }
+
+  return process.env.BLOG_PUBLISH_SECRET?.trim() || null
+}
+
 const DEFAULT_DEPS: PublishBlogDeps = {
   getAdminDbFn: getAdminDb,
   nowIsoFn: () => new Date().toISOString(),
-  getPublishSecretFn: () => process.env.BLOG_PUBLISH_SECRET?.trim() || null,
+  getPublishSecretFn: getPublishSecretFromEnv,
   getBlogOrgIdFn: getBlogOrgId,
   assertBlogOrganizationExistsFn: assertBlogOrganizationExists,
 }
@@ -100,19 +114,11 @@ export async function handleBlogPublish(
       )
     }
 
-    const db = deps.getAdminDbFn()
     const orgId = deps.getBlogOrgIdFn()
-    await deps.assertBlogOrganizationExistsFn(db, orgId)
 
     const slug = validation.value.slug
     if (!isSafeSlug(slug)) {
       return NextResponse.json({ success: false, error: 'invalid_payload' }, { status: 400 })
-    }
-
-    const postRef = db.doc(`${getBlogPostsCollectionPath(orgId)}/${slug}`)
-    const existingPost = await postRef.get()
-    if (existingPost.exists) {
-      return NextResponse.json({ success: false, error: 'duplicate_slug' }, { status: 409 })
     }
 
     const now = deps.nowIsoFn()
@@ -124,15 +130,35 @@ export async function handleBlogPublish(
       updatedAt: now,
     }
 
-    try {
-      await postRef.create(blogPost)
-    } catch (error) {
-      const duplicateCheck = await postRef.get()
-      if (duplicateCheck.exists) {
+    if (isLocalBlogPublishStorageEnabled()) {
+      await ensureLocalBlogOrganization(orgId)
+
+      const existingPost = await getLocalBlogPost(orgId, slug)
+      if (existingPost) {
         return NextResponse.json({ success: false, error: 'duplicate_slug' }, { status: 409 })
       }
 
-      throw error
+      await createLocalBlogPost(orgId, blogPost)
+    } else {
+      const db = deps.getAdminDbFn()
+      await deps.assertBlogOrganizationExistsFn(db, orgId)
+
+      const postRef = db.doc(`${getBlogPostsCollectionPath(orgId)}/${slug}`)
+      const existingPost = await postRef.get()
+      if (existingPost.exists) {
+        return NextResponse.json({ success: false, error: 'duplicate_slug' }, { status: 409 })
+      }
+
+      try {
+        await postRef.create(blogPost)
+      } catch (error) {
+        const duplicateCheck = await postRef.get()
+        if (duplicateCheck.exists) {
+          return NextResponse.json({ success: false, error: 'duplicate_slug' }, { status: 409 })
+        }
+
+        throw error
+      }
     }
 
     return NextResponse.json({
