@@ -17,6 +17,8 @@ const DEFAULT_STORE: LocalBlogPublishStore = {
   posts: {},
 }
 
+export type BlogPublishStorageMode = 'firestore' | 'local-file'
+
 function getStoreFilePath(): string {
   const customPath = process.env.BLOG_PUBLISH_LOCAL_STORE_FILE?.trim()
   if (customPath) return customPath
@@ -55,10 +57,24 @@ async function writeStore(store: LocalBlogPublishStore): Promise<void> {
 }
 
 export function isLocalBlogPublishStorageEnabled(): boolean {
+  return getBlogPublishStorageMode() === 'local-file'
+}
+
+export function getBlogPublishStorageMode(): BlogPublishStorageMode {
   const mode = process.env.BLOG_PUBLISH_STORAGE_MODE?.trim().toLowerCase()
-  if (mode === 'firestore') return false
-  if (mode === 'local' || mode === 'local-file') return true
-  return process.env.NODE_ENV !== 'production'
+  if (mode === 'firestore') return 'firestore'
+  if (mode === 'local' || mode === 'local-file') return 'local-file'
+  return process.env.NODE_ENV === 'production' ? 'firestore' : 'local-file'
+}
+
+export function assertNoLocalBlogPublishStorageInProduction(): void {
+  if (process.env.NODE_ENV !== 'production') {
+    return
+  }
+
+  if (getBlogPublishStorageMode() === 'local-file') {
+    throw new Error('BLOG_LOCAL_STORAGE_FORBIDDEN_IN_PRODUCTION')
+  }
 }
 
 export function getLocalBlogPublishStoreFilePath(): string {

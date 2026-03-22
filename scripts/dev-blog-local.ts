@@ -2,8 +2,9 @@ import { spawn } from 'node:child_process'
 import { ensureLocalBlogEnv } from './blog-local-env'
 
 ensureLocalBlogEnv()
+const port = process.env.PORT?.trim() || '9002'
 
-const child = spawn('next', ['dev', '-p', '9002'], {
+const child = spawn('next', ['dev', '-p', port], {
   stdio: 'inherit',
   shell: true,
   env: {

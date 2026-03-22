@@ -35,6 +35,36 @@ async function withFirestorePublishMode<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 
+async function withEnv<T>(
+  updates: Partial<Record<'BLOG_PUBLISH_STORAGE_MODE' | 'NODE_ENV', string | undefined>>,
+  run: () => Promise<T>
+): Promise<T> {
+  const previousValues = {
+    BLOG_PUBLISH_STORAGE_MODE: process.env.BLOG_PUBLISH_STORAGE_MODE,
+    NODE_ENV: process.env.NODE_ENV,
+  }
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === undefined) {
+      delete process.env[key]
+    } else {
+      process.env[key] = value
+    }
+  }
+
+  try {
+    return await run()
+  } finally {
+    for (const [key, value] of Object.entries(previousValues)) {
+      if (value === undefined) {
+        delete process.env[key]
+      } else {
+        process.env[key] = value
+      }
+    }
+  }
+}
+
 function getBlogPostDocEntries(store: Map<string, Record<string, unknown>>, orgId?: string) {
   return Array.from(store.entries())
     .filter(([path]) => path.startsWith('organizations/') && path.includes('/blogPosts/'))
@@ -363,4 +393,94 @@ test('handleBlogPublish writes to the established blog org and revalidates publi
   const body = await response.json() as { success: boolean; orgId?: string }
   assert.equal(body.success, true)
   assert.equal(body.orgId, 'real-blog-org')
+})
+
+test('handleBlogPublish blocks local publish storage in production', async () => {
+  const response = await withEnv(
+    {
+      BLOG_PUBLISH_STORAGE_MODE: 'local-file',
+      NODE_ENV: 'production',
+    },
+    async () =>
+      handleBlogPublish(
+        {
+          headers: new Headers({
+            Authorization: 'Bearer top-secret',
+          }),
+          json: async () => buildValidPayload(),
+        } as never,
+        {
+          getAdminDbFn: () => {
+            throw new Error('db should not be used')
+          },
+          nowIsoFn: () => '2026-03-19T12:00:00.000Z',
+          getPublishSecretFn: () => 'top-secret',
+          getBlogOrgIdFn: () => 'blog-org',
+          assertBlogOrganizationExistsFn: async () => {},
+          revalidatePathsFn: async () => {},
+        }
+      )
+  )
+
+  assert.equal(response.status, 503)
+  const body = await response.json() as { success: boolean; error?: string }
+  assert.equal(body.success, false)
+  assert.equal(body.error, 'misconfigured_storage')
+})
+
+test('handleBlogPublish fails when firestore write cannot be verified', async () => {
+  const store = new Map<string, Record<string, unknown>>()
+  store.set('organizations/blog-org', { name: 'Blog org' })
+  const revalidatedPaths: string[][] = []
+
+  const response = await withFirestorePublishMode(async () =>
+    handleBlogPublish(
+      {
+        headers: new Headers({
+          Authorization: 'Bearer top-secret',
+        }),
+        json: async () => buildValidPayload(),
+      } as never,
+      {
+        getAdminDbFn: () => {
+          const db = buildFirestoreMock(store)
+          return {
+            ...db,
+            doc(path: string) {
+              const ref = db.doc(path)
+              let created = false
+
+              return {
+                ...ref,
+                async create(payload: Record<string, unknown>) {
+                  created = true
+                  await ref.create(payload)
+                },
+                async get() {
+                  if (created && path.endsWith('/blogPosts/primer-post')) {
+                    return buildDocSnapshot(path, undefined)
+                  }
+
+                  return ref.get()
+                },
+              }
+            },
+          } as never
+        },
+        nowIsoFn: () => '2026-03-19T12:00:00.000Z',
+        getPublishSecretFn: () => 'top-secret',
+        getBlogOrgIdFn: () => 'blog-org',
+        assertBlogOrganizationExistsFn: async () => {},
+        revalidatePathsFn: async (paths) => {
+          revalidatedPaths.push(paths)
+        },
+      }
+    )
+  )
+
+  assert.equal(response.status, 503)
+  assert.deepEqual(revalidatedPaths, [])
+  const body = await response.json() as { success: boolean; error?: string }
+  assert.equal(body.success, false)
+  assert.equal(body.error, 'write_verification_failed')
 })

@@ -16,6 +16,19 @@ type PublishResponse =
       details?: string[]
     }
 
+type UploadCoverResponse =
+  | {
+      success: true
+      coverImageUrl: string
+      path: string
+      storage: 'local' | 'firebase'
+    }
+  | {
+      success: false
+      error: string
+      details?: string[]
+    }
+
 type LocalStore = {
   organizations?: Record<string, { id: string; createdAt: string }>
   posts?: Record<string, Record<string, Record<string, unknown>>>
@@ -24,7 +37,8 @@ type LocalStore = {
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const repoRoot = path.resolve(__dirname, '..')
-const baseUrl = 'http://127.0.0.1:9002'
+const port = 9012
+const baseUrl = `http://127.0.0.1:${port}`
 const localPublishSecret = 'local-blog-publish-secret'
 const localBlogOrgId = 'local-blog-org'
 const storeFile = path.join(repoRoot, 'tmp', 'blog-publish-local-store.json')
@@ -96,6 +110,23 @@ async function publish(payload: Record<string, unknown>, publishSecret: string) 
   return { status: res.status, data }
 }
 
+async function uploadCover(
+  payload: Record<string, unknown>,
+  publishSecret: string
+) {
+  const res = await fetch(`${baseUrl}/api/blog/upload-cover`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${publishSecret}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const data = await res.json() as UploadCoverResponse
+  return { status: res.status, data }
+}
+
 async function stopServer(server: ReturnType<typeof spawn>) {
   if (server.exitCode !== null) return
 
@@ -125,6 +156,7 @@ async function run() {
       BLOG_PUBLISH_LOCAL_SECRET: localPublishSecret,
       BLOG_PUBLISH_SECRET: localPublishSecret,
       BLOG_PUBLISH_STORAGE_MODE: 'local-file',
+      PORT: String(port),
       GOOGLE_APPLICATION_CREDENTIALS: '',
       NEXT_PUBLIC_FIREBASE_API_KEY: 'local-api-key',
       NEXT_PUBLIC_FIREBASE_APP_ID: '1:000000000000:web:blogpublishlocal',
@@ -143,6 +175,20 @@ async function run() {
 
     const withImageSlug = buildSlug('post-prova-amb-imatge')
     const withoutImageSlug = buildSlug('post-prova-sense-imatge')
+    const pngBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6kQAAAAASUVORK5CYII='
+
+    const upload = await uploadCover(
+      {
+        slug: withImageSlug,
+        imageBase64: pngBase64,
+        mimeType: 'image/png',
+      },
+      localPublishSecret
+    )
+
+    const uploadedCoverImageUrl =
+      upload.status === 200 && upload.data.success ? upload.data.coverImageUrl : null
 
     const withImagePayload = {
       title: 'Post prova amb imatge',
@@ -154,7 +200,7 @@ async function run() {
       tags: ['test', 'blog'],
       category: 'Producte',
       publishedAt: new Date().toISOString(),
-      coverImageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee',
+      coverImageUrl: uploadedCoverImageUrl,
       coverImageAlt: 'Portada test',
     }
 
@@ -180,11 +226,14 @@ async function run() {
     const withoutImagePost = store.posts?.[effectiveOrgId]?.[withoutImageSlug]
 
     const summary = {
+      authorizedUploadStatus: upload.status,
+      uploadSuccess: upload.status === 200 && upload.data.success === true,
       authorizedWithImageStatus: withImage.status,
       authorizedWithoutImageStatus: withoutImage.status,
       withImageSuccess: withImage.status === 200 && withImage.data.success === true,
       withoutImageSuccess: withoutImage.status === 200 && withoutImage.data.success === true,
       withImageCoverImageUrlValid:
+        withImagePayload.coverImageUrl !== null &&
         withImagePost?.coverImageUrl === withImagePayload.coverImageUrl,
       withImageCoverImageAltValid:
         withImagePost?.coverImageAlt === withImagePayload.coverImageAlt,
@@ -194,6 +243,7 @@ async function run() {
       withoutImageHasNoCoverImageAlt:
         Boolean(withoutImagePost) &&
         !Object.prototype.hasOwnProperty.call(withoutImagePost, 'coverImageAlt'),
+      uploadResponse: upload.data,
       withImageResponse: withImage.data,
       withoutImageResponse: withoutImage.data,
       effectiveOrgId,
@@ -205,6 +255,7 @@ async function run() {
     console.log(JSON.stringify(summary, null, 2))
 
     const ok =
+      summary.uploadSuccess &&
       summary.withImageSuccess &&
       summary.withoutImageSuccess &&
       summary.withImageCoverImageUrlValid &&

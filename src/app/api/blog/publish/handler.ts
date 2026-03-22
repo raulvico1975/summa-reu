@@ -9,6 +9,7 @@ import {
   resolveBlogOrgId,
 } from '@/lib/blog/firestore'
 import {
+  assertNoLocalBlogPublishStorageInProduction,
   createLocalBlogPost,
   ensureLocalBlogOrganization,
   getLocalBlogPost,
@@ -98,6 +99,33 @@ function hasValidAuthorization(request: RequestLike, secret: string | null): boo
   return safeCompare(token, secret)
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+async function verifyPersistedBlogPost(
+  postRef: { get: () => Promise<{ exists: boolean; data: () => unknown }> },
+  expectedPost: Pick<BlogPost, 'slug' | 'title' | 'contentHtml' | 'publishedAt'>
+): Promise<boolean> {
+  const persistedSnap = await postRef.get()
+
+  if (!persistedSnap.exists) {
+    return false
+  }
+
+  const persistedData = persistedSnap.data()
+  if (!isRecord(persistedData)) {
+    return false
+  }
+
+  return (
+    persistedData.slug === expectedPost.slug &&
+    persistedData.title === expectedPost.title &&
+    persistedData.contentHtml === expectedPost.contentHtml &&
+    persistedData.publishedAt === expectedPost.publishedAt
+  )
+}
+
 async function safeRevalidateBlogPaths(
   slug: string,
   deps: Pick<PublishBlogDeps, 'revalidatePathsFn'>
@@ -113,6 +141,13 @@ export async function handleBlogPublish(
   request: RequestLike,
   deps: PublishBlogDeps = DEFAULT_DEPS
 ): Promise<NextResponse<PublishBlogResponse>> {
+  try {
+    assertNoLocalBlogPublishStorageInProduction()
+  } catch (error) {
+    console.error('[blog/publish] misconfiguration:', error)
+    return NextResponse.json({ success: false, error: 'misconfigured_storage' }, { status: 503 })
+  }
+
   try {
     const publishSecret = deps.getPublishSecretFn()
     if (!publishSecret || !hasValidAuthorization(request, publishSecret)) {
@@ -183,6 +218,17 @@ export async function handleBlogPublish(
         }
 
         throw error
+      }
+
+      const persisted = await verifyPersistedBlogPost(postRef, blogPost)
+      if (!persisted) {
+        console.error(
+          `[blog/publish] write verification failed for slug=${slug} orgId=${orgId}`
+        )
+        return NextResponse.json(
+          { success: false, error: 'write_verification_failed' },
+          { status: 503 }
+        )
       }
     }
 
