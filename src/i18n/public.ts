@@ -12,6 +12,7 @@ export interface PublicTranslations {
     close: string;
     back: string;
     backToHome: string;
+    blog: string;
     contact: string;
     privacy: string;
     features: string;
@@ -378,6 +379,7 @@ const ca: PublicTranslations = {
     close: 'Tancar',
     back: 'Tornar',
     backToHome: "Tornar a l'inici",
+    blog: 'Blog',
     contact: 'Contacte',
     privacy: 'Privacitat',
     features: 'Funcionalitats',
@@ -949,6 +951,7 @@ const es: PublicTranslations = {
     close: 'Cerrar',
     back: 'Volver',
     backToHome: 'Volver al inicio',
+    blog: 'Blog',
     contact: 'Contacto',
     privacy: 'Privacidad',
     features: 'Funcionalidades',
@@ -1518,6 +1521,7 @@ const fr: PublicTranslations = {
     close: 'Fermer',
     back: 'Retour',
     backToHome: "Retour à l'accueil",
+    blog: 'Blog',
     contact: 'Contact',
     privacy: 'Confidentialité',
     features: 'Fonctionnalités',
@@ -2088,6 +2092,7 @@ const pt: PublicTranslations = {
     close: 'Fechar',
     back: 'Voltar',
     backToHome: 'Voltar ao início',
+    blog: 'Blog',
     contact: 'Contacto',
     privacy: 'Privacidade',
     features: 'Funcionalidades',

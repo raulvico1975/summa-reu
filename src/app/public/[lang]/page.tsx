@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
+import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Upload, Settings, FileCheck, Download } from 'lucide-react';
@@ -124,6 +125,8 @@ export default async function HomePage({ params }: PageProps) {
       >
         {t.home.skipToContent}
       </a>
+
+      <PublicSiteHeader locale={locale} />
 
       {/* ═══════════════════════════════════════════════════════════════════════
           A) HERO — 2 columnes desktop, 1 columna mòbil
@@ -554,6 +557,10 @@ export default async function HomePage({ params }: PageProps) {
         <div className="max-w-lg mx-auto flex items-center justify-center gap-6 text-sm text-muted-foreground">
           <Link href={`/${locale}/${featuresPath}`} className="hover:underline">
             {t.common.features}
+          </Link>
+          <span>·</span>
+          <Link href="/blog" className="hover:underline">
+            {t.common.blog}
           </Link>
           <span>·</span>
           <Link href={`/${locale}/privacy`} className="hover:underline">
