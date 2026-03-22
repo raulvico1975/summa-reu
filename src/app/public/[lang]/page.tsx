@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Upload, Settings, FileCheck, Download } from 'lucide-react';
+import { ArrowRight, Upload, Settings, FileCheck, Download, Cpu } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -115,6 +115,7 @@ export default async function HomePage({ params }: PageProps) {
   const featuresPath = FEATURES_PATH[locale];
   const capabilitiesHref = `/${locale}#capabilities`;
   const visuals = locale === 'ca' ? HOME_VISUALS.ca : HOME_VISUALS.default;
+  const introDetailParts = t.home.solves.introDetail.split(t.home.solves.aiBadge);
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -142,10 +143,9 @@ export default async function HomePage({ params }: PageProps) {
           <div className="grid items-center gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:gap-14">
             {/* Columna esquerra: Text */}
             <div className="space-y-6 text-center lg:text-left">
-              <div className="mx-auto inline-flex max-w-full items-center gap-3 rounded-full border border-sky-200/70 bg-background/85 px-4 py-2 text-left text-sm font-medium text-foreground shadow-[0_18px_50px_-28px_rgba(14,165,233,0.55)] backdrop-blur lg:mx-0">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500 animate-pulse" />
-                <span className="min-w-0">{t.home.hero.bridgeLine}</span>
-              </div>
+              <p className="mx-auto max-w-xl text-sm font-medium text-primary/85 sm:text-base lg:mx-0">
+                {t.home.hero.bridgeLine}
+              </p>
 
               <h1 className="mx-auto max-w-3xl text-[2.35rem] font-extrabold leading-[1.02] tracking-[-0.03em] text-foreground sm:text-[3rem] lg:mx-0 lg:text-[3.05rem] 2xl:text-[4.5rem]">
                 {t.home.heroTagline}
@@ -169,9 +169,22 @@ export default async function HomePage({ params }: PageProps) {
                 </div>
               </div>
 
-              <p className="text-xl text-muted-foreground sm:text-2xl">
-                {t.home.solves.intro}
-              </p>
+              <div className="mx-auto max-w-3xl space-y-3 text-center">
+                <p className="text-lg leading-8 text-muted-foreground sm:text-xl">
+                  {t.home.solves.introLead}
+                </p>
+
+                <p className="text-base leading-7 text-muted-foreground/90 sm:text-lg">
+                  {introDetailParts[0]}
+                  <span className="mx-1.5 inline-flex items-center gap-1.5 rounded-full border border-sky-200/80 bg-[linear-gradient(135deg,rgba(14,165,233,0.16),rgba(34,211,238,0.08))] px-2.5 py-1 align-middle text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700 shadow-[0_14px_30px_-18px_rgba(14,165,233,0.65)] ring-1 ring-white/80">
+                    <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-white/90 text-sky-600 shadow-sm">
+                      <Cpu className="h-3 w-3" />
+                    </span>
+                    <span>{t.home.solves.aiBadge}</span>
+                  </span>
+                  {introDetailParts[1]}
+                </p>
+              </div>
 
               <p className="text-base text-muted-foreground/80 sm:text-lg">
                 {t.cta.supporting}
@@ -195,7 +208,7 @@ export default async function HomePage({ params }: PageProps) {
             </div>
 
             {/* Columna dreta: Imatge (només desktop) */}
-            <div className="hidden lg:block lg:-mt-10">
+            <div className="hidden lg:block lg:-mt-32 xl:-mt-40 2xl:-mt-44">
               <div className="relative">
                 <div className="absolute left-10 right-10 top-10 h-28 rounded-full bg-sky-100/80 blur-3xl" />
                 <div className={`${frameClass} relative overflow-hidden shadow-[0_42px_110px_-45px_rgba(15,23,42,0.5)]`}>
@@ -412,44 +425,6 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      <section id="who-we-are" className="px-6 py-16 lg:py-20">
-        <div className="mx-auto grid max-w-6xl gap-8 rounded-[2rem] border border-border/60 bg-gradient-to-br from-background via-background to-sky-50/90 p-8 shadow-[0_28px_80px_-50px_rgba(14,165,233,0.45)] lg:grid-cols-[0.9fr_1.1fr] lg:p-12">
-          <div className="space-y-5">
-            <span className="inline-flex items-center rounded-full border border-sky-200 bg-background/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              {t.home.whoWeAre.status}
-            </span>
-            <h2 className="text-2xl font-semibold lg:text-3xl">{t.home.whoWeAre.title}</h2>
-            <p className="text-lg text-muted-foreground">{t.home.whoWeAre.lead}</p>
-            <p className="text-muted-foreground">{t.home.whoWeAre.description}</p>
-          </div>
-
-          <div className="relative overflow-hidden rounded-3xl border border-sky-100/80 bg-background/85 p-7 shadow-sm">
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-sky-100/80 blur-3xl" />
-            <div className="absolute -left-8 bottom-0 h-28 w-28 rounded-full bg-amber-100/80 blur-3xl" />
-            <div className="relative space-y-4">
-              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/90 px-4 py-3">
-                <span className="text-sm font-medium text-foreground">{t.home.whoWeAre.status}</span>
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-dashed border-border/70 bg-muted/30 p-4">
-                  <div className="h-2.5 w-20 rounded-full bg-sky-200" />
-                  <div className="mt-4 h-2.5 w-full rounded-full bg-muted" />
-                  <div className="mt-2 h-2.5 w-5/6 rounded-full bg-muted" />
-                  <div className="mt-2 h-2.5 w-2/3 rounded-full bg-muted" />
-                </div>
-                <div className="rounded-2xl border border-dashed border-border/70 bg-muted/30 p-4">
-                  <div className="h-2.5 w-24 rounded-full bg-amber-200" />
-                  <div className="mt-4 h-2.5 w-full rounded-full bg-muted" />
-                  <div className="mt-2 h-2.5 w-4/5 rounded-full bg-muted" />
-                  <div className="mt-2 h-2.5 w-3/5 rounded-full bg-muted" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="px-6 py-12">
         <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border border-border/60 bg-muted/20 p-8">
@@ -605,6 +580,10 @@ export default async function HomePage({ params }: PageProps) {
         <div className="max-w-lg mx-auto flex items-center justify-center gap-6 text-sm text-muted-foreground">
           <Link href={capabilitiesHref} className="hover:underline">
             {t.common.features}
+          </Link>
+          <span>·</span>
+          <Link href={`/${locale}/qui-som`} className="hover:underline">
+            {t.common.about}
           </Link>
           <span>·</span>
           <Link href="/blog" className="hover:underline">
