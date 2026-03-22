@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getAdminDb } from '@/lib/api/admin-sdk'
 import {
@@ -5,6 +6,7 @@ import {
   buildBlogUrl,
   getBlogOrgId,
   getBlogPostsCollectionPath,
+  resolveBlogOrgId,
 } from '@/lib/blog/firestore'
 import {
   createLocalBlogPost,
@@ -18,6 +20,7 @@ import { validateBlogPost } from '@/lib/blog/validateBlogPost'
 type PublishBlogSuccessResponse = {
   success: true
   url: string
+  orgId?: string
 }
 
 type PublishBlogErrorResponse = {
@@ -36,6 +39,7 @@ export interface PublishBlogDeps {
   getPublishSecretFn: () => string | null
   getBlogOrgIdFn: () => string
   assertBlogOrganizationExistsFn: (db?: ReturnType<typeof getAdminDb>, orgId?: string) => Promise<void>
+  revalidatePathsFn: (paths: string[]) => void | Promise<void>
 }
 
 function getPublishSecretFromEnv(): string | null {
@@ -52,6 +56,11 @@ const DEFAULT_DEPS: PublishBlogDeps = {
   getPublishSecretFn: getPublishSecretFromEnv,
   getBlogOrgIdFn: getBlogOrgId,
   assertBlogOrganizationExistsFn: assertBlogOrganizationExists,
+  revalidatePathsFn: (paths) => {
+    for (const path of paths) {
+      revalidatePath(path)
+    }
+  },
 }
 
 function safeCompare(a: string, b: string) {
@@ -89,6 +98,17 @@ function hasValidAuthorization(request: RequestLike, secret: string | null): boo
   return safeCompare(token, secret)
 }
 
+async function safeRevalidateBlogPaths(
+  slug: string,
+  deps: Pick<PublishBlogDeps, 'revalidatePathsFn'>
+): Promise<void> {
+  try {
+    await deps.revalidatePathsFn(['/blog', `/blog/${slug}`])
+  } catch (error) {
+    console.warn('[blog/publish] revalidate warning:', error)
+  }
+}
+
 export async function handleBlogPublish(
   request: RequestLike,
   deps: PublishBlogDeps = DEFAULT_DEPS
@@ -114,7 +134,7 @@ export async function handleBlogPublish(
       )
     }
 
-    const orgId = deps.getBlogOrgIdFn()
+    const requestedOrgId = deps.getBlogOrgIdFn()
 
     const slug = validation.value.slug
     if (!isSafeSlug(slug)) {
@@ -130,7 +150,10 @@ export async function handleBlogPublish(
       updatedAt: now,
     }
 
+    let effectiveOrgId = requestedOrgId
+
     if (isLocalBlogPublishStorageEnabled()) {
+      const orgId = requestedOrgId
       await ensureLocalBlogOrganization(orgId)
 
       const existingPost = await getLocalBlogPost(orgId, slug)
@@ -141,6 +164,8 @@ export async function handleBlogPublish(
       await createLocalBlogPost(orgId, blogPost)
     } else {
       const db = deps.getAdminDbFn()
+      const orgId = await resolveBlogOrgId(db, requestedOrgId)
+      effectiveOrgId = orgId
       await deps.assertBlogOrganizationExistsFn(db, orgId)
 
       const postRef = db.doc(`${getBlogPostsCollectionPath(orgId)}/${slug}`)
@@ -161,9 +186,12 @@ export async function handleBlogPublish(
       }
     }
 
+    await safeRevalidateBlogPaths(slug, deps)
+
     return NextResponse.json({
       success: true,
       url: buildBlogUrl(slug),
+      orgId: effectiveOrgId,
     })
   } catch (error) {
     console.error('[blog/publish] error:', error)

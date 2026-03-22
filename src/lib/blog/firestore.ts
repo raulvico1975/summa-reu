@@ -4,6 +4,7 @@ import type { BlogPost } from '@/lib/blog/types'
 
 const BLOG_SITE_URL = 'https://summasocial.app'
 const LOCAL_BLOG_ORG_ID = 'local-blog'
+const BLOG_ORG_DISCOVERY_LIMIT = 25
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -32,6 +33,10 @@ export function getBlogOrgId(): string {
     throw new Error('Missing BLOG_ORG_ID')
   }
   return orgId
+}
+
+function logBlogOrgWarning(message: string) {
+  console.warn(`[blog] ${message}`)
 }
 
 export function getBlogPostsCollectionPath(orgId: string = getBlogOrgId()): string {
@@ -127,6 +132,54 @@ function comparePublishedAtDesc(a: BlogPost, b: BlogPost): number {
   return safeBTime - safeATime
 }
 
+async function listBlogOrgIdsWithPosts(db: Firestore): Promise<string[]> {
+  const snap = await db.collectionGroup('blogPosts').limit(BLOG_ORG_DISCOVERY_LIMIT).get()
+  const orgIds = new Set<string>()
+
+  for (const doc of snap.docs) {
+    const orgId = doc.ref.parent.parent?.id
+    if (orgId) {
+      orgIds.add(orgId)
+    }
+  }
+
+  return Array.from(orgIds)
+}
+
+export async function resolveBlogOrgId(
+  db: Firestore = getAdminDb(),
+  requestedOrgId: string = getBlogOrgId()
+): Promise<string> {
+  const normalizedRequestedOrgId = requestedOrgId.trim()
+  const orgIdsWithPosts = await listBlogOrgIdsWithPosts(db)
+
+  if (orgIdsWithPosts.length === 0) {
+    return normalizedRequestedOrgId
+  }
+
+  if (orgIdsWithPosts.length === 1) {
+    const establishedOrgId = orgIdsWithPosts[0]
+
+    if (normalizedRequestedOrgId && normalizedRequestedOrgId !== establishedOrgId) {
+      logBlogOrgWarning(
+        `BLOG_ORG_ID=${normalizedRequestedOrgId} no coincideix amb l'org establerta del blog (${establishedOrgId}). S'usa ${establishedOrgId}.`
+      )
+    }
+
+    return establishedOrgId
+  }
+
+  if (normalizedRequestedOrgId && orgIdsWithPosts.includes(normalizedRequestedOrgId)) {
+    return normalizedRequestedOrgId
+  }
+
+  logBlogOrgWarning(
+    `Hi ha múltiples orgs amb blog (${orgIdsWithPosts.join(', ')}), però BLOG_ORG_ID=${normalizedRequestedOrgId || '(buit)'} no n'identifica cap.`
+  )
+
+  return normalizedRequestedOrgId || orgIdsWithPosts[0]
+}
+
 export async function assertBlogOrganizationExists(
   db: Firestore = getAdminDb(),
   orgId: string = getBlogOrgId()
@@ -166,8 +219,16 @@ export async function getBlogPostBySlug(
   db: Firestore = getAdminDb(),
   orgId: string = getBlogOrgId()
 ): Promise<BlogPost | null> {
-  const postSnap = await db.doc(`${getBlogPostsCollectionPath(orgId)}/${slug}`).get()
-  if (!postSnap.exists) return null
+  const resolvedOrgId = await resolveBlogOrgId(db, orgId)
+  const postSnap = await db.doc(`${getBlogPostsCollectionPath(resolvedOrgId)}/${slug}`).get()
+  if (!postSnap.exists) {
+    const fallbackSnap = await db.collectionGroup('blogPosts').where('slug', '==', slug).limit(2).get()
+    const fallbackPosts = fallbackSnap.docs
+      .map((doc) => mapBlogPost(doc.id, doc.data()))
+      .filter((post): post is BlogPost => post !== null)
+
+    return fallbackPosts.length === 1 ? fallbackPosts[0] : null
+  }
 
   return mapBlogPost(postSnap.id, postSnap.data())
 }
@@ -176,7 +237,8 @@ export async function listBlogPosts(
   db: Firestore = getAdminDb(),
   orgId: string = getBlogOrgId()
 ): Promise<BlogPost[]> {
-  const collectionRef = db.collection(getBlogPostsCollectionPath(orgId))
+  const resolvedOrgId = await resolveBlogOrgId(db, orgId)
+  const collectionRef = db.collection(getBlogPostsCollectionPath(resolvedOrgId))
   const orderedSnap = await collectionRef
     .orderBy('publishedAt', 'desc')
     .get()

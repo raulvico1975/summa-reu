@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { handleBlogPublish } from '@/app/api/blog/publish/handler'
+import { resolveBlogOrgId } from '@/lib/blog/firestore'
 import { validateBlogPost } from '@/lib/blog/validateBlogPost'
 
 function buildValidPayload() {
@@ -31,6 +32,88 @@ async function withFirestorePublishMode<T>(run: () => Promise<T>): Promise<T> {
     } else {
       process.env.BLOG_PUBLISH_STORAGE_MODE = previousMode
     }
+  }
+}
+
+function getBlogPostDocEntries(store: Map<string, Record<string, unknown>>, orgId?: string) {
+  return Array.from(store.entries())
+    .filter(([path]) => path.startsWith('organizations/') && path.includes('/blogPosts/'))
+    .filter(([path]) => (orgId ? path.startsWith(`organizations/${orgId}/blogPosts/`) : true))
+}
+
+function buildDocSnapshot(path: string, data: Record<string, unknown> | undefined) {
+  const parts = path.split('/')
+  const orgId = parts[1] || ''
+
+  return {
+    id: parts[parts.length - 1] || '',
+    exists: data !== undefined,
+    data: () => data,
+    ref: {
+      parent: {
+        parent: {
+          id: orgId,
+        },
+      },
+    },
+  }
+}
+
+function buildCollectionQuery(docs: Array<{ path: string; data: Record<string, unknown> }>) {
+  return {
+    limit(count: number) {
+      return buildCollectionQuery(docs.slice(0, count))
+    },
+    where(field: string, op: string, value: unknown) {
+      assert.equal(op, '==')
+      return buildCollectionQuery(
+        docs.filter((doc) => (doc.data as Record<string, unknown>)[field] === value)
+      )
+    },
+    orderBy(field: string, direction: 'asc' | 'desc') {
+      const sorted = [...docs].sort((a, b) => {
+        const aValue = typeof a.data[field] === 'string' ? Date.parse(String(a.data[field])) : 0
+        const bValue = typeof b.data[field] === 'string' ? Date.parse(String(b.data[field])) : 0
+        return direction === 'desc' ? bValue - aValue : aValue - bValue
+      })
+
+      return buildCollectionQuery(sorted)
+    },
+    async get() {
+      return {
+        empty: docs.length === 0,
+        docs: docs.map((doc) => buildDocSnapshot(doc.path, doc.data)),
+      }
+    },
+  }
+}
+
+function buildFirestoreMock(store: Map<string, Record<string, unknown>>) {
+  return {
+    doc(path: string) {
+      return {
+        async get() {
+          return buildDocSnapshot(path, store.get(path))
+        },
+        async create(payload: Record<string, unknown>) {
+          if (store.has(path)) {
+            throw new Error('already-exists')
+          }
+          store.set(path, payload)
+        },
+      }
+    },
+    collection(path: string) {
+      const parts = path.split('/')
+      const orgId = parts[1]
+      const docs = getBlogPostDocEntries(store, orgId).map(([docPath, data]) => ({ path: docPath, data }))
+      return buildCollectionQuery(docs)
+    },
+    collectionGroup(name: string) {
+      assert.equal(name, 'blogPosts')
+      const docs = getBlogPostDocEntries(store).map(([path, data]) => ({ path, data }))
+      return buildCollectionQuery(docs)
+    },
   }
 }
 
@@ -115,31 +198,12 @@ test('handleBlogPublish returns 409 when slug already exists', async () => {
         json: async () => buildValidPayload(),
       } as never,
       {
-        getAdminDbFn: () =>
-          ({
-            doc(path: string) {
-              return {
-                async get() {
-                  const data = store.get(path)
-                  return {
-                    id: path.split('/').pop() || '',
-                    exists: data !== undefined,
-                    data: () => data,
-                  }
-                },
-                async create(payload: Record<string, unknown>) {
-                  if (store.has(path)) {
-                    throw new Error('already-exists')
-                  }
-                  store.set(path, payload)
-                },
-              }
-            },
-          }) as never,
+        getAdminDbFn: () => buildFirestoreMock(store) as never,
         nowIsoFn: () => '2026-03-19T12:00:00.000Z',
         getPublishSecretFn: () => 'top-secret',
         getBlogOrgIdFn: () => 'blog-org',
         assertBlogOrganizationExistsFn: async () => {},
+        revalidatePathsFn: async () => {},
       }
     )
   )
@@ -164,29 +228,27 @@ test('handleBlogPublish persists cover fields when provided', async () => {
         json: async () => buildValidPayload(),
       } as never,
       {
-        getAdminDbFn: () =>
-          ({
+        getAdminDbFn: () => {
+          const db = buildFirestoreMock(store)
+          return {
+            ...db,
             doc(path: string) {
+              const ref = db.doc(path)
               return {
-                async get() {
-                  const data = store.get(path)
-                  return {
-                    id: path.split('/').pop() || '',
-                    exists: data !== undefined,
-                    data: () => data,
-                  }
-                },
+                ...ref,
                 async create(payload: Record<string, unknown>) {
                   createdPayloads.push(payload)
-                  store.set(path, payload)
+                  await ref.create(payload)
                 },
               }
             },
-          }) as never,
+          } as never
+        },
         nowIsoFn: () => '2026-03-19T12:00:00.000Z',
         getPublishSecretFn: () => 'top-secret',
         getBlogOrgIdFn: () => 'blog-org',
         assertBlogOrganizationExistsFn: async () => {},
+        revalidatePathsFn: async () => {},
       }
     )
   )
@@ -214,29 +276,27 @@ test('handleBlogPublish does not persist empty cover fields when omitted', async
         json: async () => payload,
       } as never,
       {
-        getAdminDbFn: () =>
-          ({
+        getAdminDbFn: () => {
+          const db = buildFirestoreMock(store)
+          return {
+            ...db,
             doc(path: string) {
+              const ref = db.doc(path)
               return {
-                async get() {
-                  const data = store.get(path)
-                  return {
-                    id: path.split('/').pop() || '',
-                    exists: data !== undefined,
-                    data: () => data,
-                  }
-                },
+                ...ref,
                 async create(payload: Record<string, unknown>) {
                   createdPayloads.push(payload)
-                  store.set(path, payload)
+                  await ref.create(payload)
                 },
               }
             },
-          }) as never,
+          } as never
+        },
         nowIsoFn: () => '2026-03-19T12:00:00.000Z',
         getPublishSecretFn: () => 'top-secret',
         getBlogOrgIdFn: () => 'blog-org',
         assertBlogOrganizationExistsFn: async () => {},
+        revalidatePathsFn: async () => {},
       }
     )
   )
@@ -245,4 +305,62 @@ test('handleBlogPublish does not persist empty cover fields when omitted', async
   assert.equal(createdPayloads.length, 1)
   assert.equal('coverImageUrl' in createdPayloads[0], false)
   assert.equal('coverImageAlt' in createdPayloads[0], false)
+})
+
+test('resolveBlogOrgId falls back to the established blog org when BLOG_ORG_ID drifts', async () => {
+  const store = new Map<string, Record<string, unknown>>()
+  store.set('organizations/real-blog-org', { name: 'Real Blog org' })
+  store.set('organizations/real-blog-org/blogPosts/post-real', {
+    id: 'post-real',
+    ...buildValidPayload(),
+    slug: 'post-real',
+    createdAt: '2026-03-18T10:00:00.000Z',
+    updatedAt: '2026-03-18T10:00:00.000Z',
+  })
+
+  const resolved = await resolveBlogOrgId(buildFirestoreMock(store) as never, 'wrong-blog-org')
+
+  assert.equal(resolved, 'real-blog-org')
+})
+
+test('handleBlogPublish writes to the established blog org and revalidates public paths', async () => {
+  const store = new Map<string, Record<string, unknown>>()
+  store.set('organizations/real-blog-org', { name: 'Real Blog org' })
+  store.set('organizations/real-blog-org/blogPosts/post-real', {
+    id: 'post-real',
+    ...buildValidPayload(),
+    slug: 'post-real',
+    createdAt: '2026-03-18T10:00:00.000Z',
+    updatedAt: '2026-03-18T10:00:00.000Z',
+  })
+
+  const revalidatedPaths: string[][] = []
+  const response = await withFirestorePublishMode(async () =>
+    handleBlogPublish(
+      {
+        headers: new Headers({
+          Authorization: 'Bearer top-secret',
+        }),
+        json: async () => buildValidPayload(),
+      } as never,
+      {
+        getAdminDbFn: () => buildFirestoreMock(store) as never,
+        nowIsoFn: () => '2026-03-19T12:00:00.000Z',
+        getPublishSecretFn: () => 'top-secret',
+        getBlogOrgIdFn: () => 'wrong-blog-org',
+        assertBlogOrganizationExistsFn: async () => {},
+        revalidatePathsFn: async (paths) => {
+          revalidatedPaths.push(paths)
+        },
+      }
+    )
+  )
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(revalidatedPaths, [['/blog', '/blog/primer-post']])
+  assert.ok(store.has('organizations/real-blog-org/blogPosts/primer-post'))
+
+  const body = await response.json() as { success: boolean; orgId?: string }
+  assert.equal(body.success, true)
+  assert.equal(body.orgId, 'real-blog-org')
 })
