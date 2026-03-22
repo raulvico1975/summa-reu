@@ -82,11 +82,11 @@ async function readStore(): Promise<LocalStore> {
   }
 }
 
-async function publish(payload: Record<string, unknown>) {
+async function publish(payload: Record<string, unknown>, publishSecret: string) {
   const res = await fetch(`${baseUrl}/api/blog/publish`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${localPublishSecret}`,
+      Authorization: `Bearer ${publishSecret}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
@@ -170,8 +170,8 @@ async function run() {
       publishedAt: new Date().toISOString(),
     }
 
-    const withImage = await publish(withImagePayload)
-    const withoutImage = await publish(withoutImagePayload)
+    const withImage = await publish(withImagePayload, localPublishSecret)
+    const withoutImage = await publish(withoutImagePayload, localPublishSecret)
     const store = await readStore()
     const availableOrgIds = Object.keys(store.posts ?? {})
     const effectiveOrgId =
