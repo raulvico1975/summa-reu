@@ -82,7 +82,7 @@ export default async function BlogPostPage({ params }: PageProps) {
             <img
               src={post.coverImageUrl}
               alt={post.coverImageAlt || post.title}
-              className="h-full min-h-[280px] w-full object-cover object-center sm:min-h-[360px]"
+              className="h-full min-h-[280px] w-full object-contain object-center sm:min-h-[360px]"
             />
           </div>
         ) : null}
