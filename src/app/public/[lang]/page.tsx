@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
-import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Upload, Settings, FileCheck, Download } from 'lucide-react';
 import {
@@ -114,6 +113,7 @@ export default async function HomePage({ params }: PageProps) {
   const t = getPublicTranslations(locale);
   const anchors = SECTION_ANCHORS[locale];
   const featuresPath = FEATURES_PATH[locale];
+  const capabilitiesHref = `/${locale}#capabilities`;
   const visuals = locale === 'ca' ? HOME_VISUALS.ca : HOME_VISUALS.default;
 
   return (
@@ -131,21 +131,43 @@ export default async function HomePage({ params }: PageProps) {
       {/* ═══════════════════════════════════════════════════════════════════════
           A) HERO — 2 columnes desktop, 1 columna mòbil
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="bg-background px-6 py-16 lg:py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 items-center">
+      <section className="relative overflow-hidden bg-background px-6 py-14 lg:py-20">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-[-4rem] top-[-3rem] h-44 w-44 rounded-full bg-sky-100 blur-3xl" />
+          <div className="absolute right-[8%] top-[12%] h-64 w-64 rounded-full bg-amber-100/80 blur-3xl animate-pulse" />
+          <div className="absolute bottom-[-5rem] right-[-2rem] h-56 w-56 rounded-full bg-cyan-100/70 blur-3xl" />
+        </div>
+
+        <div className="relative mx-auto max-w-6xl">
+          <div className="grid items-center gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:gap-14">
             {/* Columna esquerra: Text */}
             <div className="space-y-6 text-center lg:text-left">
-              <div className="flex items-center justify-center gap-2 lg:justify-start">
-                <Logo className="h-12 w-12 lg:h-14 lg:w-14 text-primary" />
-                <span className="text-lg font-semibold font-headline text-primary">
-                  {t.common.appName}
-                </span>
+              <div className="mx-auto inline-flex max-w-full items-center gap-3 rounded-full border border-sky-200/70 bg-background/85 px-4 py-2 text-left text-sm font-medium text-foreground shadow-[0_18px_50px_-28px_rgba(14,165,233,0.55)] backdrop-blur lg:mx-0">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500 animate-pulse" />
+                <span className="min-w-0">{t.home.hero.bridgeLine}</span>
               </div>
 
-              <h1 className="mx-auto max-w-3xl text-[2.75rem] font-extrabold leading-[1.02] tracking-[-0.03em] text-foreground sm:text-[3.5rem] lg:mx-0 lg:text-[3.35rem] 2xl:text-7xl">
+              <h1 className="mx-auto max-w-3xl text-[2.35rem] font-extrabold leading-[1.02] tracking-[-0.03em] text-foreground sm:text-[3rem] lg:mx-0 lg:text-[3.05rem] 2xl:text-[4.5rem]">
                 {t.home.heroTagline}
               </h1>
+
+              {/* Imatge en mòbil: just sota del titular */}
+              <div className="lg:hidden">
+                <div className="relative mx-auto max-w-xl pt-2">
+                  <div className="absolute inset-x-8 top-4 h-24 rounded-full bg-sky-100/80 blur-3xl" />
+                  <div className={`${frameClass} relative overflow-hidden shadow-[0_30px_90px_-38px_rgba(15,23,42,0.45)]`}>
+                    <Image
+                      src="/visuals/web/web_pantalla_summa.webp"
+                      alt={t.home.hero.visualAlt}
+                      width={800}
+                      height={500}
+                      sizes="100vw"
+                      className="w-full h-auto"
+                      priority
+                    />
+                  </div>
+                </div>
+              </div>
 
               <p className="text-xl text-muted-foreground sm:text-2xl">
                 {t.home.solves.intro}
@@ -154,21 +176,6 @@ export default async function HomePage({ params }: PageProps) {
               <p className="text-base text-muted-foreground/80 sm:text-lg">
                 {t.cta.supporting}
               </p>
-
-              {/* Imatge en mòbil: entre text i CTAs */}
-              <div className="lg:hidden">
-                <div className={frameClass}>
-                  <Image
-                    src="/visuals/web/web_pantalla_summa.webp"
-                    alt={t.home.hero.visualAlt}
-                    width={800}
-                    height={500}
-                    sizes="100vw"
-                    className="w-full h-auto"
-                    priority
-                  />
-                </div>
-              </div>
 
               {/* CTAs */}
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
@@ -179,7 +186,7 @@ export default async function HomePage({ params }: PageProps) {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <Link href={`/${locale}/${featuresPath}`}>{t.common.features}</Link>
+                  <Link href={capabilitiesHref}>{t.common.features}</Link>
                 </Button>
               </div>
 
@@ -188,17 +195,20 @@ export default async function HomePage({ params }: PageProps) {
             </div>
 
             {/* Columna dreta: Imatge (només desktop) */}
-            <div className="hidden lg:block">
-              <div className={frameClass}>
-                <Image
-                  src="/visuals/web/web_pantalla_summa.webp"
-                  alt={t.home.hero.visualAlt}
-                  width={800}
-                  height={500}
-                  sizes="50vw"
-                  className="w-full h-auto"
-                  priority
-                />
+            <div className="hidden lg:block lg:-mt-10">
+              <div className="relative">
+                <div className="absolute left-10 right-10 top-10 h-28 rounded-full bg-sky-100/80 blur-3xl" />
+                <div className={`${frameClass} relative overflow-hidden shadow-[0_42px_110px_-45px_rgba(15,23,42,0.5)]`}>
+                  <Image
+                    src="/visuals/web/web_pantalla_summa.webp"
+                    alt={t.home.hero.visualAlt}
+                    width={800}
+                    height={500}
+                    sizes="50vw"
+                    className="w-full h-auto"
+                    priority
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -295,7 +305,7 @@ export default async function HomePage({ params }: PageProps) {
       {/* ═══════════════════════════════════════════════════════════════════════
           D) CAPABILITIES GRID — 2x2
           ═══════════════════════════════════════════════════════════════════════ */}
-      <section id="capabilities" className="bg-muted/30 px-6 py-16 lg:py-20">
+      <section id="capabilities" className="scroll-mt-24 bg-muted/30 px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-6xl">
           <h2 className="text-2xl font-semibold text-center">{t.home.systemOverview.title}</h2>
           <p className="mt-2 mb-12 text-center text-muted-foreground max-w-2xl mx-auto">
@@ -396,6 +406,44 @@ export default async function HomePage({ params }: PageProps) {
                 >
                   {t.home.readMore}
                 </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="who-we-are" className="px-6 py-16 lg:py-20">
+        <div className="mx-auto grid max-w-6xl gap-8 rounded-[2rem] border border-border/60 bg-gradient-to-br from-background via-background to-sky-50/90 p-8 shadow-[0_28px_80px_-50px_rgba(14,165,233,0.45)] lg:grid-cols-[0.9fr_1.1fr] lg:p-12">
+          <div className="space-y-5">
+            <span className="inline-flex items-center rounded-full border border-sky-200 bg-background/90 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              {t.home.whoWeAre.status}
+            </span>
+            <h2 className="text-2xl font-semibold lg:text-3xl">{t.home.whoWeAre.title}</h2>
+            <p className="text-lg text-muted-foreground">{t.home.whoWeAre.lead}</p>
+            <p className="text-muted-foreground">{t.home.whoWeAre.description}</p>
+          </div>
+
+          <div className="relative overflow-hidden rounded-3xl border border-sky-100/80 bg-background/85 p-7 shadow-sm">
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-sky-100/80 blur-3xl" />
+            <div className="absolute -left-8 bottom-0 h-28 w-28 rounded-full bg-amber-100/80 blur-3xl" />
+            <div className="relative space-y-4">
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-background/90 px-4 py-3">
+                <span className="text-sm font-medium text-foreground">{t.home.whoWeAre.status}</span>
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-dashed border-border/70 bg-muted/30 p-4">
+                  <div className="h-2.5 w-20 rounded-full bg-sky-200" />
+                  <div className="mt-4 h-2.5 w-full rounded-full bg-muted" />
+                  <div className="mt-2 h-2.5 w-5/6 rounded-full bg-muted" />
+                  <div className="mt-2 h-2.5 w-2/3 rounded-full bg-muted" />
+                </div>
+                <div className="rounded-2xl border border-dashed border-border/70 bg-muted/30 p-4">
+                  <div className="h-2.5 w-24 rounded-full bg-amber-200" />
+                  <div className="mt-4 h-2.5 w-full rounded-full bg-muted" />
+                  <div className="mt-2 h-2.5 w-4/5 rounded-full bg-muted" />
+                  <div className="mt-2 h-2.5 w-3/5 rounded-full bg-muted" />
+                </div>
               </div>
             </div>
           </div>
@@ -555,7 +603,7 @@ export default async function HomePage({ params }: PageProps) {
       {/* Footer */}
       <footer className="border-t py-6 px-4">
         <div className="max-w-lg mx-auto flex items-center justify-center gap-6 text-sm text-muted-foreground">
-          <Link href={`/${locale}/${featuresPath}`} className="hover:underline">
+          <Link href={capabilitiesHref} className="hover:underline">
             {t.common.features}
           </Link>
           <span>·</span>
@@ -565,10 +613,6 @@ export default async function HomePage({ params }: PageProps) {
           <span>·</span>
           <Link href={`/${locale}/privacy`} className="hover:underline">
             {t.common.privacy}
-          </Link>
-          <span>·</span>
-          <Link href={`/${locale}/contact`} className="hover:underline">
-            {t.common.contact}
           </Link>
         </div>
       </footer>
