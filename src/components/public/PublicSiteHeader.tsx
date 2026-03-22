@@ -4,20 +4,13 @@ import { Button } from '@/components/ui/button'
 import { getPublicTranslations } from '@/i18n/public'
 import type { PublicLocale } from '@/lib/public-locale'
 
-const FEATURES_PATH: Record<PublicLocale, string> = {
-  ca: 'funcionalitats',
-  es: 'funcionalitats',
-  fr: 'fonctionnalites',
-  pt: 'funcionalidades',
-}
-
 interface PublicSiteHeaderProps {
   locale: PublicLocale
 }
 
 export function PublicSiteHeader({ locale }: PublicSiteHeaderProps) {
   const t = getPublicTranslations(locale)
-  const featuresPath = FEATURES_PATH[locale]
+  const capabilitiesHref = `/${locale}#capabilities`
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -38,23 +31,17 @@ export function PublicSiteHeader({ locale }: PublicSiteHeaderProps) {
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
           <nav className="hidden flex-wrap items-center gap-5 text-sm text-muted-foreground lg:flex">
-            <Link
-              href={`/${locale}/${featuresPath}`}
-              className="transition-colors hover:text-foreground"
-            >
+            <Link href={capabilitiesHref} className="transition-colors hover:text-foreground">
               {t.common.features}
             </Link>
             <Link href="/blog" className="transition-colors hover:text-foreground">
               {t.common.blog}
             </Link>
-            <Link href={`/${locale}/contact`} className="transition-colors hover:text-foreground">
-              {t.common.contact}
-            </Link>
           </nav>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/login">{t.common.enter}</Link>
+            <Button asChild variant="outline" size="sm" className="lg:hidden">
+              <Link href={capabilitiesHref}>{t.common.features}</Link>
             </Button>
             <Button asChild size="sm">
               <Link href={`/${locale}/contact`}>{t.cta.primary}</Link>

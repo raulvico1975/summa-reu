@@ -266,6 +266,12 @@ export interface PublicTranslations {
       admin: { title: string; description: string };
       projects: { title: string; description: string };
     };
+    whoWeAre: {
+      title: string;
+      lead: string;
+      description: string;
+      status: string;
+    };
     howWeWork: {
       title: string;
       lead: string;
@@ -755,6 +761,13 @@ const ca: PublicTranslations = {
         title: 'Per a gestors de projectes',
         description: "Seguiment de l'execució pressupostària, justificació de subvencions i exportació completa amb un clic. Excel + factures en ZIP.",
       },
+    },
+    whoWeAre: {
+      title: 'Qui som',
+      lead: 'Aquesta secció està en construcció.',
+      description:
+        'Ben aviat explicarem millor qui hi ha darrere de Summa Social, com pensem el producte i com acompanyem les entitats en la seva organització econòmica.',
+      status: 'En construcció',
     },
     howWeWork: {
       title: 'Com treballem',
@@ -1325,6 +1338,13 @@ const es: PublicTranslations = {
         title: 'Para gestores de proyectos',
         description: 'Seguimiento de la ejecución presupuestaria, justificación de subvenciones y exportación completa con un clic. Excel + facturas en ZIP.',
       },
+    },
+    whoWeAre: {
+      title: 'Quiénes somos',
+      lead: 'Esta sección está en construcción.',
+      description:
+        'Muy pronto explicaremos mejor quién hay detrás de Summa Social, cómo pensamos el producto y cómo acompañamos a las entidades en su organización económica.',
+      status: 'En construcción',
     },
     howWeWork: {
       title: 'Cómo trabajamos',
@@ -1897,6 +1917,13 @@ const fr: PublicTranslations = {
         description: "Suivi de l'exécution budgétaire, justification des subventions et export complet en un clic. Excel + factures en ZIP.",
       },
     },
+    whoWeAre: {
+      title: 'Qui nous sommes',
+      lead: 'Cette section est en construction.',
+      description:
+        "Bientôt, nous expliquerons mieux qui se trouve derrière Summa Social, comment nous pensons le produit et comment nous accompagnons les organisations dans leur gestion économique.",
+      status: 'En construction',
+    },
     howWeWork: {
       title: 'Comment nous travaillons',
       lead: "Avant d'activer Summa Social pour votre association, nous évaluons ensemble si cela correspond à votre façon de travailler et quels sont vos objectifs, pour garantir une adoption pratique et utile.",
@@ -2466,6 +2493,13 @@ const pt: PublicTranslations = {
         title: 'Para gestores de projetos',
         description: 'Seguimento da execução orçamental, justificação de subsídios e exportação completa com um clique. Excel + faturas em ZIP.',
       },
+    },
+    whoWeAre: {
+      title: 'Quem somos',
+      lead: 'Esta secção está em construção.',
+      description:
+        'Em breve explicaremos melhor quem está por trás da Summa Social, como pensamos o produto e como acompanhamos as entidades na sua organização económica.',
+      status: 'Em construção',
     },
     howWeWork: {
       title: 'Como trabalhamos',
