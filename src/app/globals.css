@@ -168,6 +168,11 @@
     color: hsl(var(--foreground));
   }
 
+  .blog-rich-text :where(strong) {
+    font-weight: 700;
+    color: hsl(var(--foreground));
+  }
+
   .blog-rich-text :where(blockquote) {
     border-left-color: hsl(var(--border));
     color: hsl(var(--muted-foreground));

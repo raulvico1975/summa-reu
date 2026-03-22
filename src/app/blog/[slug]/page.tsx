@@ -1,9 +1,16 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getBlogCopy } from '@/lib/blog/copy'
 import { formatBlogDate, getBlogPostBySlug } from '@/lib/blog/firestore'
 
 export const revalidate = 60
+
+const categoryLabels: Record<string, string> = {
+  'criteri-operatiu': 'Gestió econòmica',
+  fiscal: 'Fiscalitat',
+  operativa: 'Operativa',
+}
 
 type PageProps = {
   params: Promise<{ slug: string }>
@@ -55,6 +62,8 @@ export default async function BlogPostPage({ params }: PageProps) {
     notFound()
   }
 
+  const categoryLabel = categoryLabels[post.category] ?? post.category
+
   return (
     <main className="min-h-screen bg-background">
       <article className="mx-auto max-w-4xl px-6 py-16">
@@ -62,24 +71,38 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <time dateTime={post.publishedAt}>{formatBlogDate(post.publishedAt)}</time>
             <span>·</span>
-            <span>{post.category}</span>
+            <span>{categoryLabel}</span>
           </div>
 
           <h1 className="text-4xl font-bold tracking-tight text-foreground">{post.title}</h1>
         </header>
 
         {post.coverImageUrl ? (
-          <img
-            src={post.coverImageUrl}
-            alt={post.coverImageAlt || post.title}
-            className="mb-10 h-auto w-full rounded-2xl border border-border object-cover"
-          />
+          <div className="mb-10 min-h-[280px] overflow-hidden rounded-2xl border border-border bg-muted/30 sm:min-h-[360px]">
+            <img
+              src={post.coverImageUrl}
+              alt={post.coverImageAlt || post.title}
+              className="h-full min-h-[280px] w-full object-cover object-center sm:min-h-[360px]"
+            />
+          </div>
         ) : null}
 
         <div
           className="blog-rich-text"
           dangerouslySetInnerHTML={{ __html: post.contentHtml }}
         />
+
+        <div className="mt-16 border-t border-border pt-10">
+          <p className="max-w-2xl text-base leading-7 text-muted-foreground">
+            Summa Social gestiona donants, remeses i fiscalitat per a ONGs i associacions.
+          </p>
+          <Link
+            href="https://summasocial.app"
+            className="mt-5 inline-flex items-center rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            Descobreix com funciona
+          </Link>
+        </div>
       </article>
     </main>
   )
