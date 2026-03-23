@@ -4115,6 +4115,7 @@
   "movements.split.cancel": "Cancelar",
   "movements.split.deltaInvalid": "A soma das linhas deve fechar com o valor bancário (tolerância ±0,02 €).",
   "movements.split.deleteBlocked": "Faz parte de um desdobramento. Para alterar, desfaça o desdobramento.",
+  "movements.split.tooManyLines": "Este desdobramento admite no máximo 49 linhas.",
   "movements.delete.blocked.title": "Não é possível eliminar este movimento",
   "movements.delete.blocked.parentRemittance": "Este movimento tem um desdobramento. Desfaça-o antes de eliminar.",
   "movements.delete.blocked.childRemittance": "Faz parte de um desdobramento. Desfaça o desdobramento a partir do movimento pai.",

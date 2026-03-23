@@ -197,6 +197,22 @@ function getBuildId(paramBuildId?: string): string {
   return paramBuildId || process.env.BUILD_ID || 'unknown';
 }
 
+export function getIncidentOrgContext(
+  orgId?: string,
+  orgSlug?: string
+): { orgId: string; orgSlug?: string } | null {
+  const normalizedOrgId = typeof orgId === 'string' ? orgId.trim() : '';
+  if (!normalizedOrgId) {
+    return null;
+  }
+
+  const normalizedOrgSlug = typeof orgSlug === 'string' ? orgSlug.trim() : '';
+
+  return normalizedOrgSlug
+    ? { orgId: normalizedOrgId, orgSlug: normalizedOrgSlug }
+    : { orgId: normalizedOrgId };
+}
+
 export async function reportSystemIncident(
   params: ReportIncidentParams
 ): Promise<void> {
@@ -206,6 +222,12 @@ export async function reportSystemIncident(
   // Filtrar soroll
   if (shouldIgnoreError(message)) {
     console.debug('[SystemIncidents] Ignored:', message.slice(0, 60));
+    return;
+  }
+
+  const orgContext = getIncidentOrgContext(orgId, orgSlug);
+  if (!orgContext) {
+    console.debug('[SystemIncidents] Skipped: missing orgId');
     return;
   }
 
@@ -255,8 +277,8 @@ export async function reportSystemIncident(
       if (route) incident.route = route.slice(0, 200);
       const topStack = extractTopStackLine(stack);
       if (topStack) incident.topStack = topStack;
-      if (orgId) incident.orgId = orgId;
-      if (orgSlug) incident.orgSlug = orgSlug;
+      incident.orgId = orgContext.orgId;
+      if (orgContext.orgSlug) incident.orgSlug = orgContext.orgSlug;
       if (meta) incident.lastSeenMeta = meta;
 
       await setDoc(docRef, incident);

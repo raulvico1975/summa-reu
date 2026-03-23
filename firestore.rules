@@ -113,10 +113,12 @@ service cloud.firestore {
     match /systemIncidents/{incidentId} {
       // Llegir: només SuperAdmin
       allow read: if isSuperAdmin();
-      // P1 FIX: Create permet que el sistema client reporti errors
-      // però limitat a usuaris que són membres d'alguna org (no anònims)
-      // Update: només SuperAdmin (per canviar status, assignar, etc.)
-      allow create: if isSignedIn();
+      // Create: només amb orgId vàlid i membership real en aquella org.
+      // Si falta orgId o no es pot demostrar membership, deneguem.
+      allow create: if request.resource.data.keys().hasAll(['orgId'])
+        && request.resource.data.orgId is string
+        && request.resource.data.orgId.size() > 0
+        && isMemberOf(request.resource.data.orgId);
       allow update: if isSuperAdmin();
       // Eliminar: només SuperAdmin
       allow delete: if isSuperAdmin();

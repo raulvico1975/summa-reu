@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
 import { requirePermission } from '@/lib/api/require-permission';
 import { canReadBankInProjectes } from '@/lib/permissions';
+import { serializePublicTransaction } from '@/lib/transactions/public-transaction-dto';
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 300;
@@ -48,6 +49,8 @@ export async function GET(
     .limit(limit)
     .get();
 
-  const items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  const items = snapshot.docs.map((doc) =>
+    serializePublicTransaction(doc.id, doc.data() as Record<string, unknown>)
+  );
   return NextResponse.json({ success: true, items });
 }

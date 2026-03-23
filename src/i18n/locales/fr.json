@@ -2400,6 +2400,7 @@
   "movements.split.missingBankAccount": "Ce mouvement n'a pas de compte bancaire associé. Assignez-le d'abord.",
   "movements.split.note": "Note",
   "movements.split.subtitle": "Ce mouvement bancaire n'est pas modifié. Indiquez comment il se répartit.",
+  "movements.split.tooManyLines": "Cette ventilation admet au maximum 49 lignes.",
   "movements.split.title": "Ventiler le montant",
   "movements.splitter.allDonorsReactivated": "Donateurs réactivés",
   "movements.splitter.ambiguousIbanLabel": "IBAN ambigu",

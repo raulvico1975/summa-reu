@@ -11,6 +11,10 @@ import {
   resolvePeriodRange,
   type TransactionSearchContext,
 } from '@/lib/read-models/transactions';
+import {
+  serializePublicTransaction,
+  type PublicTransactionDto,
+} from '@/lib/transactions/public-transaction-dto';
 import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
 
 const DEFAULT_LIMIT = 50;
@@ -68,7 +72,7 @@ async function loadTransactionSearchContext(
 }
 
 interface TransactionPageScanResult {
-  transactions: Transaction[];
+  transactions: PublicTransactionDto[];
   nextCursor: string | null;
   total: number;
 }
@@ -94,7 +98,7 @@ async function scanFilteredTransactionsPage({
   scanLimit: number;
   maxScanLoops: number;
 }): Promise<TransactionPageScanResult> {
-  const transactions: Transaction[] = [];
+  const transactions: PublicTransactionDto[] = [];
   let nextCursor: string | null = null;
   let matchedCount = 0;
   let hasExtraMatch = false;
@@ -114,14 +118,15 @@ async function scanFilteredTransactionsPage({
     scanCursor = snapshot.docs[snapshot.docs.length - 1] ?? null;
 
     for (const doc of snapshot.docs) {
-      const tx = { id: doc.id, ...doc.data() } as Transaction;
+      const rawData = doc.data() as Record<string, unknown>;
+      const tx = { id: doc.id, ...rawData } as Transaction;
       if (!isVisibleInMovementsLedger(tx, { showArchived })) continue;
       if (!matchesTransactionPageFilters(tx, pageFilters, searchContext)) continue;
 
       matchedCount += 1;
 
       if (includeTransactions !== false && transactions.length < limit) {
-        transactions.push(tx);
+        transactions.push(serializePublicTransaction(doc.id, rawData));
         nextCursor = encodeTransactionPageCursor({ id: doc.id });
         continue;
       }
