@@ -155,10 +155,10 @@ export function SuperAdminsManager() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Shield className="h-4 w-4" />
-          SuperAdmins
+          Gestionar SuperAdmins
         </CardTitle>
         <CardDescription>
-          Controla qui pot accedir al panell /admin. Si et quedes sense superadmins, perdràs accés.
+          Controla qui pot accedir a aquesta zona sensible. Si et quedes sense superadmins, perdràs accés.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

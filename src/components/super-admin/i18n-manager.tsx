@@ -444,9 +444,9 @@ export function I18nManager() {
         <div className="flex items-center gap-3">
           <Languages className="h-5 w-5 text-blue-500" />
           <div>
-            <h3 className="font-semibold">Gestió de traduccions</h3>
+            <h3 className="font-semibold">Traduccions</h3>
             <p className="text-sm text-muted-foreground">
-              Baixa i puja paquets de traducció JSON
+              Revisa, puja i publica textos per idioma
             </p>
           </div>
         </div>

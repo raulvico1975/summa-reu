@@ -647,10 +647,10 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
               <Megaphone className="h-4 w-4" />
-              Novetats del producte
+              Novetats
             </CardTitle>
             <CardDescription>
-              Gestiona les novetats que veuran els usuaris
+              Gestiona les novetats visibles per als usuaris
             </CardDescription>
           </div>
           {/* Mobile: CTA + dropdown */}
@@ -686,7 +686,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem onClick={handleExportWebJson}>
                     <FileJson className="h-4 w-4 mr-2" />
-                    Exportar web JSON
+                    Exportar per a la web
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -697,10 +697,10 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
               <div className="flex flex-col items-end gap-1">
                 <Button variant="outline" size="sm" onClick={handleExportWebJson}>
                   <FileJson className="mr-2 h-4 w-4" />
-                  Exportar web JSON
+                  Exportar per a la web
                 </Button>
                 <p className="text-[10px] text-muted-foreground max-w-[200px] text-right">
-                  Després: substituir public/novetats-data.json + commit + deploy
+                  Prepara l’arxiu necessari per publicar les novetats al web
                 </p>
               </div>
               <Label htmlFor="import-json" className="cursor-pointer">

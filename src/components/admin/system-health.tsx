@@ -1597,16 +1597,15 @@ export function SystemHealth() {
                                     className="h-6 text-[10px] w-full"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      // Navegar a la secció de traduccions (SuperAdmin)
-                                      const superAdminSection = document.querySelector('[data-section="i18n"]');
-                                      if (superAdminSection) {
-                                        superAdminSection.scrollIntoView({ behavior: 'smooth' });
-                                      } else {
-                                        toast({
-                                          title: 'Traduccions',
-                                          description: 'Ves a la secció SuperAdmin → Traduccions per inicialitzar.',
-                                        });
-                                      }
+                                      window.dispatchEvent(
+                                        new CustomEvent('admin:navigate', {
+                                          detail: {
+                                            area: 'content',
+                                            contentModule: 'translations',
+                                            section: 'i18n',
+                                          },
+                                        })
+                                      );
                                     }}
                                   >
                                     Anar a Traduccions
