@@ -19,6 +19,7 @@ import { buildEmergencyFallback } from '@/lib/support/engine/renderer'
 import { extractOperationalSteps, normalizeUiPathsAgainstCatalog } from '@/lib/support/engine/policy'
 import { clampTimeout, normalizeAssistantTone, normalizeLang, parseClarifyOptionIds, withTimeout } from '@/lib/support/engine/normalize'
 import type { ApiResponse, AssistantTone, InputLang } from '@/lib/support/engine/types'
+import { normalizeSupportContext } from '@/lib/support/support-context'
 import guideProjectsCardRaw from '../../../../../docs/kb/cards/guides/guide-projects.json'
 import guideAttachDocumentCardRaw from '../../../../../docs/kb/cards/guides/guide-attach-document.json'
 import manualMemberPaidQuotasCardRaw from '../../../../../docs/kb/cards/manual/manual-member-paid-quotas.json'
@@ -85,6 +86,9 @@ Error tipico: Entrar en Movimientos en lugar de Proyectos e intentar abrir el pr
 
 const HIDDEN_FOR_ORG_CARD_IDS = new Set([
   'fallback-danger-unclear',
+])
+
+const ORG_VISIBLE_DANGER_CARD_IDS = new Set([
   'manual-danger-zone',
   'guide-danger-delete-remittance',
 ])
@@ -394,8 +398,9 @@ function filterCardsForSupportAccess(cards: KBCard[], isSuperAdminUser: boolean)
   return cards.filter(card => {
     if (!card?.id) return false
     if (HIDDEN_FOR_ORG_CARD_IDS.has(card.id)) return false
-    if ((card.domain ?? '').toLowerCase() === 'superadmin') return false
-    if ((card.guardrail ?? '').toLowerCase() === 'b1_danger') return false
+    const allowDangerCard = ORG_VISIBLE_DANGER_CARD_IDS.has(card.id)
+    if (!allowDangerCard && (card.domain ?? '').toLowerCase() === 'superadmin') return false
+    if (!allowDangerCard && (card.guardrail ?? '').toLowerCase() === 'b1_danger') return false
     return true
   })
 }
@@ -540,6 +545,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     kbLang = parsedLang.kbLang
     const clarifyOptionIds = parseClarifyOptionIds(rawClarifyOptionIds)
     const previousContext = normalizePreviousBotContext(body)
+    const supportContext = normalizeSupportContext({
+      screenContext: body.screenContext,
+      recentTurns: body.recentTurns,
+      previousCardId: previousContext.previousCardId,
+    })
 
     const db = getAdminDb()
     const userDoc = await db.doc(`users/${authResult.uid}`).get()
@@ -629,6 +639,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           cardId: card.id,
           reason: HIDDEN_FOR_ORG_CARD_IDS.has(card.id)
             ? 'role_org_filter:hidden_for_org_support_access'
+            : ORG_VISIBLE_DANGER_CARD_IDS.has(card.id)
+              ? 'role_org_filter:allowed_danger_card'
             : (card.domain ?? '').toLowerCase() === 'superadmin'
               ? 'role_org_filter:superadmin_domain'
               : (card.guardrail ?? '').toLowerCase() === 'b1_danger'
@@ -637,7 +649,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         }))
       : []
 
-    const deterministicRetrieval = retrieveCard(message, kbLang, retrievableCards)
+    const deterministicRetrieval = retrieveCard(message, kbLang, retrievableCards, supportContext)
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY
     const allowAiIntent = false
     const allowAiReformat = Boolean(apiKey) && aiReformatEnabled
@@ -647,6 +659,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       kbLang,
       cards: retrievableCards,
       clarifyOptionIds,
+      supportContext,
       assistantTone,
       allowAiIntent,
       allowAiReformat,
@@ -699,7 +712,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     let responsePayload: ApiResponse | (ApiResponse & { debugTrace?: BotDebugTrace }) = result.response
     if (traceEnabled) {
-      const retrieval = debugRetrieveCard(message, kbLang, retrievableCards)
+      const retrieval = debugRetrieveCard(message, kbLang, retrievableCards, supportContext)
       const selectedCard = retrievableCards.find(card => card.id === result.response.cardId) ?? null
       const selectedUiPathsRaw = selectedCard?.uiPaths ?? []
       const selectedUiPathsNormalized = normalizeUiPathsAgainstCatalog(selectedUiPathsRaw)

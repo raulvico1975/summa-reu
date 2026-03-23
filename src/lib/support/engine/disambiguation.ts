@@ -25,8 +25,8 @@ export function resolveClarifyChoice(
 
 export function buildClarifyAnswer(lang: KbLang, options: KBCard[]): string {
   const intro = lang === 'es'
-    ? 'Quiero ayudarte bien sin confundirte. ¿Cuál de estas opciones se parece más a tu caso?'
-    : 'Vull ajudar-te bé sense confondre’t. Quina d’aquestes opcions s’assembla més al teu cas?'
+    ? 'Quiero llevarte al paso correcto sin hacerte perder tiempo. ¿Cuál de estas opciones se parece más a tu caso?'
+    : 'Vull portar-te al pas correcte sense fer-te perdre temps. Quina d’aquestes opcions s’assembla més al teu cas?'
 
   const lines = options.slice(0, 3).map((card, i) => {
     const label = getCardLabel(card, lang)
@@ -35,8 +35,8 @@ export function buildClarifyAnswer(lang: KbLang, options: KBCard[]): string {
   })
 
   const outro = lang === 'es'
-    ? 'Respóndeme con "1", "2" o "3", o pega el texto exacto del error que te sale.'
-    : 'Respon-me amb "1", "2" o "3", o enganxa el text exacte de l’error que et surt.'
+    ? 'Respóndeme con "1", "2" o "3". Si ninguna encaja, dime la pantalla exacta o pega el error literal.'
+    : 'Respon-me amb "1", "2" o "3". Si cap no encaixa, digues-me la pantalla exacta o enganxa l’error literal.'
 
   return [intro, ...lines, outro].join('\n')
 }

@@ -15,9 +15,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
 import { trackUX } from '@/lib/ux/trackUX';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { resolveManualAnchorFromHint } from '@/help/help-manual-links';
+import type { SupportTurn } from '@/lib/support/support-context';
 
 // -------------------------------------------------------------------
 // Types
@@ -31,7 +32,7 @@ interface BotMessage {
   mode?: 'card' | 'fallback';
   questionText?: string;
   clarifyOptions?: Array<{
-    index: 1 | 2;
+    index: 1 | 2 | 3;
     cardId: string;
     label: string;
   }>;
@@ -104,6 +105,42 @@ function stripInlineUiPathFooter(text: string): string {
   return cleaned.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
+function buildWelcomeMessage(language: 'ca' | 'es' | 'fr' | 'pt'): string {
+  if (language === 'es' || language === 'pt') {
+    return [
+      'Cuéntame qué quieres hacer o pega el error exacto que te sale.',
+      '',
+      'Puedo ayudarte con cosas como:',
+      '- importar el extracto del banco',
+      '- editar un socio o donante',
+      '- deshacer una remesa',
+      '- recuperar la contraseña',
+    ].join('\n');
+  }
+
+  return [
+    "Explica'm què vols fer o enganxa l'error exacte que et surt.",
+    '',
+    'Et puc ajudar amb coses com:',
+    "- importar l'extracte del banc",
+    '- editar un soci o donant',
+    '- desfer una remesa',
+    '- recuperar la contrasenya',
+  ].join('\n');
+}
+
+function buildRecentTurns(messages: BotMessage[]): SupportTurn[] {
+  return messages
+    .filter(message => message.role === 'user' || Boolean(message.questionText))
+    .slice(-6)
+    .map(message => ({
+      role: message.role,
+      text: message.role === 'user' ? message.text : (message.questionText ?? message.text),
+      cardId: message.cardId,
+      mode: message.mode,
+    }))
+}
+
 // -------------------------------------------------------------------
 // Component
 // -------------------------------------------------------------------
@@ -112,6 +149,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   const { language, tr } = useTranslations();
   const { user } = useFirebase();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [messages, setMessages] = React.useState<BotMessage[]>([]);
   const [input, setInput] = React.useState('');
@@ -124,7 +162,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
 
   // i18n strings
   const title = tr('bot.title', language === 'es' ? 'Asistente' : 'Assistent');
-  const placeholder = tr('bot.placeholder', language === 'es' ? 'Escribe tu pregunta...' : 'Escriu la teva pregunta...');
+  const placeholder = tr('bot.placeholder', language === 'es' ? 'Explica qué quieres hacer o pega el error exacto...' : 'Explica què vols fer o enganxa l’error exacte...');
   const thinking = tr('bot.thinking', language === 'es' ? 'Pensando...' : 'Pensant...');
   const errorGeneric = tr('bot.errorGeneric', language === 'es' ? 'No he podido procesar la pregunta. Vuelve a intentarlo.' : 'No he pogut processar la pregunta. Torna-ho a provar.');
   const helpfulQuestion = tr('bot.helpfulQuestion', language === 'es' ? '¿Te ha ayudado esta respuesta?' : 'T’ha ajudat aquesta resposta?');
@@ -145,6 +183,18 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     }
   }, [open]);
 
+  React.useEffect(() => {
+    if (!open || messages.length > 0) return;
+
+    setMessages([{
+      role: 'bot',
+      text: buildWelcomeMessage(language),
+      uiPaths: language === 'es' ? ['Ayuda contextual', 'Manual'] : ['Ajuda contextual', 'Manual'],
+      cardId: 'manual-guides-hub',
+      mode: 'card',
+    }]);
+  }, [open, messages.length, language]);
+
   const sendMessage = React.useCallback(async (rawText: string) => {
     const text = rawText.trim();
     if (!text || loading || !user) return;
@@ -152,6 +202,11 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     const previousBotMessage = [...messages].reverse().find(
       (msg): msg is BotMessage => msg.role === 'bot'
     );
+    const recentTurns = buildRecentTurns(messages);
+    const screenContext = {
+      pathname,
+      helpOpen: searchParams?.get('help') === '1',
+    };
 
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text }]);
@@ -178,6 +233,8 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
           previousMode: previousBotMessage?.mode,
           previousClarifyOptionIds: previousBotMessage?.clarifyOptions?.map(option => option.cardId),
           previousWasClarify: previousBotMessage?.cardId === 'clarify-disambiguation',
+          recentTurns,
+          screenContext,
         }),
       });
 
@@ -201,7 +258,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
             clarifyOptions
               .map((option: { cardId?: string }) => option.cardId)
               .filter((id: unknown): id is string => typeof id === 'string')
-              .slice(0, 2)
+              .slice(0, 3)
           );
         } else {
           setPendingClarifyOptionIds([]);
@@ -220,13 +277,13 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     } finally {
       setLoading(false);
     }
-  }, [loading, user, language, errorGeneric, messages, pendingClarifyOptionIds]);
+  }, [loading, user, language, errorGeneric, messages, pathname, pendingClarifyOptionIds, searchParams]);
 
   const handleSend = React.useCallback(() => {
     void sendMessage(input);
   }, [input, sendMessage]);
 
-  const handleClarifyClick = React.useCallback((index: 1 | 2) => {
+  const handleClarifyClick = React.useCallback((index: 1 | 2 | 3) => {
     trackUX('bot.clarify.select', { option: index, lang: language });
     void sendMessage(String(index));
   }, [sendMessage, language]);

@@ -5,6 +5,7 @@ import { isOperationalIntent, normalizeUiPathsAgainstCatalog, SAFE_FALLBACK_PATH
 import { pickTopDisambiguationOptions, resolveRetrieval, type IntentClassifier } from './retrieval'
 import { buildEmergencyFallback, renderAnswer } from './renderer'
 import type { AssistantTone, OrchestratorResult } from './types'
+import type { SupportContext } from '../support-context'
 
 function findFallbackCard(cards: KBCard[]): KBCard | null {
   return cards.find(card => card.id === 'fallback-no-answer')
@@ -38,6 +39,7 @@ export async function orchestrator(input: {
   kbLang: KbLang
   cards: KBCard[]
   clarifyOptionIds: string[]
+  supportContext?: SupportContext
   assistantTone: AssistantTone
   allowAiIntent: boolean
   allowAiReformat: boolean
@@ -57,6 +59,7 @@ export async function orchestrator(input: {
     kbLang,
     cards,
     clarifyOptionIds,
+    supportContext,
     assistantTone,
     allowAiIntent,
     allowAiReformat,
@@ -94,6 +97,7 @@ export async function orchestrator(input: {
       lang: kbLang,
       cards,
       clarifyOptionIds,
+      supportContext,
       useIntentClassifier: allowAiIntent,
       classifyIntent,
     })
@@ -169,6 +173,41 @@ export async function orchestrator(input: {
   }
 
   if (retrievalResult?.specificCaseDetected) {
+    const selectedFallback = retrievalResult.mode === 'fallback' && retrievalResult.card?.type === 'fallback'
+      ? retrievalResult.card
+      : null
+    const shouldKeepSelectedFallback = selectedFallback && selectedFallback.id !== 'fallback-no-answer'
+
+    if (shouldKeepSelectedFallback && selectedFallback) {
+      return {
+        response: {
+          ok: true,
+          mode: 'fallback',
+          cardId: selectedFallback.id,
+          answer: selectedFallback.answer?.[kbLang] ?? selectedFallback.answer?.ca ?? selectedFallback.answer?.es ?? buildSpecificCaseFallbackAnswer(kbLang),
+          guideId: null,
+          uiPaths: selectedFallback.uiPaths?.length ? normalizeUiPathsAgainstCatalog(selectedFallback.uiPaths) : SAFE_FALLBACK_PATHS[kbLang],
+        },
+        meta: {
+          intentType,
+          retrievalConfidence: retrievalResult?.confidence,
+          confidenceBand: retrievalResult?.confidenceBand ?? retrievalResult?.confidence,
+          bestCardId: retrievalResult?.bestCardId,
+          bestScore: retrievalResult?.bestScore,
+          secondCardId: retrievalResult?.secondCardId,
+          secondScore: retrievalResult?.secondScore,
+          decisionReason: retrievalResult?.decisionReason ?? 'specific_case_guardrail',
+          specificCaseDetected: true,
+          questionDomain: retrievalResult?.questionDomain,
+          selectedCardId: selectedFallback.id,
+          usedClarification: false,
+          trustedOperationalCard: false,
+        },
+        selectedCard: null,
+        kbLang,
+      }
+    }
+
     const specificFallback = findFallbackCard(cards)
     const cardId = specificFallback?.id ?? 'fallback-no-answer'
     return {

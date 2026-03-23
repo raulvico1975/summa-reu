@@ -1,4 +1,5 @@
-import type { KBCard } from './load-kb'
+import { loadGuideContent, type KBCard } from './load-kb'
+import { cardMatchesScreenContext, isFollowUpMessage, type SupportContext } from './support-context'
 
 const DIRECT_MATCH_THRESHOLD = 36
 const CLARIFY_MIN_SCORE = 24
@@ -66,6 +67,10 @@ type DirectIntentMatch = {
   minScore?: number
 }
 
+type RetrievalOverride =
+  | { kind: 'card'; cardId: string; minScore?: number; decisionReason: string }
+  | { kind: 'fallback'; cardId: string; decisionReason: string }
+
 const STOPWORDS = new Set([
   // CA
   'com', 'que', 'quin', 'quina', 'quins', 'quines', 'de', 'del', 'dels', 'la', 'el', 'els', 'les',
@@ -83,8 +88,20 @@ const SYNONYM_GROUPS: Array<{ canon: string; variants: string[] }> = [
   { canon: 'certificat', variants: ['certificados', 'certificado', 'certificats', 'certficat', 'certificatio', 'certificados'] },
   { canon: 'donacio', variants: ['donacio', 'donacio', 'donacions', 'donacion', 'donaciones', 'donativo', 'donativos'] },
   { canon: 'soci', variants: ['socis', 'socio', 'socios', 'donant', 'donants', 'donante', 'donantes'] },
-  { canon: 'remesa', variants: ['remeses', 'remessa', 'remessas', 'remesas', 'cuota', 'cuotas'] },
-  { canon: 'dividir', variants: ['divideixo', 'dividir', 'fraccionar', 'fracciono', 'repartir', 'separar', 'desglossar', 'desglosar', 'partir'] },
+  { canon: 'remesa', variants: ['remeses', 'remessa', 'remessas', 'remesas'] },
+  { canon: 'dividir', variants: ['divideixo', 'dividir', 'divido', 'divide', 'fraccionar', 'fracciono', 'repartir', 'separar', 'separo', 'desglossar', 'desglosar', 'partir'] },
+  { canon: 'desfer', variants: ['desfer', 'desfaig', 'desfem', 'desfeta', 'deshacer', 'deshago', 'anullar', 'anulo', 'anular', 'undo'] },
+  { canon: 'importar', variants: ['importo', 'importar', 'importacio', 'importacion', 'importat', 'importada', 'importado', 'carregar', 'carrego', 'cargar', 'cargo', 'pujar', 'pujo', 'subir', 'subo'] },
+  { canon: 'extracte', variants: ['extractes', 'extracte', 'extracto', 'extractos', 'moviments', 'movimiento', 'movimientos'] },
+  { canon: 'duplicat', variants: ['duplicats', 'duplicat', 'duplicados', 'duplicado', 'repetit', 'repetits', 'repetido', 'repetidos', 'duplicada', 'duplicades', 'duplicadas', 'mateix', 'mateixos', 'mismo', 'mismos'] },
+  { canon: 'devolucio', variants: ['devolucions', 'devolucion', 'devoluciones', 'retorn', 'retorns', 'retorno', 'retornos', 'rebutjada', 'rechazo', 'devuelto', 'devueltos', 'tornat', 'tornats', 'vuelto', 'vueltos'] },
+  { canon: 'crear', variants: ['crear', 'creo', 'crea', 'nou', 'nueva', 'nuevo', 'afegir', 'afegeixo', 'añadir', 'anadir', 'anado', 'agregar', 'alta'] },
+  { canon: 'document', variants: ['document', 'documents', 'factura', 'factures', 'facturas', 'rebut', 'rebuts', 'recibo', 'recibos', 'justificant', 'justificante', 'nomina', 'nomines', 'nómina', 'archivo', 'archivos'] },
+  { canon: 'contrasenya', variants: ['contrasenya', 'contraseña', 'contrasena', 'password', 'clau'] },
+  { canon: 'historial', variants: ['historial', 'resum', 'resumen', 'summary'] },
+  { canon: 'entrar', variants: ['entrar', 'entro', 'accedir', 'accedo', 'acceso', 'login', 'sessio', 'sesion', 'iniciar', 'inicio'] },
+  { canon: 'fitxer', variants: ['fitxer', 'fitxers', 'fichero', 'ficheros', 'archivo', 'archivos', 'detalle', 'detall'] },
+  { canon: 'correcte', variants: ['correcte', 'correctament', 'correcto', 'correctamente', 'quadra', 'cuadra', 'resum', 'resumen', 'previsualitzacio', 'previsualizacion', 'confirmar', 'confirmo'] },
   { canon: 'imputar', variants: ['imputo', 'imputar', 'imputacio', 'imputacion', 'prorratejar', 'prorratear', 'prorrateo', 'distribuir'] },
   { canon: 'projecte', variants: ['projectes', 'proyecto', 'proyectos'] },
   { canon: 'despesa', variants: ['despeses', 'despesses', 'gasto', 'gastos'] },
@@ -328,6 +345,20 @@ function collectSearchPhrases(card: KBCard, lang: KbLang): string[] {
   const uiPaths = (card.uiPaths ?? []).map(normalizePlain)
   const symptom = normalizePlain(card.symptom?.[lang] ?? card.symptom?.ca ?? card.symptom?.es ?? '')
   const domain = normalizePlain(card.domain ?? '')
+  const answerText = card.guideId
+    ? loadGuideContent(card.guideId, lang)
+    : (card.answer?.[lang] ?? card.answer?.ca ?? card.answer?.es ?? '')
+  const answerPhrases = answerText
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map(line => line.trim())
+    .map(line => line.replace(/^\d+\.\s+/, ''))
+    .map(line => line.replace(/^-\s+/, ''))
+    .map(line => line.replace(/^(què passa|qué pasa|què fer ara|qué hacer ahora|com comprovar-ho|cómo comprobarlo|abans de continuar|antes de continuar|comprovacio final|comprobacion final)\s*:\s*/i, ''))
+    .map(normalizePlain)
+    .filter(line => line.length >= 8)
+    .filter(line => !['que passa', 'qué pasa', 'que fer ara', 'qué hacer ahora'].includes(line))
+    .slice(0, 4)
 
   return [
     title,
@@ -337,6 +368,7 @@ function collectSearchPhrases(card: KBCard, lang: KbLang): string[] {
     ...intents,
     ...keywords,
     ...uiPaths,
+    ...answerPhrases,
   ].filter(Boolean)
 }
 
@@ -421,13 +453,102 @@ function scoreDomainAlignment(questionDomain: QuestionDomain, cardDomainRaw: str
   return -32
 }
 
+type RetrievalSupportHints = {
+  followUp: boolean
+  routeHintText: string
+  routeTokens: string[]
+  conversationHintText: string
+  conversationTokens: string[]
+  evidenceTokens: string[]
+  previousCardId?: string
+  supportContext?: SupportContext
+}
+
+function uniquePhrases(items: string[], max = 6): string[] {
+  return Array.from(new Set(items.map(item => item.trim()).filter(Boolean))).slice(0, max)
+}
+
+function buildSupportHints(
+  message: string,
+  lang: KbLang,
+  cards: KBCard[],
+  supportContext?: SupportContext
+): RetrievalSupportHints {
+  const followUp = isFollowUpMessage(message)
+  const lexicalTokens = normalize(message)
+  const shortQuery = lexicalTokens.length <= 4
+  const routeHintText = supportContext?.screen?.routeUiPath ?? ''
+  const routeTokens = normalize(routeHintText)
+  const conversationPhrases: string[] = []
+
+  if (supportContext && (followUp || shortQuery)) {
+    for (const turn of supportContext.recentTurns.slice(-4)) {
+      if (turn.role === 'user') {
+        conversationPhrases.push(turn.text)
+        continue
+      }
+
+      if (!turn.cardId) continue
+      const card = cards.find(candidate => candidate.id === turn.cardId)
+      if (!card) continue
+
+      conversationPhrases.push(card.title?.[lang] ?? card.title?.ca ?? card.title?.es ?? '')
+      conversationPhrases.push(...(card.intents?.[lang] ?? card.intents?.ca ?? card.intents?.es ?? []).slice(0, 2))
+      conversationPhrases.push(...(card.uiPaths ?? []).slice(0, 1))
+    }
+
+    if (supportContext.previousCardId) {
+      const previousCard = cards.find(card => card.id === supportContext.previousCardId)
+      if (previousCard) {
+        conversationPhrases.push(previousCard.title?.[lang] ?? previousCard.title?.ca ?? previousCard.title?.es ?? '')
+        conversationPhrases.push(...(previousCard.intents?.[lang] ?? previousCard.intents?.ca ?? previousCard.intents?.es ?? []).slice(0, 2))
+        conversationPhrases.push(...(previousCard.uiPaths ?? []).slice(0, 1))
+      }
+    }
+  }
+
+  const conversationHintText = uniquePhrases(conversationPhrases, 8).join(' ')
+  const conversationTokens = normalize(conversationHintText)
+  const evidenceTokens = uniquePhrases(
+    [...lexicalTokens, ...conversationTokens],
+    followUp || shortQuery ? 12 : 8
+  )
+
+  return {
+    followUp,
+    routeHintText,
+    routeTokens,
+    conversationHintText,
+    conversationTokens,
+    evidenceTokens,
+    previousCardId: supportContext?.previousCardId,
+    supportContext,
+  }
+}
+
+function scoreRouteContext(card: KBCard, hints: RetrievalSupportHints): number {
+  if (!hints.routeHintText || !cardMatchesScreenContext(card, hints.supportContext?.screen)) return 0
+  return 18
+}
+
+function scoreConversationContinuity(card: KBCard, hints: RetrievalSupportHints): number {
+  const previousCardBoost = hints.previousCardId === card.id
+    ? (hints.followUp ? 52 : 18)
+    : 0
+  const recentCardBoost = hints.supportContext?.recentTurns.some(turn => turn.role === 'bot' && turn.cardId === card.id)
+    ? (hints.followUp ? 18 : 6)
+    : 0
+  return previousCardBoost + recentCardBoost
+}
+
 function scoreCard(
   tokens: string[],
   normalizedMessage: string,
   questionDomain: QuestionDomain,
   specificCaseDetected: boolean,
   card: KBCard,
-  lang: KbLang
+  lang: KbLang,
+  hints: RetrievalSupportHints
 ): number {
   let score = 0
   const intents = (card.intents?.[lang] ?? []).map(normalizePlain).filter(Boolean)
@@ -504,7 +625,12 @@ function scoreCard(
 
   score += scoreTokenOverlap(tokens, searchPhrases)
   score += scorePhraseSimilarity(normalizedMessage, searchPhrases)
+  score += Math.round(scoreTokenOverlap(hints.routeTokens, searchPhrases) * 0.35)
+  score += Math.round(scoreTokenOverlap(hints.conversationTokens, searchPhrases) * 0.55)
+  score += Math.round(scorePhraseSimilarity(hints.conversationHintText, searchPhrases) * 0.45)
   score += scoreDomainAlignment(questionDomain, card.domain ?? '')
+  score += scoreRouteContext(card, hints)
+  score += scoreConversationContinuity(card, hints)
   if (specificCaseDetected) {
     score -= SPECIFIC_CASE_SCORE_PENALTY
   }
@@ -556,6 +682,60 @@ function hasToken(tokens: Set<string>, ...candidates: string[]): boolean {
   return candidates.some(candidate => tokens.has(candidate))
 }
 
+function detectProtectedOverride(message: string): RetrievalOverride | null {
+  const normalized = normalizePlain(message)
+
+  if (/\b(zona de perill|zona de peligro)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'manual-danger-zone', minScore: 720, decisionReason: 'danger_zone_explainer' }
+  }
+
+  if (/\b(esborrar|esborro|borrar|borro|eliminar)\b/.test(normalized) && /\bultima\b/.test(normalized) && /\bremesa\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-danger-delete-remittance', minScore: 710, decisionReason: 'danger_last_remittance_exact' }
+  }
+
+  if (/\b(presento|presentar|declaracio|declaracion)\b/.test(normalized) && /\b(donatius|donativos)\b/.test(normalized) && /\b(hisenda|hacienda|aeat)\b/.test(normalized)) {
+    return { kind: 'fallback', cardId: 'fallback-fiscal-unclear', decisionReason: 'fiscal_filing_out_of_scope' }
+  }
+
+  if (/\b(comissions?|comisiones?)\b/.test(normalized) && /\bstripe\b/.test(normalized) && /\b182\b/.test(normalized)) {
+    return { kind: 'fallback', cardId: 'fallback-fiscal-unclear', decisionReason: 'fiscal_complex_stripe_182' }
+  }
+
+  if (/\b(no em surt|no me sale|no sale)\b/.test(normalized) && /\b(donant|donante)\b/.test(normalized) && /\b182\b/.test(normalized)) {
+    return { kind: 'fallback', cardId: 'fallback-fiscal-unclear', decisionReason: 'fiscal_specific_case_guardrail' }
+  }
+
+  if (/\b(anullar|anul[·l]?lar|anular)\b/.test(normalized) && /\bremesa\b/.test(normalized) && /\bsepa\b/.test(normalized)) {
+    return { kind: 'fallback', cardId: 'fallback-sepa-unclear', decisionReason: 'sepa_cancellation_ambiguous' }
+  }
+
+  if (/\b(envio|enviar|envío)\b/.test(normalized) && /\b(fitxer|archivo|xml)\b/.test(normalized) && /\bsepa\b/.test(normalized) && /\b(error|errors|errores)\b/.test(normalized)) {
+    return { kind: 'fallback', cardId: 'fallback-sepa-unclear', decisionReason: 'sepa_external_bank_consequence' }
+  }
+
+  if (/\b(reprocessar|reprocesar)\b/.test(normalized) && /\bremesa\b/.test(normalized) && /\b(processada|procesada)\b/.test(normalized)) {
+    return { kind: 'fallback', cardId: 'fallback-remittances-unclear', decisionReason: 'remittance_reprocess_ambiguous' }
+  }
+
+  if (/\b(remesa)\b/.test(normalized) && /\b(no quadra|no cuadra)\b/.test(normalized) && normalized.split(' ').length <= 4) {
+    return { kind: 'fallback', cardId: 'fallback-remittances-unclear', decisionReason: 'remittance_ambiguous_not_matching' }
+  }
+
+  if (/\b(com|como)\b/.test(normalized) && /\bdesfer remesa|deshacer remesa\b/.test(normalized) && normalized.split(' ').length <= 3) {
+    return { kind: 'fallback', cardId: 'fallback-remittances-unclear', decisionReason: 'remittance_undo_too_ambiguous' }
+  }
+
+  if (/\b(no surt|no sale)\b/.test(normalized) && /\b(soci|socio)\b/.test(normalized) && /\bremesa\b/.test(normalized)) {
+    return { kind: 'fallback', cardId: 'fallback-remittances-unclear', decisionReason: 'remittance_specific_member_guardrail' }
+  }
+
+  if (/\b(dividit|dividida|dividido|dividida|dividir)\b/.test(normalized) && /\bremesa\b/.test(normalized) && /\b(desfer|desfaig|deshacer|deshago)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-split-remittance', minScore: 700, decisionReason: 'split_remittance_followup' }
+  }
+
+  return null
+}
+
 function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   const set = new Set(tokens)
 
@@ -568,6 +748,77 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     return { cardId: 'howto-donor-update-iban', minScore: 680 }
   }
 
+  // "Com importo l'extracte del banc?" / "Com carrego els moviments del banc?"
+  if (
+    hasToken(set, 'importar', 'importo', 'importat', 'carregar', 'carrego', 'cargar', 'cargo', 'pujar', 'pujo', 'subir', 'subo') &&
+    hasToken(set, 'extracte', 'extracto', 'moviment', 'moviments', 'movimiento', 'movimientos') &&
+    hasToken(set, 'banc', 'banco', 'compte', 'cuenta') &&
+    !hasToken(set, 'duplicat', 'duplicats', 'duplicado', 'duplicados', 'repetit', 'repetits', 'repetido', 'repetidos', 'mateix', 'mateixos', 'mismo', 'mismos', 'devolucio', 'devolucions', 'devolucion', 'devoluciones', 'retorn', 'retorno', 'tornat', 'tornats', 'vuelto', 'vueltos')
+  ) {
+    return { cardId: 'guide-import-movements', minScore: 690 }
+  }
+
+  // "Com sé si s'ha importat bé l'extracte?"
+  if (
+    hasToken(set, 'importar', 'importo', 'importat', 'importado') &&
+    hasToken(set, 'extracte', 'extracto', 'moviment', 'moviments', 'movimiento', 'movimientos') &&
+    hasToken(set, 'correcte', 'correctament', 'correcto', 'correctamente', 'quadra', 'cuadra', 'resum', 'resumen', 'previsualitzacio', 'previsualizacion', 'confirmar', 'confirmo')
+  ) {
+    return { cardId: 'guide-import-movements', minScore: 680 }
+  }
+
+  // "He importat l'extracte dues vegades" / "No vull duplicats al banc"
+  if (
+    hasToken(set, 'importar', 'importo', 'importat', 'importado', 'carregar', 'carrego', 'cargar', 'cargo', 'pujar', 'pujo', 'subir', 'subo') &&
+    hasToken(set, 'extracte', 'extracto', 'moviment', 'moviments', 'movimiento', 'movimientos') &&
+    (
+      hasToken(set, 'duplicat', 'duplicats', 'duplicado', 'duplicados', 'repetit', 'repetits', 'repetido', 'repetidos') ||
+      hasToken(set, 'mateix', 'mateixos', 'mismo', 'mismos', 'tornar', 'volver', 'repetir')
+    )
+  ) {
+    return { cardId: 'howto-import-safe-duplicates', minScore: 675 }
+  }
+
+  // "M'han tornat uns rebuts del banc" / "Com entro devolucions?"
+  if (
+    hasToken(set, 'devolucio', 'devolucions', 'devolucion', 'devoluciones', 'retorn', 'retorno', 'rebutjada', 'rechazo', 'devuelto') &&
+    hasToken(set, 'importar', 'importo', 'importat', 'importado', 'carregar', 'carrego', 'cargar', 'cargo', 'pujar', 'pujo', 'subir', 'subo', 'entrar', 'entro', 'meter', 'meto', 'fitxer', 'fichero', 'archivo', 'detalle', 'detall')
+  ) {
+    return { cardId: 'howto-import-bank-returns', minScore: 690 }
+  }
+
+  // "Tinc devolucions al banc, com les gestiono?"
+  if (
+    hasToken(set, 'devolucio', 'devolucions', 'devolucion', 'devoluciones', 'retorn', 'retorno', 'impagat', 'impagats', 'devuelto', 'rebut', 'rebuts', 'recibo', 'recibos') &&
+    !hasToken(set, 'importar', 'importo', 'importat', 'importado', 'carregar', 'carrego', 'cargar', 'cargo', 'pujar', 'pujo', 'subir', 'subo', 'entrar', 'entro', 'meter', 'meto', 'fitxer', 'fichero', 'archivo', 'detalle', 'detall')
+  ) {
+    return { cardId: 'guide-returns', minScore: 680 }
+  }
+
+  // "Vull donar d'alta un soci nou"
+  if (
+    hasToken(set, 'soci', 'socio') &&
+    hasToken(set, 'crear', 'creo', 'crea', 'alta', 'nou', 'nuevo', 'afegir', 'añadir', 'anadir', 'agregar')
+  ) {
+    return { cardId: 'howto-member-create', minScore: 685 }
+  }
+
+  // "He oblidat la contrasenya"
+  if (
+    hasToken(set, 'contrasenya', 'contrasena', 'contraseña', 'password', 'reset', 'recuperar', 'oblidat', 'olvidado', 'recordo', 'recuerdo')
+  ) {
+    return { cardId: 'guide-reset-password', minScore: 690 }
+  }
+
+  // "Com veig l'historial d'un soci?"
+  if (
+    hasToken(set, 'soci', 'donant', 'socio', 'donante') &&
+    hasToken(set, 'historial', 'resum', 'resumen', 'summary') &&
+    !hasToken(set, 'canviar', 'cambiar', 'modificar', 'editar', 'actualitzar', 'actualizar')
+  ) {
+    return { cardId: 'howto-donor-history-summary', minScore: 680 }
+  }
+
   // "Com actualitzo les dades d'un donant?" / "Editar fitxa donant"
   if (
     hasToken(set, 'soci', 'donant', 'socio', 'donante') &&
@@ -577,9 +828,44 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     return { cardId: 'howto-donor-update-details', minScore: 680 }
   }
 
+  // "Com canvio els permisos d'un usuari?"
+  if (
+    hasToken(set, 'canviar', 'canvio', 'cambiar', 'cambio', 'modificar', 'modifico', 'editar', 'actualitzar', 'actualizar') &&
+    hasToken(set, 'permis', 'permiso', 'permisos', 'rol', 'roles') &&
+    hasToken(set, 'usuari', 'usuario', 'user')
+  ) {
+    return { cardId: 'howto-member-user-permissions', minScore: 680 }
+  }
+
+  // "Com canvio de mes per veure moviments anteriors?"
+  if (
+    hasToken(set, 'canviar', 'canvio', 'cambiar', 'cambio') &&
+    hasToken(set, 'moviment', 'moviments', 'movimiento', 'movimientos') &&
+    hasToken(set, 'anterior', 'anteriors', 'anteriores', 'periode', 'periodo')
+  ) {
+    return { cardId: 'guide-change-period', minScore: 670 }
+  }
+
+  // "Com edito un moviment?"
+  if (
+    hasToken(set, 'editar', 'edito', 'edit', 'actualitzar', 'actualizar', 'modificar', 'modifico') &&
+    hasToken(set, 'moviment', 'moviments', 'movimiento', 'movimientos') &&
+    !hasToken(set, 'document', 'factura', 'rebut', 'recibo')
+  ) {
+    return { cardId: 'guide-edit-movement', minScore: 670 }
+  }
+
+  // "Com gestiono els accessos i permisos?"
+  if (
+    hasToken(set, 'acces', 'acceso', 'permis', 'permiso', 'permisos', 'rol', 'roles', 'seguretat', 'seguridad') &&
+    !hasToken(set, 'contrasenya', 'contrasena', 'contraseña', 'password', 'usuari', 'usuario', 'user')
+  ) {
+    return { cardId: 'guide-access-security', minScore: 670 }
+  }
+
   // "Com desfer una remesa?" / "Puc reprocessar una remesa?"
   if (
-    hasToken(set, 'desfer', 'deshacer', 'reprocessar', 'reprocesar', 'undo') &&
+    hasToken(set, 'desfer', 'desfaig', 'deshacer', 'deshago', 'anullar', 'anulo', 'anular', 'reprocessar', 'reprocesar', 'undo') &&
     hasToken(set, 'remesa')
   ) {
     return { cardId: 'howto-remittance-undo', minScore: 680 }
@@ -596,7 +882,7 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
 
   // "Com canvio la quota d'un soci?"
   if (
-    hasToken(set, 'canviar', 'canvio', 'cambiar', 'modificar', 'modifico', 'editar', 'actualitzar', 'actualizar') &&
+    hasToken(set, 'canviar', 'canvio', 'cambiar', 'cambio', 'modificar', 'modifico', 'editar', 'actualitzar', 'actualizar') &&
     hasToken(set, 'quota', 'cuota', 'periodicitat', 'periodicidad') &&
     hasToken(set, 'soci', 'donant', 'socio', 'donante')
   ) {
@@ -622,7 +908,7 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   // "Tinc problemes per dividir una remesa"
   if (
     hasToken(set, 'dividir', 'separar', 'repartir') &&
-    hasToken(set, 'remesa', 'cuota')
+    hasToken(set, 'remesa', 'quota', 'cuota')
   ) {
     return { cardId: 'guide-split-remittance', minScore: 650 }
   }
@@ -655,8 +941,8 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
 
   // "Com pujo una factura o rebut o nomina?"
   if (
-    hasToken(set, 'pujar', 'adjuntar', 'vincular') &&
-    hasToken(set, 'factura', 'document', 'rebut', 'recibo', 'nomina')
+    hasToken(set, 'pujar', 'pujo', 'subir', 'subo', 'importar', 'importo', 'adjuntar', 'adjunto', 'vincular', 'arrossegar', 'arrastrar') &&
+    hasToken(set, 'factura', 'factures', 'facturas', 'document', 'documents', 'rebut', 'rebuts', 'recibo', 'recibos', 'nomina', 'nomines')
   ) {
     return { cardId: 'guide-attach-document', minScore: 600 }
   }
@@ -665,9 +951,54 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   if (
     hasToken(set, 'quote', 'quota', 'pagat', 'pagar', 'historial', 'aportacio') &&
     hasToken(set, 'soci', 'donant') &&
-    !hasToken(set, 'canviar', 'cambiar', 'modificar', 'editar', 'actualitzar', 'actualizar')
+    !hasToken(set, 'canviar', 'canvio', 'cambiar', 'cambio', 'modificar', 'editar', 'actualitzar', 'actualizar')
   ) {
     return { cardId: 'manual-member-paid-quotas', minScore: 500 }
+  }
+
+  return null
+}
+
+function detectFollowUpDirectIntent(currentTokens: string[], contextTokens: string[]): DirectIntentMatch | null {
+  if (currentTokens.length === 0 || contextTokens.length === 0) return null
+
+  const currentSet = new Set(currentTokens)
+  const contextSet = new Set(contextTokens)
+
+  if (
+    hasToken(currentSet, 'desfer', 'desfaig', 'deshacer', 'deshago', 'anullar', 'anulo', 'anular', 'undo') &&
+    hasToken(contextSet, 'remesa')
+  ) {
+    return { cardId: 'howto-remittance-undo', minScore: 705 }
+  }
+
+  if (
+    hasToken(currentSet, 'editar', 'edito', 'edit', 'modificar', 'modifico', 'actualitzar', 'actualizar') &&
+    hasToken(contextSet, 'moviment', 'movimiento')
+  ) {
+    return { cardId: 'guide-edit-movement', minScore: 690 }
+  }
+
+  if (
+    hasToken(currentSet, 'pujar', 'pujo', 'subir', 'subo', 'adjuntar', 'adjunto') &&
+    hasToken(contextSet, 'document', 'factura', 'rebut', 'recibo', 'nomina')
+  ) {
+    return { cardId: 'guide-attach-document', minScore: 690 }
+  }
+
+  if (
+    hasToken(currentSet, 'importar', 'importo', 'carregar', 'carrego', 'cargar', 'cargo') &&
+    hasToken(contextSet, 'extracte', 'extracto', 'moviment', 'movimiento', 'banc', 'banco')
+  ) {
+    return { cardId: 'guide-import-movements', minScore: 690 }
+  }
+
+  if (
+    hasToken(currentSet, 'canviar', 'canvio', 'cambiar', 'cambio', 'editar', 'edito', 'actualitzar', 'actualizar') &&
+    hasToken(contextSet, 'permis', 'permiso', 'permisos', 'rol', 'roles') &&
+    hasToken(contextSet, 'usuari', 'usuario', 'user')
+  ) {
+    return { cardId: 'howto-member-user-permissions', minScore: 690 }
   }
 
   return null
@@ -699,26 +1030,59 @@ function hasMinimumEvidenceForDirectMatch(tokens: string[], card: KBCard, lang: 
   return overlap >= 2
 }
 
-export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): RetrievalResult {
+export function retrieveCard(
+  message: string,
+  lang: KbLang,
+  cards: KBCard[],
+  supportContext?: SupportContext
+): RetrievalResult {
   const tokens = normalize(message)
   const normalizedMessage = normalizePlain(message)
-  const questionDomain = inferQuestionDomain(message)
+  const hints = buildSupportHints(message, lang, cards, supportContext)
+  const contextualQuestion = hints.followUp && hints.conversationHintText
+    ? `${message} ${hints.conversationHintText}`
+    : message
+  const questionDomain = inferQuestionDomain(contextualQuestion)
   const specificCaseDetected = detectSpecificCase(message)
+  const evidenceTokens = hints.evidenceTokens.length > 0 ? hints.evidenceTokens : tokens
 
+  const override = detectProtectedOverride(message)
+  if (override) {
+    const matchedCard = cards.find(card => card.id === override.cardId)
+    if (matchedCard) {
+      return {
+        card: matchedCard,
+        mode: override.kind === 'fallback' ? 'fallback' : 'card',
+        bestCardId: matchedCard.id,
+        bestScore: override.kind === 'card' ? (override.minScore ?? 999) : 0,
+        secondCardId: undefined,
+        secondScore: 0,
+        confidence: HIGH_CONFIDENCE,
+        confidenceBand: HIGH_CONFIDENCE,
+        decisionReason: override.decisionReason,
+        specificCaseDetected,
+        questionDomain,
+      }
+    }
+  }
+
+  const followUpDirectIntent = specificCaseDetected ? null : detectFollowUpDirectIntent(tokens, hints.conversationTokens)
   const directIntent = specificCaseDetected ? null : detectDirectIntentMatch(tokens)
-  if (directIntent) {
-    const directCard = cards.find(card => card.id === directIntent.cardId)
+  const resolvedDirectIntent = followUpDirectIntent ?? directIntent
+
+  if (resolvedDirectIntent) {
+    const directCard = cards.find(card => card.id === resolvedDirectIntent.cardId)
     if (directCard) {
       return {
         card: directCard,
         mode: 'card',
         bestCardId: directCard.id,
-        bestScore: directIntent.minScore ?? 999,
+        bestScore: resolvedDirectIntent.minScore ?? 999,
         secondCardId: undefined,
         secondScore: 0,
         confidence: HIGH_CONFIDENCE,
         confidenceBand: HIGH_CONFIDENCE,
-        decisionReason: 'direct_intent_high_confidence',
+        decisionReason: followUpDirectIntent ? 'follow_up_direct_intent' : 'direct_intent_high_confidence',
         specificCaseDetected,
         questionDomain,
       }
@@ -729,7 +1093,7 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
   const ranked = regularCards
     .map(card => ({
       card,
-      score: scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang),
+      score: scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang, hints),
     }))
     .sort((a, b) => b.score - a.score)
 
@@ -753,7 +1117,7 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
     best &&
     confidence === HIGH_CONFIDENCE &&
     bestScore >= DIRECT_MATCH_THRESHOLD &&
-    hasMinimumEvidenceForDirectMatch(tokens, best.card, lang)
+    hasMinimumEvidenceForDirectMatch(evidenceTokens, best.card, lang)
   ) {
     return {
       card: best.card,
@@ -770,7 +1134,7 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
     best &&
     confidence === MEDIUM_CONFIDENCE &&
     bestScore >= DIRECT_MATCH_THRESHOLD &&
-    hasMinimumEvidenceForDirectMatch(tokens, best.card, lang) &&
+    hasMinimumEvidenceForDirectMatch(evidenceTokens, best.card, lang) &&
     (!second || secondScore < CLARIFY_MIN_SCORE || bestScore - secondScore > CLARIFY_MAX_GAP)
   ) {
     return {
@@ -853,17 +1217,29 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
   throw new Error('No KB cards available for retrieval')
 }
 
-export function debugRetrieveCard(message: string, lang: KbLang, cards: KBCard[]): RetrievalDebugTrace {
+export function debugRetrieveCard(
+  message: string,
+  lang: KbLang,
+  cards: KBCard[],
+  supportContext?: SupportContext
+): RetrievalDebugTrace {
   const tokens = normalize(message)
   const normalizedMessage = normalizePlain(message)
-  const questionDomain = inferQuestionDomain(message)
+  const hints = buildSupportHints(message, lang, cards, supportContext)
+  const contextualQuestion = hints.followUp && hints.conversationHintText
+    ? `${message} ${hints.conversationHintText}`
+    : message
+  const questionDomain = inferQuestionDomain(contextualQuestion)
   const specificCaseDetected = detectSpecificCase(message)
+  const override = detectProtectedOverride(message)
+  const followUpDirectIntent = specificCaseDetected ? null : detectFollowUpDirectIntent(tokens, hints.conversationTokens)
   const directIntent = specificCaseDetected ? null : detectDirectIntentMatch(tokens)
+  const resolvedDirectIntent = followUpDirectIntent ?? directIntent
   const regularCards = cards.filter(isRetrievableCard)
   const ranked = regularCards
     .map(card => ({
       card,
-      score: scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang),
+      score: scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang, hints),
     }))
     .sort((a, b) => b.score - a.score)
 
@@ -884,11 +1260,11 @@ export function debugRetrieveCard(message: string, lang: KbLang, cards: KBCard[]
         : 'policy:guide_missing_guide_id',
     }))
 
-  const result = retrieveCard(message, lang, cards)
+  const result = retrieveCard(message, lang, cards, supportContext)
 
-  if (directIntent) {
+  if (resolvedDirectIntent) {
     for (const entry of ranked.slice(0, 5)) {
-      if (entry.card.id !== directIntent.cardId) {
+      if (entry.card.id !== resolvedDirectIntent.cardId) {
         discarded.push({
           cardId: entry.card.id,
           score: entry.score,
@@ -916,7 +1292,11 @@ export function debugRetrieveCard(message: string, lang: KbLang, cards: KBCard[]
     questionDomain,
     specificCaseDetected,
     cardsConsidered: regularCards.map(card => card.id),
-    directIntent: directIntent ? { cardId: directIntent.cardId, minScore: directIntent.minScore ?? 999 } : null,
+    directIntent: override && override.kind === 'card'
+      ? { cardId: override.cardId, minScore: override.minScore ?? 999 }
+      : resolvedDirectIntent
+        ? { cardId: resolvedDirectIntent.cardId, minScore: resolvedDirectIntent.minScore ?? 999 }
+        : null,
     topCandidates,
     discarded,
     predictedMode: result.mode,

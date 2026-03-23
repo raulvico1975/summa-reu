@@ -1,6 +1,7 @@
 import type { KBCard } from '../load-kb'
 import { retrieveCard, type KbLang, type RetrievalResult } from '../bot-retrieval'
 import { resolveClarifyChoice } from './disambiguation'
+import type { SupportContext } from '../support-context'
 
 export type IntentClassifier = (input: {
   message: string
@@ -18,10 +19,11 @@ export async function resolveRetrieval(input: {
   lang: KbLang
   cards: KBCard[]
   clarifyOptionIds: string[]
+  supportContext?: SupportContext
   useIntentClassifier: boolean
   classifyIntent?: IntentClassifier
 }): Promise<RetrievalResolution> {
-  const { message, lang, cards, clarifyOptionIds, useIntentClassifier, classifyIntent } = input
+  const { message, lang, cards, clarifyOptionIds, supportContext, useIntentClassifier, classifyIntent } = input
 
   let result: RetrievalResult | null = null
   let selectedByClarify = false
@@ -41,7 +43,7 @@ export async function resolveRetrieval(input: {
     }
     selectedByClarify = true
   } else {
-    result = retrieveCard(message, lang, cards)
+    result = retrieveCard(message, lang, cards, supportContext)
   }
 
   if (

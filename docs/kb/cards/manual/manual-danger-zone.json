@@ -1,0 +1,53 @@
+{
+  "id": "manual-danger-zone",
+  "type": "manual",
+  "domain": "general",
+  "risk": "guarded",
+  "guardrail": "none",
+  "answerMode": "limited",
+  "title": {
+    "ca": "Què és la Zona de Perill",
+    "es": "Qué es la Zona de Peligro"
+  },
+  "intents": {
+    "ca": [
+      "què és la zona de perill",
+      "on és la zona de perill",
+      "per a què serveix la zona de perill",
+      "accions avançades remesa"
+    ],
+    "es": [
+      "qué es la zona de peligro",
+      "dónde está la zona de peligro",
+      "para qué sirve la zona de peligro",
+      "acciones avanzadas remesa"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "La Zona de Perill és l'espai d'accions avançades i irreversibles de Summa.\n\nQuè hi trobaràs:\n1. Operacions de manteniment que només s'han de fer quan el procediment normal no serveix.\n2. Accions que poden afectar remeses o moviments ja processats.\n3. Confirmacions reforçades perquè el risc és alt.\n\nAbans d'entrar-hi:\n- Fes-ho només si tens clar el cas exacte.\n- Si el que vols és corregir una remesa normal, revisa primer el flux habitual de remeses o \"Desfer remesa\".\n- Si veus una acció de SuperAdmin Summa, no està pensada per a ús ordinari.",
+    "es": "La Zona de Peligro es el espacio de acciones avanzadas e irreversibles de Summa.\n\nQué encontrarás ahí:\n1. Operaciones de mantenimiento que solo deben usarse cuando el procedimiento normal no sirve.\n2. Acciones que pueden afectar remesas o movimientos ya procesados.\n3. Confirmaciones reforzadas porque el riesgo es alto.\n\nAntes de entrar:\n- Hazlo solo si tienes claro el caso exacto.\n- Si lo que quieres es corregir una remesa normal, revisa primero el flujo habitual de remesas o \"Deshacer remesa\".\n- Si ves una acción de SuperAdmin Summa, no está pensada para uso ordinario."
+  },
+  "uiPaths": [
+    "Configuració > Zona de Perill",
+    "Configuració > Accions avançades (SuperAdmin Summa)"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "zona de perill",
+    "zona de peligro",
+    "accions avançades",
+    "acciones avanzadas",
+    "superadmin",
+    "irreversible"
+  ],
+  "related": [
+    "guide-danger-delete-remittance",
+    "howto-remittance-undo"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

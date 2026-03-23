@@ -46,8 +46,8 @@
     },
     "guideId": null,
     "answer": {
-      "ca": "Aquesta consulta toca fiscalitat i no et donaré passos concrets sense una resposta verificada.\n\nQuè fer ara:\n1. Ves a Informes i revisa si hi ha avisos o errors.\n2. Resol primer el que la pantalla et marca com a incomplet.\n3. Obre el manual fiscal corresponent abans de continuar.",
-      "es": "Esta consulta toca fiscalidad y no voy a darte pasos concretos sin una respuesta verificada.\n\nQué hacer ahora:\n1. Ve a Informes y revisa si hay avisos o errores.\n2. Resuelve primero lo que la pantalla marca como incompleto.\n3. Abre el manual fiscal correspondiente antes de continuar."
+      "ca": "Aquesta consulta toca fiscalitat i no et donaré passos concrets sense una resposta verificada.\n\nQuè fer ara:\n1. Pantalla útil: Informes.\n2. Prioritat: resoldre primer qualsevol avís o dada incompleta que ja et mostri Summa.\n3. Abans de continuar, revisa el manual fiscal corresponent.",
+      "es": "Esta consulta toca fiscalidad y no voy a darte pasos concretos sin una respuesta verificada.\n\nQué hacer ahora:\n1. Pantalla útil: Informes.\n2. Prioridad: resolver primero cualquier aviso o dato incompleto que ya muestre Summa.\n3. Antes de continuar, revisa el manual fiscal correspondiente."
     },
     "uiPaths": ["Informes", "Manual > Informes"],
     "needsSnapshot": false,
