@@ -779,6 +779,8 @@ export function StripeImputationModal({
                               value={line.contactId}
                               onSelect={(donorId) => handleSetLineContact(line.localId, donorId)}
                               placeholder="Assigna donant"
+                              presentation="dialog"
+                              dialogTitle="Selecciona donant o soci"
                               createActions={[
                                 {
                                   key: `donor-${line.localId}`,
