@@ -21,6 +21,7 @@ interface ErrorBoundaryProps {
   children: React.ReactNode;
   firestore: Firestore | null;
   pathname: string | null;
+  canReportIncident: boolean;
   orgId?: string;
   orgSlug?: string;
 }
@@ -41,14 +42,14 @@ class ReactErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBounda
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    const { firestore, pathname, orgId, orgSlug } = this.props;
+    const { firestore, pathname, canReportIncident, orgId, orgSlug } = this.props;
 
     // Filtrar soroll
     if (shouldIgnoreError(error.message)) {
       return;
     }
 
-    if (firestore) {
+    if (firestore && canReportIncident) {
       reportSystemIncident({
         firestore,
         type: 'CLIENT_CRASH',
@@ -104,12 +105,13 @@ export function ErrorBoundaryGlobal({
   const org = React.useContext(OrganizationContext);
   const orgId = org?.organizationId;
   const orgSlug = org?.orgSlug;
+  const canReportIncident = Boolean(orgId && org?.member);
 
   // Guardar referència estable per als handlers
-  const contextRef = React.useRef({ firestore, pathname, orgId, orgSlug });
+  const contextRef = React.useRef({ firestore, pathname, canReportIncident, orgId, orgSlug });
   React.useEffect(() => {
-    contextRef.current = { firestore, pathname, orgId, orgSlug };
-  }, [firestore, pathname, orgId, orgSlug]);
+    contextRef.current = { firestore, pathname, canReportIncident, orgId, orgSlug };
+  }, [firestore, pathname, canReportIncident, orgId, orgSlug]);
 
   React.useEffect(() => {
     // No activar fins que Firebase estigui llest
@@ -124,8 +126,8 @@ export function ErrorBoundaryGlobal({
         return;
       }
 
-      const { firestore: fs, pathname: route, orgId: oid, orgSlug: slug } = contextRef.current;
-      if (!fs) {
+      const { firestore: fs, pathname: route, canReportIncident: allowed, orgId: oid, orgSlug: slug } = contextRef.current;
+      if (!fs || !allowed) {
         return;
       }
 
@@ -169,8 +171,8 @@ export function ErrorBoundaryGlobal({
         message.includes('permission-denied') ||
         message.includes('PERMISSION_DENIED');
 
-      const { firestore: fs, pathname: route, orgId: oid, orgSlug: slug } = contextRef.current;
-      if (!fs) return;
+      const { firestore: fs, pathname: route, canReportIncident: allowed, orgId: oid, orgSlug: slug } = contextRef.current;
+      if (!fs || !allowed) return;
 
       reportSystemIncident({
         firestore: fs,
@@ -196,6 +198,7 @@ export function ErrorBoundaryGlobal({
     <ReactErrorBoundary
       firestore={firestore}
       pathname={pathname}
+      canReportIncident={canReportIncident}
       orgId={orgId ?? undefined}
       orgSlug={orgSlug ?? undefined}
     >

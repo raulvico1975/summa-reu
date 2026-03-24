@@ -1009,7 +1009,8 @@ post_deploy_check() {
   echo "[8/9] Post-deploy check..."
   echo ""
   echo "  Verificant publicacio remota..."
-  remote_sha=$(git ls-remote origin prod | awk '{print substr($1,1,7)}')
+  git fetch origin --prune --quiet >/dev/null 2>&1 || true
+  remote_sha=$(git rev-parse --short refs/remotes/origin/prod 2>/dev/null || true)
   if [ "$remote_sha" != "$prod_sha" ]; then
     POSTDEPLOY_REMOTE_SHA_STATUS="PENDENT"
     DEPLOY_RESULT="PENDENT"

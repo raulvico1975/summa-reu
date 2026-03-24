@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
 import {
-  BATCH_SIZE,
   getAdminDb,
   validateUserMembership,
   verifyIdToken,
@@ -12,6 +11,15 @@ import {
   calculateSplitAmountDeltaCents,
   isSplitAmountBalanced,
 } from '@/lib/fiscal/split-amount-balance';
+import {
+  commitAtomicSplit,
+  SplitTooLargeError,
+} from '@/lib/transactions/commit-atomic-split';
+import {
+  MAX_SPLIT_CHILDREN,
+  SPLIT_TOO_LARGE_CODE,
+  getSplitTooLargeMessage,
+} from '@/lib/transactions/split-contract';
 
 type SplitLineKind = 'donation' | 'nonDonation';
 
@@ -66,25 +74,6 @@ interface LockAcquireResult {
 
 const LOCK_TTL_SECONDS = 90;
 
-function omitUndefinedDeep<T>(value: T): T {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => omitUndefinedDeep(item))
-      .filter((item) => item !== undefined) as T;
-  }
-
-  if (value && typeof value === 'object') {
-    const next: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-      if (entry === undefined) continue;
-      next[key] = omitUndefinedDeep(entry);
-    }
-    return next as T;
-  }
-
-  return value;
-}
-
 function validateBody(body: unknown): {
   ok: true;
   data: { orgId: string; parentTxId: string; lines: SplitLineValidated[] };
@@ -109,6 +98,14 @@ function validateBody(body: unknown): {
 
   if (!Array.isArray(payload.lines) || payload.lines.length < 2) {
     return { ok: false, error: 'Calen almenys 2 línies', code: 'INVALID_LINES_COUNT' };
+  }
+
+  if (payload.lines.length > MAX_SPLIT_CHILDREN) {
+    return {
+      ok: false,
+      error: getSplitTooLargeMessage(),
+      code: SPLIT_TOO_LARGE_CODE,
+    };
   }
 
   const lines: SplitLineValidated[] = [];
@@ -296,36 +293,6 @@ async function loadCategoriesMap(orgId: string, categoryIds: string[]): Promise<
   return map;
 }
 
-async function archiveRollbackChildren(input: {
-  orgId: string;
-  childTransactionIds: string[];
-  uid: string;
-}): Promise<void> {
-  const { orgId, childTransactionIds, uid } = input;
-  const db = getAdminDb();
-  const archivedAt = new Date().toISOString();
-
-  for (let i = 0; i < childTransactionIds.length; i += BATCH_SIZE) {
-    const chunk = childTransactionIds.slice(i, i + BATCH_SIZE);
-    const batch = db.batch();
-
-    for (const childId of chunk) {
-      const childRef = db.doc(`organizations/${orgId}/transactions/${childId}`);
-      batch.update(
-        childRef,
-        omitUndefinedDeep({
-          archivedAt,
-          archivedByUid: uid,
-          archivedReason: 'split_rollback',
-          archivedFromAction: 'split_process',
-        })
-      );
-    }
-
-    await batch.commit();
-  }
-}
-
 export async function POST(request: NextRequest): Promise<NextResponse<SplitResponseBody>> {
   const authResult = await verifyIdToken(request);
   if (!authResult) {
@@ -335,7 +302,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SplitResp
     );
   }
 
-  let parsedBody: SplitRequestBody;
+  let parsedBody: { orgId: string; parentTxId: string; lines: SplitLineValidated[] };
   try {
     const rawBody = await request.json();
     const validation = validateBody(rawBody);
@@ -571,88 +538,41 @@ export async function POST(request: NextRequest): Promise<NextResponse<SplitResp
     );
   }
 
-  const createdChildIds: string[] = [];
-  let parentUpdated = false;
   const nowIso = new Date().toISOString();
 
   try {
-    for (let i = 0; i < parsedBody.lines.length; i += BATCH_SIZE) {
-      const chunk = parsedBody.lines.slice(i, i + BATCH_SIZE);
-      const batch = db.batch();
-
-      for (const line of chunk) {
-        const childRef = db.collection(`organizations/${parsedBody.orgId}/transactions`).doc();
-        const childId = childRef.id;
-        createdChildIds.push(childId);
-
-        const contact = line.contactId ? contactsMap.get(line.contactId) : null;
-        const category = line.categoryId ? categoriesMap.get(line.categoryId) : null;
-
-        const childData = omitUndefinedDeep({
-          id: childId,
-          parentTransactionId: parsedBody.parentTxId,
-          date: parentDate,
-          description: parentDescription,
-          amount: line.amountCents / 100,
-          category: line.categoryId ?? null,
-          categoryName: category?.name ?? null,
-          document: null,
-          contactId: line.contactId ?? null,
-          contactType: line.kind === 'donation' ? 'donor' : contact?.type ?? null,
-          contactName: line.contactId ? contact?.name ?? null : null,
-          transactionType: line.kind === 'donation' ? 'donation' : null,
-          source: 'bank',
-          bankAccountId: parentBankAccountId,
-          notes: line.note ?? null,
-          createdAt: nowIso,
-          createdByUid: authResult.uid,
-          archivedAt: null,
-        });
-
-        batch.set(childRef, childData);
-      }
-
-      await batch.commit();
-    }
-
-    const parentBatch = db.batch();
-    parentBatch.update(
-      parentRef,
-      omitUndefinedDeep({
-        isSplit: true,
-        linkedTransactionIds: createdChildIds,
-      })
-    );
-    await parentBatch.commit();
-    parentUpdated = true;
+    const result = await commitAtomicSplit({
+      db,
+      orgId: parsedBody.orgId,
+      parentTxId: parsedBody.parentTxId,
+      parentDate,
+      parentDescription,
+      parentBankAccountId,
+      lines: parsedBody.lines,
+      contactsMap,
+      categoriesMap,
+      uid: authResult.uid,
+      nowIso,
+    });
 
     return NextResponse.json({
       success: true,
       parentTxId: parsedBody.parentTxId,
-      childTransactionIds: createdChildIds,
-      createdCount: createdChildIds.length,
+      childTransactionIds: result.childTransactionIds,
+      createdCount: result.createdCount,
     });
   } catch (error) {
     console.error('[transactions/split] Error processant desglossament:', error);
 
-    if (!parentUpdated && createdChildIds.length > 0) {
-      try {
-        await archiveRollbackChildren({
-          orgId: parsedBody.orgId,
-          childTransactionIds: createdChildIds,
-          uid: authResult.uid,
-        });
-      } catch (rollbackError) {
-        console.error('[transactions/split] Error fent rollback de filles:', rollbackError);
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Error en rollback de desglossament',
-            code: 'SPLIT_ROLLBACK_FAILED',
-          },
-          { status: 500 }
-        );
-      }
+    if (error instanceof SplitTooLargeError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          code: SPLIT_TOO_LARGE_CODE,
+        },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json(

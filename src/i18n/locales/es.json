@@ -2400,6 +2400,7 @@
   "movements.split.missingBankAccount": "Este movimiento no tiene cuenta bancaria asociada. Asígnala primero.",
   "movements.split.note": "Nota",
   "movements.split.subtitle": "Este movimiento del banco no se modifica. Indica cómo se reparte.",
+  "movements.split.tooManyLines": "Este desglose admite como máximo 49 líneas.",
   "movements.split.title": "Desglosar importe",
   "movements.splitter.allDonorsReactivated": "Donantes reactivados",
   "movements.splitter.ambiguousIbanLabel": "IBAN ambiguo",

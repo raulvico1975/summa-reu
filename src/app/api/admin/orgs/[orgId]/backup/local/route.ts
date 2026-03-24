@@ -16,6 +16,7 @@ import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { exportOrganizationBackup } from '@/lib/admin/org-backup-export';
+import { isSuperAdminInRegistry } from '@/lib/api/super-admin-registry';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Firebase Admin initialization (lazy, cached, idempotent)
@@ -96,18 +97,9 @@ async function verifyIdToken(request: NextRequest): Promise<AuthResult | null> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function verifySuperAdmin(uid: string): Promise<boolean> {
-  // Opció 1: Verificar via SUPER_ADMIN_UID (per entorns amb env var)
-  const envSuperAdminUid = process.env.SUPER_ADMIN_UID;
-  if (envSuperAdminUid && uid === envSuperAdminUid) {
-    console.log('[backup/local] SuperAdmin verificat via SUPER_ADMIN_UID env');
-    return true;
-  }
-
-  // Opció 2: Verificar a Firestore (col·lecció systemSuperAdmins)
   try {
     const db = getAdminDb();
-    const superAdminDoc = await db.doc(`systemSuperAdmins/${uid}`).get();
-    if (superAdminDoc.exists) {
+    if (await isSuperAdminInRegistry(db, uid)) {
       console.log('[backup/local] SuperAdmin verificat via Firestore');
       return true;
     }

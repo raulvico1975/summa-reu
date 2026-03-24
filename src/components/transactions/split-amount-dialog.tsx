@@ -30,6 +30,11 @@ import {
   calculateSplitAmountDeltaCents,
   isSplitAmountBalanced,
 } from '@/lib/fiscal/split-amount-balance';
+import {
+  MAX_SPLIT_CHILDREN,
+  SPLIT_TOO_LARGE_CODE,
+  getSplitTooLargeMessage,
+} from '@/lib/transactions/split-contract';
 
 type SplitKind = 'donation' | 'nonDonation';
 
@@ -100,6 +105,10 @@ export function SplitAmountDialog({
 
   const [lines, setLines] = React.useState<SplitLineState[]>([]);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const splitTooLargeMessage = tr(
+    'movements.split.tooManyLines',
+    getSplitTooLargeMessage()
+  );
 
   const donorContacts = React.useMemo(
     () => contacts.filter((contact) => contact.type === 'donor'),
@@ -169,7 +178,9 @@ export function SplitAmountDialog({
     return parsedLines.some((line) => line.hasAmountError || line.hasCategoryError || line.hasContactError);
   }, [lines.length, parsedLines]);
 
-  const canApply = !isSubmitting && !hasLineErrors && isDeltaBalanced;
+  const isAtSplitLineLimit = lines.length >= MAX_SPLIT_CHILDREN;
+  const hasTooManyLines = lines.length > MAX_SPLIT_CHILDREN;
+  const canApply = !isSubmitting && !hasLineErrors && isDeltaBalanced && !hasTooManyLines;
 
   const updateLine = React.useCallback((lineId: string, patch: Partial<SplitLineState>) => {
     setLines((previousLines) =>
@@ -185,7 +196,13 @@ export function SplitAmountDialog({
   }, []);
 
   const handleAddLine = React.useCallback(() => {
-    setLines((previousLines) => [...previousLines, createLine({ kind: 'nonDonation' })]);
+    setLines((previousLines) => {
+      if (previousLines.length >= MAX_SPLIT_CHILDREN) {
+        return previousLines;
+      }
+
+      return [...previousLines, createLine({ kind: 'nonDonation' })];
+    });
   }, []);
 
   const handleRemoveLine = React.useCallback((lineId: string) => {
@@ -237,7 +254,10 @@ export function SplitAmountDialog({
         toast({
           variant: 'destructive',
           title: t.common.error,
-          description: result?.error || t.common.error,
+          description:
+            result?.code === SPLIT_TOO_LARGE_CODE
+              ? splitTooLargeMessage
+              : result?.error || t.common.error,
         });
         return;
       }
@@ -253,7 +273,7 @@ export function SplitAmountDialog({
     } finally {
       setIsSubmitting(false);
     }
-  }, [canApply, onApplied, onOpenChange, organizationId, parsedLines, t.common.error, toast, transaction, user]);
+  }, [canApply, onApplied, onOpenChange, organizationId, parsedLines, splitTooLargeMessage, t.common.error, toast, transaction, user]);
 
   if (!transaction) return null;
 
@@ -381,7 +401,7 @@ export function SplitAmountDialog({
           })}
 
           <div className="flex items-center justify-between gap-3">
-            <Button variant="outline" onClick={handleAddLine}>
+            <Button variant="outline" onClick={handleAddLine} disabled={isAtSplitLineLimit || isSubmitting}>
               <Plus className="mr-2 h-4 w-4" />
               {tr('movements.split.addLine')}
             </Button>
@@ -390,6 +410,12 @@ export function SplitAmountDialog({
               Δ {formatCurrencyEU(deltaCents / 100)}
             </div>
           </div>
+
+          {isAtSplitLineLimit && (
+            <p className={`text-sm ${hasTooManyLines ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {splitTooLargeMessage}
+            </p>
+          )}
 
           {!isDeltaBalanced && (
             <p className="text-sm text-destructive">{tr('movements.split.deltaInvalid')}</p>

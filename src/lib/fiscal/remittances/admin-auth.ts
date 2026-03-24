@@ -10,6 +10,7 @@ import { NextRequest } from 'next/server';
 import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
+import { isSuperAdminInRegistry } from '@/lib/api/super-admin-registry';
 
 // =============================================================================
 // FIREBASE ADMIN INITIALIZATION (lazy, cached, idempotent)
@@ -76,13 +77,7 @@ function isAdminLikeRole(role: unknown): boolean {
 }
 
 async function isGlobalSuperAdmin(db: Firestore, uid: string): Promise<boolean> {
-  const envSuperAdminUid = process.env.SUPER_ADMIN_UID;
-  if (envSuperAdminUid && uid === envSuperAdminUid) {
-    return true;
-  }
-
-  const superAdminSnap = await db.doc(`systemSuperAdmins/${uid}`).get();
-  return superAdminSnap.exists;
+  return isSuperAdminInRegistry(db, uid);
 }
 
 async function loadMemberData(

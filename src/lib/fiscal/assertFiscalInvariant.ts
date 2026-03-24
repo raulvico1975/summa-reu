@@ -146,6 +146,7 @@ function reportAndThrow(
       type: 'INVARIANT_BROKEN',
       message: fullMessage,
       route: context.route,
+      orgId: context.orgId,
       meta: {
         operation: context.operation,
         invariantCode: code,

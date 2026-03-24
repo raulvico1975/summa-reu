@@ -2400,6 +2400,7 @@
   "movements.split.missingBankAccount": "Aquest moviment no té compte bancari associat. Assigna'l primer.",
   "movements.split.note": "Nota",
   "movements.split.subtitle": "Aquest moviment del banc no es modifica. Indica com es reparteix.",
+  "movements.split.tooManyLines": "Aquest desglossament admet com a màxim 49 línies.",
   "movements.split.title": "Desglossar import",
   "movements.splitter.allDonorsReactivated": "Donants reactivats",
   "movements.splitter.ambiguousIbanLabel": "IBAN ambigu",
