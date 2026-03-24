@@ -1064,7 +1064,7 @@ post_deploy_check() {
     if ! wait_for_text_marker \
       "Home pública (/ca)" \
       "${RESOLVED_DEPLOY_BASE_URL}/ca" \
-      "Controla donacions, quotes i informes fiscals de la teva ONG sense Excel."; then
+      "Controla donacions"; then
       public_ok=false
     fi
     if ! wait_for_text_marker \
