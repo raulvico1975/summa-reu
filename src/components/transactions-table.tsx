@@ -1991,15 +1991,22 @@ export function TransactionsTable({
       return;
     }
 
-    // Comptar filles
-    const childCount = await countChildTransactions(
-      firestore,
-      organizationId,
-      transaction.id,
-      transaction.remittanceId
-    );
+    const localStripeSummary = opType === 'stripe'
+      ? stripeImputationSummaryByParentId[transaction.id]
+      : null;
 
-    if (childCount === 0) {
+    // Per Stripe prioritzem el resum local ja carregat per evitar una query addicional
+    // en un flux que ara es resol principalment al backend.
+    const childCount = localStripeSummary
+      ? localStripeSummary.donationCount + localStripeSummary.adjustmentCount
+      : await countChildTransactions(
+          firestore,
+          organizationId,
+          transaction.id,
+          transaction.remittanceId
+        );
+
+    if (childCount === 0 && opType !== 'stripe') {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -2024,10 +2031,11 @@ export function TransactionsTable({
     setIsUndoProcessing(true);
 
     try {
-      // Per remeses IN (amount > 0), usar API server-side
-      // Per Stripe i devolucions, mantenir flux client-side
+      // Per remeses IN i Stripe usem backend per evitar dependència de permisos client-side.
       if (opType === 'remittance_in' && undoTransaction.amount > 0) {
         await handleUndoServerSide();
+      } else if (opType === 'stripe') {
+        await handleUndoStripeServerSide();
       } else {
         await handleUndoClientSide(opType);
       }
@@ -2092,7 +2100,66 @@ export function TransactionsTable({
     }
   };
 
-  // Undo client-side per Stripe, devolucions i remeses OUT
+  const handleUndoStripeServerSide = async () => {
+    if (!undoTransaction || !organizationId || !user) return;
+
+    try {
+      const idToken = await user.getIdToken();
+
+      const response = await fetch('/api/transactions/stripe/undo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          parentTxId: undoTransaction.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast({
+          variant: 'destructive',
+          title: 'Error desfent Stripe',
+          description: result.error || 'Error desconegut',
+        });
+        return;
+      }
+
+      if (result.idempotent) {
+        toast({
+          title: 'Ja estava desfet',
+          description: 'Aquesta imputació Stripe ja s\'havia desfet anteriorment.',
+        });
+      } else {
+        const archivedFiscal = (result.donationsArchived ?? 0) + (result.childrenArchived ?? 0);
+        const deletedNonFiscal = result.childrenDeleted ?? 0;
+        toast({
+          title: 'Imputació Stripe desfeta',
+          description:
+            `S'han arxivat ${archivedFiscal} registres fiscals` +
+            (deletedNonFiscal > 0 ? ` i eliminat ${deletedNonFiscal} no fiscals` : '') +
+            '. Pots processar de nou.',
+        });
+      }
+
+      setIsUndoDialogOpen(false);
+      setUndoTransaction(null);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconegut';
+      console.error('Error undoing stripe (server-side):', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error desfent Stripe',
+        description: errorMessage,
+      });
+    }
+  };
+
+  // Undo client-side per devolucions i remeses OUT
   const handleUndoClientSide = async (opType: UndoOperationType) => {
     if (!undoTransaction || !organizationId || !user?.uid) return;
 
