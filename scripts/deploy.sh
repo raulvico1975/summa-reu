@@ -335,7 +335,7 @@ preflight_git_checks() {
 
   # 1d. Pull ff-only a la branca origen
   echo "  Actualitzant $DEPLOY_TARGET_BRANCH..."
-  if ! git pull --ff-only origin "$DEPLOY_TARGET_BRANCH" 2>/dev/null; then
+  if ! git merge --ff-only "refs/remotes/origin/$DEPLOY_TARGET_BRANCH" >/dev/null 2>&1; then
     DEPLOY_BLOCK_REASON="La branca origen no esta sincronitzada amb remot."
     echo "ERROR: La branca '$DEPLOY_TARGET_BRANCH' ha divergit del remot."
     echo "  Cal resoldre manualment abans de desplegar."
@@ -345,7 +345,7 @@ preflight_git_checks() {
   # 1e. Pull ff-only a prod
   echo "  Actualitzant prod..."
   git checkout prod --quiet
-  if ! git pull --ff-only origin prod 2>/dev/null; then
+  if ! git merge --ff-only refs/remotes/origin/prod >/dev/null 2>&1; then
     DEPLOY_BLOCK_REASON="Prod no esta sincronitzada amb remot."
     echo "ERROR: La branca 'prod' ha divergit del remot."
     echo "  Cal resoldre manualment abans de desplegar."
