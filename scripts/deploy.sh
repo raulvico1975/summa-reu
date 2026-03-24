@@ -4,7 +4,7 @@ set -euo pipefail
 # ============================================================
 # SUMMA SOCIAL — DEPLOY VERIFICAT
 # Script determinista i bloquejant per desplegar a produccio.
-# Execucio: bash scripts/deploy.sh  (o npm run deploy)
+# Execucio: bash scripts/deploy.sh [branca]  (o npm run deploy -- [branca])
 # ============================================================
 
 DEPLOY_LOG="docs/DEPLOY-LOG.md"
@@ -51,6 +51,8 @@ GUIDED_ALERT_EMITTED=false
 GUIDED_ALERT_RECOMMENDATION=""
 CHANGE_PROFILE="STANDARD"
 FAST_PUBLIC_SCOPE=false
+DEPLOY_TARGET_BRANCH="${DEPLOY_TARGET_BRANCH:-${1:-main}}"
+DEPLOY_TARGET_BRANCH_SAFE="${DEPLOY_TARGET_BRANCH//\//-}"
 
 append_incident_log() {
   if [ "$INCIDENT_RECORDED" = true ]; then
@@ -60,8 +62,8 @@ append_incident_log() {
   local log_path="$PROJECT_DIR/$INCIDENT_LOG"
   local date
   date=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
-  local main_sha_short prod_sha_short
-  main_sha_short=$(git rev-parse --short main 2>/dev/null || echo "-")
+  local source_sha_short prod_sha_short
+  source_sha_short=$(git rev-parse --short "$DEPLOY_TARGET_BRANCH" 2>/dev/null || echo "-")
   prod_sha_short=$(git rev-parse --short prod 2>/dev/null || echo "-")
   local reason
   reason=${DEPLOY_BLOCK_REASON:-"Bloqueig de seguretat a la fase: $CURRENT_PHASE"}
@@ -73,12 +75,12 @@ append_incident_log() {
 
 Registre curt d'incidències de deploy bloquejat o incomplet.
 
-| Data | Fase | Risc | main | prod | Resultat | Què ha fallat | Com s'ha resolt |
+| Data | Fase | Risc | Origen | prod | Resultat | Què ha fallat | Com s'ha resolt |
 |------|------|------|------|------|----------|---------------|------------------|
 HEADER
   fi
 
-  echo "| $date | $CURRENT_PHASE | $RISK_LEVEL | $main_sha_short | $prod_sha_short | $DEPLOY_RESULT | $reason | Pendent |" >> "$log_path"
+  echo "| $date | $CURRENT_PHASE | $RISK_LEVEL | $source_sha_short | $prod_sha_short | $DEPLOY_RESULT | $reason | Pendent |" >> "$log_path"
   INCIDENT_RECORDED=true
 }
 
@@ -307,14 +309,14 @@ preflight_git_checks() {
     exit 1
   fi
 
-  # 1a. Branca actual ha de ser main
+  # 1a. Branca actual ha de ser la branca origen del deploy
   local branch
   branch=$(git rev-parse --abbrev-ref HEAD)
-  if [ "$branch" != "main" ]; then
-    DEPLOY_BLOCK_REASON="El deploy nomes es pot fer des de main."
-    echo "ERROR: Has d'estar a la branca 'main' per desplegar."
+  if [ "$branch" != "$DEPLOY_TARGET_BRANCH" ]; then
+    DEPLOY_BLOCK_REASON="El deploy nomes es pot fer des de la branca origen indicada."
+    echo "ERROR: Has d'estar a la branca '$DEPLOY_TARGET_BRANCH' per desplegar."
     echo "  Branca actual: $branch"
-    echo "  Executa: git checkout main"
+    echo "  Executa: git checkout $DEPLOY_TARGET_BRANCH"
     exit 1
   fi
 
@@ -331,11 +333,11 @@ preflight_git_checks() {
   echo "  Descarregant canvis del servidor..."
   git fetch origin
 
-  # 1d. Pull ff-only a main
-  echo "  Actualitzant main..."
-  if ! git pull --ff-only origin main 2>/dev/null; then
-    DEPLOY_BLOCK_REASON="Main no esta sincronitzada amb remot."
-    echo "ERROR: La branca 'main' ha divergit del remot."
+  # 1d. Pull ff-only a la branca origen
+  echo "  Actualitzant $DEPLOY_TARGET_BRANCH..."
+  if ! git pull --ff-only origin "$DEPLOY_TARGET_BRANCH" 2>/dev/null; then
+    DEPLOY_BLOCK_REASON="La branca origen no esta sincronitzada amb remot."
+    echo "ERROR: La branca '$DEPLOY_TARGET_BRANCH' ha divergit del remot."
     echo "  Cal resoldre manualment abans de desplegar."
     exit 1
   fi
@@ -347,20 +349,20 @@ preflight_git_checks() {
     DEPLOY_BLOCK_REASON="Prod no esta sincronitzada amb remot."
     echo "ERROR: La branca 'prod' ha divergit del remot."
     echo "  Cal resoldre manualment abans de desplegar."
-    git checkout main --quiet
+    git checkout "$DEPLOY_TARGET_BRANCH" --quiet
     exit 1
   fi
 
-  # Tornar a main
-  git checkout main --quiet
+  # Tornar a la branca origen
+  git checkout "$DEPLOY_TARGET_BRANCH" --quiet
 
   MAIN_SHA=$(git rev-parse --short HEAD)
   PROD_SHA=$(git rev-parse --short prod)
 
-  if ! git merge-base --is-ancestor refs/remotes/origin/prod refs/heads/main >/dev/null 2>&1; then
-    DEPLOY_BLOCK_REASON="Prod conté commits fora de main."
-    echo "ERROR: prod conté commits fora de main."
-    echo "  El model main -> prod ha quedat desalineat i cal resoldre-ho abans de publicar."
+  if ! git merge-base --is-ancestor refs/remotes/origin/prod "refs/heads/$DEPLOY_TARGET_BRANCH" >/dev/null 2>&1; then
+    DEPLOY_BLOCK_REASON="Prod conté commits fora de la branca origen."
+    echo "ERROR: prod conté commits fora de '$DEPLOY_TARGET_BRANCH'."
+    echo "  El model branca origen -> prod ha quedat desalineat i cal resoldre-ho abans de publicar."
     exit 1
   fi
 
@@ -373,12 +375,12 @@ preflight_git_checks() {
 # ============================================================
 detect_changed_files() {
   CURRENT_PHASE="Detectar canvis"
-  echo "[2/9] Detectant fitxers canviats (main vs prod)..."
+  echo "[2/9] Detectant fitxers canviats ($DEPLOY_TARGET_BRANCH vs prod)..."
 
-  CHANGED_FILES=$(git diff --name-only prod..main --diff-filter=ACMRT)
+  CHANGED_FILES=$(git diff --name-only "prod..$DEPLOY_TARGET_BRANCH" --diff-filter=ACMRT)
 
   if [ -z "$CHANGED_FILES" ]; then
-    echo "  Res a desplegar (main == prod)."
+    echo "  Res a desplegar ($DEPLOY_TARGET_BRANCH == prod)."
     exit 0
   fi
 
@@ -513,7 +515,7 @@ auto_predeploy_backup() {
 
   local export_suffix
   export_suffix=$(TZ="Europe/Madrid" date '+%Y%m%d-%H%M%S')
-  BACKUP_EXPORT_PATH="gs://${FIRESTORE_BACKUP_BUCKET}/summa-social/predeploy/${export_suffix}-main-${MAIN_SHA}"
+  BACKUP_EXPORT_PATH="gs://${FIRESTORE_BACKUP_BUCKET}/summa-social/predeploy/${export_suffix}-${DEPLOY_TARGET_BRANCH_SAFE}-${MAIN_SHA}"
 
   local backup_cmd=(firebase firestore:export "$BACKUP_EXPORT_PATH")
   if [ -n "${FIREBASE_PROJECT_ID:-}" ]; then
@@ -699,7 +701,7 @@ classify_fiscal_impact() {
     [ -z "$file" ] && continue
 
     local diff_content changes line_count tags
-    diff_content=$(git diff prod..main -- "$file" 2>/dev/null)
+    diff_content=$(git diff "prod..$DEPLOY_TARGET_BRANCH" -- "$file" 2>/dev/null)
     [ -z "$diff_content" ] && continue
 
     # Nomes linies canviades (exclou headers de diff)
@@ -914,8 +916,8 @@ display_deploy_summary() {
   echo "[6/9] Resum del deploy..."
   echo ""
   echo "  Branques:"
-  echo "    main:   $MAIN_SHA"
-  echo "    prod:   $PROD_SHA"
+  echo "    origen ($DEPLOY_TARGET_BRANCH): $MAIN_SHA"
+  echo "    prod:                     $PROD_SHA"
   echo ""
   echo "  Risc:     $RISK_LEVEL"
   echo "  Perfil:   $CHANGE_PROFILE"
@@ -930,10 +932,10 @@ prepare_rollback_plan() {
   echo "[8c/9] Preparant rollback..."
   echo ""
 
-  local date current_prod_sha target_main_sha
+  local date current_prod_sha target_branch_sha
   date=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
   current_prod_sha="${DEPLOY_PROD_BEFORE_SHA:-$(git rev-parse --short prod)}"
-  target_main_sha="${DEPLOY_CONTENT_SHA:-$(git rev-parse --short main)}"
+  target_branch_sha="${DEPLOY_CONTENT_SHA:-$(git rev-parse --short "$DEPLOY_TARGET_BRANCH")}"
 
   cat > "$PROJECT_DIR/$ROLLBACK_PLAN_FILE" <<EOF
 # Rollback Plan (auto) — Summa Social
@@ -942,16 +944,16 @@ Generat: $date
 Risc: $RISK_LEVEL
 Backup curt: $BACKUP_RESULT
 SHA prod abans de publicar: $current_prod_sha
-SHA main a publicar: $target_main_sha
+SHA branca a publicar ($DEPLOY_TARGET_BRANCH): $target_branch_sha
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 \`\`\`bash
-git checkout main
-git revert $target_main_sha --no-edit
-git push origin main
-bash scripts/deploy.sh
+git checkout $DEPLOY_TARGET_BRANCH
+git revert $target_branch_sha --no-edit
+git push origin $DEPLOY_TARGET_BRANCH
+bash scripts/deploy.sh $DEPLOY_TARGET_BRANCH
 \`\`\`
 
 Emergencia critica (nomes si la produccio cau i no hi ha alternativa):
@@ -973,24 +975,24 @@ execute_merge_ritual() {
   CURRENT_PHASE="Merge i push a prod"
   echo "[7/9] Executant merge ritual..."
 
-  # main -> prod
-  echo "  main -> prod..."
+  # branca origen -> prod
+  echo "  $DEPLOY_TARGET_BRANCH -> prod..."
   git checkout prod --quiet
-  if ! git merge --no-ff main -m "chore(deploy): merge main -> prod"; then
-    DEPLOY_BLOCK_REASON="Hi ha conflicte d'integracio entre main i prod."
+  if ! git merge --no-ff "$DEPLOY_TARGET_BRANCH" -m "chore(deploy): merge $DEPLOY_TARGET_BRANCH -> prod"; then
+    DEPLOY_BLOCK_REASON="Hi ha conflicte d'integracio entre la branca origen i prod."
     echo ""
     echo "ERROR: Conflicte de merge a prod."
     git merge --abort || true
-    git checkout main --quiet
+    git checkout "$DEPLOY_TARGET_BRANCH" --quiet
     echo "  Resol el conflicte manualment."
     exit 1
   fi
   git push origin prod
   echo "  prod actualitzat i pujat."
 
-  # Tornar a main
-  git checkout main --quiet
-  echo "  Tornat a main."
+  # Tornar a la branca origen
+  git checkout "$DEPLOY_TARGET_BRANCH" --quiet
+  echo "  Tornat a $DEPLOY_TARGET_BRANCH."
   echo ""
 }
 
@@ -1239,7 +1241,7 @@ append_deploy_log() {
   local deploy_date
   deploy_date=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
   local deploy_sha
-  deploy_sha="${DEPLOY_CONTENT_SHA:-$(git rev-parse --short main)}"
+  deploy_sha="${DEPLOY_CONTENT_SHA:-$(git rev-parse --short "$DEPLOY_TARGET_BRANCH")}"
   local fiscal_str
   fiscal_str=$([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")
 
@@ -1354,67 +1356,67 @@ commit_deploy_logs_if_needed() {
 
   HUSKY=0 git commit -m "chore(deploy): update deploy logs" -- "${tracked_files[@]}"
   MAIN_SHA=$(git rev-parse --short HEAD)
-  echo "  Commit de logs creat a main."
+  echo "  Commit de logs creat a $DEPLOY_TARGET_BRANCH."
   echo ""
 }
 
-reabsorb_prod_into_main() {
-  CURRENT_PHASE="Reabsorbir prod a main"
-  echo "[9c/9] Reabsorbint prod a main..."
+reabsorb_prod_into_target_branch() {
+  CURRENT_PHASE="Reabsorbir prod a la branca origen"
+  echo "[9c/9] Reabsorbint prod a $DEPLOY_TARGET_BRANCH..."
   echo ""
 
-  git checkout main --quiet
+  git checkout "$DEPLOY_TARGET_BRANCH" --quiet
 
-  if git merge-base --is-ancestor refs/remotes/origin/prod refs/heads/main >/dev/null 2>&1; then
-    echo "  main ja conté prod. No cal cap reabsorció."
+  if git merge-base --is-ancestor refs/remotes/origin/prod "refs/heads/$DEPLOY_TARGET_BRANCH" >/dev/null 2>&1; then
+    echo "  $DEPLOY_TARGET_BRANCH ja conté prod. No cal cap reabsorció."
     echo ""
     return
   fi
 
-  if git merge --no-ff prod -m "chore(branches): reabsorbeix prod a main postdeploy" >/dev/null 2>&1; then
+  if git merge --no-ff prod -m "chore(branches): reabsorbeix prod a $DEPLOY_TARGET_BRANCH postdeploy" >/dev/null 2>&1; then
     MAIN_SHA=$(git rev-parse --short HEAD)
-    echo "  prod reabsorbida correctament a main."
+    echo "  prod reabsorbida correctament a $DEPLOY_TARGET_BRANCH."
     echo ""
     return
   fi
 
   git merge --abort >/dev/null 2>&1 || true
   DEPLOY_RESULT="PENDENT"
-  DEPLOY_BLOCK_REASON="Prod publicada però main no ha pogut reabsorbir el merge final de prod."
-  echo "  PENDENT: la reabsorció automàtica de prod a main no s'ha pogut completar."
+  DEPLOY_BLOCK_REASON="Prod publicada però la branca origen no ha pogut reabsorbir el merge final de prod."
+  echo "  PENDENT: la reabsorció automàtica de prod a $DEPLOY_TARGET_BRANCH no s'ha pogut completar."
   echo ""
 }
 
-sync_main_after_deploy_logs() {
-  CURRENT_PHASE="Sincronitzar main remot"
-  echo "[9d/9] Sincronitzant main amb origin/main..."
+sync_target_branch_after_deploy_logs() {
+  CURRENT_PHASE="Sincronitzar branca origen remota"
+  echo "[9d/9] Sincronitzant $DEPLOY_TARGET_BRANCH amb origin/$DEPLOY_TARGET_BRANCH..."
   echo ""
 
-  git checkout main --quiet
+  git checkout "$DEPLOY_TARGET_BRANCH" --quiet
 
-  local local_main_sha remote_main_sha
-  local_main_sha=$(git rev-parse HEAD)
-  remote_main_sha=$(git rev-parse refs/remotes/origin/main 2>/dev/null || true)
+  local local_branch_sha remote_branch_sha
+  local_branch_sha=$(git rev-parse HEAD)
+  remote_branch_sha=$(git rev-parse "refs/remotes/origin/$DEPLOY_TARGET_BRANCH" 2>/dev/null || true)
 
-  if [ -n "$remote_main_sha" ] && [ "$local_main_sha" = "$remote_main_sha" ]; then
+  if [ -n "$remote_branch_sha" ] && [ "$local_branch_sha" = "$remote_branch_sha" ]; then
     MAIN_REMOTE_SYNC_STATUS="SI"
-    echo "  main ja estava alineada amb origin/main."
+    echo "  $DEPLOY_TARGET_BRANCH ja estava alineada amb origin/$DEPLOY_TARGET_BRANCH."
     echo ""
     return
   fi
 
-  if git push origin main; then
+  if git push origin "$DEPLOY_TARGET_BRANCH"; then
     MAIN_REMOTE_SYNC_STATUS="SI"
     MAIN_SHA=$(git rev-parse --short HEAD)
-    echo "  origin/main actualitzada."
+    echo "  origin/$DEPLOY_TARGET_BRANCH actualitzada."
     echo ""
     return
   fi
 
   MAIN_REMOTE_SYNC_STATUS="NO"
   DEPLOY_RESULT="PENDENT"
-  DEPLOY_BLOCK_REASON="Prod publicada però origin/main no s'ha sincronitzat amb els logs de deploy."
-  echo "  PENDENT: prod publicada, pero origin/main no s'ha pogut sincronitzar."
+  DEPLOY_BLOCK_REASON="Prod publicada però la branca origen remota no s'ha sincronitzat amb els logs de deploy."
+  echo "  PENDENT: prod publicada, pero origin/$DEPLOY_TARGET_BRANCH no s'ha pogut sincronitzar."
   echo ""
 }
 
@@ -1437,10 +1439,10 @@ main() {
   display_deploy_summary     # Pas 6
   handle_business_decision_for_residual_risk
   DEPLOY_PROD_BEFORE_SHA=$(git rev-parse --short prod)
-  DEPLOY_CONTENT_SHA=$(git rev-parse --short main)
+  DEPLOY_CONTENT_SHA=$(git rev-parse --short "$DEPLOY_TARGET_BRANCH")
   prepare_rollback_plan
   commit_deploy_logs_if_needed
-  DEPLOY_CONTENT_SHA=$(git rev-parse --short main)
+  DEPLOY_CONTENT_SHA=$(git rev-parse --short "$DEPLOY_TARGET_BRANCH")
   execute_merge_ritual       # Pas 7
   post_deploy_check          # Pas 8
   post_production_3min_check
@@ -1449,11 +1451,11 @@ main() {
   prepare_rollback_plan
   append_deploy_log          # Pas 9
   commit_deploy_logs_if_needed
-  reabsorb_prod_into_main
-  sync_main_after_deploy_logs
+  reabsorb_prod_into_target_branch
+  sync_target_branch_after_deploy_logs
   DEPLOY_SUCCESS=1
 
-  echo "  main alineada amb origin/main: $MAIN_REMOTE_SYNC_STATUS"
+  echo "  branca origen $DEPLOY_TARGET_BRANCH alineada amb origin/$DEPLOY_TARGET_BRANCH: $MAIN_REMOTE_SYNC_STATUS"
   echo "  DEPLOY COMPLETAT ($DEPLOY_RESULT)."
   echo ""
 }
