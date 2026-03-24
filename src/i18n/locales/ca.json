@@ -2653,6 +2653,7 @@
   "movements.table.transactionDeleted": "Transacció eliminada",
   "movements.table.transactionUpdated": "Transacció actualitzada",
   "movements.table.uncategorized": "Sense categoritzar",
+  "movements.table.undoRemittance": "Desfer remesa",
   "movements.table.unlink": "(Desvincular)",
   "movements.table.uploadBankFile": "Importar fitxer del banc",
   "movements.table.uploadBankFileTooltip": "Importar fitxer del banc per identificar devolucions",

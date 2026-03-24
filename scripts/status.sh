@@ -13,6 +13,7 @@ if [ -z "$GIT_COMMON_DIR" ]; then
 fi
 
 CONTROL_REPO_DIR="${WORKFLOW_CONTROL_REPO_DIR:-$(cd "$GIT_COMMON_DIR/.." && pwd)}"
+PUBLICA_TARGET_BRANCH="${DEPLOY_TARGET_BRANCH:-main}"
 
 say() {
   printf '%s\n' "$1"
@@ -45,6 +46,18 @@ main_aligned_label() {
   printf '%s' "NO"
 }
 
+target_aligned_label() {
+  local target_branch="$1"
+  local local_target remote_target
+  local_target="$(git -C "$CONTROL_REPO_DIR" rev-parse "refs/heads/$target_branch" 2>/dev/null || true)"
+  remote_target="$(git -C "$CONTROL_REPO_DIR" rev-parse "refs/remotes/origin/$target_branch" 2>/dev/null || true)"
+  if [ -n "$local_target" ] && [ -n "$remote_target" ] && [ "$local_target" = "$remote_target" ]; then
+    printf '%s' "SI"
+    return
+  fi
+  printf '%s' "NO"
+}
+
 prod_aligned_with_main_label() {
   local local_main remote_prod
   local_main="$(git -C "$CONTROL_REPO_DIR" rev-parse refs/heads/main 2>/dev/null || true)"
@@ -60,6 +73,17 @@ prod_ahead_of_main_label() {
   if git -C "$CONTROL_REPO_DIR" rev-parse refs/remotes/origin/prod >/dev/null 2>&1 \
     && git -C "$CONTROL_REPO_DIR" rev-parse refs/heads/main >/dev/null 2>&1 \
     && ! git -C "$CONTROL_REPO_DIR" merge-base --is-ancestor refs/remotes/origin/prod refs/heads/main >/dev/null 2>&1; then
+    printf '%s' "SI"
+    return
+  fi
+  printf '%s' "NO"
+}
+
+prod_ahead_of_target_label() {
+  local target_branch="$1"
+  if git -C "$CONTROL_REPO_DIR" rev-parse refs/remotes/origin/prod >/dev/null 2>&1 \
+    && git -C "$CONTROL_REPO_DIR" rev-parse "refs/heads/$target_branch" >/dev/null 2>&1 \
+    && ! git -C "$CONTROL_REPO_DIR" merge-base --is-ancestor refs/remotes/origin/prod "refs/heads/$target_branch" >/dev/null 2>&1; then
     printf '%s' "SI"
     return
   fi
@@ -215,7 +239,7 @@ gate_integra() {
 }
 
 gate_publica() {
-  local control_branch control_clean main_aligned prod_ahead
+  local control_branch control_clean target_aligned prod_ahead
 
   bash "$SCRIPT_DIR/worktree.sh" gc --quiet >/dev/null 2>&1 || true
   git -C "$CONTROL_REPO_DIR" fetch origin --prune --quiet >/dev/null 2>&1 || true
@@ -223,23 +247,23 @@ gate_publica() {
 
   control_branch="$(current_control_branch)"
   control_clean="$(control_repo_clean_label)"
-  main_aligned="$(main_aligned_label)"
-  prod_ahead="$(prod_ahead_of_main_label)"
+  target_aligned="$(target_aligned_label "$PUBLICA_TARGET_BRANCH")"
+  prod_ahead="$(prod_ahead_of_target_label "$PUBLICA_TARGET_BRANCH")"
 
-  if [ "$control_branch" != "main" ]; then
-    say "Abans de publicar, el repositori de control ha d'estar a main."
+  if [ "$control_branch" != "$PUBLICA_TARGET_BRANCH" ]; then
+    say "Abans de publicar, el repositori de control ha d'estar a $PUBLICA_TARGET_BRANCH."
     return 1
   fi
   if [ "$control_clean" != "SI" ]; then
-    say "Abans de publicar, main ha d'estar neta."
+    say "Abans de publicar, $PUBLICA_TARGET_BRANCH ha d'estar neta."
     return 1
   fi
-  if [ "$main_aligned" != "SI" ]; then
-    say "Abans de publicar, main ha d'estar alineada amb origin/main."
+  if [ "$target_aligned" != "SI" ]; then
+    say "Abans de publicar, $PUBLICA_TARGET_BRANCH ha d'estar alineada amb origin/$PUBLICA_TARGET_BRANCH."
     return 1
   fi
   if [ "$prod_ahead" = "SI" ]; then
-    say "Abans de publicar, prod no pot contenir commits fora de main."
+    say "Abans de publicar, prod no pot contenir commits fora de $PUBLICA_TARGET_BRANCH."
     return 1
   fi
   if [ "${WORKTREE_RESIDUE_COUNT:-0}" -gt 0 ] 2>/dev/null; then

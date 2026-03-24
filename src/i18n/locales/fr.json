@@ -2653,6 +2653,7 @@
   "movements.table.transactionDeleted": "Mouvement supprimé",
   "movements.table.transactionUpdated": "Mouvement mis à jour",
   "movements.table.uncategorized": "Non catégorisé",
+  "movements.table.undoRemittance": "Annuler le virement",
   "movements.table.unlink": "(Dissocier)",
   "movements.table.uploadBankFile": "Importer fichier banque",
   "movements.table.uploadBankFileTooltip": "Importer un fichier bancaire pour identifier les rejets",

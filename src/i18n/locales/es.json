@@ -2653,6 +2653,7 @@
   "movements.table.transactionDeleted": "Transacción eliminada",
   "movements.table.transactionUpdated": "Transacción actualizada",
   "movements.table.uncategorized": "Sin categorizar",
+  "movements.table.undoRemittance": "Deshacer remesa",
   "movements.table.unlink": "(Desvincular)",
   "movements.table.uploadBankFile": "Importar archivo del banco",
   "movements.table.uploadBankFileTooltip": "Importar archivo del banco para identificar devoluciones",

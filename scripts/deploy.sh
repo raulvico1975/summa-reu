@@ -302,7 +302,7 @@ preflight_git_checks() {
   echo "[1/9] Comprovacions previes de git..."
 
   bash "$SCRIPT_DIR/worktree.sh" gc --quiet >/dev/null 2>&1 || true
-  gate_message="$(bash "$SCRIPT_DIR/status.sh" gate publica 2>&1 || true)"
+  gate_message="$(DEPLOY_TARGET_BRANCH="$DEPLOY_TARGET_BRANCH" bash "$SCRIPT_DIR/status.sh" gate publica 2>&1 || true)"
   if [ -n "$gate_message" ]; then
     DEPLOY_BLOCK_REASON="$gate_message"
     echo "ERROR: $DEPLOY_BLOCK_REASON"
@@ -335,7 +335,7 @@ preflight_git_checks() {
 
   # 1d. Pull ff-only a la branca origen
   echo "  Actualitzant $DEPLOY_TARGET_BRANCH..."
-  if ! git pull --ff-only origin "$DEPLOY_TARGET_BRANCH" 2>/dev/null; then
+  if ! git merge --ff-only "refs/remotes/origin/$DEPLOY_TARGET_BRANCH" >/dev/null 2>&1; then
     DEPLOY_BLOCK_REASON="La branca origen no esta sincronitzada amb remot."
     echo "ERROR: La branca '$DEPLOY_TARGET_BRANCH' ha divergit del remot."
     echo "  Cal resoldre manualment abans de desplegar."
@@ -345,7 +345,7 @@ preflight_git_checks() {
   # 1e. Pull ff-only a prod
   echo "  Actualitzant prod..."
   git checkout prod --quiet
-  if ! git pull --ff-only origin prod 2>/dev/null; then
+  if ! git merge --ff-only refs/remotes/origin/prod >/dev/null 2>&1; then
     DEPLOY_BLOCK_REASON="Prod no esta sincronitzada amb remot."
     echo "ERROR: La branca 'prod' ha divergit del remot."
     echo "  Cal resoldre manualment abans de desplegar."
@@ -1009,7 +1009,8 @@ post_deploy_check() {
   echo "[8/9] Post-deploy check..."
   echo ""
   echo "  Verificant publicacio remota..."
-  remote_sha=$(git ls-remote origin prod | awk '{print substr($1,1,7)}')
+  git fetch origin --prune --quiet >/dev/null 2>&1 || true
+  remote_sha=$(git rev-parse --short refs/remotes/origin/prod 2>/dev/null || true)
   if [ "$remote_sha" != "$prod_sha" ]; then
     POSTDEPLOY_REMOTE_SHA_STATUS="PENDENT"
     DEPLOY_RESULT="PENDENT"
