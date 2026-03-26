@@ -1,0 +1,65 @@
+{
+  "id": "ts-remittance-member-not-identified",
+  "type": "troubleshooting",
+  "domain": "remittances",
+  "risk": "guarded",
+  "guardrail": "b1_remittances",
+  "answerMode": "full",
+  "title": {
+    "ca": "Un soci no apareix identificat a la remesa",
+    "es": "Un socio no aparece identificado en la remesa"
+  },
+  "intents": {
+    "ca": [
+      "per què no surt un soci a la remesa",
+      "un soci no apareix a la remesa",
+      "no s'identifica un soci a la remesa",
+      "remesa no troba el soci"
+    ],
+    "es": [
+      "por qué no sale un socio en la remesa",
+      "un socio no aparece en la remesa",
+      "no se identifica un socio en la remesa",
+      "la remesa no encuentra al socio"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Si un soci no apareix identificat a la remesa:\n1. Obre el detall o el divisor de la remesa.\n2. Revisa si el fitxer porta DNI/CIF, IBAN o nom i comprova que coincideixin amb la fitxa del donant.\n3. Si el soci és nou, el pots crear abans o deixar que es creï quan processis.\n4. Si les dades no coincideixen, actualitza el donant i torna a processar la remesa.\n\nOrdre habitual de matching: DNI exacte, després IBAN exacte i finalment nom aproximat.",
+    "es": "Si un socio no aparece identificado en la remesa:\n1. Abre el detalle o el divisor de la remesa.\n2. Revisa si el fichero trae DNI/CIF, IBAN o nombre y comprueba que coincidan con la ficha del donante.\n3. Si el socio es nuevo, puedes crearlo antes o dejar que se cree al procesar.\n4. Si los datos no coinciden, actualiza el donante y vuelve a procesar la remesa.\n\nOrden habitual de matching: DNI exacto, después IBAN exacto y finalmente nombre aproximado."
+  },
+  "uiPaths": [
+    "Moviments > Remeses",
+    "Donants > Fitxa del donant > Editar"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "soci",
+    "socio",
+    "remesa",
+    "matching",
+    "dni",
+    "iban",
+    "nom",
+    "nombre"
+  ],
+  "source_faq": [
+    "Q49",
+    "Q51"
+  ],
+  "source_manual": [
+    "6.3",
+    "6.7"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-remittance-low-members",
+    "howto-remittance-undo",
+    "howto-donor-update-details"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": "El matching de la remesa deixa un soci sense identificar",
+    "es": "El matching de la remesa deja a un socio sin identificar"
+  }
+}

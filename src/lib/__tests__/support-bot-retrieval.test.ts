@@ -230,6 +230,16 @@ test('retrieveCard resolves generic donor details update question', () => {
   assert.equal(result.mode, 'card')
 })
 
+test('retrieveCard resolves donor default category configuration in ca and es', () => {
+  const ca = retrieveCard("com canvio la categoria per defecte d'un donant?", 'ca', cards)
+  assert.equal(ca.card.id, 'howto-donor-default-category')
+  assert.equal(ca.mode, 'card')
+
+  const es = retrieveCard('¿cómo cambio la categoría por defecto de un donante?', 'es', cards)
+  assert.equal(es.card.id, 'howto-donor-default-category')
+  assert.equal(es.mode, 'card')
+})
+
 test('retrieveCard resolves donor edit variants without clarify', () => {
   const questions = [
     'com editar un donant',
@@ -338,13 +348,15 @@ test('retrieveCard falls back safely on out-of-scope fiscal filing and complex f
   const stripe182 = retrieveCard('com calculo les comissions de Stripe per al 182?', 'ca', cards)
   assert.equal(stripe182.card.id, 'fallback-fiscal-unclear')
   assert.equal(stripe182.mode, 'fallback')
-
-  const donor182 = retrieveCard('no em surt el donant al 182', 'ca', cards)
-  assert.equal(donor182.card.id, 'fallback-fiscal-unclear')
-  assert.equal(donor182.mode, 'fallback')
 })
 
-test('retrieveCard falls back safely on ambiguous SEPA and remittance risk queries', () => {
+test('retrieveCard resolves donor missing in model 182 to the verified checklist card', () => {
+  const donor182 = retrieveCard('no em surt el donant al 182', 'ca', cards)
+  assert.equal(donor182.card.id, 'ts-model-182-donor-missing')
+  assert.equal(donor182.mode, 'card')
+})
+
+test('retrieveCard falls back safely on ambiguous SEPA queries', () => {
   const cancelSepa = retrieveCard('puc anul·lar una remesa SEPA ja generada?', 'ca', cards)
   assert.equal(cancelSepa.card.id, 'fallback-sepa-unclear')
   assert.equal(cancelSepa.mode, 'fallback')
@@ -352,18 +364,24 @@ test('retrieveCard falls back safely on ambiguous SEPA and remittance risk queri
   const sepaErrors = retrieveCard('què passa si envio un fitxer SEPA amb errors?', 'ca', cards)
   assert.equal(sepaErrors.card.id, 'fallback-sepa-unclear')
   assert.equal(sepaErrors.mode, 'fallback')
+})
 
+test('retrieveCard resolves operational remittance recovery queries to verified cards', () => {
   const reprocess = retrieveCard('puc reprocessar una remesa ja processada?', 'ca', cards)
-  assert.equal(reprocess.card.id, 'fallback-remittances-unclear')
-  assert.equal(reprocess.mode, 'fallback')
+  assert.equal(reprocess.card.id, 'howto-remittance-undo')
+  assert.equal(reprocess.mode, 'card')
 
   const shortUndo = retrieveCard('com desfer remesa', 'ca', cards)
-  assert.equal(shortUndo.card.id, 'fallback-remittances-unclear')
-  assert.equal(shortUndo.mode, 'fallback')
+  assert.equal(shortUndo.card.id, 'howto-remittance-undo')
+  assert.equal(shortUndo.mode, 'card')
 
   const lowMembers = retrieveCard('per què no surt soci remesa', 'ca', cards)
-  assert.equal(lowMembers.card.id, 'fallback-remittances-unclear')
-  assert.equal(lowMembers.mode, 'fallback')
+  assert.equal(lowMembers.card.id, 'ts-remittance-member-not-identified')
+  assert.equal(lowMembers.mode, 'card')
+
+  const notMatching = retrieveCard('remesa no quadra', 'ca', cards)
+  assert.equal(notMatching.card.id, 'ts-remittance-not-matching')
+  assert.equal(notMatching.mode, 'card')
 })
 
 test('retrieveCard keeps split-remittance recovery on the split guide', () => {

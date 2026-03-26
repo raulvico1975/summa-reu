@@ -34,6 +34,11 @@ function buildGuidedNavigationAnswer(card: KBCard, lang: KbLang): string {
     : `Crec que la millor ruta per a això és "${title}".\n\nQuè fer ara:\n1. Obre el destí recomanat.\n2. Segueix aquest flux exacte abans de tocar res més.\n\nSi no era això, digues-me el pas exacte o el missatge d’error i ho afinarem.`
 }
 
+function canServeSpecificCaseCard(decisionReason: string | undefined, selectedCard: KBCard | null): boolean {
+  if (!selectedCard || selectedCard.type === 'fallback') return false
+  return decisionReason === 'specific_case_safe_checklist'
+}
+
 export async function orchestrator(input: {
   message: string
   kbLang: KbLang
@@ -172,7 +177,7 @@ export async function orchestrator(input: {
     }
   }
 
-  if (retrievalResult?.specificCaseDetected) {
+  if (retrievalResult?.specificCaseDetected && !canServeSpecificCaseCard(retrievalResult?.decisionReason, selectedCard)) {
     const selectedFallback = retrievalResult.mode === 'fallback' && retrievalResult.card?.type === 'fallback'
       ? retrievalResult.card
       : null
