@@ -2332,7 +2332,9 @@ export const ca = {
       filterUnassigned: "No assignades",
       filterOffBank: "Terreny",
       filterBank: "Seu",
+      filterCategoryPending: "Categoria pendent",
       filterNoResults: "No s'han trobat resultats",
+      pendingCategoryHelp: "Classifica el moviment a Moviments abans d'imputar-lo a un projecte.",
       filterResults: (count: number): string => count === 1 ? "resultat" : "resultats",
       // Cerca
       searchPlaceholder: "Cerca per descripció, contrapart, categoria...",
@@ -2378,6 +2380,7 @@ export const ca = {
       statusUnassigned: "No imputada",
       statusPartial: "Parcial",
       statusAssigned: "Imputada",
+      statusCategoryPending: "Categoria pendent",
       // Breakdown badge
       breakdownNProjects: (n: number) => `${n} projectes`,
       breakdownNProjectsPcts: (n: number, pcts: string) => `${n} proj. (${pcts})`,

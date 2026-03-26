@@ -37,10 +37,12 @@ import {
 } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AssignmentEditor } from '@/components/project-module/assignment-editor';
 import { formatDateDMY } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import type { ExpenseAssignment, ExpenseJustification } from '@/lib/project-module-types';
+import { isExpenseCategoryPending } from '@/lib/project-module/expense-category-pending';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -91,6 +93,11 @@ export default function ExpenseDetailPage() {
   // Obrir editor automàticament si la despesa no està completament assignada
   React.useEffect(() => {
     if (!isLoading && expense && !hasAutoOpened) {
+      if (isExpenseCategoryPending({ source: 'bank', categoryName: expense.categoryName })) {
+        setHasAutoOpened(true);
+        return;
+      }
+
       const assignedAmt = link
         ? link.assignments.reduce((sum, a) => sum + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
         : 0;
@@ -105,6 +112,15 @@ export default function ExpenseDetailPage() {
   }, [isLoading, expense, link, hasAutoOpened]);
 
   const handleSave = async (assignments: ExpenseAssignment[], note: string | null) => {
+    if (categoryPending) {
+      toast({
+        variant: 'destructive',
+        title: categoryPendingLabel,
+        description: categoryPendingHelp,
+      });
+      return;
+    }
+
     try {
       // Mantenir la justificació existent
       await save(txId, assignments, note, link?.justification);
@@ -226,6 +242,15 @@ export default function ExpenseDetailPage() {
   const totalAmount = Math.abs(expense.amountEUR);
   const remainingAmount = totalAmount - assignedAmount;
   const isFullyAssigned = remainingAmount <= 0.01;
+  const categoryPending = isExpenseCategoryPending({
+    source: 'bank',
+    categoryName: expense.categoryName,
+  });
+  const categoryPendingLabel = tr('projectModule.expensesPage.statusCategoryPending', 'Categoria pendent');
+  const categoryPendingHelp = tr(
+    'projectModule.expensesPage.pendingCategoryHelp',
+    "Classifica aquest moviment a Moviments abans d'imputar-lo a un projecte."
+  );
 
   return (
     <div className="space-y-6">
@@ -276,10 +301,15 @@ export default function ExpenseDetailPage() {
               <p className="text-sm">{expense.description || '-'}</p>
             </div>
 
-            {expense.categoryName && (
+            {(expense.categoryName || categoryPending) && (
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-muted-foreground" />
-                <Badge variant="secondary">{expense.categoryName}</Badge>
+                <Badge
+                  variant="outline"
+                  className={categoryPending ? 'bg-amber-50 text-amber-700 border-amber-200' : undefined}
+                >
+                  {categoryPending ? categoryPendingLabel : expense.categoryName}
+                </Badge>
               </div>
             )}
 
@@ -342,6 +372,7 @@ export default function ExpenseDetailPage() {
                     variant="default"
                     size="icon"
                     onClick={() => setIsEditing(true)}
+                    disabled={categoryPending}
                     title={link ? tr('projectModule.expenseDetail.editAssignment') : tr('projectModule.expenseDetail.assignToProject')}
                   >
                     {link ? (
@@ -355,7 +386,15 @@ export default function ExpenseDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {isEditing ? (
+            {categoryPending && (
+              <Alert className="mb-4 border-amber-200 bg-amber-50 text-amber-900 [&>svg]:text-amber-700">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{categoryPendingLabel}</AlertTitle>
+                <AlertDescription>{categoryPendingHelp}</AlertDescription>
+              </Alert>
+            )}
+
+            {isEditing && !categoryPending ? (
               <AssignmentEditor
                 projects={projects}
                 projectsLoading={projectsLoading}

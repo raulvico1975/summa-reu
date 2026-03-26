@@ -106,7 +106,6 @@ function findMissionTransferCategoryId(categories: CategoryDoc[]): string | null
 function calculateProjectFeedEligibility(tx: HealthTx): boolean {
   if (tx.archivedAt != null) return false;
   if (tx.amount >= 0) return false;
-  if (!tx.category) return false;
   if (tx.transactionType === "return" || tx.transactionType === "return_fee") return false;
   if ((tx as { isCounterpartTransfer?: boolean }).isCounterpartTransfer === true) return false;
   if ((tx as { isRemittance?: boolean }).isRemittance === true) return false;

@@ -96,6 +96,7 @@ import { buildDocumentFilename } from '@/lib/build-document-filename';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { usePermissions } from '@/hooks/use-permissions';
+import { isExpenseCategoryPending } from '@/lib/project-module/expense-category-pending';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -284,6 +285,8 @@ function AssignmentStatusPopover({
   isSaving,
   projectIdFilter,
   ep,
+  isCategoryPending = false,
+  categoryPendingLabel = 'Categoria pendent',
 }: {
   expense: UnifiedExpenseWithLink;
   status: ExpenseStatus;
@@ -294,8 +297,18 @@ function AssignmentStatusPopover({
   isSaving: boolean;
   projectIdFilter?: string | null;
   ep: { statusUnassigned: string; statusPartial: string; statusAssigned: string; popoverAssigned: string; popoverFree: string; breakdownNProjects: (n: number) => string; breakdownNProjectsPcts: (n: number, pcts: string) => string; breakdownInThisProject: (pct: number) => string };
+  isCategoryPending?: boolean;
+  categoryPendingLabel?: string;
 }) {
   const [open, setOpen] = React.useState(false);
+
+  if (isCategoryPending) {
+    return (
+      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+        {categoryPendingLabel}
+      </Badge>
+    );
+  }
 
   // Calcular breakdown centralitzat
   const bd = computeAssignmentBreakdown(expense.expense, assignments);
@@ -734,6 +747,8 @@ function DroppableExpenseRow({
 export default function ExpensesInboxPage() {
   const { t, tr } = useTranslations();
   const ep = t.projectModule.expensesPage;
+  const statusCategoryPendingLabel = tr('projectModule.expensesPage.statusCategoryPending', 'Categoria pendent');
+  const filterCategoryPendingLabel = tr('projectModule.expensesPage.filterCategoryPending', 'Categoria pendent');
   const searchParams = useSearchParams();
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
@@ -854,6 +869,7 @@ export default function ExpensesInboxPage() {
     | 'offBank'
     | 'assigned'
     | 'unassigned'
+    | 'categoryPending'
     | 'needsReview';
   const [tableFilter, setTableFilter] = React.useState<ExpenseTableFilter>('all');
 
@@ -871,9 +887,12 @@ export default function ExpensesInboxPage() {
     if (tableFilter !== 'all') {
       result = result.filter(e => {
         const exp = e.expense;
+        const categoryPending = isExpenseCategoryPending(exp);
         switch (tableFilter) {
           case 'needsReview':
             return exp.needsReview === true;
+          case 'categoryPending':
+            return categoryPending;
           case 'withDocument':
             return !!exp.documentUrl;
           case 'withoutDocument':
@@ -887,7 +906,7 @@ export default function ExpensesInboxPage() {
           case 'assigned':
             return e.status === 'assigned';
           case 'unassigned':
-            return e.status === 'unassigned';
+            return e.status === 'unassigned' && !categoryPending;
           default:
             return true;
         }
@@ -1038,7 +1057,18 @@ export default function ExpensesInboxPage() {
     setIsBulkAssigning(true);
 
     try {
-      const selectedExpenses = expenses.filter(e => selectedIds.has(e.expense.txId));
+      const selectedExpenses = expenses.filter(
+        (e) => selectedIds.has(e.expense.txId) && !isExpenseCategoryPending(e.expense)
+      );
+
+      if (selectedExpenses.length === 0) {
+        toast({
+          variant: 'destructive',
+          title: ep.toastError,
+          description: `${statusCategoryPendingLabel}. ${tr('projectModule.expensesPage.pendingCategoryHelp', "Classifica el moviment a Moviments abans d'imputar-lo a un projecte.")}`,
+        });
+        return;
+      }
 
       // Carregar fxTransfers del projecte si hi ha despeses FX
       const hasFxExpenses = selectedExpenses.some(e => isFxExpenseNeedingProjectTC(e.expense));
@@ -1111,7 +1141,10 @@ export default function ExpensesInboxPage() {
   };
 
   // Selection handlers
-  const toggleSelect = (txId: string) => {
+  const toggleSelect = (expense: UnifiedExpenseWithLink) => {
+    if (isExpenseCategoryPending(expense.expense)) return;
+
+    const txId = expense.expense.txId;
     const newSet = new Set(selectedIds);
     if (newSet.has(txId)) {
       newSet.delete(txId);
@@ -1120,6 +1153,12 @@ export default function ExpensesInboxPage() {
     }
     setSelectedIds(newSet);
   };
+
+  const selectableExpenses = React.useMemo(
+    () => filteredExpenses.filter((item) => !isExpenseCategoryPending(item.expense)),
+    [filteredExpenses]
+  );
+  const selectedVisibleSelectableCount = selectableExpenses.filter((item) => selectedIds.has(item.expense.txId)).length;
 
   // Handler per obrir edició de despesa off-bank
   const handleEditOffBank = (expense: UnifiedExpenseWithLink) => {
@@ -1338,15 +1377,15 @@ export default function ExpensesInboxPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredExpenses.length) {
+    if (selectedVisibleSelectableCount === selectableExpenses.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredExpenses.map(e => e.expense.txId)));
+      setSelectedIds(new Set(selectableExpenses.map((e) => e.expense.txId)));
     }
   };
 
   const hasSelection = selectedIds.size > 0;
-  const allSelected = filteredExpenses.length > 0 && selectedIds.size === filteredExpenses.length;
+  const allSelected = selectableExpenses.length > 0 && selectedVisibleSelectableCount === selectableExpenses.length;
 
   if (error) {
     return (
@@ -1504,6 +1543,7 @@ export default function ExpensesInboxPage() {
               <SelectItem value="all">{ep.filterAll} ({expenses.length})</SelectItem>
               <SelectItem value="withoutDocument">{ep.filterWithoutDocument}</SelectItem>
               <SelectItem value="unassigned">{ep.filterUnassigned}</SelectItem>
+              <SelectItem value="categoryPending">{filterCategoryPendingLabel}</SelectItem>
               <SelectItem value="offBank">{ep.filterOffBank}</SelectItem>
               {canReadBankInProjectes && <SelectItem value="bank">{ep.filterBank}</SelectItem>}
             </SelectContent>
@@ -1530,6 +1570,14 @@ export default function ExpensesInboxPage() {
               onClick={() => setTableFilter('unassigned')}
             >
               {ep.filterUnassigned}
+            </Button>
+            <Button
+              variant={tableFilter === 'categoryPending' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTableFilter('categoryPending')}
+            >
+              <AlertCircle className="h-4 w-4 mr-1" />
+              {filterCategoryPendingLabel}
             </Button>
             <Button
               variant={tableFilter === 'offBank' ? 'default' : 'outline'}
@@ -1608,6 +1656,7 @@ export default function ExpensesInboxPage() {
           ) : (
             filteredExpenses.map((item) => {
               const { expense, status } = item;
+              const categoryPending = isExpenseCategoryPending(expense);
               const mobileBd = computeAssignmentBreakdown(expense, item.link?.assignments);
               const mobileBreakdown = computeBreakdownLabel(mobileBd, projectIdFilter, ep);
 
@@ -1623,16 +1672,24 @@ export default function ExpensesInboxPage() {
                   badges={[
                     <Badge
                       key="status"
-                      variant={status === 'assigned' ? 'default' : 'outline'}
+                      variant={!categoryPending && status === 'assigned' ? 'default' : 'outline'}
                       className={
-                        status === 'assigned'
+                        categoryPending
+                          ? 'bg-amber-50 text-amber-700 border-amber-200 text-xs'
+                          : status === 'assigned'
                           ? 'bg-emerald-600 text-xs'
                           : status === 'partial'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-xs'
                           : 'text-xs'
                       }
                     >
-                      {status === 'assigned' ? ep.statusAssigned : status === 'partial' ? ep.statusPartial : ep.statusUnassigned}
+                      {categoryPending
+                        ? statusCategoryPendingLabel
+                        : status === 'assigned'
+                        ? ep.statusAssigned
+                        : status === 'partial'
+                        ? ep.statusPartial
+                        : ep.statusUnassigned}
                     </Badge>,
                     mobileBreakdown && (
                       <Badge key="breakdown" variant="outline" className="text-xs max-w-[120px] truncate">
@@ -1660,7 +1717,7 @@ export default function ExpensesInboxPage() {
                   actions={
                     <div className="flex items-center gap-1">
                       {/* Assignar (per-projecte TC check al popover) */}
-                      {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                      {!projectsLoading && projects.length > 0 && status === 'unassigned' && !categoryPending && (
                         expense.amountEUR !== null || isFxExpenseNeedingProjectTC(expense)
                       ) && (
                         <QuickAssignPopover
@@ -1732,6 +1789,7 @@ export default function ExpensesInboxPage() {
                     checked={allSelected}
                     onCheckedChange={toggleSelectAll}
                     aria-label={ep.tableSelectAll}
+                    disabled={selectableExpenses.length === 0}
                   />
                 </TableHead>
                 <TableHead className="w-[28px] px-1 text-center hidden xl:table-cell">{ep.tableDoc}</TableHead>
@@ -1770,6 +1828,7 @@ export default function ExpensesInboxPage() {
                   const { expense, status } = item;
                   const isSelected = selectedIds.has(expense.txId);
                   const isUploading = uploadingDocTxId === expense.txId;
+                  const categoryPending = isExpenseCategoryPending(expense);
 
                   return (
                     <DroppableExpenseRow
@@ -1783,8 +1842,9 @@ export default function ExpensesInboxPage() {
                       <TableCell className="px-2">
                         <Checkbox
                           checked={isSelected}
-                          onCheckedChange={() => toggleSelect(expense.txId)}
+                          onCheckedChange={() => toggleSelect(item)}
                           aria-label={`${ep.tableSelectExpense} ${expense.txId}`}
+                          disabled={categoryPending}
                         />
                       </TableCell>
 
@@ -1898,13 +1958,15 @@ export default function ExpensesInboxPage() {
                           isSaving={isSaving}
                           projectIdFilter={projectIdFilter}
                           ep={ep}
+                          isCategoryPending={categoryPending}
+                          categoryPendingLabel={statusCategoryPendingLabel}
                         />
                       </TableCell>
 
                       {/* Accions */}
                       <TableCell className="px-1">
                         <div className="flex items-center gap-0.5 justify-end">
-                          {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                          {!projectsLoading && projects.length > 0 && status === 'unassigned' && !categoryPending && (
                             expense.amountEUR !== null || isFxExpenseNeedingProjectTC(expense)
                           ) && (
                             <QuickAssignPopover

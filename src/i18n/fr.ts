@@ -2334,7 +2334,9 @@ export const fr = {
       filterUnassigned: "Non attribués",
       filterOffBank: "Terrain",
       filterBank: "Siège",
+      filterCategoryPending: "Catégorie en attente",
       filterNoResults: "Aucun résultat trouvé",
+      pendingCategoryHelp: "Classez le mouvement dans Mouvements avant de l'imputer à un projet.",
       filterResults: (count: number): string => count === 1 ? "résultat" : "résultats",
       // Recherche
       searchPlaceholder: "Rechercher par description, partenaire, catégorie...",
@@ -2380,6 +2382,7 @@ export const fr = {
       statusUnassigned: "Non imputée",
       statusPartial: "Partielle",
       statusAssigned: "Imputée",
+      statusCategoryPending: "Catégorie en attente",
       // Breakdown badge
       breakdownNProjects: (n: number) => `${n} projets`,
       breakdownNProjectsPcts: (n: number, pcts: string) => `${n} proj. (${pcts})`,

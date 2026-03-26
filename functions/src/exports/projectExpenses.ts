@@ -182,7 +182,6 @@ export const exportProjectExpenses = functions
 
 function calculateEligibility(tx: Transaction): boolean {
   if (tx.amount >= 0) return false;
-  if (!tx.category) return false;
 
   if (tx.transactionType === "return" || tx.transactionType === "return_fee") {
     return false;
@@ -192,6 +191,9 @@ function calculateEligibility(tx: Transaction): boolean {
   if (tx.isRemittance === true) return false;
   if (tx.isSplit === true) return false;
 
+  // Les despeses sense categoria també entren al feed:
+  // la UI les marca com "categoria pendent" i bloqueja la imputació
+  // fins que es categoritzin a Moviments.
   // TODO: si s'implementen transferències internes, excloure-les aquí.
   return true;
 }
