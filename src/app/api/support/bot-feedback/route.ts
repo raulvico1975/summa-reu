@@ -4,7 +4,6 @@
  * Stores per-question helpful feedback (yes/no) for continuous KB improvement.
  * Firestore path: organizations/{orgId}/supportBotQuestions/{hash}
  *
- * @see CLAUDE.md — src/app/api/** = RISC ALT
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -97,4 +96,3 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     )
   }
 }
-

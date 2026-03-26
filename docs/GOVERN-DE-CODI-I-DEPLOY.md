@@ -1,354 +1,128 @@
 # Govern de Codi i Deploy — Summa Social
 
-**Versió:** 3.2
-**Data:** 2026-02-16
-**Autor:** Raül Vico (CEO/CTO)
+Aquest és el contracte normatiu llarg del flux de treball i deploy.
 
-**Complementaris:**
-- `docs/operations/OPENCLAW-MIRROR.md`
+- Dubte operatiu curt: `docs/DEPLOY.md`
+- Bloquejos, residus i neteja: `docs/REPO-HIGIENE-I-DIAGNOSTIC.md`
+- Ús pràctic i checklists: `docs/DEV-SOLO-MANUAL.md`
 
----
+## 1. Model operatiu únic
 
-## 0. Principis no negociables
+Només hi ha tres veritats operatives:
 
-1. **Model de branques:** `main → prod` (invariant)
-2. **Autoritat final:** CEO decideix quan es desplega
-3. **Cap dependència nova** sense aprovació explícita
-4. **Cap commit directe** a `prod`
+1. `WORK`: una branca de feina oberta en un worktree extern de tasca.
+2. `MAIN`: canvis integrats a `main`.
+3. `PROD`: canvis publicats a `prod`.
 
----
+Regles del model:
 
-## 1. Model de branques
+- El repositori de control és `/Users/raulvico/Documents/summa-social`.
+- El repositori de control viu a `main` i s'ha de mantenir net.
+- `npm run inicia` crea una branca `codex/*` i un worktree extern a `../summa-social-worktrees/<branch>`.
+- La implementació es fa només dins del worktree de tasca.
+- Treballar directament al repositori de control per fer una feature queda prohibit.
+- `main` és integració; `prod` és producció.
 
-| Branca | Funció | Qui hi treballa |
-|--------|--------|-----------------|
-| `main` | Integració central i preparació de deploy | Repositori de control |
-| `prod` | Producció (App Hosting) | Només merge des de main |
-| `codex/*` | Tasques d'implementació | Worktrees externs |
-
-```
-[worktree codex/*] → [main] → [prod] → Deploy automàtic
-```
-
-**Repositori de control:** `/Users/raulvico/Documents/summa-social`  
-**Regla:** el control es manté a `main` i net. Les tasques van fora, en worktrees.
-
-**Firebase App Hosting desplega automàticament només des de `prod`.**
-
----
-
-## 2. Classificació de canvis per risc
-
-| Risc | Tipus de canvis | Exemples | Paths típics |
-|------|-----------------|----------|--------------|
-| **BAIX** | i18n, docs, microcopy | Labels, traduccions, README | `src/i18n/*`, `docs/*`, `*.md` |
-| **MITJÀ** | UI, filtres, exports | Dashboards, CSV, Excel | `src/components/*`, `src/app/*/dashboard/*` |
-| **ALT** | Dades, fiscal, conciliació, SEPA | Remeses, Model 182, ledger, pain.008 | `src/lib/remittances/*`, `src/lib/model182/*`, `src/lib/sepa/*`, `src/app/api/*` |
-
-Aquesta classificació determina els requisits de validació (secció 4).
-
----
-
-## 3. Ritual de desenvolupament
-
-1. Des del **repositori de control** (a `main`, net): `npm run inicia` o `npm run implementa` (opcional: `npm run inicia -- <area>`)
-2. El sistema crea **branca `codex/*` + worktree extern** a `../summa-social-worktrees/<branch>` i, si hi ha `area`, evita solapaments amb una altra tasca oberta de la mateixa àrea
-3. **Treballar i validar** dins del worktree de tasca:
-   ```bash
-   node scripts/check-build-env.mjs && npm run build && npm test
-   ```
-4. `npm run acabat` des del worktree: checks + commit + push de la branca `codex/*`
-5. `npm run integra` des del repositori de control: prova de merge en worktree temporal + validacions + actualització d'`origin/main` + sincronització de `main`
-6. El tancament del worktree deixa de ser un pas mental del flux: `worktree:gc` es pot executar automàticament i `publica` només accepta estat sense residus
-
-### Estats operatius admesos
-
-El sistema només admet 3 veritats operatives:
-
-1. `WORK`: una sola branca de feina (`codex/*` o, excepcionalment, `hotfix/*`)
-2. `MAIN`: integrat i alineat amb `origin/main`
-3. `PROD`: publicat i alineat amb `main`
-
-Tot el que no encaixa aquí es considera `BLOQUEJAT`, no “estat vàlid a interpretar”.
-
----
-
-## 4. Ritual de deploy per nivell de risc
-
-### Requisits abans de `main → prod`
-
-| Risc | Requisits mínims |
-|------|------------------|
-| **BAIX** | `npm run build` OK |
-| **MITJÀ** | build + smoke tests (`docs/QA/SMOKE-TESTS.md`) |
-| **ALT** | build + smoke + checklist manual (`tests/CHECKLIST-MANUAL.md`) |
-
-**Prerequisit estable de build:** `npm run build` requereix credencials Firebase mínimes (`NEXT_PUBLIC_FIREBASE_PROJECT_ID` i `NEXT_PUBLIC_FIREBASE_API_KEY`) via `.env.local` o variables d'entorn de shell/CI.
-
-**Variables de deploy per contacte públic:** si el canvi toca `src/app/public/[lang]/contact/` o `src/app/api/contact/`, producció ha de tenir:
-- `RESEND_API_KEY`
-- `CONTACT_FORM_TO_EMAIL`
-
-Sense aquesta configuració, `/api/contact` respon `503` i el formulari públic mostra error controlat sense enviar correu.
-
-### Regla P0 específica: filtre de Moviments
-
-Qualsevol canvi del filtre de visibilitat de Moviments es considera **P0** (govern de dades, no UI).
-
-**Obligatori al PR:**
-- Tests de filtre actualitzats/afegits (mínim unitaris del helper de visibilitat)
-- `verify-local` OK
-- `verify-ci` OK
-- Evidència de QA manual (checklist curt)
-
-**Checklist QA manual (4 passos):**
-1. Flores: cercar remesa a Moviments i validar que el pare 2025 és visible
-2. Validar que les filles de remesa no apareixen al llistat principal
-3. Toggle arxivats OFF: un moviment arxivat no es veu
-4. Toggle arxivats ON: el mateix moviment arxivat es veu
-
-### Verificació post-deploy: contactes
-
-Si el deploy toca `donor-manager`, `supplier-manager`, `employee-manager` o `src/app/api/contacts/import/`:
-- Editar un donant existent → desar → verificar que no apareix `permission-denied`
-- Comprovar Network tab: `/api/contacts/import` respon 200
-
-### Comandes de deploy (invariants)
+## 2. Flux obligatori
 
 ```bash
-# 1) main → prod
-git checkout prod
-git pull --ff-only
-git merge --no-ff main
-git push origin prod
+npm run inicia
+# implementar dins del worktree
+npm run acabat
+npm run integra
+npm run status
+npm run publica
 ```
 
----
+Interpretació obligatòria:
 
-## 5. Punt de control i autorització
+1. `npm run inicia` o `npm run implementa` només es llança des del repositori de control, a `main` i net.
+2. El sistema crea branca `codex/*` + worktree extern.
+3. La feina es desenvolupa i es valida només dins del worktree.
+4. `npm run acabat` només valida, commita i puja la branca de feina.
+5. `npm run integra` és l'única porta d'entrada a `main`.
+6. `npm run publica` és l'única porta d'entrada a `prod`.
 
-**Un sol punt de decisió humana:** abans de `main → prod`.
+La decisió de publicar és separada del tancament i de la integració. Acabar una tasca no vol dir publicar-la.
 
-### Execució
+## 3. Garanties dels scripts
 
-El ritual complet d'"acabar feina" i publicar s'executa via scripts deterministes:
+### `npm run inicia`
 
-```bash
-npm run inicia    # crea branca codex/* + worktree extern de tasca
-npm run implementa # equivalent a inicia
-npm run acabat    # tanca tasca des del worktree (checks + commit + push)
-npm run integra   # integra a main des del repositori de control
-npm run publica   # publica main -> prod (només des del repositori de control)
-npm run status    # font única d'estat operatiu
-npm run worktree:list
-npm run worktree:close
-npm run worktree:gc
-```
+- Exigeix repositori de control a `main` i net.
+- Crea branca `codex/*` i worktree extern.
+- Si s'indica una àrea (`npm run inicia -- <area>`), evita obrir una altra tasca activa a la mateixa àrea.
 
-`npm run inicia` i `npm run implementa` (`scripts/workflow.sh inicia|implementa`) només funcionen al repositori de control (`main` net) i creen una tasca aïllada: branca `codex/...` + worktree extern.
+### `npm run acabat`
 
-Si es vol reservar una àrea funcional, es pot fer servir:
+- S'executa des del worktree de tasca.
+- Corre validacions i, si hi ha canvis locals, fa commit i push.
+- No integra res a `main`.
+- No publica res a `prod`.
+- El resultat correcte és: branca llesta per integrar.
 
-```bash
-npm run inicia -- remeses
-```
+### `npm run integra`
 
-Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOCKED_SAFE`) per evitar solapaments.
+- S'executa només des del repositori de control.
+- És l'única porta d'entrada a `main`.
+- Valida la integració en un worktree temporal abans de tocar `main`.
+- Si falla, `main` queda intacta.
+- Si passa, `main` queda alineada com a base única per a `publica`.
 
-`npm run acabat` (`scripts/workflow.sh acabat`) fa aquests passos de forma seqüencial:
-1. Detectar canvis pendents i classificar risc (ALT/MITJÀ/BAIX)
-2. Verificacions (`verify-local.sh`, `verify-ci.sh`) quan hi ha canvis locals
-3. Commit i push automàtics de la branca de treball (`codex/...`) quan hi ha canvis locals
-4. Sortida clara indicant que la branca ja és llesta per integrar amb `npm run integra`
+### `npm run status`
 
-`npm run integra` (`scripts/integrate.sh`) fa aquests passos:
-1. Verifica que el repositori de control és `main` i està net
-2. Detecta l'única branca de worktree realment llesta per integrar
-3. Fa una **prova de merge en worktree temporal**, sense tocar `main`
-4. Regenera `.next/types` al worktree temporal i executa `typecheck` + `test:node`
-5. Si tot és correcte, actualitza `origin/main` amb el cap validat
-6. Sincronitza `main` local amb `origin/main`
-7. Mostra un resum inequívoc de què ha entrat, si `main` és neta i si queda pendent decidir deploy
-8. Si hi ha més d'una veritat de treball, worktrees residuals o feina sense pujar, bloqueja abans de tocar `main`
+- És la font única d'estat operatiu.
+- Resumeix `WORK`, `MAIN`, `PROD`, el parc de worktrees i l'`ESTAT GLOBAL`.
+- Si diu `BLOQUEJAT`, ni `integra` ni `publica` poden continuar.
 
-`npm run publica` executa `scripts/deploy.sh`, que fa:
-1. Preflight git al **repositori de control** (branca=main, working tree net, pull ff-only)
-2. Detectar fitxers canviats (main vs prod)
-3. Classificar risc (ALT/MITJÀ/BAIX) per patrons de path
-4. Detectar si el bloc és `FAST_PUBLIC` (només web públic/blog/landings)
-4. **Backup curt automàtic** quan el risc és ALT fiscal (si l'entorn està configurat)
-5. **Anàlisi fiscal i d'impacte** — detecta si el canvi pot afectar diners, saldos o fiscalitat.
-6. Verificacions locals (`verify-local.sh` + `verify-ci.sh`)
-   - en `FAST_PUBLIC`: i18n + build env + typecheck + build
-   - fora de `FAST_PUBLIC`: flux complet actual amb oracle/coverage/support eval
-7. Resum
-8. **Avís guiat de negoci** si hi ha risc ALT residual: no tècnic, amb impacte possible i recomanació clara.
-9. **Pla de rollback automàtic** guardat a `docs/DEPLOY-ROLLBACK-LATEST.md`
-10. Merge ritual (main→prod + push)
-11. Post-deploy check automàtic (SHA remot + smoke amb URLs resoltes automàticament)
-12. **Check post-producció automàtic de 3 minuts** (login, flux principal, informe/export), excepte `FAST_PUBLIC`
-13. Oracle fiscal postdeploy, excepte `FAST_PUBLIC`
-14. Registre a `docs/DEPLOY-LOG.md` + incidències a `docs/DEPLOY-INCIDENTS.md` si hi ha bloqueig
-15. Reabsorció automàtica de `prod` a `main` per deixar el següent deploy desbloquejat
-16. Sincronització final de `main` amb `origin/main` si els logs han creat commits nous
-17. Si només falla la propagació immediata del SHA remot però la resta de comprovacions passen, el resultat final es considera `OK`
-18. Si hi ha worktrees actius o residuals, o si `prod` conté commits fora de `main`, bloqueja abans de publicar
+### `npm run publica`
 
-### Autorització
+- S'executa només des del repositori de control.
+- És l'única porta d'entrada a `prod`.
+- Publica a `prod` només allò que ja és a `main`.
+- Si falla, `prod` no s'ha de donar per actualitzada.
 
-- **Trigger d'inici:** el CEO escriu `"Comença"`, `"Inicia"` o `"Implementa"` → Codex executa `npm run inicia` o `npm run implementa` (mateix efecte)
-- **Trigger de tancament:** el CEO escriu `"Acabat"` → Codex executa `npm run acabat`
-- **Trigger d'integració:** quan la branca ja és llesta → Codex executa `npm run integra`
-- **Trigger de publicació:** el CEO escriu `"Autoritzo deploy"` → Codex executa `npm run publica`
-- El script detecta el nivell de risc automàticament
-- El script s'atura si les verificacions fallen
-- `Inicia` i `Implementa` serveixen igual.
+## 4. Bloquejos que aturen el ritual
 
-### Sortida esperada cap al CEO
+Qualsevol d'aquests casos talla el flux:
 
-- Quan hi ha canvis locals, el sistema mostra sempre:
-  - bloc `RESUM NO TÈCNIC` (què s'ha fet, implicació, què pot notar l'entitat)
-  - bloc `SEGÜENT PAS RECOMANAT` indicant quan dir `Acabat`
-- Després d'`acabat`, el sistema mostra:
-  - estat curt de la branca (`commit pujat`, `llest per integració`)
-  - bloc `SEGÜENT PAS RECOMANAT` indicant `npm run integra`
-- Després d'`integra` OK, el sistema mostra:
-  - quines branques han entrat
-  - si `origin/main` ha quedat actualitzat
-  - si `main` local ha quedat alineada i neta
-  - bloc `SEGÜENT PAS RECOMANAT` indicant si ja es pot decidir deploy
-- Text obligatori del bloc `QUÈ VOL DIR AUTORITZO DEPLOY`:
-  - Dir `Autoritzo deploy` vol dir publicar els canvis preparats a producció.
-  - Es faran comprovacions automàtiques abans i després.
-  - Si alguna comprovació falla, no es publica.
-  - L'entitat podria notar canvis immediatament després de publicar.
-- Quan el CEO respon `Autoritzo deploy`, Codex executa publicació en silenci.
-- Si tot va bé, la resposta final és només: `Ja a producció.`
-- Si alguna verificació falla, no es publica i Codex explica el bloqueig en una frase clara.
-- Després de `publica`, `main` i `origin/main` han de quedar alineades o el resultat s'ha de marcar explícitament com a `PENDENT`.
+- `main` amb canvis locals.
+- `main` desalineada amb `origin/main`.
+- worktrees residuals o ambigus.
+- més d'una branca llesta per integrar.
+- feina local o commits sense pujar dins dels worktrees.
+- `prod` amb commits fora de `main`.
+- `ESTAT GLOBAL: BLOQUEJAT`.
 
-### Pràctiques operatives automàtiques (sense passos manuals del CEO)
+Quan passi, no s'interpreta ni es força res. Es diagnostica amb `docs/REPO-HIGIENE-I-DIAGNOSTIC.md`.
 
-- Backup curt selectiu abans de deploy en risc ALT fiscal (si hi ha configuració d'entorn).
-- Rollback preparat automàticament abans de publicar.
-- Check post-producció de 3 minuts automatitzat.
-- Via ràpida automàtica `FAST_PUBLIC` per canvis exclusius del web públic/blog/landings.
-- Mini-registre d'incidència quan un deploy queda bloquejat.
-- Si no hi ha URLs de smoke definides, el sistema prova automàticament amb `DEPLOY_BASE_URL` o amb la URL publicada detectada a `firebase.json`.
-- Prova prèvia de merge a `integra` en worktree temporal per detectar solapaments abans de tocar `main`.
-- `worktree:gc` neteja automàticament worktrees integrats nets i branques `codex/*` fusionades que ja no tenen worktree.
-- límit operatiu: màxim 2 worktrees de tasca actius alhora (`codex/*` + `hotfix/*` si cal)
-- `npm run status` és la font única d'estat global; si diu `BLOQUEJAT`, ni `integra` ni `publica` poden continuar
-- `check-doc-sync` en mode flexible per defecte (warnings). Si cal bloqueig estricte de documentació: `DOC_SYNC_STRICT=1`.
+## 5. Comandes auxiliars
 
-### Missatge de commit
+Aquestes comandes són de manteniment, no de govern:
 
-- El commit ha de tenir un nom representatiu del canvi.
-- Si el CEO no dicta un text concret, el sistema genera automàticament un missatge representatiu segons fitxers i impacte.
+- `npm run worktree:list`: inspeccionar worktrees actius i residus.
+- `npm run worktree:close`: tancar un worktree que ja no ha de quedar actiu.
+- `npm run worktree:gc`: neteja segura de residus i worktrees integrats nets.
 
-### Estat operatiu (frases obligatòries)
+Cap d'aquestes comandes substitueix `acabat`, `integra` o `publica`.
 
-Codex només pot reportar un d'aquests tres estats:
-- `No en producció`
-- `Preparat per producció`
-- `A producció`
+## 6. Prohibicions
 
-### Regla d'avisos de negoci (no tècnics)
+- No treballar sense worktree de tasca.
+- No implementar al repositori de control.
+- No interpretar `npm run acabat` com a integració.
+- No fer deploy fora de `npm run publica`.
+- No usar l'estat d'un worktree com a font de veritat per damunt de `npm run status`.
+- No barrejar neteja de repo amb una feature.
+- No fer cherry-picks improvisats per trencar un bloqueig sense aclarir abans l'estat real.
+- No deixar dues versions actives del mateix ritual.
 
-- **BAIX/MITJÀ:** cap pregunta humana.
-- **ALT residual:** no es pregunta per defecte; es mostra un **avís guiat**.
-- **Format obligatori de l'avís:** impacte per l'entitat (què s'ha tocat, què pot veure malament, què ja està validat, recomanació clara).
-- **Prohibit preguntar** sobre comandes, flags, branques, merges o logs tècnics.
-- **Bloqueig només en casos forts:** preflight git, verificacions/CI, oracle fiscal, conflicte d'integració.
-- Mode estricte opcional: `DEPLOY_REQUIRE_MANUAL_CONFIRMATION_ON_RESIDUAL_ALT=1` (amb aquest mode, risc ALT residual sí bloqueja).
-- Els avisos guiats es registren al deploy log.
+## 7. Regla final
 
-### Restriccions Codex
+Quan hi hagi dubte:
 
-- **NO pot** decidir quan desplegar
-- **NO pot** fer canvis fora del ritual establert
-- **NO pot** usar `--no-verify` en cap cas
-- **Implementa sempre** en worktrees de tasca (`codex/*`), mai directament al repositori de control
-- **Publica només** des del repositori de control a `main`
+- `docs/DEPLOY.md` resol el dubte curt.
+- aquest document fixa la norma llarga.
+- `docs/REPO-HIGIENE-I-DIAGNOSTIC.md` resol el bloqueig.
 
-### Protecció contra artefactes de build i dependències
-
-El workflow bloqueja explícitament qualsevol fitxer staged sota:
-- `node_modules/`
-- qualsevol subruta `node_modules/` dins del repositori (incloent `functions/`)
-- `.next/`
-- `dist/`
-- `build/`
-- `.turbo/`
-
-Encara que `.gitignore` ja els exclou, el workflow aplica un segon nivell de protecció.  
-Nota: per provar el bloqueig de forma controlada (smoke test), pot ser necessari utilitzar `git add -f`.
-
----
-
-## 6. Rollback
-
-### Rollback bàsic (emergència)
-
-```bash
-git checkout prod
-git reset --hard <SHA_BON>
-git push --force-with-lease
-```
-
-Firebase App Hosting redesplegarà automàticament.
-
-**Regla:** Rollback sempre des de `prod`.
-
-### Protocol complet
-
-Per incidents específics (bot, API, Storage, etc.), escenaris detallats i temps estimats:
-
-👉 **Veure [`docs/operations/DEPLOY-ROLLBACK.md`](./operations/DEPLOY-ROLLBACK.md)**
-
-Aquest document conté:
-- Escenaris d'error específics (bot, diagnostics, Storage JSON, etc.)
-- Rollback parcial vs complet
-- Temps estimat per escenari
-- Verificació post-rollback
-- Procediments de documentació d'incidents
-
----
-
-## 7. Regles d'or
-
-1. Mai commit directe a `prod`
-2. Repositori de control sempre a `main` i net abans d'obrir tasca o publicar
-3. Implementació sempre en worktree extern (`codex/*`)
-4. Un commit = un propòsit clar
-5. Build + test abans de merge
-6. Deploy només amb autorització CEO
-7. Rollback des de `prod`
-8. Risc ALT = confirmació extra obligatòria
-
----
-
-## 8. Casos especials
-
-| Cas | Tractament |
-|-----|------------|
-| Web pública (`/public/*`) | Risc BAIX |
-| Novetats producte (Firestore `productUpdates`) | Fora d'aquest protocol (SuperAdmin) |
-| DEMO | Mai tocar `prod` |
-| Canvis visuals | Verificar en mòbil abans de merge |
-| Generador pain.008 (`src/lib/sepa/pain008/*`) | Risc ALT — Verificar compatibilitat amb Mode Santander (veure `DEV-SOLO-MANUAL.md` §18) |
-
----
-
-## 9. Quan canviar aquest model
-
-Només si:
-- **Equip 3+ devs** → afegir PRs obligatoris
-- **CI/CD automatitzat** → afegir protecció de branques
-
-Fins llavors: **simplicitat i disciplina > automatització**.
-
----
-
-**Aquest document és norma del projecte.**
-Quan algú pregunti "com despleguem Summa?", la resposta és: llegeix aquest document i segueix-lo.
+Si d'una lectura d'aquests documents encara es pogués deduir "es pot treballar sense worktree" o "`acabat` ja integra", el contracte estaria mal escrit.

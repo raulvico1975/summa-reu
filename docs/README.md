@@ -9,11 +9,12 @@ Aquest directori queda ordenat amb un criteri conservador:
 
 ## Llegeix primer
 
-1. `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` - document mestre del producte
-2. `docs/PATRONS-CODI-OBLIGATORIS.md` - invariants i patrons obligatoris
-3. `docs/DEV-SOLO-MANUAL.md` - manual operatiu del mantenidor
-4. `docs/GOVERN-DE-CODI-I-DEPLOY.md` - model de treball i deploy
-5. `docs/DOCS-STATUS-2026-03-08.md` - estat de vigencia de la documentacio
+1. `docs/DEPLOY.md` - contracte curt d'autoritat operativa
+2. `docs/GOVERN-DE-CODI-I-DEPLOY.md` - norma llarga de worktree, integracio i deploy
+3. `docs/REPO-HIGIENE-I-DIAGNOSTIC.md` - diagnòstic i neteja de bloquejos
+4. `docs/DEV-SOLO-MANUAL.md` - manual pràctic del mantenidor
+5. `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` - document mestre del producte
+6. `docs/PATRONS-CODI-OBLIGATORIS.md` - invariants i patrons obligatoris
 
 ## Mapa rapid
 
@@ -27,6 +28,9 @@ Nomes hi han de viure:
 
 Exemples:
 
+- `docs/DEPLOY.md`
+- `docs/GOVERN-DE-CODI-I-DEPLOY.md`
+- `docs/REPO-HIGIENE-I-DIAGNOSTIC.md`
 - `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md`
 - `docs/DEV-SOLO-MANUAL.md`
 - `docs/QA-FISCAL.md`
@@ -39,6 +43,9 @@ Exemples:
 ### Carpetes amb sentit actual
 
 - `docs/operations/` - runbooks manuals i operativa no automatica
+  - `docs/operations/CONTEXT-OPERATIU-WEB-I-INTEGRACIONS.md` - web public, contacte, WhatsApp, correu del domini i runtime extern d'OpenClaw
+  - `docs/operations/SUMMA-MAIL-OPERATIVA-RAPIDA.md` - on es veu l'inbox de `hola@`, on es veuen els enviats i com no perdre's amb el runtime comercial
+  - `docs/operations/SUMMA-INBOUND-FUNNEL.md` - com `Octavi` detecta, briefa i acompanya els contactes entrants de `hola@summasocial.app`
 - `docs/guardrails/` - fitxes curtes de guardrails i criteris d'implementacio
 - `docs/QA/` - proves manuals, cobertura i analisi estatica
 - `docs/security/` - auditories i documents de seguretat/privacitat
@@ -65,5 +72,5 @@ Exemple actual de `docs/contracts/`:
 - l'antiga carpeta de pseudo-skills s'ha renombrat a `docs/guardrails/`
 - runbooks manuals dispersos s'han mogut a `docs/operations/`
 - residus com `.DS_Store` i proves temporals s'han apartat a `docs/archive/_trash/`
-- s'ha afegit `docs/DOCS-STATUS-2026-03-08.md` per distingir el que es vigent del que requereix revisio
+- els snapshots de vigencia documental s'arxiven a `docs/archive/`
 - `docs/CHANGELOG.md` s'ha deixat com a resum curt i l'historial ampli ha passat a `docs/archive/changelog/`

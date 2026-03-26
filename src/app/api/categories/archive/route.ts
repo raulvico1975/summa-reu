@@ -11,7 +11,6 @@
  * - Bloqueig si la categoria és de sistema (SYSTEM_CATEGORY_LOCKED)
  * - Idempotent: si ja està arxivada, retorna success
  *
- * @see CLAUDE.md secció 7 per context d'integritat
  */
 
 import { NextRequest, NextResponse } from 'next/server';

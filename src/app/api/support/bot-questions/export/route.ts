@@ -12,7 +12,6 @@
  *
  * Returns: CSV file download
  *
- * @see CLAUDE.md — src/app/api/** = RISC ALT
  */
 
 import { NextRequest, NextResponse } from 'next/server'

@@ -135,37 +135,31 @@ El hook Husky (`.husky/pre-commit`) bloqueja `git commit` si estàs a la branca 
 
 ### 4.1c Treball en paral·lel amb worktrees (obligatori)
 
-**Regla base:** 1 tasca d'implementació = 1 worktree.
+Aquest manual no redefineix el contracte. L'autoritat és:
 
-**Worktree de control:**
-- Ruta: `/Users/raulvico/Documents/summa-social`
-- Branca obligatòria: `main`
-- Sempre net abans d'obrir tasca o publicar
+- `docs/DEPLOY.md` per al dubte curt
+- `docs/GOVERN-DE-CODI-I-DEPLOY.md` per a la norma llarga
+- `docs/REPO-HIGIENE-I-DIAGNOSTIC.md` per a bloquejos i residus
 
-**Cicle de vida d'una tasca:**
-1. Des del control (`main`, net): `npm run inicia` (o `npm run implementa`)
-2. El sistema crea:
-   - branca `codex/...`
-   - worktree extern a `../summa-social-worktrees/<branch>`
-3. Implementar dins del worktree nou
-4. Tancar amb `npm run acabat` des del worktree (checks + commit/push)
-5. Integrar amb `npm run integra` des del repositori de control
-6. El worktree integrat no és un estat operatiu nou: s'ha de tancar o netejar perquè `status`, `integra` i `publica` només treballen sense residus
+Checklist pràctica:
 
-**Reserva d'àrea (opcional, recomanada):**
-- Pots iniciar amb àrea per evitar solapaments: `npm run inicia -- remeses` (també vàlid amb `implementa`).
-- Si ja hi ha una tasca activa de la mateixa àrea, el sistema bloqueja l'inici (`BLOCKED_SAFE`).
+1. El repositori de control és `/Users/raulvico/Documents/summa-social`.
+2. Des del control (`main`, net): `npm run inicia` o `npm run implementa`.
+3. El sistema crea branca `codex/*` + worktree extern.
+4. Implementar només dins del worktree.
+5. `npm run acabat` només valida, commita i puja la branca.
+6. `npm run integra` s'executa després, des del repositori de control.
+7. `npm run status` és la font única d'estat.
 
-**Operacions de manteniment:**
-- Estat global únic: `npm run status`
-- Llistar worktrees: `npm run worktree:list`
-- Tancar worktree actual o indicat: `npm run worktree:close`
-- Neteja automàtica segura (TTL 14 dies + integrats nets): `npm run worktree:gc`
+Operacions de manteniment:
 
-**Regla nova de simplicitat:**
-- només hi ha 3 estats mentals vàlids: `WORK`, `MAIN`, `PROD`
-- si `npm run status` diu `BLOQUEJAT`, no interpretis res: primer resol el bloqueig
-- màxim operatiu: `main` + 1 `codex/*` actiu + 1 `hotfix/*` si cal
+- `npm run worktree:list` per inspeccionar worktrees actius i residus
+- `npm run worktree:close` per tancar un worktree que ja no ha de continuar viu
+- `npm run worktree:gc` per neteja segura després de revisar l'estat
+
+Regla pràctica:
+
+- si `npm run status` diu `BLOQUEJAT`, no interpretis res ni facis deploy; primer diagnostica el repo
 
 ### Bloqueig d’artefactes
 
@@ -195,83 +189,35 @@ En cas de test intern del mecanisme, pot ser necessari utilitzar `git add -f` pe
 5. Millora estructural pendent:
    - portar cerca i filtres de Moviments a backend
 
-**Incidència operativa resolta — ritual `npm run integra` (2026-03-20)**
-1. El fals `KO` venia d'executar `typecheck` abans de regenerar `.next/types`.
-2. El ritual actual valida en un worktree temporal, regenera `next typegen` i només actualitza `origin/main` si tot passa.
-3. Això evita dos errors de procés:
-   - reportar `KO` quan el merge real era bo
-   - deixar `main` local en estat ambigu després d'una validació fallida
-4. El resum final d'`integra` ha de reflectir sempre:
-   - si `origin/main` s'ha actualitzat
-   - si `main` local ha quedat alineada
-   - si `main` és neta
-
 Guia ràpida d'execució: [scripts/verify-fiscal.md](../scripts/verify-fiscal.md)
-
-Nota docs: `check-doc-sync` és flexible per defecte (warnings) i bloqueja en incoherències greus. Si vols bloqueig estricte per tota la part documental, executa amb `DOC_SYNC_STRICT=1`.
 
 ---
 
 ### 4.3 Desplegament
 
-Flux guiat recomanat:
+Aquest manual no reescriu el ritual de deploy. Per govern i autoritat:
+
+- `docs/DEPLOY.md`
+- `docs/GOVERN-DE-CODI-I-DEPLOY.md`
+- `docs/REPO-HIGIENE-I-DIAGNOSTIC.md`
+
+Checklist pràctica abans de publicar:
 
 ```bash
-npm run inicia -- remeses # opcional: reserva d'àrea (exemple)
-npm run worktree:list # identifica la ruta del worktree actiu
-npm run estat         # et suggereix quan dir "Acabat" amb resum no tècnic
-npm run acabat
+npm run status
+npm run worktree:list
 npm run integra
-npm run worktree:close # recomanat quan la branca ja està integrada
-npm run estat         # et suggereix quan dir "Autoritzo deploy" i què vol dir
+npm run status
 npm run publica
 ```
 
-`inicia` i `implementa` són equivalents.
-`Inicia` i `Implementa` serveixen igual.
-Si no vols reservar àrea, usa `npm run inicia` / `npm run implementa` sense arguments.
+Regles pràctiques:
 
-**Important:** `npm run publica` només es pot executar des del repositori de control (`/Users/raulvico/Documents/summa-social`) a la branca `main`.
-
-`npm run publica` executa el ritual de deploy complet de forma seqüencial i bloquejant. No cal recordar comandes git ni passos manuals.
-
-**Què fa en ordre:**
-1. Comprova que estàs a `main` i que no hi ha canvis pendents
-2. Actualitza totes les branques (`main`, `prod`)
-3. Mostra els fitxers canviats i el nivell de risc
-4. Analitza impacte fiscal/econòmic del canvi
-5. Executa verificacions (i18n, typecheck, tests, build)
-6. Si el risc és BAIX/MITJÀ: continua automàticament
-7. Si el risc és ALT residual: mostra **avís guiat de negoci** (mai tècnic) i continua per defecte
-8. Fa el merge i push (main→prod)
-9. Fa post-check automàtic (SHA remot + smoke amb URL auto-resolta)
-10. Registra el deploy a `docs/DEPLOY-LOG.md` (inclou avís guiat si n'hi ha)
-11. Sincronitza `main` amb `origin/main` si el mateix deploy ha creat commits nous de registre
-12. Si el remot triga a reflectir `prod` però smoke + contingut + check de 3 minuts + oracle passen, tanca el resultat final com a `OK`
-
-Per defecte, si no es defineixen URLs de comprovació, el sistema intenta deduir-les automàticament a partir de `DEPLOY_BASE_URL` o de la URL publicada detectada a `firebase.json`.
-
-**Si falla:**
-- Solapament detectat a `integra` (prova prèvia de merge) → el canvi queda guardat a la teva branca; `main` no es toca.
-- Conflicte de merge → el script aborta i torna a `main`. Resol el conflicte manualment.
-- Verificació falla → corregeix els errors i torna a executar `npm run publica`.
-- Si `prod` queda publicada però `origin/main` no es pot sincronitzar al final, el resultat s'ha de marcar com `PENDENT`, no com `OK`.
-- En risc ALT residual, el sistema t'avisa amb llenguatge de negoci i recomanació clara.
-- Mode estricte opcional: `DEPLOY_REQUIRE_MANUAL_CONFIRMATION_ON_RESIDUAL_ALT=1` (sí bloqueja risc ALT residual).
-
-**Important (avisos de negoci):**
-- MAI preguntes tècniques (comandes, flags, branques, merge, logs).
-- Sempre en format impacte d'entitat: què s'ha tocat, què pot veure malament, què ja està validat i quina recomanació es fa.
-
-**Guia obligatòria al CEO:**
-- Bloc `RESUM NO TÈCNIC` abans de recomanar `Acabat`.
-- Bloc `QUÈ VOL DIR AUTORITZO DEPLOY` abans de recomanar publicació.
-- Bloc `SEGÜENT PAS RECOMANAT` en cada estat del procés.
-- Text obligatori de `QUÈ VOL DIR AUTORITZO DEPLOY`:
-  - Dir `Autoritzo deploy` vol dir publicar els canvis preparats a producció.
-  - Es faran comprovacions automàtiques abans i després.
-  - Si alguna comprovació falla, no es publica.
-  - L'entitat podria notar canvis immediatament després de publicar.
+- `npm run acabat` no integra.
+- `npm run integra` és l'única porta d'entrada a `main`.
+- `npm run publica` és l'única porta d'entrada a `prod`.
+- si `npm run status` diu `BLOQUEJAT`, no es publica
+- si hi ha residus, primer aplica `worktree:close`, `worktree:gc` o el diagnòstic del document de higiene
 
 ---
 
@@ -539,7 +485,7 @@ Quan publiques una novetat nova des de SuperAdmin (`/admin` → Novetats):
    □ git commit -m "docs(novetats): actualitzar web JSON - [títol breu]"
 
 4. Deploy ───────────────────────────────────────────────────────
-   □ git push (App Hosting desplega automàticament)
+   □ seguir el mateix ritual general del repo: `npm run acabat` → `npm run integra` → `npm run publica`
    □ Verificar que /ca/novetats mostra la nova entrada
 ```
 

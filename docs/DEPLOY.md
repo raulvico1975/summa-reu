@@ -1,14 +1,16 @@
-# Deploy — runtime real
+# Deploy — contracte vigent
 
-Document curt d'autoritat operativa per al tram `main -> prod`.
+Document curt d'autoritat operativa.
 
 ## Contracte vigent
 
-1. `npm run acabat` només tanca i puja la branca `codex/*`.
-2. `npm run integra` és l'única porta d'entrada a `main`.
-3. `npm run publica` és l'única porta d'entrada a `prod`.
-4. El repositori de control és `/Users/raulvico/Documents/summa-social`.
-5. `prod` no rep commits directes.
+- `npm run inicia` crea branca `codex/*` + worktree extern.
+- La feina es fa només dins del worktree de tasca.
+- `npm run acabat` només valida, commita i puja la branca.
+- `npm run integra` és l'única porta d'entrada a `main`.
+- `npm run status` és la font única d'estat operatiu.
+- Si `npm run status` diu `BLOQUEJAT`, ni `integra` ni `publica` poden continuar.
+- `npm run publica` és l'única porta d'entrada a `prod`.
 
 ## Flux normal
 
@@ -21,99 +23,34 @@ npm run status
 npm run publica
 ```
 
-Els passos mentals reals són 3:
+## Què garanteix `acabat`
 
-1. `WORK` — treballar a una sola branca de tasca
-2. `MAIN` — integrar-la i deixar `main` alineada
-3. `PROD` — publicar-la
+- La branca `codex/*` queda validada, commitada i pujada.
+- `main` no es toca.
+- `prod` no es toca.
 
-`acabat` i `worktree:close` continuen existint com a automatismes, però no com a “quarta” o “cinquena” veritat del sistema.
+## Què garanteix `integra`
 
-## Què garanteix cada pas
+- Només entra a `main` una branca llesta.
+- La integració es valida abans de tocar `main`.
+- Si falla, `main` queda intacta.
+- Si passa, `main` queda com a base única per publicar.
 
-### `npm run acabat`
+## Què garanteix `status`
 
-- executa checks locals i CI quan hi ha canvis
-- fa commit i push de la branca de feina
-- no toca `main`
+- Resumeix `WORK`, `MAIN`, `PROD` i el parc de worktrees.
+- Decideix si l'estat global és `OK` o `BLOQUEJAT`.
+- Si diu `BLOQUEJAT`, s'atura el ritual i es diagnostica el repo.
 
-### `npm run integra`
+## Què garanteix `publica`
 
-- només corre des del repositori de control
-- falla en sec si hi ha worktrees residuals, més d'una branca llesta o feina local oberta en algun worktree
-- valida el merge en un worktree temporal
-- regenera `next typegen` abans del `typecheck`
-- només actualitza `origin/main` si la prova és correcta
-- sincronitza `main` local després del push
+- Publica a `prod` només allò que ja és a `main`.
+- No accepta residus ni `prod` fora de `main`.
+- Deixa traça operativa del resultat.
 
-Resultat esperat:
-- `origin/main` actualitzat: `SI`
-- `main alineada amb origin/main`: `SI`
-- `main neta`: `SI`
+## Què passa quan alguna cosa falla
 
-### `npm run status`
-
-- és la font única d'estat operatiu
-- mostra només:
-  - `WORK`
-  - `MAIN`
-  - `PROD`
-  - resum de worktrees
-  - `ESTAT GLOBAL: OK/BLOQUEJAT`
-- si diu `BLOQUEJAT`, el sistema no accepta `integra` ni `publica`
-
-### `npm run publica`
-
-- només corre des de `main` al repositori de control
-- falla en sec si hi ha worktrees actius/residuals o si `prod` conté commits fora de `main`
-- fa preflight git, verificacions i classificació de risc
-- detecta automàticament el perfil `FAST_PUBLIC` quan tots els canvis són de web públic/blog/landings (`src/app/public/*`, `src/components/public/*`, `src/app/blog/*`, `public/*`, `src/i18n/public.ts`, etc.)
-- en perfil `FAST_PUBLIC` fa validació curta però segura: i18n, build env, typecheck i build; salta cobertura, support eval i oracles fiscals
-- prepara rollback i registra el resultat a `docs/DEPLOY-LOG.md`
-- fa el merge `main -> prod`, push i post-check automàtic
-- després del deploy reabsorbeix automàticament `prod` cap a `main` perquè el següent `publica` no quedi bloquejat
-- si els logs de deploy creen commits nous a `main`, els sincronitza també a `origin/main`
-- si el SHA remot triga a reflectir `prod` però la resta de comprovacions passen, el resultat final es normalitza a `OK`
-- els commits automàtics de logs de deploy no tornen a passar pel `pre-commit` complet
-
-Resultat esperat:
-- `prod` actualitzada
-- `main` alineada amb `origin/main`
-- post-check automàtic confirmat o marcat com `PENDENT`
-- registre escrit a `docs/DEPLOY-LOG.md`
-
-## Quan alguna cosa falla
-
-- Si falla `acabat`: la branca continua al worktree i no s'integra res.
-- Si falla `integra`: `main` queda intacta i el resum ha d'indicar el bloqueig real.
-- Si falla `publica`: `prod` no s'ha d'actualitzar i el bloqueig queda registrat.
-
-## Verificació operativa
-
-- Smoke del 2026-03-20: worktree creat amb `.env.local`, `.env.demo` i `node_modules` enllaçats automàticament, sense passos manuals extra.
-
-## Traça mínima de l'estabilització del ritual (2026-03-20)
-
-- Defectes corregits:
-  - `npm run integra` podia donar fals `KO` perquè `typecheck` corria abans de regenerar `.next/types`.
-  - `npm run integra` podia deixar dubte sobre si `origin/main` i `main` havien quedat realment alineades.
-  - `npm run publica` podia deixar `main` per davant d'`origin/main` després dels commits automàtics de logs.
-  - `npm run publica` podia acabar en `PENDENT` fals quan només fallava la propagació immediata del SHA remot però la resta de comprovacions ja havien confirmat el deploy.
-  - el cicle de worktrees exigia massa diagnòstic manual per saber què era actiu, què es podia tancar i què es podia netejar.
-- Fitxers tocats en aquesta estabilització:
-  - `scripts/integrate.sh`
-  - `scripts/worktree.sh`
-  - `scripts/workflow.sh`
-  - `scripts/deploy.sh`
-  - `docs/GOVERN-DE-CODI-I-DEPLOY.md`
-  - `docs/DEV-SOLO-MANUAL.md`
-  - `docs/DEPLOY.md`
-- Bloc de commits que conté la correcció:
-- `b070bedc` — fiabilitat d'`integra`, resum operatiu i higiene de worktrees
-- `2f6a91ca` — sincronització final de `main` després de `publica`
-- `955f7cb1` — normalització del resultat final de `publica` quan el SHA remot arriba tard
-- `2026-03-22` — via ràpida `FAST_PUBLIC` per canvis de web públic/blog i reabsorció automàtica de `prod` a `main`
-- Prova real del flux complet:
-  - el 2026-03-20 es va executar un cicle complet `codex/* -> acabat -> integra -> worktree:close -> publica` amb resultat final `OK`
-  - el deploy va quedar confirmat per smoke, contingut públic, check de 3 minuts i oracle postdeploy
-  - `main` i `origin/main` van quedar alineades al final del ritual i `prod` va quedar actualitzada
+- Si falla `acabat`, la feina continua al worktree i no s'integra res.
+- Si falla `integra`, `main` queda intacta.
+- Si `status` diu `BLOQUEJAT`, primer s'aplica `docs/REPO-HIGIENE-I-DIAGNOSTIC.md`.
+- Si falla `publica`, `prod` no s'ha de donar per actualitzada.

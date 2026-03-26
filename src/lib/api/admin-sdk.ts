@@ -3,7 +3,6 @@
  *
  * Centralitza: inicialització cached, verificació de token, validació de membership.
  *
- * @see CLAUDE.md secció 2.b — paths `src/app/api/**` són RISC ALT
  */
 
 import { type NextRequest } from 'next/server';

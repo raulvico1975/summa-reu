@@ -8,7 +8,6 @@
  * 2. Pas 2: Confirmar la reassignació
  * 3. Executar via API (no escriu Firestore directament)
  *
- * @see CLAUDE.md secció sobre integritat per context
  */
 
 import * as React from 'react';

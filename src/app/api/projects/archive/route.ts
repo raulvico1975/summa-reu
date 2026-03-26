@@ -13,7 +13,6 @@
  * NOTA: Aquesta API NO afecta projectModule/* (mòdul de projectes modern)
  * Només afecta organizations/{orgId}/projects/* (eixos d'actuació legacy)
  *
- * @see CLAUDE.md secció 7 per context d'integritat
  */
 
 import { NextRequest, NextResponse } from 'next/server';

@@ -12,7 +12,6 @@
  * IMPORTANT: No es poden arxivar comptes amb transaccions perquè
  * el bankAccountId és referència d'integritat per conciliació.
  *
- * @see CLAUDE.md secció 7 per context d'integritat
  */
 
 import { NextRequest, NextResponse } from 'next/server';

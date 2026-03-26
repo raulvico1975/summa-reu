@@ -55,5 +55,5 @@ No descriu el producte al detall; per això ja existeixen:
 | què fa exactament el producte | `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` |
 | com usar-lo com a usuari | `docs/manual-usuari-summa-social.md` |
 | dubtes freqüents i respostes curtes | `docs/FAQ_SUMMA_SOCIAL.md` |
-| estat i criteri de la documentació | `docs/DOCS-STATUS-2026-03-08.md` |
+| govern operatiu i deploy | `docs/DEPLOY.md` |
 | canvis recents resumits | `docs/CHANGELOG.md` |

@@ -91,11 +91,12 @@ Gestors, administradors i tresorers d'entitats sense ànim de lucre que necessit
 
 ## Documentació
 
+- [Contracte curt de deploy](docs/DEPLOY.md) — Autoritat operativa curta
+- [Norma de codi i deploy](docs/GOVERN-DE-CODI-I-DEPLOY.md) — Contracte normatiu llarg
+- [Higiene i diagnòstic del repo](docs/REPO-HIGIENE-I-DIAGNOSTIC.md) — Bloquejos, residus i neteja
+- [Manual pràctic del mantenidor](docs/DEV-SOLO-MANUAL.md) — Checklists i ús quotidià
 - [Índex de documentació](docs/README.md) — Mapa i criteri d'ordre de `/docs`
 - [Manual de referència complet](docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md) — Document mestre del projecte
-- [Catàleg de funcionalitats](docs/CATALEG-FUNCIONALITATS.md) — Referència ràpida
-- [Manual d'usuari](docs/manual-usuari-summa-social.md) — Per a usuaris finals
-- [Changelog](docs/CHANGELOG.md) — Historial de canvis
 
 ## Blog públic
 

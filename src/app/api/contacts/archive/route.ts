@@ -12,7 +12,6 @@
  * IMPORTANT: No es poden arxivar contactes amb transaccions perquè
  * el contactId és referència d'integritat per fiscalitat (Model 182, 347).
  *
- * @see CLAUDE.md secció 7 per context d'integritat
  */
 
 import { NextRequest, NextResponse } from 'next/server';

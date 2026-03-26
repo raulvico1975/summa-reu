@@ -6,7 +6,6 @@
  *
  * Firestore path: organizations/{orgId}/supportBotQuestions/{hash}
  *
- * @see CLAUDE.md — src/lib/** = RISC MITJÀ (helper no crític)
  */
 
 import { createHash } from 'crypto'

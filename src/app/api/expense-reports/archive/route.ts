@@ -10,7 +10,6 @@
  * - NO permet arxivar si ja està conciliada (status === 'matched')
  * - Idempotent: si ja està arxivada, retorna success
  *
- * @see CLAUDE.md secció 7 per context d'integritat
  */
 
 import { NextRequest, NextResponse } from 'next/server';
