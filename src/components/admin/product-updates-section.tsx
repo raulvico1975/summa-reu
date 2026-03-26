@@ -596,7 +596,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     toast({ title: `${label} copiat` });
   };
 
-  // Exportar JSON per web públic (Fase 4)
+  // Exportar JSON legacy per web públic (només suport temporal)
   const handleExportWebJson = () => {
     if (!published || published.length === 0) {
       toast({ variant: 'destructive', title: 'Cap novetat', description: 'No hi ha novetats actives amb web.enabled' });
@@ -635,8 +635,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     URL.revokeObjectURL(url);
 
     toast({
-      title: 'JSON exportat',
-      description: `${webUpdates.length} novetats. Copia a public/novetats-data.json i fes commit.`,
+      title: 'JSON legacy exportat',
+      description: `${webUpdates.length} novetats. Aquest export ja no es necessari per al web public i queda només com a suport legacy.`,
     });
   };
 
@@ -686,7 +686,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem onClick={handleExportWebJson}>
                     <FileJson className="h-4 w-4 mr-2" />
-                    Exportar per a la web
+                    Exportar JSON legacy
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -697,10 +697,10 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
               <div className="flex flex-col items-end gap-1">
                 <Button variant="outline" size="sm" onClick={handleExportWebJson}>
                   <FileJson className="mr-2 h-4 w-4" />
-                  Exportar per a la web
+                  Exportar JSON legacy
                 </Button>
                 <p className="text-[10px] text-muted-foreground max-w-[200px] text-right">
-                  Prepara l’arxiu necessari per publicar les novetats al web
+                  Suport temporal. El web public ja llegeix des de Firestore server-side
                 </p>
               </div>
               <Label htmlFor="import-json" className="cursor-pointer">

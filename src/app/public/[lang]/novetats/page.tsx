@@ -1,6 +1,6 @@
 // src/app/public/[lang]/novetats/page.tsx
 // Pàgina pública de novetats del producte
-// Llegeix de public/novetats-data.json (NO Firestore directe)
+// Llegeix server-side de Firestore via Admin SDK
 
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -13,36 +13,8 @@ import {
   generatePublicPageMetadata,
   type PublicLocale,
 } from '@/lib/public-locale';
+import { listPublicProductUpdates } from '@/lib/product-updates/public';
 import { getPublicTranslations } from '@/i18n/public';
-
-// Tipus del JSON estàtic
-interface WebUpdate {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string | null;
-  content: string | null;
-  publishedAt: string | null;
-}
-
-interface NovetatsData {
-  updates: WebUpdate[];
-  generatedAt: string;
-}
-
-// Carregar dades del JSON estàtic
-async function getUpdatesData(): Promise<NovetatsData | null> {
-  try {
-    // Llegir fitxer local (build time i runtime)
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const filePath = path.join(process.cwd(), 'public', 'novetats-data.json');
-    const content = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(content) as NovetatsData;
-  } catch {
-    return null;
-  }
-}
 
 interface PageProps {
   params: Promise<{ lang: string }>;
@@ -75,8 +47,7 @@ export default async function NovetatsPage({ params }: PageProps) {
 
   const locale = lang as PublicLocale;
   const t = getPublicTranslations(locale);
-  const data = await getUpdatesData();
-  const updates = data?.updates ?? [];
+  const updates = await listPublicProductUpdates();
 
   return (
     <main className="min-h-screen bg-background">
