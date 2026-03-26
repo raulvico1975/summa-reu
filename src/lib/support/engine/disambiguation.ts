@@ -3,6 +3,17 @@ import type { KbLang } from '../bot-retrieval'
 import type { ClarifyOption } from './types'
 
 function getCardLabel(card: KBCard, lang: KbLang): string {
+  const rawIntent = card.intents?.[lang]?.find(Boolean)
+    ?? card.intents?.ca?.find(Boolean)
+    ?? card.intents?.es?.find(Boolean)
+
+  if (rawIntent) {
+    const normalized = rawIntent.trim().replace(/[?.!]+$/, '')
+    if (normalized) {
+      return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+    }
+  }
+
   return card.title?.[lang] ?? card.title?.ca ?? card.title?.es ?? card.id
 }
 

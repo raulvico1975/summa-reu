@@ -129,6 +129,25 @@ test('orchestrator falls back on specific-case operational queries', async () =>
   assert.match(result.response.answer, /cas concret/i)
 })
 
+test('orchestrator serves the verified checklist for a donor missing in model 182', async () => {
+  const result = await orchestrator({
+    message: 'no em surt el donant al 182',
+    kbLang: 'ca',
+    cards,
+    clarifyOptionIds: [],
+    assistantTone: 'neutral',
+    allowAiIntent: false,
+    allowAiReformat: false,
+  })
+
+  assert.equal(result.response.mode, 'card')
+  assert.equal(result.response.cardId, 'ts-model-182-donor-missing')
+  assert.equal(result.meta.decisionReason, 'specific_case_safe_checklist')
+  assert.equal(result.meta.specificCaseDetected, true)
+  assert.ok(result.response.uiPaths.includes('Donants > Fitxa del donant'))
+  assert.ok(result.response.uiPaths.includes('Informes > Model 182'))
+})
+
 test('orchestrator blocks medium-confidence operational answers in sensitive domains', async () => {
   const fallbackCard = cards.find(card => card.id === 'fallback-no-answer')
   assert.ok(fallbackCard, 'fallback-no-answer card must exist')

@@ -702,7 +702,7 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
   }
 
   if (/\b(no em surt|no me sale|no sale)\b/.test(normalized) && /\b(donant|donante)\b/.test(normalized) && /\b182\b/.test(normalized)) {
-    return { kind: 'fallback', cardId: 'fallback-fiscal-unclear', decisionReason: 'fiscal_specific_case_guardrail' }
+    return { kind: 'card', cardId: 'ts-model-182-donor-missing', minScore: 720, decisionReason: 'specific_case_safe_checklist' }
   }
 
   if (/\b(anullar|anul[·l]?lar|anular)\b/.test(normalized) && /\bremesa\b/.test(normalized) && /\bsepa\b/.test(normalized)) {
@@ -711,22 +711,6 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
 
   if (/\b(envio|enviar|envío)\b/.test(normalized) && /\b(fitxer|archivo|xml)\b/.test(normalized) && /\bsepa\b/.test(normalized) && /\b(error|errors|errores)\b/.test(normalized)) {
     return { kind: 'fallback', cardId: 'fallback-sepa-unclear', decisionReason: 'sepa_external_bank_consequence' }
-  }
-
-  if (/\b(reprocessar|reprocesar)\b/.test(normalized) && /\bremesa\b/.test(normalized) && /\b(processada|procesada)\b/.test(normalized)) {
-    return { kind: 'fallback', cardId: 'fallback-remittances-unclear', decisionReason: 'remittance_reprocess_ambiguous' }
-  }
-
-  if (/\b(remesa)\b/.test(normalized) && /\b(no quadra|no cuadra)\b/.test(normalized) && normalized.split(' ').length <= 4) {
-    return { kind: 'fallback', cardId: 'fallback-remittances-unclear', decisionReason: 'remittance_ambiguous_not_matching' }
-  }
-
-  if (/\b(com|como)\b/.test(normalized) && /\bdesfer remesa|deshacer remesa\b/.test(normalized) && normalized.split(' ').length <= 3) {
-    return { kind: 'fallback', cardId: 'fallback-remittances-unclear', decisionReason: 'remittance_undo_too_ambiguous' }
-  }
-
-  if (/\b(no surt|no sale)\b/.test(normalized) && /\b(soci|socio)\b/.test(normalized) && /\bremesa\b/.test(normalized)) {
-    return { kind: 'fallback', cardId: 'fallback-remittances-unclear', decisionReason: 'remittance_specific_member_guardrail' }
   }
 
   if (/\b(dividit|dividida|dividido|dividida|dividir)\b/.test(normalized) && /\bremesa\b/.test(normalized) && /\b(desfer|desfaig|deshacer|deshago)\b/.test(normalized)) {
@@ -738,6 +722,16 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
 
 function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   const set = new Set(tokens)
+
+  // "Com canvio la categoria per defecte d'un donant?"
+  if (
+    hasToken(set, 'categoria') &&
+    hasToken(set, 'defecte', 'defecto', 'default') &&
+    hasToken(set, 'soci', 'donant', 'socio', 'donante') &&
+    hasToken(set, 'canviar', 'canvio', 'cambiar', 'cambio', 'editar', 'edito', 'assignar', 'asignar', 'actualitzar', 'actualizar')
+  ) {
+    return { cardId: 'howto-donor-default-category', minScore: 690 }
+  }
 
   // "Com modifico l'IBAN d'un soci?"
   if (
@@ -823,7 +817,7 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   if (
     hasToken(set, 'soci', 'donant', 'socio', 'donante') &&
     hasToken(set, 'actualitzar', 'actualitzo', 'actualizar', 'actualizo', 'editar', 'edito', 'edit', 'update', 'canviar', 'cambiar', 'cambio', 'modificar', 'modifico') &&
-    !hasToken(set, 'quota', 'cuota', 'periodicitat', 'periodicidad', 'iban', 'banc', 'banco', 'compte', 'cuenta', 'historial', 'pagat', 'pagar', 'alta', 'baja', 'baixa', 'inactiu', 'inactivo')
+    !hasToken(set, 'quota', 'cuota', 'periodicitat', 'periodicidad', 'iban', 'banc', 'banco', 'compte', 'cuenta', 'historial', 'pagat', 'pagar', 'alta', 'baja', 'baixa', 'inactiu', 'inactivo', 'categoria', 'defecte', 'defecto', 'default')
   ) {
     return { cardId: 'howto-donor-update-details', minScore: 680 }
   }
@@ -872,12 +866,29 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     return { cardId: 'howto-enter-expense', minScore: 690 }
   }
 
+  // "La remesa no quadra"
+  if (
+    hasToken(set, 'remesa') &&
+    hasToken(set, 'correcte', 'correcto', 'quadra', 'cuadra')
+  ) {
+    return { cardId: 'ts-remittance-not-matching', minScore: 690 }
+  }
+
   // "Com desfer una remesa?" / "Puc reprocessar una remesa?"
   if (
     hasToken(set, 'desfer', 'desfaig', 'deshacer', 'deshago', 'anullar', 'anulo', 'anular', 'reprocessar', 'reprocesar', 'undo') &&
     hasToken(set, 'remesa')
   ) {
     return { cardId: 'howto-remittance-undo', minScore: 680 }
+  }
+
+  // "Per què no surt un soci a la remesa?"
+  if (
+    hasToken(set, 'remesa') &&
+    hasToken(set, 'soci', 'donant', 'socio', 'donante') &&
+    hasToken(set, 'surt', 'sale', 'apareix', 'aparece', 'falten', 'faltan')
+  ) {
+    return { cardId: 'ts-remittance-member-not-identified', minScore: 685 }
   }
 
   // "Com generar una remesa SEPA?"

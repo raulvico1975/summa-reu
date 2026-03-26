@@ -51,7 +51,7 @@
   "source_faq": ["Q16", "Q17", "Q18", "Q23"],
   "source_manual": ["3.1", "3.2", "3.6"],
   "source_guides": ["donors"],
-  "related": ["guide-import-donors", "guide-update-donors", "guide-donor-inactive"],
+  "related": ["guide-import-donors", "guide-update-donors", "guide-donor-inactive", "howto-donor-default-category"],
   "error_key": null,
   "symptom": { "ca": null, "es": null }
 }
