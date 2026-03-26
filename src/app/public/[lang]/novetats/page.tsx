@@ -6,6 +6,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
 import {
   PUBLIC_LOCALES,
@@ -51,7 +52,8 @@ export default async function NovetatsPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Header */}
+      <PublicSiteHeader locale={locale} />
+
       <div className="border-b">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <Button asChild variant="ghost" size="sm">

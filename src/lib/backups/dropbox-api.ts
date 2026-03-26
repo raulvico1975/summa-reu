@@ -103,6 +103,11 @@ export async function uploadFile(
     mute: true,
   };
 
+  const body = content.buffer.slice(
+    content.byteOffset,
+    content.byteOffset + content.byteLength
+  ) as ArrayBuffer;
+
   const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
     method: 'POST',
     headers: {
@@ -110,7 +115,7 @@ export async function uploadFile(
       'Content-Type': 'application/octet-stream',
       'Dropbox-API-Arg': JSON.stringify(dropboxArg),
     },
-    body: content,
+    body,
   });
 
   if (!response.ok) {

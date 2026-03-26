@@ -374,11 +374,16 @@ export interface PublicTranslations {
   updates: {
     metaTitle: string;
     metaDescription: string;
+    navLabel: string;
     title: string;
     back: string;
     noUpdates: string;
     readMore: string;
+    viewAll: string;
     publishedAt: string;
+    latestLabel: string;
+    latestTitle: string;
+    latestDescription: string;
   };
   about: {
     metaTitle: string;
@@ -961,11 +966,17 @@ const ca: PublicTranslations = {
   updates: {
     metaTitle: 'Novetats | Summa Social',
     metaDescription: 'Descobreix les últimes novetats i millores de Summa Social.',
+    navLabel: 'Novetats',
     title: 'Novetats del producte',
     back: 'Tornar',
     noUpdates: 'No hi ha novetats publicades.',
     readMore: 'Llegir més',
+    viewAll: 'Veure totes les novetats',
     publishedAt: 'Publicat el',
+    latestLabel: 'Nou a Summa',
+    latestTitle: 'L’última millora publicada',
+    latestDescription:
+      'Anem publicant millores petites i útils perquè sigui fàcil entendre què canvia i com es notarà en el dia a dia.',
   },
   about: {
     metaTitle: 'Qui som | Summa Social',
@@ -1548,11 +1559,17 @@ const es: PublicTranslations = {
   updates: {
     metaTitle: 'Novedades | Summa Social',
     metaDescription: 'Descubre las últimas novedades y mejoras de Summa Social.',
+    navLabel: 'Novedades',
     title: 'Novedades del producto',
     back: 'Volver',
     noUpdates: 'No hay novedades publicadas.',
     readMore: 'Leer más',
+    viewAll: 'Ver todas las novedades',
     publishedAt: 'Publicado el',
+    latestLabel: 'Nuevo en Summa',
+    latestTitle: 'La última mejora publicada',
+    latestDescription:
+      'Vamos publicando mejoras pequeñas y útiles para que sea fácil entender qué cambia y cómo se notará en el día a día.',
   },
   about: {
     metaTitle: 'Quiénes somos | Summa Social',
@@ -2136,11 +2153,17 @@ const fr: PublicTranslations = {
   updates: {
     metaTitle: 'Nouveautés | Summa Social',
     metaDescription: 'Découvrez les dernières nouveautés et améliorations de Summa Social.',
+    navLabel: 'Nouveautés',
     title: 'Nouveautés du produit',
     back: 'Retour',
     noUpdates: 'Aucune nouveauté publiée.',
     readMore: 'En savoir plus',
+    viewAll: 'Voir toutes les nouveautés',
     publishedAt: 'Publié le',
+    latestLabel: 'Nouveau dans Summa',
+    latestTitle: 'La dernière amélioration publiée',
+    latestDescription:
+      'Nous publions des améliorations utiles et discrètes pour expliquer clairement ce qui change et comment cela se remarquera au quotidien.',
   },
   about: {
     metaTitle: 'Qui sommes-nous | Summa Social',
@@ -2723,11 +2746,17 @@ const pt: PublicTranslations = {
   updates: {
     metaTitle: 'Novidades | Summa Social',
     metaDescription: 'Descubra as últimas novidades e melhorias do Summa Social.',
+    navLabel: 'Novidades',
     title: 'Novidades do produto',
     back: 'Voltar',
     noUpdates: 'Não há novidades publicadas.',
     readMore: 'Ler mais',
+    viewAll: 'Ver todas as novidades',
     publishedAt: 'Publicado em',
+    latestLabel: 'Novo no Summa',
+    latestTitle: 'A última melhoria publicada',
+    latestDescription:
+      'Vamos publicando melhorias pequenas e úteis para que seja simples perceber o que mudou e como isso se nota no dia a dia.',
   },
   about: {
     metaTitle: 'Quem somos | Summa Social',

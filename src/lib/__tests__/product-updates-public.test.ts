@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getPublicProductUpdateBySlug, listPublicProductUpdates } from '@/lib/product-updates/public';
+import {
+  getLatestPublicProductUpdate,
+  getPublicProductUpdateBySlug,
+  listPublicProductUpdates,
+} from '@/lib/product-updates/public';
 
 type DocData = Record<string, unknown>;
 
@@ -114,4 +118,34 @@ test('getPublicProductUpdateBySlug returns null for invalid or missing slug', as
   assert.equal(found?.title, 'Millora A');
   assert.equal(missing, null);
   assert.equal(invalid, null);
+});
+
+test('getLatestPublicProductUpdate returns the newest published web update', async () => {
+  const store = new Map<string, DocData>();
+  store.set('productUpdates/update-1', {
+    title: 'Millora antiga',
+    isActive: true,
+    publishedAt: buildTimestamp('2026-03-20T10:00:00.000Z'),
+    web: {
+      enabled: true,
+      slug: 'millora-antiga',
+    },
+  });
+  store.set('productUpdates/update-2', {
+    title: 'Millora nova',
+    isActive: true,
+    publishedAt: buildTimestamp('2026-03-25T10:00:00.000Z'),
+    web: {
+      enabled: true,
+      slug: 'millora-nova',
+      excerpt: 'Resum nou',
+    },
+  });
+
+  const latest = await getLatestPublicProductUpdate({
+    getAdminDbFn: () => new FakeProductUpdatesDb(store) as never,
+  });
+
+  assert.equal(latest?.slug, 'millora-nova');
+  assert.equal(latest?.excerpt, 'Resum nou');
 });

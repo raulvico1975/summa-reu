@@ -115,8 +115,10 @@ test('handleProductUpdatesUnpublish deactivates product update and revalidates l
   assert.equal(body.alreadyInactive, false);
   assert.equal(store.get('productUpdates/novetat-1')?.isActive, false);
   assert.deepEqual(revalidatedPaths, [
+    '/ca',
     '/ca/novetats',
     '/ca/novetats/millora-detall-cobraments',
+    '/es',
     '/es/novetats',
     '/es/novetats/millora-detall-cobraments',
   ]);

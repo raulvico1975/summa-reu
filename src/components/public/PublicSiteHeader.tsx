@@ -14,6 +14,7 @@ export function PublicSiteHeader({ locale }: PublicSiteHeaderProps) {
   const t = getPublicTranslations(locale)
   const capabilitiesHref = `/${locale}#capabilities`
   const aboutHref = `/${locale}/qui-som`
+  const updatesHref = `/${locale}/novetats`
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -34,6 +35,9 @@ export function PublicSiteHeader({ locale }: PublicSiteHeaderProps) {
               </Link>
               <Link href={aboutHref} className="transition-colors hover:text-foreground">
                 {t.common.about}
+              </Link>
+              <Link href={updatesHref} className="transition-colors hover:text-foreground">
+                {t.updates.navLabel}
               </Link>
               <Link href="/blog" className="transition-colors hover:text-foreground">
                 {t.common.blog}
@@ -75,6 +79,14 @@ export function PublicSiteHeader({ locale }: PublicSiteHeaderProps) {
                 className="group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50"
               >
                 <span>{t.common.about}</span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover/item:translate-x-0.5" />
+              </Link>
+
+              <Link
+                href={updatesHref}
+                className="group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50"
+              >
+                <span>{t.updates.navLabel}</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover/item:translate-x-0.5" />
               </Link>
 

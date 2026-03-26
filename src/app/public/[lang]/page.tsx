@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Upload, Settings, FileCheck, Download, Cpu } from 'lucide-react';
+import { ArrowRight, Upload, Settings, FileCheck, Download, Cpu, Sparkles } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -13,6 +13,7 @@ import {
   type PublicLocale,
 } from '@/lib/public-locale';
 import { getPublicTranslations } from '@/i18n/public';
+import { getLatestPublicProductUpdate } from '@/lib/product-updates/public';
 
 // Classe consistent per "product window frame" a totes les captures
 const frameClass = 'rounded-xl border border-border/50 shadow-sm overflow-hidden bg-background';
@@ -114,8 +115,16 @@ export default async function HomePage({ params }: PageProps) {
   const anchors = SECTION_ANCHORS[locale];
   const featuresPath = FEATURES_PATH[locale];
   const capabilitiesHref = `/${locale}#capabilities`;
+  const updatesHref = `/${locale}/novetats`;
   const visuals = locale === 'ca' ? HOME_VISUALS.ca : HOME_VISUALS.default;
   const introDetailParts = t.home.solves.introDetail.split(t.home.solves.aiBadge);
+  let latestUpdate: Awaited<ReturnType<typeof getLatestPublicProductUpdate>> = null;
+
+  try {
+    latestUpdate = await getLatestPublicProductUpdate();
+  } catch (error) {
+    console.warn('[public-home] latest product update unavailable:', error);
+  }
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -227,6 +236,53 @@ export default async function HomePage({ params }: PageProps) {
           </div>
         </div>
       </section>
+
+      {latestUpdate ? (
+        <section className="border-y border-border/50 bg-[linear-gradient(180deg,rgba(240,249,255,0.75),rgba(255,255,255,0.92))] px-6 py-6">
+          <div className="mx-auto max-w-6xl">
+            <div className="rounded-[1.75rem] border border-sky-100 bg-white/90 p-5 shadow-[0_24px_60px_-44px_rgba(14,165,233,0.55)] backdrop-blur sm:p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 font-semibold text-sky-700">
+                      <Sparkles className="h-4 w-4" />
+                      {t.updates.latestLabel}
+                    </span>
+                    {latestUpdate.publishedAt ? (
+                      <span className="text-muted-foreground">
+                        {t.updates.publishedAt} {latestUpdate.publishedAt}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-primary">{t.updates.latestTitle}</p>
+                    <h2 className="text-2xl font-semibold tracking-tight">{latestUpdate.title}</h2>
+                    <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
+                      {latestUpdate.excerpt ?? t.updates.latestDescription}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row lg:flex-col lg:items-end">
+                  <Button asChild size="sm">
+                    <Link href={`/${locale}/novetats/${latestUpdate.slug}`}>
+                      {t.updates.readMore}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Link
+                    href={updatesHref}
+                    className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                  >
+                    {t.updates.viewAll}
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* ═══════════════════════════════════════════════════════════════════════
           B) TRUST STRIP — Números clau
@@ -584,6 +640,10 @@ export default async function HomePage({ params }: PageProps) {
           <span>·</span>
           <Link href={`/${locale}/qui-som`} className="hover:underline">
             {t.common.about}
+          </Link>
+          <span>·</span>
+          <Link href={updatesHref} className="hover:underline">
+            {t.updates.navLabel}
           </Link>
           <span>·</span>
           <Link href="/blog" className="hover:underline">

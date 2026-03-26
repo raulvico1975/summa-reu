@@ -127,6 +127,7 @@ function buildRevalidationPaths(locales: string[], slug: string | null): string[
   for (const locale of locales) {
     const normalized = locale.trim();
     if (!normalized) continue;
+    paths.add(`/${normalized}`);
     paths.add(`/${normalized}/novetats`);
     if (slug) {
       paths.add(`/${normalized}/novetats/${slug}`);

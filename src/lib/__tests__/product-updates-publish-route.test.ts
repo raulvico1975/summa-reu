@@ -165,8 +165,10 @@ test('handleProductUpdatesPublish creates product update, avoids undefined and r
   assert.equal('videoUrl' in (stored ?? {}), true);
   assert.equal(Object.values(stored ?? {}).includes(undefined), false);
   assert.deepEqual(revalidatedPaths, [
+    '/ca',
     '/ca/novetats',
     '/ca/novetats/millora-detall-cobraments',
+    '/es',
     '/es/novetats',
     '/es/novetats/millora-detall-cobraments',
   ]);

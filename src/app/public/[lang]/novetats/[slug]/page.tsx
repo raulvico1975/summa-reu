@@ -7,6 +7,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
 import {
   isValidPublicLocale,
@@ -58,7 +59,8 @@ export default async function NovetatsDetailPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Header */}
+      <PublicSiteHeader locale={locale} />
+
       <div className="border-b">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <Button asChild variant="ghost" size="sm">
@@ -102,6 +104,10 @@ export default async function NovetatsDetailPage({ params }: PageProps) {
           <span>·</span>
           <Link href={`/${locale}/contact`} className="hover:underline">
             {t.common.contact}
+          </Link>
+          <span>·</span>
+          <Link href={`/${locale}/novetats`} className="hover:underline">
+            {t.updates.navLabel}
           </Link>
         </div>
       </footer>

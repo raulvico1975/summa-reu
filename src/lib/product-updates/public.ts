@@ -132,3 +132,10 @@ export async function getPublicProductUpdateBySlug(
   const updates = await listPublicProductUpdates(deps);
   return updates.find((update) => update.slug === slug) ?? null;
 }
+
+export async function getLatestPublicProductUpdate(
+  deps: PublicProductUpdatesDeps = {}
+): Promise<PublicProductUpdate | null> {
+  const updates = await listPublicProductUpdates(deps);
+  return updates[0] ?? null;
+}
