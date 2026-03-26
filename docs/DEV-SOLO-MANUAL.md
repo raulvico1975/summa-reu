@@ -462,38 +462,34 @@ Abans d'activar `ALERTS_ENABLED=true` en producció:
 
 ---
 
-## 10. Novetats del producte — Ritual de publicació
+## 10. Novetats del producte — Operativa actual
 
-Quan publiques una novetat nova des de SuperAdmin (`/admin` → Novetats):
+Quan publiques una novetat del producte, la veritat és `productUpdates`.
 
 ### Flux complet
 
 ```
-1. Publicar ─────────────────────────────────────────────────────
-   □ Crear novetat a SuperAdmin (omplir camps o usar "Generar amb IA")
-   □ Revisar preview (App / Web / X / LinkedIn)
-   □ Clicar "Publicar"
-   → La campaneta de les instàncies mostrarà la novetat immediatament
+1. Publicació manual o server-to-server ─────────────────────────
+   □ Si és manual, crear/publicar des de SuperAdmin
+   □ Si ve d'OpenClaw, el punt oficial és `POST /api/product-updates/publish`
+   □ El write final sempre acaba a `productUpdates`
 
-2. Exportar JSON (si web.enabled = true) ────────────────────────
-   □ Clicar "Exportar web JSON" al SuperAdmin
-   □ Es descarrega novetats-data.json
+2. Web públic ───────────────────────────────────────────────────
+   □ Si `web.enabled = true`, `/ca/novetats` i el detall llegeixen SSR des de `productUpdates`
+   □ `public/novetats-data.json` ja no és la font principal
+   □ NO cal exportar JSON ni fer commit manual per actualitzar el web públic
 
-3. Commit ───────────────────────────────────────────────────────
-   □ Substituir public/novetats-data.json amb el fitxer descarregat
-   □ git add public/novetats-data.json
-   □ git commit -m "docs(novetats): actualitzar web JSON - [títol breu]"
-
-4. Deploy ───────────────────────────────────────────────────────
-   □ seguir el mateix ritual general del repo: `npm run acabat` → `npm run integra` → `npm run publica`
-   □ Verificar que /ca/novetats mostra la nova entrada
+3. Telegram dins OpenClaw ───────────────────────────────────────
+   □ Telegram aprova copy i timing
+   □ Telegram NO aprova la feature ni substitueix QA o validació funcional
 ```
 
 ### Checklist ràpid
 
 ```
-□ Campaneta funciona? → No cal deploy
-□ Web públic necessita actualització? → Exportar + Commit + Deploy
+□ App i web pengen de `productUpdates`? → Sí
+□ Flux server-to-server? → `POST /api/product-updates/publish`
+□ Web públic? → lectura SSR, sense ritual de JSON manual
 □ Social? → Copiar textos des de preview, publicar manualment
 ```
 
@@ -501,7 +497,9 @@ Quan publiques una novetat nova des de SuperAdmin (`/admin` → Novetats):
 
 - **NO HTML** a Firestore — sempre text pla estructurat
 - **NO `dangerouslySetInnerHTML`** — render segur via `renderStructuredText()`
-- **NO Firestore públic** — web llegeix JSON estàtic
+- **NO lectura pública client-side de Firestore** — web llegeix SSR server-side
+- **`public/novetats-data.json` NO és font principal**
+- **Telegram aprova copy i timing, no la feature**
 - **NO deps noves** — tot funciona amb stack existent
 
 ---

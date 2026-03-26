@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Última actualització: 23 Març 2026
+# Última actualització: 26 Març 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -6480,15 +6480,38 @@ Les novetats es mostren **només via inbox** (campaneta o FAB), mai amb toast au
   } | null
 ```
 
-### Web públic: JSON estàtic (NO Firestore directe)
+### Web públic: SSR server-side des de `productUpdates`
 
-El web públic `/novetats` NO llegeix Firestore directament per seguretat.
+El web públic `/novetats` NO fa lectura client-side de Firestore.
+La lectura es resol server-side amb Admin SDK sobre `productUpdates`.
 
-**Flux:**
-1. SuperAdmin genera novetat amb `web.enabled: true`
-2. SuperAdmin clica "Exportar web JSON" → descarrega `novetats-data.json`
-3. Commit manual a `public/novetats-data.json`
-4. Deploy
+**Conseqüència operativa:**
+- `public/novetats-data.json` ja NO és la font principal del web públic
+- la font de veritat per `app` i `web` és `productUpdates`
+- el detall i el llistat públics es renderitzen SSR a partir de `productUpdates`
+
+### Publicació server-to-server oficial
+
+El punt oficial de publicació server-to-server és:
+
+- `POST /api/product-updates/publish`
+
+Aquest endpoint:
+- valida el payload
+- escriu a `productUpdates/{externalId}`
+- resol la URL pública si `web.enabled = true`
+- revalida només les rutes/idiomes públics que existeixen al repo
+
+### Rol de Telegram dins OpenClaw
+
+Telegram NO aprova la feature.
+
+Telegram només aprova:
+- copy
+- timing
+- descart o regeneració de la peça comunicativa
+
+La validació funcional, QA i criteri de desplegament queden fora de Telegram.
 
 ## D.3 Guardrails (NO NEGOCIABLES)
 
@@ -6496,9 +6519,10 @@ El web públic `/novetats` NO llegeix Firestore directament per seguretat.
 |-------|-------|
 | NO HTML a `contentLong` | XSS prevention, render segur |
 | NO `dangerouslySetInnerHTML` | Seguretat |
-| NO Firestore list públic | Evitar leaks i costos |
+| NO lectura pública client-side de Firestore | Evitar leaks i costos |
 | NO `undefined` a writes | Firestore errors |
 | NO deps noves | Estabilitat |
+| `public/novetats-data.json` no és font principal | Evitar doble font de veritat |
 
 ## D.4 Fitxers Principals
 
@@ -6506,23 +6530,24 @@ El web públic `/novetats` NO llegeix Firestore directament per seguretat.
 src/hooks/use-product-updates.ts           # Hook Firestore + fallback
 src/lib/render-structured-text.tsx         # Render text pla (NO HTML)
 src/lib/firestore-utils.ts                 # stripUndefined helpers
+src/lib/product-updates/public.ts          # Lectura SSR pública des de productUpdates
 src/components/notifications/              # Campaneta + modal
 src/components/admin/product-updates-section.tsx  # SuperAdmin
 src/app/api/ai/generate-product-update/    # Endpoint IA
+src/app/api/product-updates/publish/       # Publicació server-to-server oficial
 src/app/public/[lang]/novetats/            # Web públic
-public/novetats-data.json                  # JSON estàtic web
+public/novetats-data.json                  # Legacy, NO font principal
 ```
 
 ## D.5 Ritual Publicació Web
 
-1. Crear/editar novetat amb `web.enabled: true` a SuperAdmin
-2. Clicar "Exportar web JSON"
-3. Substituir `public/novetats-data.json` dins del worktree de tasca
-4. Tancar la tasca amb `npm run acabat`
-5. Integrar a `main` amb `npm run integra`
-6. Publicar amb `npm run publica`
+1. Crear o publicar una novetat cap a `productUpdates`
+2. Si el flux és server-to-server, usar `POST /api/product-updates/publish`
+3. Si `web.enabled = true`, la web pública la mostra via SSR des de `productUpdates`
+4. `public/novetats-data.json` queda només com a suport legacy, no com a ritual obligatori
+5. Si el flux ve d'OpenClaw, Telegram només aprova copy i timing, no la feature
 
-> **Important**: El web NO s'actualitza automàticament. Cal completar el flux `acabat -> integra -> publica`.
+> **Important**: La publicació pública ja no depèn d'exportar i commitejar `public/novetats-data.json`.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
