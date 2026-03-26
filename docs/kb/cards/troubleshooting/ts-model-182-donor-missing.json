@@ -1,0 +1,64 @@
+{
+  "id": "ts-model-182-donor-missing",
+  "type": "troubleshooting",
+  "domain": "fiscal",
+  "risk": "guarded",
+  "guardrail": "b1_fiscal",
+  "answerMode": "full",
+  "title": {
+    "ca": "Un donant no surt al Model 182",
+    "es": "Un donante no sale en el Modelo 182"
+  },
+  "intents": {
+    "ca": [
+      "no em surt el donant al 182",
+      "un donant no apareix al model 182",
+      "per què un donant no surt al 182",
+      "donant exclòs del model 182"
+    ],
+    "es": [
+      "no me sale el donante en el 182",
+      "un donante no aparece en el modelo 182",
+      "por qué un donante no sale en el 182",
+      "donante excluido del modelo 182"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Si un donant no surt al Model 182:\n1. Ves a Donants i obre la fitxa del donant.\n2. Revisa com a mínim el nom complet, el DNI/CIF i el codi postal.\n3. Si hi ha devolucions, comprova que el total net de l'any sigui positiu.\n4. Torna a Informes > Model 182 i revisa si surt a exclosos o amb algun avís.\n5. Corregeix el que falti i genera de nou l'informe.\n\nSi després d'aquesta revisió encara no surt, ja estem davant d'un cas concret de dades i no d'un dubte general del procés.",
+    "es": "Si un donante no sale en el Modelo 182:\n1. Ve a Donantes y abre la ficha del donante.\n2. Revisa como mínimo el nombre completo, el DNI/CIF y el código postal.\n3. Si hay devoluciones, comprueba que el total neto del año sea positivo.\n4. Vuelve a Informes > Modelo 182 y revisa si aparece en excluidos o con algún aviso.\n5. Corrige lo que falte y genera de nuevo el informe.\n\nSi después de esta revisión sigue sin salir, ya estamos ante un caso concreto de datos y no ante una duda general del proceso."
+  },
+  "uiPaths": [
+    "Donants > Fitxa del donant",
+    "Informes > Model 182"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "model 182",
+    "modelo 182",
+    "donant no surt",
+    "donante no sale",
+    "dni",
+    "codi postal",
+    "devolucions",
+    "devoluciones"
+  ],
+  "source_faq": [
+    "Q70"
+  ],
+  "source_manual": [
+    "3.1",
+    "9.1"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-model-182",
+    "howto-donor-fiscal-review",
+    "ts-donor-incomplete-data"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": "Un donant no apareix al llistat del Model 182",
+    "es": "Un donante no aparece en el listado del Modelo 182"
+  }
+}

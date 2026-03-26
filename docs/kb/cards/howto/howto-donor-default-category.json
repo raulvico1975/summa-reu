@@ -1,0 +1,60 @@
+{
+  "id": "howto-donor-default-category",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Canviar la categoria per defecte d'un donant",
+    "es": "Cambiar la categoría por defecto de un donante"
+  },
+  "intents": {
+    "ca": [
+      "com canvio la categoria per defecte d'un donant",
+      "on assigno la categoria per defecte d'un soci",
+      "categoria per defecte del donant",
+      "com funciona la categoria per defecte"
+    ],
+    "es": [
+      "cómo cambio la categoría por defecto de un donante",
+      "dónde asigno la categoría por defecto de un socio",
+      "categoría por defecto del donante",
+      "cómo funciona la categoría por defecto"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per canviar la categoria per defecte d'un donant:\n1. Ves a Donants i obre la fitxa del donant.\n2. Clica Editar.\n3. Busca el camp \"Categoria per defecte\" i selecciona la categoria correcta.\n4. Desa els canvis.\n\nQuè aconsegueixes: els moviments futurs d'aquest donant es categoritzaran automàticament quan l'identifiquis.",
+    "es": "Para cambiar la categoría por defecto de un donante:\n1. Ve a Donantes y abre la ficha del donante.\n2. Haz clic en Editar.\n3. Busca el campo \"Categoría por defecto\" y selecciona la categoría correcta.\n4. Guarda los cambios.\n\nQué consigues: los movimientos futuros de este donante se categorizarán automáticamente cuando lo identifiques."
+  },
+  "uiPaths": [
+    "Donants > Fitxa del donant > Editar"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "categoria per defecte",
+    "categoria por defecto",
+    "categoritzacio automatica",
+    "categorizacion automatica",
+    "donant",
+    "donante"
+  ],
+  "source_faq": [
+    "Q27"
+  ],
+  "source_manual": [
+    "3.1",
+    "3.6"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-donors",
+    "howto-donor-update-details"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

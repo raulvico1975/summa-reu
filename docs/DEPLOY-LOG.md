@@ -241,6 +241,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-03-24 16:14 | 9e5c1ab2 | ALT | Si | 6 | OK_AMB_AVIS |
 | 2026-03-26 08:45 | a8296a80 | ALT | No | 15 | OK |
 | 2026-03-26 09:06 | cedd12fd | ALT | No | 31 | OK |
+| 2026-03-26 09:18 | 4e7833a4 | ALT | No | 16 | OK_AMB_AVIS |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
@@ -317,3 +318,5 @@ Registre cronologic de desplegaments a produccio.
 | 2026-03-24 16:14 | 9e5c1ab2 | Risc ALT residual detectat (avís guiat, no bloquejant). | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | AUTO_CONTINUE_GUIDED_WARNING |
 | 2026-03-24 16:14 | 9e5c1ab2 | ALT | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | Recomanacio: validar 1 cas real curt abans de publicar (moviment d'exemple -> resultat final esperat). |
 | 2026-03-24 16:14 | 9e5c1ab2 | SKIPPED_NO_BUCKET | - |
+| 2026-03-26 09:18 | 4e7833a4 | Risc ALT residual detectat (avís guiat, no bloquejant). | podria afectar càlculs econòmics de projectes, i l'entitat podria veure imports o desviacions incorrectes. | AUTO_CONTINUE_GUIDED_WARNING |
+| 2026-03-26 09:18 | 4e7833a4 | ALT | podria afectar càlculs econòmics de projectes, i l'entitat podria veure imports o desviacions incorrectes. | Recomanacio: publicar amb monitoratge curt post-deploy. |

@@ -115,8 +115,9 @@ function buildWelcomeMessage(language: 'ca' | 'es' | 'fr' | 'pt'): string {
       '',
       'Puedo ayudarte con cosas como:',
       '- importar el extracto del banco',
+      '- subir una factura, ticket o nómina',
       '- editar un socio o donante',
-      '- deshacer una remesa',
+      '- crear una liquidación o deshacer una remesa',
       '- recuperar la contraseña',
     ].join('\n');
   }
@@ -126,8 +127,9 @@ function buildWelcomeMessage(language: 'ca' | 'es' | 'fr' | 'pt'): string {
     '',
     'Et puc ajudar amb coses com:',
     "- importar l'extracte del banc",
+    '- pujar una factura, tiquet o nòmina',
     '- editar un soci o donant',
-    '- desfer una remesa',
+    '- fer una liquidació o desfer una remesa',
     '- recuperar la contrasenya',
   ].join('\n');
 }
