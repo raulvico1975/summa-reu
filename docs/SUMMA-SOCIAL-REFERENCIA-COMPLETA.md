@@ -285,8 +285,8 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
 | Event | Format | Exemple |
 |-------|--------|---------|
 | Inici individual | `[IA] Iniciant categoritzacio per: "{desc}..."` | `[IA] Iniciant categoritzacio per: "TRANSFERENCIA DE NÒMINA..."` |
-| Èxit individual | `[IA] OK: category="{cat}" confidence={n}% model=gemini-2.0-flash` | `[IA] OK: category="Nòmines" confidence=95% model=gemini-2.0-flash` |
-| Error individual | `[IA] ERROR: code={code} reason="{msg}" model=gemini-2.0-flash` | `[IA] ERROR: code=QUOTA_EXCEEDED reason="Quota exceeded" model=gemini-2.0-flash` |
+| Èxit individual | `[IA] OK: category="{cat}" confidence={n}% model=gemini-3.1-flash-lite-preview` | `[IA] OK: category="Nòmines" confidence=95% model=gemini-3.1-flash-lite-preview` |
+| Error individual | `[IA] ERROR: code={code} reason="{msg}" model=gemini-3.1-flash-lite-preview` | `[IA] ERROR: code=QUOTA_EXCEEDED reason="Quota exceeded" model=gemini-3.1-flash-lite-preview` |
 | Inici batch | `[IA] Iniciant classificacio SEQÜENCIAL de {n} moviments{mode}.` | `[IA] Iniciant classificacio SEQÜENCIAL de 25 moviments (MODE RÀPID).` |
 | Progrés batch | `[IA] Classificant {i}/{n}: "{desc}..."` | `[IA] Classificant 3/25: "PAGAMENT LLOGU..."` |
 | Èxit batch item | `[IA] ✓ {txId} → "{category}"` | `[IA] ✓ abc123 → "Lloguer"` |
@@ -6517,11 +6517,12 @@ public/novetats-data.json                  # JSON estàtic web
 
 1. Crear/editar novetat amb `web.enabled: true` a SuperAdmin
 2. Clicar "Exportar web JSON"
-3. Substituir `public/novetats-data.json` amb el fitxer descarregat
-4. `git add && git commit && git push`
-5. Publicar a Firebase App Hosting
+3. Substituir `public/novetats-data.json` dins del worktree de tasca
+4. Tancar la tasca amb `npm run acabat`
+5. Integrar a `main` amb `npm run integra`
+6. Publicar amb `npm run publica`
 
-> **Important**: El web NO s'actualitza automàticament. Cal fer commit + deploy.
+> **Important**: El web NO s'actualitza automàticament. Cal completar el flux `acabat -> integra -> publica`.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

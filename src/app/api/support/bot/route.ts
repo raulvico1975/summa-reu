@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { hasGoogleGenAiApiKey } from '@/ai/config'
 import { ai } from '@/ai/genkit'
 import { z } from 'genkit'
 import { verifyIdToken, getAdminDb, validateUserMembership, isSuperAdmin } from '@/lib/api/admin-sdk'
@@ -650,9 +651,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       : []
 
     const deterministicRetrieval = retrieveCard(message, kbLang, retrievableCards, supportContext)
-    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY
     const allowAiIntent = false
-    const allowAiReformat = Boolean(apiKey) && aiReformatEnabled
+    const allowAiReformat = hasGoogleGenAiApiKey() && aiReformatEnabled
 
     let result = await orchestrator({
       message,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { getStorage } from 'firebase/storage';
 import { getApp } from 'firebase/app';
+import { resolveGoogleGenAiApiKey } from '@/ai/config';
 import { extractTicketImage, type ExtractTicketImageOutput } from '@/ai/flows/extract-ticket-image';
 
 // =============================================================================
@@ -110,7 +111,7 @@ function detectMimeType(buffer: ArrayBuffer): 'image/jpeg' | 'image/png' | 'imag
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
     // Verify API key is available
-    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+    const apiKey = resolveGoogleGenAiApiKey();
     if (!apiKey) {
       console.error('[extract-ticket] No API key found');
       return NextResponse.json({

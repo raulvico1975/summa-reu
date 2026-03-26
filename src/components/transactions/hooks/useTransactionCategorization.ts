@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { DEFAULT_GOOGLE_GENAI_MODEL_LABEL } from '@/ai/config';
 import { doc, CollectionReference } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -283,7 +284,7 @@ export function useTransactionCategorization({
           description: errorMsg.description,
         });
 
-        trackUX('ai.categorize.error', { code: result.code, reason: result.message, model: 'gemini-2.0-flash' });
+        trackUX('ai.categorize.error', { code: result.code, reason: result.message, model: DEFAULT_GOOGLE_GENAI_MODEL_LABEL });
         return;
       }
 
@@ -309,7 +310,7 @@ export function useTransactionCategorization({
         title: errorMsg.title,
         description: errorMsg.description,
       });
-      trackUX('ai.categorize.error', { code: 'NETWORK', reason: String(error), model: 'gemini-2.0-flash' });
+      trackUX('ai.categorize.error', { code: 'NETWORK', reason: String(error), model: DEFAULT_GOOGLE_GENAI_MODEL_LABEL });
     } finally {
       setLoadingStates((prev) => ({ ...prev, [txId]: false }));
     }

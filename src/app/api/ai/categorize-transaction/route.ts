@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { resolveGoogleGenAiApiKey } from '@/ai/config';
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
@@ -97,9 +98,9 @@ type ApiResponse = SuccessResponse | ErrorResponse;
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
     // Verify API key is available
-    const apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY;
+    const apiKey = resolveGoogleGenAiApiKey();
     if (!apiKey) {
-      console.error('[API] No API key found. Check GOOGLE_API_KEY or GOOGLE_GENAI_API_KEY');
+      console.error('[API] No API key found. Check GOOGLE_API_KEY, GOOGLE_GENAI_API_KEY or GEMINI_API_KEY');
       return NextResponse.json({
         ok: false,
         code: 'AI_ERROR',

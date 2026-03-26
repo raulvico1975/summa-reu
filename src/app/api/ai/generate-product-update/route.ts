@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     const prompt = buildPrompt(body);
 
-    // Generar amb Genkit (gemini-2.0-flash)
+    // Generar amb el runtime compartit de Genkit
     const result = await ai.generate({
       prompt,
       config: {
