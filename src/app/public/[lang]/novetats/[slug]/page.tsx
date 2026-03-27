@@ -8,7 +8,6 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CalendarDays } from 'lucide-react';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   isValidPublicLocale,
@@ -27,13 +26,6 @@ interface PageProps {
 
 const pageShellClass =
   'min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#ffffff_26%,#ffffff_100%)]';
-
-const UPDATES_PANEL_COPY: Record<PublicLocale, string> = {
-  ca: 'Cada novetat intenta explicar què ha canviat i per què us pot afectar al dia a dia.',
-  es: 'Cada novedad intenta explicar qué ha cambiado y por qué puede afectar a vuestro día a día.',
-  fr: 'Chaque nouveauté cherche à expliquer ce qui a changé et pourquoi cela peut toucher votre quotidien.',
-  pt: 'Cada novidade procura explicar o que mudou e por que motivo isso pode afetar o vosso dia a dia.',
-};
 
 export function generateStaticParams() {
   return [];
@@ -105,35 +97,21 @@ export default async function NovetatsDetailPage({ params }: PageProps) {
             </Link>
           </Button>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[0.38fr_0.62fr] lg:items-start">
-            <aside className="rounded-[1.9rem] border border-border/60 bg-white/92 p-6 shadow-[0_24px_70px_-48px_rgba(15,23,42,0.18)]">
-              <Badge variant="outline" className="border-sky-200 bg-sky-50 text-primary">
-                {t.updates.navLabel}
-              </Badge>
-              {publishedAt && (
-                <p className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground">
-                  <CalendarDays className="h-4 w-4 text-primary" />
-                  {publishedAt}
-                </p>
-              )}
-              <div className="mt-6 rounded-[1.35rem] border border-sky-100 bg-sky-50/70 p-4 text-sm leading-6 text-muted-foreground">
-                {UPDATES_PANEL_COPY[locale]}
-              </div>
-              <Button asChild variant="outline" className="mt-6 w-full sm:w-auto">
-                <Link href={`/${locale}/novetats`}>{t.updates.viewAll}</Link>
-              </Button>
-            </aside>
-
-            <div className="space-y-5">
-              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-                {update.title}
-              </h1>
-              {update.excerpt && (
-                <p className="max-w-3xl text-lg leading-8 text-muted-foreground">
-                  {update.excerpt}
-                </p>
-              )}
-            </div>
+          <div className="mt-6 space-y-5">
+            {publishedAt && (
+              <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarDays className="h-4 w-4 text-primary" />
+                {publishedAt}
+              </p>
+            )}
+            <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+              {update.title}
+            </h1>
+            {update.excerpt && (
+              <p className="max-w-3xl text-lg leading-8 text-muted-foreground">
+                {update.excerpt}
+              </p>
+            )}
           </div>
         </div>
       </section>

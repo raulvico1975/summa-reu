@@ -5,7 +5,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, CalendarDays, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays } from 'lucide-react';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,13 +30,6 @@ const pageShellClass =
 
 const updateCardClass =
   'group rounded-[1.9rem] border border-border/60 bg-white/92 p-6 shadow-[0_24px_70px_-48px_rgba(15,23,42,0.2)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_32px_90px_-54px_rgba(15,23,42,0.26)]';
-
-const UPDATES_PANEL_COPY: Record<PublicLocale, string> = {
-  ca: 'Aquí recollim canvis de producte que afecten l’operativa i els publiquem amb context útil, sense soroll.',
-  es: 'Aquí recogemos cambios de producto que afectan a la operativa y los publicamos con contexto útil, sin ruido.',
-  fr: 'Ici, nous rassemblons les évolutions produit qui touchent l’opératif et nous les publions avec un contexte utile, sans bruit.',
-  pt: 'Aqui reunimos alterações de produto que afetam a operação e publicamo-las com contexto útil, sem ruído.',
-};
 
 export function generateStaticParams() {
   return PUBLIC_LOCALES.map((lang) => ({ lang }));
@@ -101,51 +94,22 @@ export default async function NovetatsPage({ params }: PageProps) {
             </Link>
           </Button>
 
-          <div className="mt-6 grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">
-            <div className="space-y-5">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                {t.updates.navLabel}
+          <div className="mt-6 max-w-3xl space-y-5">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
+              {t.updates.navLabel}
+            </p>
+            <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+              {t.updates.title}
+            </h1>
+            <p className="text-base leading-7 text-muted-foreground sm:text-lg">
+              {t.updates.latestDescription}
+            </p>
+            {latestPublishedAt && (
+              <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarDays className="h-4 w-4 text-primary" />
+                {t.common.lastUpdated}: {latestPublishedAt}
               </p>
-              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-                {t.updates.title}
-              </h1>
-              <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                {t.updates.latestDescription}
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Button asChild size="lg">
-                  <Link href={`/${locale}#capabilities`}>{t.common.features}</Link>
-                </Button>
-                <Button asChild size="lg" variant="outline">
-                  <Link href={`/${locale}#how-we-work`}>{t.home.howWeWork.title}</Link>
-                </Button>
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-sky-200/70 bg-white/90 p-6 shadow-[0_30px_90px_-56px_rgba(14,165,233,0.36)] sm:p-7">
-              <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                <Sparkles className="h-4 w-4" />
-                {t.updates.latestLabel}
-              </div>
-              <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
-                {t.updates.latestTitle}
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
-                {UPDATES_PANEL_COPY[locale]}
-              </p>
-
-              {latestPublishedAt && (
-                <div className="mt-6 rounded-[1.35rem] border border-sky-100 bg-sky-50/70 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">
-                    {t.common.lastUpdated}
-                  </p>
-                  <p className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-foreground">
-                    <CalendarDays className="h-4 w-4 text-primary" />
-                    {latestPublishedAt}
-                  </p>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </section>

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle2, Upload, Settings, FileCheck, Download, Sparkles } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Upload, Settings, FileCheck, Download, CalendarDays } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -730,40 +730,25 @@ export default async function HomePage({ params }: PageProps) {
             <div className="rounded-[1.75rem] border border-sky-100 bg-white/90 p-5 shadow-[0_24px_60px_-44px_rgba(14,165,233,0.55)] backdrop-blur sm:p-6">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 font-semibold text-sky-700">
-                      <Sparkles className="h-4 w-4" />
-                      {t.updates.latestLabel}
-                    </span>
-                    {formatPublicDate(latestUpdate.publishedAt, locale) ? (
-                      <span className="text-muted-foreground">
-                        {t.updates.publishedAt} {formatPublicDate(latestUpdate.publishedAt, locale)}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-primary">{t.updates.latestTitle}</p>
-                    <h2 className="text-2xl font-semibold tracking-tight">{latestUpdate.title}</h2>
-                    <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
-                      {latestUpdate.excerpt ?? t.updates.latestDescription}
+                  {formatPublicDate(latestUpdate.publishedAt, locale) ? (
+                    <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                      <CalendarDays className="h-4 w-4 text-primary" />
+                      {formatPublicDate(latestUpdate.publishedAt, locale)}
                     </p>
-                  </div>
+                  ) : null}
+                  <h2 className="text-2xl font-semibold tracking-tight">{latestUpdate.title}</h2>
+                  <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
+                    {latestUpdate.excerpt ?? t.updates.latestDescription}
+                  </p>
                 </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row lg:flex-col lg:items-end">
+                <div className="flex sm:flex-row lg:items-end">
                   <Button asChild size="sm">
                     <Link href={`/${locale}/novetats/${latestUpdate.slug}`}>
                       {t.updates.readMore}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
-                  <Link
-                    href={updatesHref}
-                    className="inline-flex items-center text-sm font-medium text-primary hover:underline"
-                  >
-                    {t.updates.viewAll}
-                  </Link>
                 </div>
               </div>
             </div>
