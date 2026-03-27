@@ -19,6 +19,8 @@ import { getPublicProductUpdateBySlug } from '@/lib/product-updates/public';
 import { getPublicTranslations } from '@/i18n/public';
 import { renderStructuredText } from '@/lib/render-structured-text';
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   params: Promise<{ lang: string; slug: string }>;
 }

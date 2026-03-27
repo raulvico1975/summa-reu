@@ -19,6 +19,8 @@ import { listPublicProductUpdates } from '@/lib/product-updates/public';
 import { cn } from '@/lib/utils';
 import { getPublicTranslations } from '@/i18n/public';
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   params: Promise<{ lang: string }>;
 }

@@ -16,6 +16,8 @@ import { SUPPORT_EMAIL } from '@/lib/constants';
 import { getPublicTranslations } from '@/i18n/public';
 import { getLatestPublicProductUpdate } from '@/lib/product-updates/public';
 
+export const dynamic = 'force-dynamic';
+
 const frameClass =
   'overflow-hidden rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_28px_80px_-44px_rgba(15,23,42,0.28)] backdrop-blur';
 
