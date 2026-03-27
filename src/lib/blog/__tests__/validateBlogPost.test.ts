@@ -331,6 +331,19 @@ test('handleBlogPublish persists cover fields when provided', async () => {
   )
 
   assert.equal(response.status, 200)
+  const body = await response.json() as {
+    success: boolean
+    url?: string
+    localizedUrls?: { ca: string; es: string }
+    legacyUrl?: string
+  }
+  assert.equal(body.success, true)
+  assert.equal(body.url, 'https://summasocial.app/ca/blog/primer-post')
+  assert.deepEqual(body.localizedUrls, {
+    ca: 'https://summasocial.app/ca/blog/primer-post',
+    es: 'https://summasocial.app/es/blog/primer-post',
+  })
+  assert.equal(body.legacyUrl, 'https://summasocial.app/blog/primer-post')
   assert.equal(createdPayloads.length, 1)
   assert.equal(createdPayloads[0].coverImageUrl, 'https://example.com/cover.jpg')
   assert.equal(createdPayloads[0].coverImageAlt, 'Portada del primer post')
@@ -502,9 +515,21 @@ test('handleBlogPublish writes to the established blog org and revalidates publi
   ]])
   assert.ok(store.has('organizations/real-blog-org/blogPosts/primer-post'))
 
-  const body = await response.json() as { success: boolean; orgId?: string }
+  const body = await response.json() as {
+    success: boolean
+    orgId?: string
+    url?: string
+    localizedUrls?: { ca: string; es: string }
+    legacyUrl?: string
+  }
   assert.equal(body.success, true)
   assert.equal(body.orgId, 'real-blog-org')
+  assert.equal(body.url, 'https://summasocial.app/ca/blog/primer-post')
+  assert.deepEqual(body.localizedUrls, {
+    ca: 'https://summasocial.app/ca/blog/primer-post',
+    es: 'https://summasocial.app/es/blog/primer-post',
+  })
+  assert.equal(body.legacyUrl, 'https://summasocial.app/blog/primer-post')
 })
 
 test('handleBlogPublish blocks local publish storage in production', async () => {

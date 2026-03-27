@@ -4,6 +4,7 @@ import { getAdminDb } from '@/lib/api/admin-sdk'
 import {
   assertBlogOrganizationExists,
   buildBlogUrl,
+  buildLocalizedBlogUrls,
   getBlogOrgId,
   getBlogPostsCollectionPath,
   resolveBlogOrgId,
@@ -22,6 +23,11 @@ import { validateBlogPost } from '@/lib/blog/validateBlogPost'
 type PublishBlogSuccessResponse = {
   success: true
   url: string
+  localizedUrls: {
+    ca: string
+    es: string
+  }
+  legacyUrl: string
   orgId?: string
 }
 
@@ -254,10 +260,14 @@ export async function handleBlogPublish(
     }
 
     await safeRevalidateBlogPaths(slug, deps)
+    const localizedUrls = buildLocalizedBlogUrls(slug)
+    const legacyUrl = buildBlogUrl(slug)
 
     return NextResponse.json({
       success: true,
-      url: buildBlogUrl(slug),
+      url: localizedUrls.ca,
+      localizedUrls,
+      legacyUrl,
       orgId: effectiveOrgId,
     })
   } catch (error) {
