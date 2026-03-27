@@ -3,8 +3,28 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { Timestamp } from 'firebase-admin/firestore';
 import { getAdminDb } from '@/lib/api/admin-sdk';
 import { PUBLIC_LOCALES } from '@/lib/public-locale';
+import {
+  type ProductUpdateContentLocale,
+  getBaseProductUpdateLocale,
+} from '@/lib/product-updates/localized';
+import { generateSpanishProductUpdateVariant } from '@/lib/product-updates/server-localization';
 
 type ProductUpdateChannel = 'app' | 'web';
+type ProductUpdateLocalizedLocale = 'es';
+
+interface PublishProductUpdateLocalizedWebPayload {
+  title?: string | null;
+  excerpt?: string | null;
+  content?: string | null;
+}
+
+interface PublishProductUpdateLocalizedPayload {
+  title: string;
+  description: string;
+  contentLong?: string | null;
+  ctaLabel?: string | null;
+  web?: PublishProductUpdateLocalizedWebPayload | null;
+}
 
 interface PublishProductUpdateWebPayload {
   enabled: boolean;
@@ -24,6 +44,7 @@ interface PublishProductUpdateSourceMeta {
 
 interface PublishProductUpdatePayload {
   externalId: string;
+  locale: ProductUpdateContentLocale;
   title: string;
   description: string;
   link?: string | null;
@@ -31,6 +52,7 @@ interface PublishProductUpdatePayload {
   guideUrl?: string | null;
   videoUrl?: string | null;
   web?: PublishProductUpdateWebPayload | null;
+  locales?: Partial<Record<ProductUpdateLocalizedLocale, PublishProductUpdateLocalizedPayload>> | null;
   sourceMeta: PublishProductUpdateSourceMeta;
   channels: ProductUpdateChannel[];
 }
@@ -83,6 +105,9 @@ export interface PublishProductUpdateDeps {
   getPublishSecretFn: () => string | null;
   getPublicBaseUrlFn: () => string;
   getPublicLocalesFn: () => string[];
+  localizeProductUpdateFn: (
+    payload: PublishProductUpdatePayload
+  ) => Promise<Partial<Record<ProductUpdateLocalizedLocale, PublishProductUpdateLocalizedPayload>> | null>;
   revalidatePathsFn: (paths: string[]) => void | Promise<void>;
 }
 
@@ -98,12 +123,48 @@ function getPublishSecretFromEnv(): string | null {
   return process.env.PRODUCT_UPDATES_PUBLISH_SECRET?.trim() || null;
 }
 
+async function localizeProductUpdate(
+  payload: PublishProductUpdatePayload
+): Promise<Partial<Record<ProductUpdateLocalizedLocale, PublishProductUpdateLocalizedPayload>> | null> {
+  const existing = payload.locales ? { ...payload.locales } : {};
+  if (payload.locale === 'ca' && !existing.es) {
+    const translated = await generateSpanishProductUpdateVariant({
+      title: payload.title,
+      description: payload.description,
+      contentLong: payload.contentLong,
+      web: payload.web?.enabled
+        ? {
+            title: payload.title,
+            excerpt: payload.web.excerpt ?? payload.description,
+            content: payload.web.content ?? payload.contentLong,
+          }
+        : null,
+    });
+
+    existing.es = {
+      title: translated.title,
+      description: translated.description,
+      contentLong: translated.contentLong,
+      web: translated.web
+        ? {
+            title: translated.web.title,
+            excerpt: translated.web.excerpt ?? translated.description,
+            content: translated.web.content ?? translated.contentLong,
+          }
+        : null,
+    };
+  }
+
+  return Object.keys(existing).length > 0 ? existing : null;
+}
+
 const DEFAULT_DEPS: PublishProductUpdateDeps = {
   getAdminDbFn: () => getAdminDb() as unknown as ProductUpdatesPublishDb,
   nowTimestampFn: () => Timestamp.now(),
   getPublishSecretFn: getPublishSecretFromEnv,
   getPublicBaseUrlFn: () => process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://summasocial.app',
   getPublicLocalesFn: () => [...PUBLIC_LOCALES],
+  localizeProductUpdateFn: localizeProductUpdate,
   revalidatePathsFn: (paths) => {
     for (const path of paths) {
       revalidatePath(path);
@@ -249,6 +310,84 @@ function sanitizeOptionalIsoString(value: unknown, field: string, errors: string
   return parsed.toISOString();
 }
 
+function sanitizeBaseLocale(
+  value: unknown,
+  field: string,
+  errors: string[]
+): ProductUpdateContentLocale {
+  const normalized = normalizeString(value);
+  if (!normalized) return 'ca';
+  if (normalized === 'ca' || normalized === 'es') {
+    return normalized;
+  }
+  errors.push(`${field} must be "ca" or "es"`);
+  return 'ca';
+}
+
+function sanitizeLocalizedWebPayload(
+  value: unknown,
+  field: string,
+  errors: string[]
+): PublishProductUpdateLocalizedWebPayload | null {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value)) {
+    errors.push(`${field} must be an object`);
+    return null;
+  }
+
+  return {
+    title: sanitizeStringField(value.title, `${field}.title`, errors, { max: TITLE_MAX }),
+    excerpt: sanitizeStringField(value.excerpt, `${field}.excerpt`, errors, { max: EXCERPT_MAX }),
+    content: sanitizeStringField(value.content, `${field}.content`, errors, { max: CONTENT_MAX }),
+  };
+}
+
+function sanitizeLocalizedPayload(
+  value: unknown,
+  field: string,
+  errors: string[]
+): PublishProductUpdateLocalizedPayload | null {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value)) {
+    errors.push(`${field} must be an object`);
+    return null;
+  }
+
+  const title = sanitizeStringField(value.title, `${field}.title`, errors, { max: TITLE_MAX, required: true });
+  const description = sanitizeStringField(value.description, `${field}.description`, errors, {
+    max: DESCRIPTION_MAX,
+    required: true,
+  });
+
+  if (!title || !description) {
+    return null;
+  }
+
+  return {
+    title,
+    description,
+    contentLong: sanitizeStringField(value.contentLong, `${field}.contentLong`, errors, { max: CONTENT_MAX }),
+    ctaLabel: sanitizeStringField(value.ctaLabel, `${field}.ctaLabel`, errors, { max: TITLE_MAX }),
+    web: sanitizeLocalizedWebPayload(value.web, `${field}.web`, errors),
+  };
+}
+
+function sanitizeLocalizedMap(
+  value: unknown,
+  errors: string[]
+): Partial<Record<ProductUpdateLocalizedLocale, PublishProductUpdateLocalizedPayload>> | null {
+  if (value === null || value === undefined) return null;
+  if (!isRecord(value)) {
+    errors.push('locales must be an object');
+    return null;
+  }
+
+  const localizedEs = sanitizeLocalizedPayload(value.es, 'locales.es', errors);
+  if (!localizedEs) return null;
+
+  return { es: localizedEs };
+}
+
 function sanitizeWeb(
   value: unknown,
   channels: ProductUpdateChannel[],
@@ -367,6 +506,7 @@ function validatePublishPayload(raw: unknown): {
   }
 
   const externalId = sanitizeStringField(raw.externalId, 'externalId', errors, { max: 160, required: true });
+  const locale = sanitizeBaseLocale(raw.locale, 'locale', errors);
   const title = sanitizeStringField(raw.title, 'title', errors, { max: TITLE_MAX, required: true });
   const description = sanitizeStringField(raw.description, 'description', errors, { max: DESCRIPTION_MAX, required: true });
   const contentLong = sanitizeStringField(raw.contentLong, 'contentLong', errors, { max: CONTENT_MAX, required: true });
@@ -395,6 +535,7 @@ function validatePublishPayload(raw: unknown): {
   }
 
   const web = sanitizeWeb(raw.web, channels, errors);
+  const locales = sanitizeLocalizedMap(raw.locales, errors);
 
   const sourceMetaRaw = raw.sourceMeta;
   if (!isRecord(sourceMetaRaw)) {
@@ -438,6 +579,7 @@ function validatePublishPayload(raw: unknown): {
     ok: true,
     value: {
       externalId,
+      locale,
       title,
       description,
       link,
@@ -445,6 +587,7 @@ function validatePublishPayload(raw: unknown): {
       guideUrl,
       videoUrl,
       web: web?.enabled ? web : null,
+      locales,
       sourceMeta: {
         system: 'openclaw',
         externalId: sourceMetaExternalId,
@@ -526,13 +669,22 @@ export async function handleProductUpdatesPublish(
     }
 
     const now = deps.nowTimestampFn();
+    const localizedPayloads = await deps.localizeProductUpdateFn(payload);
     const webLink = payload.web?.enabled
       ? buildWebUrl(deps.getPublicBaseUrlFn(), payload.web.slug)
       : null;
     const effectiveLink = payload.guideUrl ?? webLink ?? null;
+    const localizedWebEs = localizedPayloads?.es
+      ? {
+          title: localizedPayloads.es.web?.title ?? localizedPayloads.es.title,
+          excerpt: localizedPayloads.es.web?.excerpt ?? localizedPayloads.es.description,
+          content: localizedPayloads.es.web?.content ?? localizedPayloads.es.contentLong ?? payload.contentLong,
+        }
+      : null;
 
     const docPayload = omitUndefinedDeep({
       id: payload.externalId,
+      locale: payload.locale,
       title: payload.title,
       description: payload.description,
       link: effectiveLink,
@@ -542,14 +694,17 @@ export async function handleProductUpdatesPublish(
       publishedAt: now,
       createdAt: now,
       isActive: true,
+      locales: localizedPayloads,
       web: payload.web?.enabled
         ? {
             enabled: true,
             slug: payload.web.slug,
+            locale: payload.locale,
             title: payload.title,
             excerpt: payload.web.excerpt ?? payload.description,
             content: payload.web.content ?? payload.contentLong,
             publishedAt: now,
+            locales: localizedWebEs ? { es: localizedWebEs } : null,
           }
         : null,
       social: null,

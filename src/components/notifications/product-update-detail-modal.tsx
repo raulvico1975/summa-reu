@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useOrgUrl } from '@/hooks/organization-provider';
+import { useTranslations } from '@/i18n';
 import { renderStructuredText } from '@/lib/render-structured-text';
 import type { FirestoreProductUpdate } from '@/hooks/use-product-updates';
 
@@ -31,6 +32,7 @@ export function ProductUpdateDetailModal({
   onOpenChange,
 }: ProductUpdateDetailModalProps) {
   const { buildUrl } = useOrgUrl();
+  const { t } = useTranslations();
 
   if (!update) return null;
 
@@ -61,7 +63,7 @@ export function ProductUpdateDetailModal({
                 <Button variant="outline" size="sm" asChild>
                   <Link href={buildUrl(update.guideUrl!)} onClick={() => onOpenChange(false)}>
                     <BookOpen className="h-4 w-4 mr-2" />
-                    Veure guia
+                    {t.productUpdates.viewGuide}
                   </Link>
                 </Button>
               )}
@@ -73,7 +75,7 @@ export function ProductUpdateDetailModal({
                     rel="noopener noreferrer"
                   >
                     <Play className="h-4 w-4 mr-2" />
-                    Veure vídeo
+                    {t.productUpdates.viewVideo}
                   </a>
                 </Button>
               )}
@@ -81,11 +83,11 @@ export function ProductUpdateDetailModal({
           )}
 
           {/* CTA principal si existeix */}
-          {update.href && update.ctaLabel && (
+          {update.href && (
             <div className="pt-2 border-t">
               <Button asChild className="w-full">
                 <Link href={buildUrl(update.href)} onClick={() => onOpenChange(false)}>
-                  {update.ctaLabel}
+                  {update.ctaLabel ?? t.productUpdates.openUpdate}
                   <ExternalLink className="h-4 w-4 ml-2" />
                 </Link>
               </Button>

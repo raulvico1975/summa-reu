@@ -1,4 +1,6 @@
 import { getAdminDb } from '@/lib/api/admin-sdk';
+import type { PublicLocale } from '@/lib/public-locale';
+import { resolvePublicProductUpdateCopy } from '@/lib/product-updates/localized';
 
 export interface PublicProductUpdate {
   id: string;
@@ -24,6 +26,7 @@ type ProductUpdatesPublicDb = {
 
 export interface PublicProductUpdatesDeps {
   getAdminDbFn?: () => ProductUpdatesPublicDb;
+  locale?: PublicLocale;
 }
 
 function isRecord(value: unknown): value is RecordLike {
@@ -68,7 +71,11 @@ function normalizeDate(value: unknown): Date | null {
   return null;
 }
 
-function toPublicProductUpdate(docId: string, raw: unknown): PublicProductUpdate | null {
+function toPublicProductUpdate(
+  docId: string,
+  raw: unknown,
+  locale?: PublicLocale
+): PublicProductUpdate | null {
   if (!isRecord(raw)) return null;
 
   const isActive = raw.isActive !== false;
@@ -80,18 +87,9 @@ function toPublicProductUpdate(docId: string, raw: unknown): PublicProductUpdate
   const slug = asNonEmptyString(web.slug);
   if (!slug || !isSafeSlug(slug)) return null;
 
-  const title =
-    asNonEmptyString(web.title) ??
-    asNonEmptyString(raw.title);
+  const resolvedCopy = resolvePublicProductUpdateCopy(raw, locale);
+  if (!resolvedCopy) return null;
 
-  if (!title) return null;
-
-  const excerpt =
-    asNonEmptyString(web.excerpt) ??
-    asNonEmptyString(raw.description);
-  const content =
-    asNonEmptyString(web.content) ??
-    asNonEmptyString(raw.contentLong);
   const publishedAtDate =
     normalizeDate(web.publishedAt) ??
     normalizeDate(raw.publishedAt) ??
@@ -99,10 +97,10 @@ function toPublicProductUpdate(docId: string, raw: unknown): PublicProductUpdate
 
   return {
     id: docId,
-    title,
+    title: resolvedCopy.title,
     slug,
-    excerpt,
-    content,
+    excerpt: resolvedCopy.excerpt,
+    content: resolvedCopy.content,
     publishedAt: publishedAtDate ? publishedAtDate.toISOString().slice(0, 10) : null,
   };
 }
@@ -114,7 +112,7 @@ export async function listPublicProductUpdates(
   const snapshot = await db.collection('productUpdates').get();
 
   return snapshot.docs
-    .map((doc) => toPublicProductUpdate(doc.id, doc.data()))
+    .map((doc) => toPublicProductUpdate(doc.id, doc.data(), deps.locale))
     .filter((item): item is PublicProductUpdate => item !== null)
     .sort((left, right) => {
       const leftMs = left.publishedAt ? Date.parse(left.publishedAt) : 0;

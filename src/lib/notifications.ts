@@ -9,6 +9,13 @@ export type ProductUpdate = {
   href?: string; // ruta interna sense orgSlug
   ctaLabel?: string;
   createdAt: string; // YYYY-MM-DD
+  locale?: 'ca' | 'es';
+  locales?: Partial<Record<'es', {
+    title?: string;
+    body?: string;
+    ctaLabel?: string;
+    contentLong?: string;
+  }>>;
 };
 
 export type RoadmapItem = {
@@ -28,6 +35,14 @@ export const PRODUCT_UPDATES: ProductUpdate[] = [
     href: '/dashboard/movimientos',
     ctaLabel: 'Veure com funciona',
     createdAt: '2025-12-26',
+    locale: 'ca',
+    locales: {
+      es: {
+        title: 'Categorías en bloque',
+        body: 'Ahora puedes seleccionar varios movimientos y asignar categorías de una sola vez.',
+        ctaLabel: 'Ver cómo funciona',
+      },
+    },
   },
 ];
 

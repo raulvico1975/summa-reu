@@ -27,10 +27,10 @@ export function ProductUpdatesFab() {
   const { organizationId } = useCurrentOrganization();
   const { user } = useAuth();
   const { buildUrl } = useOrgUrl();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
 
   // Carregar updates de Firestore amb fallback (hook centralitzat)
-  const { updates, usingFallback, error } = useProductUpdates();
+  const { updates, usingFallback, error } = useProductUpdates(language);
 
   // Detectar SuperAdmin per mostrar indicador de font
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
@@ -109,7 +109,7 @@ export function ProductUpdatesFab() {
         <CardHeader className="flex flex-row items-center justify-between p-4">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-500" />
-            <CardTitle className="text-lg">Novetats a Summa</CardTitle>
+            <CardTitle className="text-lg">{t.productUpdates.inboxTitle}</CardTitle>
           </div>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
@@ -118,7 +118,7 @@ export function ProductUpdatesFab() {
                 size="icon"
                 className="h-8 w-8"
                 onClick={handleMarkAllRead}
-                title="Marcar totes com a llegides"
+                title={t.productUpdates.markAllRead}
               >
                 <CheckCheck className="h-4 w-4" />
               </Button>
@@ -156,7 +156,7 @@ export function ProductUpdatesFab() {
                           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                             {update.body}
                           </p>
-                          {update.href && update.ctaLabel && (
+                          {update.href && (
                             <Link
                               href={buildUrl(update.href)}
                               onClick={(e) => {
@@ -166,7 +166,7 @@ export function ProductUpdatesFab() {
                               }}
                               className="inline-flex items-center text-xs text-primary hover:underline mt-2"
                             >
-                              {update.ctaLabel}
+                              {update.ctaLabel ?? t.productUpdates.openUpdate}
                             </Link>
                           )}
                         </div>

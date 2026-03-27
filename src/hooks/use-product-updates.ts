@@ -8,6 +8,8 @@ import { collection, query, where, orderBy, limit, getDocs, Firestore } from 'fi
 import { useFirebase } from '@/firebase';
 import { type ProductUpdate, PRODUCT_UPDATES } from '@/lib/notifications';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
+import type { Language } from '@/i18n';
+import { resolveAppProductUpdateCopy } from '@/lib/product-updates/localized';
 
 /**
  * Tipus ampliat per incloure camps nous de Firestore.
@@ -26,6 +28,53 @@ export type UseProductUpdatesResult = {
   usingFallback: boolean;
 };
 
+type RawProductUpdateEntry = {
+  id: string;
+  data: unknown;
+};
+
+function toFirestoreProductUpdate(
+  entry: RawProductUpdateEntry,
+  language: Language
+): FirestoreProductUpdate | null {
+  const source = entry.data as Record<string, unknown>;
+  const resolvedCopy = resolveAppProductUpdateCopy(source, language);
+  if (!resolvedCopy) return null;
+
+  const createdAtRaw = source?.createdAt;
+  const createdAt =
+    typeof createdAtRaw === 'object' &&
+    createdAtRaw !== null &&
+    'toDate' in createdAtRaw &&
+    typeof (createdAtRaw as { toDate?: () => Date }).toDate === 'function'
+      ? (createdAtRaw as { toDate: () => Date }).toDate().toISOString().slice(0, 10)
+      : typeof source?.createdAt === 'string'
+        ? source.createdAt.slice(0, 10)
+        : '';
+
+  const link = typeof source?.link === 'string' && source.link.trim()
+    ? source.link
+    : undefined;
+  const guideUrl = typeof source?.guideUrl === 'string' && source.guideUrl.trim()
+    ? source.guideUrl
+    : null;
+  const videoUrl = typeof source?.videoUrl === 'string' && source.videoUrl.trim()
+    ? source.videoUrl
+    : null;
+
+  return {
+    id: entry.id,
+    title: resolvedCopy.title,
+    body: resolvedCopy.body,
+    href: link,
+    ctaLabel: resolvedCopy.ctaLabel ?? undefined,
+    createdAt,
+    contentLong: resolvedCopy.contentLong,
+    guideUrl,
+    videoUrl,
+  };
+}
+
 /**
  * Hook per carregar novetats del producte.
  *
@@ -37,20 +86,31 @@ export type UseProductUpdatesResult = {
  * - publishedAt pot quedar pendent fins que Firestore resol serverTimestamp()
  * - Per timeline futur, es pot migrar a publishedAt quan sigui Timestamp garantit
  */
-export function useProductUpdates(): UseProductUpdatesResult {
+export function useProductUpdates(language: Language): UseProductUpdatesResult {
   const { firestore } = useFirebase();
-  const [updates, setUpdates] = React.useState<FirestoreProductUpdate[]>(
-    // Convertir legacy a format ampliat
-    PRODUCT_UPDATES.map((u) => ({ ...u }))
+  const fallbackEntries = React.useMemo<RawProductUpdateEntry[]>(
+    () => PRODUCT_UPDATES.map((update) => ({ id: update.id, data: update })),
+    []
+  );
+  const [rawUpdates, setRawUpdates] = React.useState<RawProductUpdateEntry[]>(
+    fallbackEntries
   );
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
   const [usingFallback, setUsingFallback] = React.useState(false);
 
+  const updates = React.useMemo(
+    () => rawUpdates
+      .map((entry) => toFirestoreProductUpdate(entry, language))
+      .filter((entry): entry is FirestoreProductUpdate => entry !== null),
+    [rawUpdates, language]
+  );
+
   React.useEffect(() => {
     if (!firestore) {
       setIsLoading(false);
       setUsingFallback(true);
+      setRawUpdates(fallbackEntries);
       return;
     }
 
@@ -63,28 +123,17 @@ export function useProductUpdates(): UseProductUpdatesResult {
           limit(6)
         );
         const snapshot = await getDocs(q);
-        const firestoreUpdates: FirestoreProductUpdate[] = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            title: data.title ?? '',
-            body: data.description ?? '',
-            href: data.link ?? undefined,
-            ctaLabel: data.link ? 'Veure' : undefined,
-            createdAt: data.createdAt?.toDate?.()?.toISOString?.()?.slice(0, 10) ?? '',
-            // Camps nous
-            contentLong: data.contentLong ?? null,
-            guideUrl: data.guideUrl ?? null,
-            videoUrl: data.videoUrl ?? null,
-          };
-        });
+        const firestoreUpdates: RawProductUpdateEntry[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          data: doc.data(),
+        }));
 
         if (firestoreUpdates.length > 0) {
-          setUpdates(firestoreUpdates);
+          setRawUpdates(firestoreUpdates);
           setUsingFallback(false);
         } else {
           // Firestore buit → usar fallback
-          setUpdates(PRODUCT_UPDATES.map((u) => ({ ...u })));
+          setRawUpdates(fallbackEntries);
           setUsingFallback(true);
         }
       } catch (err: unknown) {
@@ -102,7 +151,7 @@ export function useProductUpdates(): UseProductUpdatesResult {
           );
         }
         setError(err instanceof Error ? err : new Error(String(err)));
-        setUpdates(PRODUCT_UPDATES.map((u) => ({ ...u })));
+        setRawUpdates(fallbackEntries);
         setUsingFallback(true);
       } finally {
         setIsLoading(false);
@@ -110,7 +159,7 @@ export function useProductUpdates(): UseProductUpdatesResult {
     }
 
     fetchUpdates();
-  }, [firestore]);
+  }, [fallbackEntries, firestore]);
 
   return { updates, isLoading, error, usingFallback };
 }

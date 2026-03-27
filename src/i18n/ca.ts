@@ -3132,12 +3132,16 @@ export const ca = {
   },
   productUpdates: {
     title: "Novetats",
+    inboxTitle: "Novetats a Summa",
     tooltip: (params: { count: number }) =>
       params.count > 0 ? `Novetats (${params.count} noves)` : "Novetats",
     markAllRead: "Marcar com llegides",
     markAsRead: "Marcar com llegida",
     noUpdates: "No hi ha novetats noves",
     workingOn: "En què estem treballant",
+    openUpdate: "Veure novetat",
+    viewGuide: "Veure guia",
+    viewVideo: "Veure vídeo",
   },
   // ═══════════════════════════════════════════════════════════════════════════
   // MÒDUL PRE-BANC: DOCUMENTS PENDENTS

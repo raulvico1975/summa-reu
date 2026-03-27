@@ -84,6 +84,18 @@ type AIGeneratedContent = {
     excerpt: string;
     content: string;
   };
+  locales?: {
+    es?: {
+      title: string;
+      description: string;
+      contentLong: string;
+      web?: {
+        title: string;
+        excerpt: string;
+        content: string;
+      } | null;
+    };
+  };
   social?: {
     xText: string;
     linkedinText: string;
@@ -120,12 +132,18 @@ type DraftItem = {
  */
 type PublishedUpdate = {
   id: string;
+  locale?: 'ca' | 'es';
   title: string;
   description: string;
   link: string | null;
   publishedAt: Date;
   isActive?: boolean; // soft delete: false = despublicat
   createdAt?: Date;
+  locales?: Partial<Record<'es', {
+    title?: string | null;
+    description?: string | null;
+    contentLong?: string | null;
+  }>>;
 
   // NOU - Detall app (TEXT PLA, NO HTML)
   contentLong?: string | null;
@@ -136,10 +154,16 @@ type PublishedUpdate = {
   web?: {
     enabled: boolean;
     slug: string;
+    locale?: 'ca' | 'es';
     title?: string | null;
     excerpt?: string | null;
     content?: string | null;
     publishedAt?: Date;
+    locales?: Partial<Record<'es', {
+      title?: string | null;
+      excerpt?: string | null;
+      content?: string | null;
+    }>>;
   } | null;
 
   // NOU - Social
@@ -412,6 +436,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       const updateId = `update-${Date.now()}`;
       await setDoc(doc(firestore, 'productUpdates', updateId), stripUndefined({
         id: updateId,
+        locale: 'ca',
         title: draft.title,
         description: draft.description,
         link: draft.link ?? null,
@@ -534,6 +559,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
 
       const updateData = stripUndefinedDeep({
         id: updateId,
+        locale: 'ca',
         title: aiTitle.trim(),
         description: aiDescription.trim(),
         link: aiLink.trim() || null,
@@ -541,6 +567,13 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
         createdAt: Timestamp.now(),
         isActive: true,
         contentLong: generatedContent.contentLong,
+        locales: generatedContent.locales?.es ? {
+          es: {
+            title: generatedContent.locales.es.title,
+            description: generatedContent.locales.es.description,
+            contentLong: generatedContent.locales.es.contentLong,
+          },
+        } : null,
         ai: {
           input: {
             changeBrief: aiChangeBrief.trim() || null,
@@ -553,8 +586,17 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
         web: webEnabled && generatedContent.web ? {
           enabled: true,
           slug,
+          locale: 'ca',
+          title: aiTitle.trim(),
           excerpt: generatedContent.web.excerpt,
           content: generatedContent.web.content,
+          locales: generatedContent.locales?.es?.web ? {
+            es: {
+              title: generatedContent.locales.es.web.title,
+              excerpt: generatedContent.locales.es.web.excerpt,
+              content: generatedContent.locales.es.web.content,
+            },
+          } : null,
         } : null,
         social: socialEnabled && generatedContent.social ? {
           enabled: true,

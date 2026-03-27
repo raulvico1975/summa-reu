@@ -68,6 +68,7 @@ function createRequest(body: unknown, token = 'top-secret') {
 
 function buildValidPayload() {
   return {
+    locale: 'ca',
     externalId: 'novetat-2026-03-26-001',
     title: 'Millora en el detall de cobraments',
     description: 'Ara tens una vista mes clara del detall de cobraments.',
@@ -93,6 +94,21 @@ function buildValidPayload() {
   };
 }
 
+function buildSpanishLocalization() {
+  return {
+    es: {
+      title: 'Mejora en el detalle de cobros',
+      description: 'Ahora tienes una vista más clara del detalle de cobros.',
+      contentLong: 'Hemos simplificado el detalle de cobros para entender mejor cada paso.',
+      web: {
+        title: 'Mejora en el detalle de cobros',
+        excerpt: 'Una vista más clara para entender cada cobro.',
+        content: 'Hemos simplificado los datos visibles y el contexto de cada cobro.',
+      },
+    },
+  };
+}
+
 test('handleProductUpdatesPublish rejects unauthorized requests', async () => {
   const response = await handleProductUpdatesPublish(
     createRequest(buildValidPayload(), 'wrong-token'),
@@ -102,6 +118,7 @@ test('handleProductUpdatesPublish rejects unauthorized requests', async () => {
       getPublishSecretFn: () => 'top-secret',
       getPublicBaseUrlFn: () => 'https://summasocial.app',
       getPublicLocalesFn: () => ['ca', 'es'],
+      localizeProductUpdateFn: async () => buildSpanishLocalization(),
       revalidatePathsFn: async () => {},
     }
   );
@@ -121,6 +138,7 @@ test('handleProductUpdatesPublish validates payload and rejects html', async () 
       getPublishSecretFn: () => 'top-secret',
       getPublicBaseUrlFn: () => 'https://summasocial.app',
       getPublicLocalesFn: () => ['ca'],
+      localizeProductUpdateFn: async () => buildSpanishLocalization(),
       revalidatePathsFn: async () => {},
     }
   );
@@ -145,6 +163,7 @@ test('handleProductUpdatesPublish creates product update, avoids undefined and r
       getPublishSecretFn: () => 'top-secret',
       getPublicBaseUrlFn: () => 'https://summasocial.app',
       getPublicLocalesFn: () => ['ca', 'es'],
+      localizeProductUpdateFn: async () => buildSpanishLocalization(),
       revalidatePathsFn: async (paths) => {
         revalidatedPaths.push(...paths);
       },
@@ -159,9 +178,14 @@ test('handleProductUpdatesPublish creates product update, avoids undefined and r
 
   const stored = store.get('productUpdates/novetat-2026-03-26-001');
   assert.ok(stored);
+  assert.equal(stored?.locale, 'ca');
   assert.equal(stored?.link, 'https://summasocial.app/ca/novetats/millora-detall-cobraments');
   assert.equal(stored?.social, null);
   assert.equal((stored?.web as { title?: string }).title, 'Millora en el detall de cobraments');
+  assert.deepEqual(stored?.locales, buildSpanishLocalization());
+  assert.deepEqual((stored?.web as { locales?: unknown }).locales, {
+    es: buildSpanishLocalization().es.web,
+  });
   assert.equal('videoUrl' in (stored ?? {}), true);
   assert.equal(Object.values(stored ?? {}).includes(undefined), false);
   assert.deepEqual(revalidatedPaths, [
@@ -189,6 +213,7 @@ test('handleProductUpdatesPublish is idempotent for existing externalId', async 
       getPublishSecretFn: () => 'top-secret',
       getPublicBaseUrlFn: () => 'https://summasocial.app',
       getPublicLocalesFn: () => ['ca'],
+      localizeProductUpdateFn: async () => buildSpanishLocalization(),
       revalidatePathsFn: async () => {},
     }
   );
@@ -217,6 +242,7 @@ test('handleProductUpdatesPublish rejects duplicate slug from another doc', asyn
       getPublishSecretFn: () => 'top-secret',
       getPublicBaseUrlFn: () => 'https://summasocial.app',
       getPublicLocalesFn: () => ['ca'],
+      localizeProductUpdateFn: async () => buildSpanishLocalization(),
       revalidatePathsFn: async () => {},
     }
   );

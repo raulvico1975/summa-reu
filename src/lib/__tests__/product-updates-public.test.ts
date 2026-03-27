@@ -90,6 +90,55 @@ test('listPublicProductUpdates returns only active web updates sorted by publish
   assert.equal(updates[0]?.publishedAt, '2026-03-25');
 });
 
+test('listPublicProductUpdates only returns updates localized for the requested locale', async () => {
+  const store = new Map<string, DocData>();
+  store.set('productUpdates/update-ca-only', {
+    title: 'Millora en la gestió',
+    description: 'Text base en català',
+    isActive: true,
+    publishedAt: buildTimestamp('2026-03-24T10:00:00.000Z'),
+    web: {
+      enabled: true,
+      locale: 'ca',
+      slug: 'millora-gestio',
+      title: 'Millora en la gestió',
+      excerpt: 'Text base en català',
+      content: 'Detall base en català',
+    },
+  });
+  store.set('productUpdates/update-with-es', {
+    title: 'Millora de projectes',
+    description: 'Base en català',
+    isActive: true,
+    publishedAt: buildTimestamp('2026-03-25T10:00:00.000Z'),
+    web: {
+      enabled: true,
+      locale: 'ca',
+      slug: 'millora-projectes',
+      title: 'Millora de projectes',
+      excerpt: 'Base en català',
+      content: 'Detall base en català',
+      locales: {
+        es: {
+          title: 'Mejora de proyectos',
+          excerpt: 'Versión pública en español',
+          content: 'Detalle público en español',
+        },
+      },
+    },
+  });
+
+  const updates = await listPublicProductUpdates({
+    locale: 'es',
+    getAdminDbFn: () => new FakeProductUpdatesDb(store) as never,
+  });
+
+  assert.deepEqual(updates.map((update) => update.slug), ['millora-projectes']);
+  assert.equal(updates[0]?.title, 'Mejora de proyectos');
+  assert.equal(updates[0]?.excerpt, 'Versión pública en español');
+  assert.equal(updates[0]?.content, 'Detalle público en español');
+});
+
 test('getPublicProductUpdateBySlug returns null for invalid or missing slug', async () => {
   const store = new Map<string, DocData>();
   store.set('productUpdates/update-1', {
@@ -120,6 +169,44 @@ test('getPublicProductUpdateBySlug returns null for invalid or missing slug', as
   assert.equal(invalid, null);
 });
 
+test('getPublicProductUpdateBySlug reuses spanish copy for fr/pt locales', async () => {
+  const store = new Map<string, DocData>();
+  store.set('productUpdates/update-1', {
+    title: 'Millora A',
+    description: 'Descripció A',
+    isActive: true,
+    publishedAt: buildTimestamp('2026-03-20T10:00:00.000Z'),
+    web: {
+      enabled: true,
+      locale: 'ca',
+      slug: 'millora-a',
+      title: 'Millora A',
+      excerpt: 'Resum A',
+      locales: {
+        es: {
+          title: 'Mejora A',
+          excerpt: 'Resumen A',
+          content: 'Contenido A',
+        },
+      },
+    },
+  });
+
+  const foundEs = await getPublicProductUpdateBySlug('millora-a', {
+    locale: 'es',
+    getAdminDbFn: () => new FakeProductUpdatesDb(store) as never,
+  });
+  const foundFr = await getPublicProductUpdateBySlug('millora-a', {
+    locale: 'fr',
+    getAdminDbFn: () => new FakeProductUpdatesDb(store) as never,
+  });
+
+  assert.equal(foundEs?.title, 'Mejora A');
+  assert.equal(foundEs?.excerpt, 'Resumen A');
+  assert.equal(foundFr?.title, 'Mejora A');
+  assert.equal(foundFr?.excerpt, 'Resumen A');
+});
+
 test('getLatestPublicProductUpdate returns the newest published web update', async () => {
   const store = new Map<string, DocData>();
   store.set('productUpdates/update-1', {
@@ -148,4 +235,44 @@ test('getLatestPublicProductUpdate returns the newest published web update', asy
 
   assert.equal(latest?.slug, 'millora-nova');
   assert.equal(latest?.excerpt, 'Resum nou');
+});
+
+test('getLatestPublicProductUpdate skips non-localized items for the requested locale', async () => {
+  const store = new Map<string, DocData>();
+  store.set('productUpdates/update-1', {
+    title: 'Novetat només en català',
+    isActive: true,
+    publishedAt: buildTimestamp('2026-03-26T10:00:00.000Z'),
+    web: {
+      enabled: true,
+      locale: 'ca',
+      slug: 'novetat-ca',
+      title: 'Novetat només en català',
+    },
+  });
+  store.set('productUpdates/update-2', {
+    title: 'Novetat traduïda',
+    isActive: true,
+    publishedAt: buildTimestamp('2026-03-25T10:00:00.000Z'),
+    web: {
+      enabled: true,
+      locale: 'ca',
+      slug: 'novetat-es',
+      title: 'Novetat traduïda',
+      locales: {
+        es: {
+          title: 'Novedad traducida',
+          excerpt: 'Resumen en español',
+        },
+      },
+    },
+  });
+
+  const latest = await getLatestPublicProductUpdate({
+    locale: 'es',
+    getAdminDbFn: () => new FakeProductUpdatesDb(store) as never,
+  });
+
+  assert.equal(latest?.slug, 'novetat-es');
+  assert.equal(latest?.title, 'Novedad traducida');
 });

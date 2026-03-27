@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ai } from '@/ai/genkit';
+import { generateSpanishProductUpdateVariant } from '@/lib/product-updates/server-localization';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipus
@@ -27,6 +28,18 @@ interface GenerateResponse {
   web?: {
     excerpt: string;
     content: string;
+  };
+  locales?: {
+    es?: {
+      title: string;
+      description: string;
+      contentLong: string;
+      web?: {
+        title: string;
+        excerpt: string;
+        content: string;
+      } | null;
+    };
   };
   social?: {
     xText: string;
@@ -171,6 +184,34 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    const spanishVariant = await generateSpanishProductUpdateVariant({
+      title: body.title,
+      description: body.description,
+      contentLong: generated.contentLong,
+      web: body.webEnabled
+        ? {
+            title: body.title,
+            excerpt: generated.web?.excerpt ?? body.description,
+            content: generated.web?.content ?? generated.contentLong,
+          }
+        : null,
+    });
+
+    generated.locales = {
+      es: {
+        title: spanishVariant.title,
+        description: spanishVariant.description,
+        contentLong: spanishVariant.contentLong,
+        web: spanishVariant.web
+          ? {
+              title: spanishVariant.web.title,
+              excerpt: spanishVariant.web.excerpt ?? spanishVariant.description,
+              content: spanishVariant.web.content ?? spanishVariant.contentLong,
+            }
+          : null,
+      },
+    };
 
     return NextResponse.json(generated);
   } catch (error) {

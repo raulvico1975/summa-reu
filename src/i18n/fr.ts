@@ -3135,12 +3135,16 @@ export const fr = {
   },
   productUpdates: {
     title: "Nouveautés",
+    inboxTitle: "Nouveautés de Summa",
     tooltip: (params: { count: number }) =>
       params.count > 0 ? `Nouveautés (${params.count} nouvelles)` : "Nouveautés",
     markAllRead: "Marquer comme lues",
     markAsRead: "Marquer comme lue",
     noUpdates: "Aucune nouveauté",
     workingOn: "Ce sur quoi nous travaillons",
+    openUpdate: "Voir la nouveauté",
+    viewGuide: "Voir le guide",
+    viewVideo: "Voir la vidéo",
   },
   // ═══════════════════════════════════════════════════════════════════════════
   // MODULE PRÉ-BANQUE : DOCUMENTS EN ATTENTE

@@ -1,8 +1,8 @@
 # Impacte funcional i sincronitzacio documental
 
 ## Metadata
-- date: 2026-03-03
-- change_scope: Hotfix fiscal al drawer per evitar doble comptatge de devolucions vinculades
+- date: 2026-03-27
+- change_scope: Novetats del producte visibles en l'idioma correcte a web i app
 
 ## Declaracio obligatoria
 - help_topics_updated:
@@ -11,4 +11,4 @@
 - manual_sections:
 - faq_updated: no
 - faq_questions:
-- justification_if_no_change: No hi ha canvi de flux d'usuari ni textos del manual/FAQ; s'aplica correccio de calcul fiscal i s'afegeix validacio operativa a docs/QA-FISCAL.md (VF-5b).
+- justification_if_no_change: El canvi és visible a la web pública i a la campaneta de novetats, però no altera el manual ni la FAQ. L'impacte és que les novetats es mostren en català a ca i en castellà a es, amb reutilització del castellà a fr i pt.
