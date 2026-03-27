@@ -16,8 +16,6 @@ import { SUPPORT_EMAIL } from '@/lib/constants';
 import { getPublicTranslations } from '@/i18n/public';
 import { getLatestPublicProductUpdate } from '@/lib/product-updates/public';
 
-export const dynamic = 'force-dynamic';
-
 const frameClass =
   'overflow-hidden rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_28px_80px_-44px_rgba(15,23,42,0.28)] backdrop-blur';
 
@@ -724,7 +722,7 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-	      {latestUpdate ? (
+      {latestUpdate ? (
         <section className="border-y border-border/50 bg-[linear-gradient(180deg,rgba(240,249,255,0.75),rgba(255,255,255,0.92))] px-6 py-6">
           <div className="mx-auto max-w-6xl">
             <div className="rounded-[1.75rem] border border-sky-100 bg-white/90 p-5 shadow-[0_24px_60px_-44px_rgba(14,165,233,0.55)] backdrop-blur sm:p-6">
