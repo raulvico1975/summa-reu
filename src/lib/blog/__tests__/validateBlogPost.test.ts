@@ -20,6 +20,23 @@ function buildValidPayload() {
   }
 }
 
+function buildLocalizedPayload() {
+  return {
+    ...buildValidPayload(),
+    baseLocale: 'ca' as const,
+    translations: {
+      es: {
+        title: 'Primer post en castellano',
+        seoTitle: 'Primer post en castellano | Summa Social',
+        metaDescription: 'Meta description del primer post en castellano',
+        excerpt: 'Resumen corto del primer post',
+        contentHtml: '<p>Contenido HTML en castellano</p>',
+        coverImageAlt: 'Portada del primer post en castellano',
+      },
+    },
+  }
+}
+
 async function withFirestorePublishMode<T>(run: () => Promise<T>): Promise<T> {
   const previousMode = process.env.BLOG_PUBLISH_STORAGE_MODE
   process.env.BLOG_PUBLISH_STORAGE_MODE = 'firestore'
@@ -159,6 +176,36 @@ test('validateBlogPost accepts a valid payload', () => {
   }
 })
 
+test('validateBlogPost accepts an es translation payload', () => {
+  const result = validateBlogPost(buildLocalizedPayload())
+
+  assert.equal(result.ok, true)
+  if (result.ok) {
+    assert.equal(result.value.baseLocale, 'ca')
+    assert.equal(result.value.translations?.es?.title, 'Primer post en castellano')
+    assert.equal(result.value.translations?.es?.contentHtml, '<p>Contenido HTML en castellano</p>')
+  }
+})
+
+test('validateBlogPost rejects unsupported translations locales', () => {
+  const payload = {
+    ...buildLocalizedPayload(),
+    translations: {
+      es: buildLocalizedPayload().translations.es,
+      fr: {
+        title: 'Titre',
+      },
+    },
+  }
+
+  const result = validateBlogPost(payload)
+
+  assert.equal(result.ok, false)
+  if (!result.ok) {
+    assert.ok(result.errors.includes('translations only supports: es'))
+  }
+})
+
 test('validateBlogPost omits cover fields when they are not provided', () => {
   const payload = buildValidPayload()
   delete (payload as Partial<typeof payload>).coverImageUrl
@@ -289,6 +336,60 @@ test('handleBlogPublish persists cover fields when provided', async () => {
   assert.equal(createdPayloads[0].coverImageAlt, 'Portada del primer post')
 })
 
+test('handleBlogPublish persists es translation when provided', async () => {
+  const store = new Map<string, Record<string, unknown>>()
+  store.set('organizations/blog-org', { name: 'Blog org' })
+  const createdPayloads: Record<string, unknown>[] = []
+
+  const response = await withFirestorePublishMode(async () =>
+    handleBlogPublish(
+      {
+        headers: new Headers({
+          Authorization: 'Bearer top-secret',
+        }),
+        json: async () => buildLocalizedPayload(),
+      } as never,
+      {
+        getAdminDbFn: () => {
+          const db = buildFirestoreMock(store)
+          return {
+            ...db,
+            doc(path: string) {
+              const ref = db.doc(path)
+              return {
+                ...ref,
+                async create(payload: Record<string, unknown>) {
+                  createdPayloads.push(payload)
+                  await ref.create(payload)
+                },
+              }
+            },
+          } as never
+        },
+        nowIsoFn: () => '2026-03-19T12:00:00.000Z',
+        getPublishSecretFn: () => 'top-secret',
+        getBlogOrgIdFn: () => 'blog-org',
+        assertBlogOrganizationExistsFn: async () => {},
+        revalidatePathsFn: async () => {},
+      }
+    )
+  )
+
+  assert.equal(response.status, 200)
+  assert.equal(createdPayloads.length, 1)
+  assert.equal(createdPayloads[0].baseLocale, 'ca')
+  assert.deepEqual(createdPayloads[0].translations, {
+    es: {
+      title: 'Primer post en castellano',
+      seoTitle: 'Primer post en castellano | Summa Social',
+      metaDescription: 'Meta description del primer post en castellano',
+      excerpt: 'Resumen corto del primer post',
+      contentHtml: '<p>Contenido HTML en castellano</p>',
+      coverImageAlt: 'Portada del primer post en castellano',
+    },
+  })
+})
+
 test('handleBlogPublish does not persist empty cover fields when omitted', async () => {
   const store = new Map<string, Record<string, unknown>>()
   store.set('organizations/blog-org', { name: 'Blog org' })
@@ -387,7 +488,18 @@ test('handleBlogPublish writes to the established blog org and revalidates publi
   )
 
   assert.equal(response.status, 200)
-  assert.deepEqual(revalidatedPaths, [['/blog', '/blog/primer-post']])
+  assert.deepEqual(revalidatedPaths, [[
+    '/blog',
+    '/blog/primer-post',
+    '/ca/blog',
+    '/ca/blog/primer-post',
+    '/es/blog',
+    '/es/blog/primer-post',
+    '/fr/blog',
+    '/fr/blog/primer-post',
+    '/pt/blog',
+    '/pt/blog/primer-post',
+  ]])
   assert.ok(store.has('organizations/real-blog-org/blogPosts/primer-post'))
 
   const body = await response.json() as { success: boolean; orgId?: string }

@@ -1,22 +1,35 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { BlogPostView } from '@/components/public/blog/BlogPostView'
 import { getBlogCopy } from '@/lib/blog/copy'
 import { getLocalizedBlogPostBySlug } from '@/lib/blog/firestore'
+import {
+  generatePublicPageMetadata,
+  isValidPublicLocale,
+  type PublicLocale,
+} from '@/lib/public-locale'
 
 export const revalidate = 60
 
-const locale = 'ca' as const
-
 type PageProps = {
-  params: Promise<{ slug: string }>
+  params: Promise<{ lang: string; slug: string }>
 }
 
 function isBlogConfigured() {
   return Boolean(process.env.BLOG_ORG_ID?.trim())
 }
 
+export function generateStaticParams() {
+  return []
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { lang, slug } = await params
+  if (!isValidPublicLocale(lang)) return {}
+
+  const locale = lang as PublicLocale
   const copy = getBlogCopy(locale)
+  const seoMeta = generatePublicPageMetadata(locale, `/blog/${slug}`)
 
   if (!isBlogConfigured()) {
     return {
@@ -26,34 +39,35 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         index: false,
         follow: false,
       },
+      ...seoMeta,
     }
   }
 
-  const { slug } = await params
   const post = await getLocalizedBlogPostBySlug(slug, locale)
-
-  if (!post) {
-    return {
-      title: copy.metaTitle,
-      description: copy.metaDescription,
-    }
-  }
+  if (!post) return {}
 
   return {
     title: post.seoTitle,
     description: post.metaDescription,
+    ...seoMeta,
   }
 }
 
-export default async function BlogPostPage({ params }: PageProps) {
-  const { slug } = await params
+export default async function PublicBlogPostPage({ params }: PageProps) {
+  const { lang, slug } = await params
+
+  if (!isValidPublicLocale(lang)) {
+    notFound()
+  }
+
+  const locale = lang as PublicLocale
 
   return (
     <BlogPostView
       locale={locale}
       slug={slug}
-      blogBasePath="/blog"
-      homeHref="/ca"
+      blogBasePath={`/${locale}/blog`}
+      homeHref={`/${locale}`}
     />
   )
 }

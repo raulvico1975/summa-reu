@@ -611,7 +611,11 @@ export function DonationsReportGenerator() {
       return;
     }
 
-    const blob = new Blob([encoded.bytes], { type: 'application/octet-stream' });
+    const bytesBuffer = encoded.bytes.buffer.slice(
+      encoded.bytes.byteOffset,
+      encoded.bytes.byteOffset + encoded.bytes.byteLength
+    ) as ArrayBuffer;
+    const blob = new Blob([bytesBuffer], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

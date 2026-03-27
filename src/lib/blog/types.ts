@@ -1,5 +1,17 @@
+export type BlogContentLocale = 'ca' | 'es'
+
+export type BlogPostTranslation = {
+  title: string
+  seoTitle: string
+  metaDescription: string
+  excerpt: string
+  contentHtml: string
+  coverImageAlt?: string | null
+}
+
 export type BlogPost = {
   id: string
+  baseLocale?: BlogContentLocale
   title: string
   slug: string
   seoTitle: string
@@ -10,6 +22,7 @@ export type BlogPost = {
   category: string
   coverImageUrl?: string | null
   coverImageAlt?: string | null
+  translations?: Partial<Record<'es', BlogPostTranslation>>
   publishedAt: string
   createdAt: string
   updatedAt: string

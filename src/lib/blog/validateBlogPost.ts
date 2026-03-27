@@ -84,6 +84,98 @@ function normalizeOptionalCoverImageAlt(
   return normalized
 }
 
+function normalizeBaseLocale(
+  value: unknown,
+  errors: string[]
+): 'ca' | undefined {
+  if (value === undefined) return undefined
+
+  if (value !== 'ca') {
+    errors.push('baseLocale must be "ca"')
+    return undefined
+  }
+
+  return 'ca'
+}
+
+function normalizeTranslationField(
+  value: unknown,
+  field: string,
+  errors: string[]
+): string {
+  return normalizeRequiredString(value, field, errors)
+}
+
+function normalizeEsTranslation(
+  value: unknown,
+  coverImageUrl: string | null | undefined,
+  errors: string[]
+): NonNullable<BlogPostPublishInput['translations']>['es'] | undefined {
+  if (value === undefined) return undefined
+
+  if (!isRecord(value)) {
+    errors.push('translations.es must be an object')
+    return undefined
+  }
+
+  const title = normalizeTranslationField(value.title, 'translations.es.title', errors)
+  const seoTitle = normalizeTranslationField(value.seoTitle, 'translations.es.seoTitle', errors)
+  const metaDescription = normalizeTranslationField(
+    value.metaDescription,
+    'translations.es.metaDescription',
+    errors
+  )
+  const excerpt = normalizeTranslationField(value.excerpt, 'translations.es.excerpt', errors)
+  const contentHtml = normalizeTranslationField(
+    value.contentHtml,
+    'translations.es.contentHtml',
+    errors
+  )
+  const coverImageAlt = normalizeOptionalCoverImageAlt(value.coverImageAlt, errors)
+
+  if (coverImageAlt && !coverImageUrl) {
+    errors.push('translations.es.coverImageAlt requires coverImageUrl')
+  }
+
+  const translation: NonNullable<BlogPostPublishInput['translations']>['es'] = {
+    title,
+    seoTitle,
+    metaDescription,
+    excerpt,
+    contentHtml,
+  }
+
+  if (coverImageAlt !== undefined) {
+    translation.coverImageAlt = coverImageAlt
+  }
+
+  return translation
+}
+
+function normalizeTranslations(
+  value: unknown,
+  coverImageUrl: string | null | undefined,
+  errors: string[]
+): BlogPostPublishInput['translations'] | undefined {
+  if (value === undefined) return undefined
+
+  if (!isRecord(value)) {
+    errors.push('translations must be an object')
+    return undefined
+  }
+
+  const keys = Object.keys(value)
+  const unsupportedKeys = keys.filter((key) => key !== 'es')
+  if (unsupportedKeys.length > 0) {
+    errors.push(`translations only supports: es`)
+  }
+
+  const es = normalizeEsTranslation(value.es, coverImageUrl, errors)
+  if (!es) return undefined
+
+  return { es }
+}
+
 function normalizeTags(value: unknown, errors: string[]): string[] {
   if (!Array.isArray(value)) {
     errors.push('tags must be an array')
@@ -163,8 +255,10 @@ export function validateBlogPost(payload: unknown): BlogPostValidationResult {
   const contentHtml = normalizeRequiredString(payload.contentHtml, 'contentHtml', errors)
   const category = normalizeRequiredString(payload.category, 'category', errors)
   const tags = normalizeTags(payload.tags, errors)
+  const baseLocale = normalizeBaseLocale(payload.baseLocale, errors)
   const coverImageUrl = normalizeOptionalCoverImageUrl(payload.coverImageUrl, errors)
   const coverImageAlt = normalizeOptionalCoverImageAlt(payload.coverImageAlt, errors)
+  const translations = normalizeTranslations(payload.translations, coverImageUrl, errors)
   const publishedAt = normalizeIsoDate(payload.publishedAt, 'publishedAt', errors)
 
   if (slug && !URL_SAFE_SLUG_PATTERN.test(slug)) {
@@ -191,12 +285,20 @@ export function validateBlogPost(payload: unknown): BlogPostValidationResult {
     publishedAt,
   }
 
+  if (baseLocale !== undefined) {
+    value.baseLocale = baseLocale
+  }
+
   if (coverImageUrl !== undefined) {
     value.coverImageUrl = coverImageUrl
   }
 
   if (coverImageAlt !== undefined) {
     value.coverImageAlt = coverImageAlt
+  }
+
+  if (translations) {
+    value.translations = translations
   }
 
   return {

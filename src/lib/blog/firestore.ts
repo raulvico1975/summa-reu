@@ -1,6 +1,12 @@
 import type { Firestore } from 'firebase-admin/firestore'
 import { getAdminDb } from '@/lib/api/admin-sdk'
-import type { BlogPost } from '@/lib/blog/types'
+import type { BlogPost, BlogPostTranslation } from '@/lib/blog/types'
+import {
+  resolveLocalizedBlogPost,
+  resolveLocalizedBlogPosts,
+  type LocalizedBlogPost,
+} from '@/lib/blog/localized'
+import type { PublicLocale } from '@/lib/public-locale'
 
 const BLOG_SITE_URL = 'https://summasocial.app'
 const LOCAL_BLOG_ORG_ID = 'local-blog'
@@ -23,6 +29,39 @@ function normalizeStringArray(value: unknown): string[] | null {
     .filter(Boolean)
 
   return normalized
+}
+
+function mapBlogTranslation(value: unknown): BlogPostTranslation | null {
+  if (!isRecord(value)) return null
+
+  const title = normalizeString(value.title)
+  const seoTitle = normalizeString(value.seoTitle)
+  const metaDescription = normalizeString(value.metaDescription)
+  const excerpt = normalizeString(value.excerpt)
+  const contentHtml = normalizeString(value.contentHtml)
+
+  if (!title || !seoTitle || !metaDescription || !excerpt || !contentHtml) {
+    return null
+  }
+
+  const coverImageAlt =
+    value.coverImageAlt === null || value.coverImageAlt === undefined
+      ? value.coverImageAlt
+      : normalizeString(value.coverImageAlt)
+
+  const translation: BlogPostTranslation = {
+    title,
+    seoTitle,
+    metaDescription,
+    excerpt,
+    contentHtml,
+  }
+
+  if (coverImageAlt !== undefined) {
+    translation.coverImageAlt = coverImageAlt ?? null
+  }
+
+  return translation
 }
 
 export function getBlogOrgId(): string {
@@ -53,11 +92,21 @@ export function buildBlogUrl(slug: string): string {
   return `${baseUrl.replace(/\/+$/, '')}/blog/${slug}`
 }
 
-export function formatBlogDate(iso: string): string {
+export function formatBlogDate(
+  iso: string,
+  locale: PublicLocale = 'ca'
+): string {
   const date = new Date(iso)
   if (!Number.isFinite(date.getTime())) return iso
 
-  return date.toLocaleDateString('ca-ES', {
+  const localeMap: Record<PublicLocale, string> = {
+    ca: 'ca-ES',
+    es: 'es-ES',
+    fr: 'fr-FR',
+    pt: 'pt-PT',
+  }
+
+  return date.toLocaleDateString(localeMap[locale], {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -103,9 +152,16 @@ function mapBlogPost(docId: string, value: unknown): BlogPost | null {
     value.coverImageAlt === null || value.coverImageAlt === undefined
       ? value.coverImageAlt
       : normalizeString(value.coverImageAlt)
+  const baseLocale = normalizeString(value.baseLocale)
+  const translations = isRecord(value.translations)
+    ? {
+        es: mapBlogTranslation(value.translations.es) ?? undefined,
+      }
+    : undefined
 
   return {
     id: docId,
+    baseLocale: baseLocale === 'es' ? 'es' : 'ca',
     title,
     slug,
     seoTitle,
@@ -116,6 +172,7 @@ function mapBlogPost(docId: string, value: unknown): BlogPost | null {
     category,
     coverImageUrl: coverImageUrl ?? null,
     coverImageAlt: coverImageAlt ?? null,
+    translations: translations?.es ? { es: translations.es } : undefined,
     publishedAt,
     createdAt,
     updatedAt,
@@ -256,4 +313,23 @@ export async function listBlogPosts(
     .sort(comparePublishedAtDesc)
 
   return [...orderedPosts, ...fallbackPosts]
+}
+
+export async function getLocalizedBlogPostBySlug(
+  slug: string,
+  locale: PublicLocale = 'ca',
+  db: Firestore = getAdminDb(),
+  orgId: string = getBlogOrgId()
+): Promise<LocalizedBlogPost | null> {
+  const post = await getBlogPostBySlug(slug, db, orgId)
+  return post ? resolveLocalizedBlogPost(post, locale) : null
+}
+
+export async function listLocalizedBlogPosts(
+  locale: PublicLocale = 'ca',
+  db: Firestore = getAdminDb(),
+  orgId: string = getBlogOrgId()
+): Promise<LocalizedBlogPost[]> {
+  const posts = await listBlogPosts(db, orgId)
+  return resolveLocalizedBlogPosts(posts, locale)
 }

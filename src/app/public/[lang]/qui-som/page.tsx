@@ -146,7 +146,7 @@ export default async function AboutPage({ params }: PageProps) {
             {t.common.features}
           </Link>
           <span>·</span>
-          <Link href="/blog" className="hover:underline">
+          <Link href={`/${locale}/blog`} className="hover:underline">
             {t.common.blog}
           </Link>
           <span>·</span>

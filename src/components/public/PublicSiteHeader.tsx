@@ -8,12 +8,14 @@ import { cn } from '@/lib/utils'
 
 interface PublicSiteHeaderProps {
   locale: PublicLocale
+  currentSection?: 'features' | 'about' | 'blog'
 }
 
-export function PublicSiteHeader({ locale }: PublicSiteHeaderProps) {
+export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderProps) {
   const t = getPublicTranslations(locale)
   const capabilitiesHref = `/${locale}#capabilities`
   const aboutHref = `/${locale}/qui-som`
+  const blogHref = `/${locale}/blog`
 
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -29,13 +31,31 @@ export function PublicSiteHeader({ locale }: PublicSiteHeaderProps) {
 
           <div className="hidden lg:flex lg:items-center lg:gap-6">
             <nav className="hidden flex-wrap items-center gap-5 text-sm text-muted-foreground lg:flex">
-              <Link href={capabilitiesHref} className="transition-colors hover:text-foreground">
+              <Link
+                href={capabilitiesHref}
+                className={cn(
+                  'transition-colors hover:text-foreground',
+                  currentSection === 'features' && 'text-foreground'
+                )}
+              >
                 {t.common.features}
               </Link>
-              <Link href={aboutHref} className="transition-colors hover:text-foreground">
+              <Link
+                href={aboutHref}
+                className={cn(
+                  'transition-colors hover:text-foreground',
+                  currentSection === 'about' && 'text-foreground'
+                )}
+              >
                 {t.common.about}
               </Link>
-              <Link href="/blog" className="transition-colors hover:text-foreground">
+              <Link
+                href={blogHref}
+                className={cn(
+                  'transition-colors hover:text-foreground',
+                  currentSection === 'blog' && 'text-foreground'
+                )}
+              >
                 {t.common.blog}
               </Link>
             </nav>
@@ -64,7 +84,10 @@ export function PublicSiteHeader({ locale }: PublicSiteHeaderProps) {
             <nav className="relative px-3 py-3">
               <Link
                 href={capabilitiesHref}
-                className="group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50"
+                className={cn(
+                  'group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50',
+                  currentSection === 'features' && 'bg-sky-50'
+                )}
               >
                 <span>{t.common.features}</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover/item:translate-x-0.5" />
@@ -72,15 +95,21 @@ export function PublicSiteHeader({ locale }: PublicSiteHeaderProps) {
 
               <Link
                 href={aboutHref}
-                className="group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50"
+                className={cn(
+                  'group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50',
+                  currentSection === 'about' && 'bg-sky-50'
+                )}
               >
                 <span>{t.common.about}</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover/item:translate-x-0.5" />
               </Link>
 
               <Link
-                href="/blog"
-                className="group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50"
+                href={blogHref}
+                className={cn(
+                  'group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50',
+                  currentSection === 'blog' && 'bg-sky-50'
+                )}
               >
                 <span>{t.common.blog}</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover/item:translate-x-0.5" />

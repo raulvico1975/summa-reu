@@ -8,6 +8,7 @@ import {
   getBlogPostsCollectionPath,
   resolveBlogOrgId,
 } from '@/lib/blog/firestore'
+import { PUBLIC_LOCALES } from '@/lib/public-locale'
 import {
   assertNoLocalBlogPublishStorageInProduction,
   createLocalBlogPost,
@@ -105,7 +106,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 async function verifyPersistedBlogPost(
   postRef: { get: () => Promise<{ exists: boolean; data: () => unknown }> },
-  expectedPost: Pick<BlogPost, 'slug' | 'title' | 'contentHtml' | 'publishedAt'>
+  expectedPost: Pick<BlogPost, 'slug' | 'title' | 'contentHtml' | 'publishedAt' | 'translations'>
 ): Promise<boolean> {
   const persistedSnap = await postRef.get()
 
@@ -118,11 +119,26 @@ async function verifyPersistedBlogPost(
     return false
   }
 
+  const persistedTranslations = isRecord(persistedData.translations)
+    ? persistedData.translations
+    : null
+  const expectedEsTranslation = expectedPost.translations?.es
+  const persistedEsTranslation = persistedTranslations && isRecord(persistedTranslations.es)
+    ? persistedTranslations.es
+    : null
+
+  const translationsMatch =
+    !expectedEsTranslation ||
+    (persistedEsTranslation?.title === expectedEsTranslation.title &&
+      persistedEsTranslation?.contentHtml === expectedEsTranslation.contentHtml &&
+      persistedEsTranslation?.excerpt === expectedEsTranslation.excerpt)
+
   return (
     persistedData.slug === expectedPost.slug &&
     persistedData.title === expectedPost.title &&
     persistedData.contentHtml === expectedPost.contentHtml &&
-    persistedData.publishedAt === expectedPost.publishedAt
+    persistedData.publishedAt === expectedPost.publishedAt &&
+    translationsMatch
   )
 }
 
@@ -131,7 +147,11 @@ async function safeRevalidateBlogPaths(
   deps: Pick<PublishBlogDeps, 'revalidatePathsFn'>
 ): Promise<void> {
   try {
-    await deps.revalidatePathsFn(['/blog', `/blog/${slug}`])
+    const localizedPaths = PUBLIC_LOCALES.flatMap((locale) => [
+      `/${locale}/blog`,
+      `/${locale}/blog/${slug}`,
+    ])
+    await deps.revalidatePathsFn(['/blog', `/blog/${slug}`, ...localizedPaths])
   } catch (error) {
     console.warn('[blog/publish] revalidate warning:', error)
   }
@@ -180,6 +200,7 @@ export async function handleBlogPublish(
     const blogPost: BlogPost = {
       id: slug,
       ...validation.value,
+      baseLocale: validation.value.baseLocale ?? 'ca',
       publishedAt: validation.value.publishedAt,
       createdAt: now,
       updatedAt: now,
