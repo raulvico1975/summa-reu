@@ -371,10 +371,10 @@ test('handleBlogUpdate writes only defined fields and never persists undefined',
 test('handleBlogUpdate persists normalized contentHtml for legacy posts when any update touches the post', async () => {
   const legacyPost = buildValidStoredPost()
   legacyPost.title = 'Gestió de quotes'
-  legacyPost.contentHtml = '<h1>Gestió de quotes</h1><p>Text amb **negreta**.</p>'
+  legacyPost.contentHtml = '<h1>Gestió de quotes</h1><p>Text amb **negreta** i *cursiva*.</p>'
   legacyPost.translations.es.title = 'Gestión de cuotas'
   legacyPost.translations.es.contentHtml =
-    '<h1>Gestión de cuotas</h1><p>Texto con **negrita**.</p>'
+    '<h1>Gestión de cuotas</h1><p>Texto con **negrita** y *cursiva*.</p>'
 
   const store = new Map<string, Record<string, unknown>>()
   store.set('organizations/blog-org', { name: 'Blog org' })
@@ -409,9 +409,12 @@ test('handleBlogUpdate persists normalized contentHtml for legacy posts when any
 
   const updated = store.get('organizations/blog-org/blogPosts/primer-post')
   assert.equal(updated?.excerpt, 'Resum actualitzat')
-  assert.equal(updated?.contentHtml, '<p>Text amb <strong>negreta</strong>.</p>')
+  assert.equal(
+    updated?.contentHtml,
+    '<p>Text amb <strong>negreta</strong> i <em>cursiva</em>.</p>'
+  )
   assert.equal(
     (updated?.translations as { es?: { contentHtml?: string } })?.es?.contentHtml,
-    '<p>Texto con <strong>negrita</strong>.</p>'
+    '<p>Texto con <strong>negrita</strong> y <em>cursiva</em>.</p>'
   )
 })

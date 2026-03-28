@@ -49,6 +49,12 @@ function normalizeMarkdownStrong(text: string): string {
     .replace(/__([^_\n][\s\S]*?[^_\n])__/g, '<strong>$1</strong>')
 }
 
+function normalizeMarkdownEmphasis(text: string): string {
+  return text
+    .replace(/(^|[^\w*])\*([^*\n][\s\S]*?[^*\n])\*(?!\*)/g, '$1<em>$2</em>')
+    .replace(/(^|[^\w_])_([^_\n][\s\S]*?[^_\n])_(?!_)/g, '$1<em>$2</em>')
+}
+
 function normalizeInlineMarkdownInHtml(contentHtml: string): string {
   const tokens = contentHtml.split(/(<[^>]+>)/g)
   let protectedDepth = 0
@@ -58,7 +64,12 @@ function normalizeInlineMarkdownInHtml(contentHtml: string): string {
       if (!token) return token
 
       if (!token.startsWith('<')) {
-        return protectedDepth > 0 ? token : normalizeMarkdownStrong(token)
+        if (protectedDepth > 0) {
+          return token
+        }
+
+        const strongNormalized = normalizeMarkdownStrong(token)
+        return normalizeMarkdownEmphasis(strongNormalized)
       }
 
       if (token.startsWith('<!--') || token.startsWith('<!')) {
