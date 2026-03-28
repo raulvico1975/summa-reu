@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getPublicTranslations } from '@/i18n/public'
 import { SUPPORT_EMAIL } from '@/lib/constants'
 import type { PublicLocale } from '@/lib/public-locale'
+import { getPublicFeaturesHref } from '@/lib/public-site-paths'
 
 const FOOTER_COPY: Record<
   PublicLocale,
@@ -39,7 +40,7 @@ interface PublicSiteFooterProps {
 
 export function PublicSiteFooter({ locale }: PublicSiteFooterProps) {
   const t = getPublicTranslations(locale)
-  const capabilitiesHref = `/${locale}#capabilities`
+  const featuresHref = getPublicFeaturesHref(locale)
   const howWeWorkHref = `/${locale}#how-we-work`
   const updatesHref = `/${locale}/novetats`
   const blogHref = `/${locale}/blog`
@@ -62,14 +63,14 @@ export function PublicSiteFooter({ locale }: PublicSiteFooterProps) {
             {FOOTER_COPY[locale].sitemap}
           </p>
           <nav className="grid gap-3 text-sm text-muted-foreground">
-            <Link href={capabilitiesHref} className="hover:text-foreground hover:underline">
+            <Link href={featuresHref} className="hover:text-foreground hover:underline">
               {t.common.features}
             </Link>
             <Link href={howWeWorkHref} className="hover:text-foreground hover:underline">
               {t.home.howWeWork.title}
             </Link>
             <Link href={updatesHref} className="hover:text-foreground hover:underline">
-              {t.updates.title}
+              {t.updates.navLabel}
             </Link>
             <Link href={blogHref} className="hover:text-foreground hover:underline">
               {t.common.blog}

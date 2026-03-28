@@ -11,6 +11,7 @@ import {
   isValidPublicLocale,
   type PublicLocale,
 } from '@/lib/public-locale';
+import { getPublicFeaturesHref } from '@/lib/public-site-paths';
 import { getPublicTranslations } from '@/i18n/public';
 
 interface PageProps {
@@ -43,7 +44,7 @@ export default async function AboutPage({ params }: PageProps) {
 
   const locale = lang as PublicLocale;
   const t = getPublicTranslations(locale);
-  const capabilitiesHref = `/${locale}#capabilities`;
+  const featuresHref = getPublicFeaturesHref(locale);
 
   return (
     <main className="flex min-h-screen flex-col bg-background">
@@ -142,7 +143,7 @@ export default async function AboutPage({ params }: PageProps) {
 
       <footer className="border-t px-4 py-6">
         <div className="mx-auto flex max-w-lg items-center justify-center gap-6 text-sm text-muted-foreground">
-          <Link href={capabilitiesHref} className="hover:underline">
+          <Link href={featuresHref} className="hover:underline">
             {t.common.features}
           </Link>
           <span>·</span>

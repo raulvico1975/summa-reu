@@ -134,6 +134,7 @@ import {
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
   initialFiscalFilter?: 'pending' | null;
+  initialDemoAction?: { type: 'split' | 'detail'; txId: string } | null;
   canEditMovements?: boolean;
 }
 
@@ -158,6 +159,7 @@ const ReturnImporter = dynamic(
 export function TransactionsTable({
   initialDateFilter = null,
   initialFiscalFilter = null,
+  initialDemoAction = null,
   canEditMovements = true
 }: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
@@ -685,6 +687,28 @@ export function TransactionsTable({
     () => (splitDetailParentTxId ? allTransactionsById[splitDetailParentTxId] ?? null : null),
     [allTransactionsById, splitDetailParentTxId]
   );
+  const handledDemoActionRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (!initialDemoAction?.txId) return;
+
+    const actionKey = `${initialDemoAction.type}:${initialDemoAction.txId}`;
+    if (handledDemoActionRef.current === actionKey) return;
+
+    const transaction = allTransactionsById[initialDemoAction.txId];
+    if (!transaction) return;
+
+    if (initialDemoAction.type === 'split') {
+      setTransactionToSplit(transaction);
+      setIsSplitterOpen(true);
+    } else {
+      setSelectedRemittanceId(transaction.id);
+      setRemittanceDetailParentTx(transaction);
+      setIsRemittanceDetailOpen(true);
+    }
+
+    handledDemoActionRef.current = actionKey;
+  }, [allTransactionsById, initialDemoAction]);
 
   const splitDetailParts = React.useMemo(() => {
     if (!splitDetailParentTxId) return [];

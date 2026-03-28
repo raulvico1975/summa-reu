@@ -4,6 +4,7 @@ import { Logo } from '@/components/logo'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { getPublicTranslations } from '@/i18n/public'
 import type { PublicLocale } from '@/lib/public-locale'
+import { getPublicFeaturesHref } from '@/lib/public-site-paths'
 import { cn } from '@/lib/utils'
 
 interface PublicSiteHeaderProps {
@@ -13,7 +14,7 @@ interface PublicSiteHeaderProps {
 
 export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderProps) {
   const t = getPublicTranslations(locale)
-  const capabilitiesHref = `/${locale}#capabilities`
+  const featuresHref = getPublicFeaturesHref(locale)
   const updatesHref = `/${locale}/novetats`
   const blogHref = `/${locale}/blog`
 
@@ -32,7 +33,7 @@ export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderPro
           <div className="hidden lg:flex lg:items-center lg:gap-6">
             <nav className="hidden flex-wrap items-center gap-5 text-sm text-muted-foreground lg:flex">
               <Link
-                href={capabilitiesHref}
+                href={featuresHref}
                 className={cn(
                   'transition-colors hover:text-foreground',
                   currentSection === 'features' && 'text-foreground'
@@ -83,7 +84,7 @@ export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderPro
 
             <nav className="relative px-3 py-3">
               <Link
-                href={capabilitiesHref}
+                href={featuresHref}
                 className={cn(
                   'group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50',
                   currentSection === 'features' && 'bg-sky-50'

@@ -9,8 +9,8 @@
  */
 
 import { spawn } from 'child_process';
-import { readFileSync, existsSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { readFileSync, existsSync, lstatSync, realpathSync } from 'fs';
+import { resolve, dirname, sep } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -102,6 +102,34 @@ function cleanupCredentialsEnv(env) {
   return env;
 }
 
+function chooseBundler() {
+  const requested = process.env.NEXT_DEV_BUNDLER?.trim().toLowerCase();
+  if (requested === 'webpack' || requested === 'turbopack') return requested;
+
+  const nodeModulesPath = resolve(projectRoot, 'node_modules');
+  if (!existsSync(nodeModulesPath)) return 'turbopack';
+
+  try {
+    const stat = lstatSync(nodeModulesPath);
+    if (!stat.isSymbolicLink()) return 'turbopack';
+
+    const resolved = realpathSync(nodeModulesPath);
+    const withinProjectRoot =
+      resolved === projectRoot || resolved.startsWith(`${projectRoot}${sep}`);
+
+    if (!withinProjectRoot) {
+      console.log(
+        '\x1b[33m[DEMO]\x1b[0m node_modules enllaçat fora del worktree. Canviant a webpack per evitar el crash de Turbopack.'
+      );
+      return 'webpack';
+    }
+  } catch {
+    // Si no podem inspeccionar l enllac, mantenim el bundler per defecte.
+  }
+
+  return 'turbopack';
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,8 +151,16 @@ console.log('\x1b[36m[DEMO]\x1b[0m Arrencant Next.js...\n');
 // Executar next dev amb env net (sense GOOGLE_APPLICATION_CREDENTIALS si no existeix)
 const finalEnv = { ...process.env, ...demoEnv };
 delete finalEnv.GOOGLE_APPLICATION_CREDENTIALS; // Forçar ús d'ADC
+const bundler = chooseBundler();
+const nextArgs = ['next', 'dev', '-p', '9002'];
 
-const nextDev = spawn('npx', ['next', 'dev', '--turbopack', '-p', '9002'], {
+if (bundler === 'turbopack') {
+  nextArgs.splice(2, 0, '--turbopack');
+}
+
+console.log(`\x1b[36m[DEMO]\x1b[0m Bundler demo: ${bundler}`);
+
+const nextDev = spawn('npx', nextArgs, {
   cwd: projectRoot,
   stdio: 'inherit',
   env: finalEnv,
