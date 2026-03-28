@@ -61,6 +61,11 @@ export default async function PublicBlogPostPage({ params }: PageProps) {
   }
 
   const locale = lang as PublicLocale
+  const post = await getLocalizedBlogPostBySlug(slug, locale)
+
+  if (!post) {
+    notFound()
+  }
 
   return (
     <BlogPostView
