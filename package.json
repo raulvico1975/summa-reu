@@ -58,6 +58,13 @@
     "perf:monthly": "node scripts/performance/monthly-performance-check.mjs",
     "migrate:capabilities": "node scripts/migrations/backfill-member-capabilities.mjs",
     "images:landings:optimize": "node scripts/images/optimize-landing-assets.mjs"
+    ,
+    "editorial:seed-historical": "node --import tsx scripts/editorial/seed-historical.ts",
+    "editorial:generate-monthly": "node --import tsx scripts/editorial/generate-monthly.ts",
+    "editorial:derive-linkedin": "node --import tsx scripts/editorial/derive-linkedin.ts",
+    "editorial:approve-telegram": "node --import tsx scripts/editorial/approve-telegram.ts",
+    "editorial:publish-blog": "node --import tsx scripts/editorial/publish-blog.ts",
+    "editorial:publish-linkedin": "node --import tsx scripts/editorial/publish-linkedin.ts"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.15.2",

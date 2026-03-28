@@ -1,0 +1,270 @@
+version: 1
+calendarId: summa-editorial-2026
+calendarOrigin: inferred_from_missing_exact_yaml_block
+criteriaSources:
+  sectorKnowledgeBasePath: /mnt/data/KNOWLEDGE_BASE_Entitats.md
+  blogPublishContractPath: docs/contracts/blog-publish-cover-image.md
+  octaviStructurePaths:
+    - agents/AGENTS.md
+    - docs/operations/SUMMA-INBOUND-FUNNEL.md
+    - docs/operations/CONTEXT-OPERATIU-WEB-I-INTEGRACIONS.md
+defaults:
+  blogLocale: ca
+  approvalChannel: telegram
+  linkedinMode: mock
+  derivativesPerPost: 3
+  requiresHumanApproval: true
+posts:
+  - id: hist-2025-11-criteri-model-182
+    kind: historical
+    state: published
+    title: Criteri previ abans d'exportar el Model 182
+    slug: criteri-previ-abans-exportar-model-182
+    month: 2025-11
+    plannedDate: 2025-11-18
+    publishedAt: 2025-11-18T08:00:00.000Z
+    category: fiscal
+    tags:
+      - model-182
+      - donants
+      - fiscalitat
+    sectorPrimary: fiscalitat
+    sectorSecondary: donants
+    objective: Fixar un criteri de revisió abans del tancament fiscal i evitar errors de dades bàsiques de donants.
+    brief: Revisió prèvia de dades, devolucions i traçabilitat abans de generar el Model 182 d'una entitat.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: hist-2025-12-remeses-abans-banc
+    kind: historical
+    state: published
+    title: Què revisar abans d'enviar una remesa al banc
+    slug: que-revisar-abans-enviar-remesa-banc
+    month: 2025-12
+    plannedDate: 2025-12-09
+    publishedAt: 2025-12-09T08:00:00.000Z
+    category: operativa
+    tags:
+      - remeses
+      - iban
+      - devolucions
+    sectorPrimary: remeses
+    sectorSecondary: tresoreria
+    objective: Ordenar les comprovacions prèvies a una remesa i reduir incidències de dades i retorns.
+    brief: Validacions bàsiques de mandat, IBAN, estat del donant i excepcions abans del fitxer SEPA.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: hist-2026-01-conciliacio-multi-compte
+    kind: historical
+    state: published
+    title: Conciliació bancària amb més d'un compte sense perdre criteri
+    slug: conciliacio-bancaria-mes-un-compte-sense-perdre-criteri
+    month: 2026-01
+    plannedDate: 2026-01-14
+    publishedAt: 2026-01-14T08:00:00.000Z
+    category: operativa
+    tags:
+      - conciliacio
+      - tresoreria
+      - moviments
+    sectorPrimary: tresoreria
+    sectorSecondary: conciliació bancària
+    objective: Explicar com mantenir una lectura econòmica coherent quan l'entitat opera amb diversos comptes.
+    brief: Criteri per separar moviments, evitar duplicitats i mantenir la traçabilitat quan hi ha múltiples comptes bancaris.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: hist-2026-02-projectes-justificacio
+    kind: historical
+    state: published
+    title: La traçabilitat mínima que necessita una justificació de subvenció
+    slug: tracabilitat-minima-necessita-justificacio-subvencio
+    month: 2026-02
+    plannedDate: 2026-02-11
+    publishedAt: 2026-02-11T08:00:00.000Z
+    category: criteri-operatiu
+    tags:
+      - subvencions
+      - projectes
+      - justificacio
+    sectorPrimary: subvencions
+    sectorSecondary: projectes
+    objective: Donar criteri documental mínim perquè la justificació no es construeixi a última hora.
+    brief: Imputació, documents i explicabilitat mínima perquè una justificació de subvenció no depengui de reconstruccions tardanes.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: hist-2026-03-devolucions-lectura-captacio
+    kind: historical
+    state: published
+    title: Quan una devolució distorsiona la lectura de captació
+    slug: quan-devolucio-distorsiona-lectura-captacio
+    month: 2026-03
+    plannedDate: 2026-03-12
+    publishedAt: 2026-03-12T08:00:00.000Z
+    category: fiscal
+    tags:
+      - devolucions
+      - donants
+      - captacio
+    sectorPrimary: fiscalitat
+    sectorSecondary: devolucions
+    objective: Explicar per què una devolució mal tractada altera informes, remeses i lectura de donants.
+    brief: Distingir devolució, regularització i baixa operativa per no contaminar la lectura real de captació i fiscalitat.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: 2026-04-control-model-347
+    kind: monthly
+    state: planned
+    title: El control previ que convé fer abans del Model 347
+    slug: control-previ-conve-fer-abans-model-347
+    month: 2026-04
+    plannedDate: 2026-04-08
+    publishedAt: 2026-04-08T08:00:00.000Z
+    category: fiscal
+    tags:
+      - model-347
+      - proveidors
+      - fiscalitat
+    sectorPrimary: fiscalitat
+    sectorSecondary: proveïdors
+    objective: Explicar les verificacions mínimes abans d'una exportació 347 perquè el tancament no depengui d'urgències finals.
+    brief: Revisió de tercers, imports agregats i traçabilitat documental abans de treballar el Model 347.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: 2026-05-projectes-despesa-imputada
+    kind: monthly
+    state: planned
+    title: Despesa imputada a projecte amb criteri suficient per justificar-la
+    slug: despesa-imputada-projecte-criteri-suficient-justificar
+    month: 2026-05
+    plannedDate: 2026-05-13
+    publishedAt: 2026-05-13T08:00:00.000Z
+    category: criteri-operatiu
+    tags:
+      - projectes
+      - subvencions
+      - traçabilitat
+    sectorPrimary: subvencions
+    sectorSecondary: projectes
+    objective: Donar criteri pràctic per imputar despesa a projecte sense afegir opacitat documental.
+    brief: Com deixar una imputació prou clara perquè tingui sentit per a coordinació, tresoreria i revisió externa.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: 2026-06-recorrencia-devolucions
+    kind: monthly
+    state: planned
+    title: Quotes recurrents i devolucions sense contaminar el seguiment
+    slug: quotes-recurrents-devolucions-sense-contaminar-seguiment
+    month: 2026-06
+    plannedDate: 2026-06-10
+    publishedAt: 2026-06-10T08:00:00.000Z
+    category: operativa
+    tags:
+      - donants
+      - quotes
+      - devolucions
+    sectorPrimary: remeses
+    sectorSecondary: donants
+    objective: Evitar que el tractament de quotes i devolucions distorsioni les dades recurrents.
+    brief: Criteri per separar activitat recurrent, incidències i baixes sense perdre lectura de base donant.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: 2026-07-tancament-semestre
+    kind: monthly
+    state: planned
+    title: Tancament de semestre amb una lectura útil per a junta i equip
+    slug: tancament-semestre-lectura-util-junta-equip
+    month: 2026-07
+    plannedDate: 2026-07-08
+    publishedAt: 2026-07-08T08:00:00.000Z
+    category: criteri-operatiu
+    tags:
+      - tancament
+      - tresoreria
+      - govern
+    sectorPrimary: tresoreria
+    sectorSecondary: govern
+    objective: Explicar com ordenar un tancament semestral que serveixi tant per operativa com per govern intern.
+    brief: Saldo, desviacions i decisions pendents amb un format entenedor per a direcció i tresoreria.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: 2026-08-arxiu-documental
+    kind: monthly
+    state: planned
+    title: Arxiu documental d'estiu per no improvisar la justificació a la tardor
+    slug: arxiu-documental-estiu-no-improvisar-justificacio-tardor
+    month: 2026-08
+    plannedDate: 2026-08-12
+    publishedAt: 2026-08-12T08:00:00.000Z
+    category: operativa
+    tags:
+      - documents
+      - justificacio
+      - arxiu
+    sectorPrimary: subvencions
+    sectorSecondary: documents
+    objective: Proposar una rutina d'ordre documental abans del tram fort de justificacions i tancaments.
+    brief: Ordenar factures, comprovants i criteris abans que el volum de setembre compliqui la revisió.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: 2026-09-donants-campanya
+    kind: monthly
+    state: planned
+    title: Preparar una campanya sense deixar dades dèbils a la base de donants
+    slug: preparar-campanya-sense-deixar-dades-debils-base-donants
+    month: 2026-09
+    plannedDate: 2026-09-09
+    publishedAt: 2026-09-09T08:00:00.000Z
+    category: criteri-operatiu
+    tags:
+      - donants
+      - captacio
+      - qualitat-dada
+    sectorPrimary: donants
+    sectorSecondary: captació
+    objective: Enfocar qualitat de dades i seguiment abans d'un nou cicle de captació.
+    brief: Preparar la base donant perquè una campanya no amplifiqui errors previs de dades i seguiment.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: 2026-10-junta-lectura-economica
+    kind: monthly
+    state: planned
+    title: Quina lectura econòmica necessita de debò una junta d'entitat
+    slug: quina-lectura-economica-necessita-de-debo-junta-entitat
+    month: 2026-10
+    plannedDate: 2026-10-14
+    publishedAt: 2026-10-14T08:00:00.000Z
+    category: criteri-operatiu
+    tags:
+      - junta
+      - govern
+      - tresoreria
+    sectorPrimary: govern
+    sectorSecondary: tresoreria
+    objective: Aterrar quines dades i explicacions val la pena portar a una junta.
+    brief: Dades, context i excepcions que ajuden a governar sense ofegar la junta amb detall innecessari.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: 2026-11-pre-tancament-fiscal
+    kind: monthly
+    state: planned
+    title: Pre-tancament fiscal de novembre sense sobresalts al desembre
+    slug: pre-tancament-fiscal-novembre-sense-sobresalts-desembre
+    month: 2026-11
+    plannedDate: 2026-11-11
+    publishedAt: 2026-11-11T08:00:00.000Z
+    category: fiscal
+    tags:
+      - tancament
+      - fiscalitat
+      - conciliacio
+    sectorPrimary: fiscalitat
+    sectorSecondary: tresoreria
+    objective: Fixar una rutina de comprovació abans del tancament anual fort.
+    brief: Revisió prèvia de classificacions, excepcions i traçabilitat abans de l'últim tram de l'any.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+  - id: 2026-12-preparar-182-347
+    kind: monthly
+    state: planned
+    title: Preparar ara les dades que complicaran el 182 i el 347 de gener
+    slug: preparar-ara-dades-complicaran-182-347-gener
+    month: 2026-12
+    plannedDate: 2026-12-09
+    publishedAt: 2026-12-09T08:00:00.000Z
+    category: fiscal
+    tags:
+      - model-182
+      - model-347
+      - tancament
+    sectorPrimary: fiscalitat
+    sectorSecondary: tancament
+    objective: Identificar quines dades s'han de netejar abans del canvi d'any.
+    brief: Donants, tercers, devolucions i documents que convé revisar abans de generar els models fiscals del nou any.
+    sourceStatus: inferred_from_missing_exact_yaml_block
+
