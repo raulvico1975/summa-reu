@@ -2,11 +2,11 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { PublicFeaturesExplorer, type PublicFeaturesExplorerSection } from '@/components/public/PublicFeaturesExplorer';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
-import { PublicFeatureDemo } from '@/components/public/PublicFeatureDemo';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle2, Upload, Settings, FileCheck, Download, CalendarDays, Play } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Upload, Settings, FileCheck, Download, CalendarDays } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -16,12 +16,15 @@ import {
 import { SUPPORT_EMAIL } from '@/lib/constants';
 import { getPublicTranslations } from '@/i18n/public';
 import {
+  getPublicLandingPreviewBySlug,
+  type PublicLandingHeroMedia,
+} from '@/lib/public-landings';
+import {
   getPublicDetailedGuidesLocale,
   getPublicEconomicGuideHref,
   getPublicFeaturesHref,
 } from '@/lib/public-site-paths';
 import { getLatestPublicProductUpdate } from '@/lib/product-updates/public';
-import { getPublicLandingPreviewBySlug, type PublicLandingHeroMedia } from '@/lib/public-landings';
 
 const frameClass =
   'overflow-hidden rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_28px_80px_-44px_rgba(15,23,42,0.28)] backdrop-blur';
@@ -381,40 +384,575 @@ const HOME_SECTION_COPY: Record<
   },
 };
 
-const SECONDARY_CAPABILITY_LABELS: Record<
+const HOME_FUNCTIONS_COPY: Record<
   PublicLocale,
   {
-    bankImport: string;
-    returnedReceipts: string;
-    donationCertificates: string;
-    model347: string;
+    eyebrow: string;
+    title: string;
+    description: string;
+    coreLabel: string;
+    optionalLabel: string;
+    viewBlock: string;
+    viewOptional: string;
+    blocks: {
+      treasury: { title: string; description: string; highlights: string[] };
+      memberOps: { title: string; description: string; highlights: string[] };
+      expenses: { title: string; description: string; highlights: string[] };
+      projects: { title: string; description: string; highlights: string[] };
+    };
   }
 > = {
   ca: {
-    bankImport: 'Importació bancària',
-    returnedReceipts: 'Retorns i incidències',
-    donationCertificates: 'Donants i certificats',
-    model347: 'Fiscalitat anual',
+    eyebrow: 'Funcionalitats',
+    title: 'Tria un bloc i mira Summa en acció',
+    description:
+      'Explora les funcionalitats principals des de la home i mira la pantalla real de cada flux abans d’entrar al detall.',
+    coreLabel: 'Nucli base',
+    optionalLabel: 'Mòdul opcional',
+    viewBlock: 'Veure bloc',
+    viewOptional: 'Veure projectes',
+    blocks: {
+      treasury: {
+        title: 'Cobrar i conciliar',
+        description: 'Quotes, remeses, devolucions i banc dins del mateix fil.',
+        highlights: ['Quotes', 'Remeses', 'Banc'],
+      },
+      memberOps: {
+        title: 'Gestionar la despesa',
+        description: 'Factures, nòmines i pagaments amb els documents on toca.',
+        highlights: ['Factures', 'Pagaments', 'Liquidacions'],
+      },
+      expenses: {
+        title: 'Arribar bé a fiscalitat',
+        description: 'Certificats, 182 i 347 sense reconstruir dades a última hora.',
+        highlights: ['Certificats', '182', '347'],
+      },
+      projects: {
+        title: 'Seguir projectes',
+        description: 'Pressupost, subvencions i justificació només si us cal aquest nivell.',
+        highlights: ['Pressupost', 'Subvencions', 'Justificació'],
+      },
+    },
   },
   es: {
-    bankImport: 'Importación bancaria',
-    returnedReceipts: 'Retornos e incidencias',
-    donationCertificates: 'Donantes y certificados',
-    model347: 'Fiscalidad anual',
+    eyebrow: 'Funcionalidades',
+    title: 'Elige un bloque y mira Summa en acción',
+    description:
+      'Explora las funcionalidades principales desde la home y mira la pantalla real de cada flujo antes de entrar en detalle.',
+    coreLabel: 'Núcleo base',
+    optionalLabel: 'Módulo opcional',
+    viewBlock: 'Ver bloque',
+    viewOptional: 'Ver proyectos',
+    blocks: {
+      treasury: {
+        title: 'Cobrar y conciliar',
+        description: 'Cuotas, remesas, devoluciones y banco dentro del mismo hilo.',
+        highlights: ['Cuotas', 'Remesas', 'Banco'],
+      },
+      memberOps: {
+        title: 'Gestionar el gasto',
+        description: 'Facturas, nóminas y pagos con los documentos donde toca.',
+        highlights: ['Facturas', 'Pagos', 'Liquidaciones'],
+      },
+      expenses: {
+        title: 'Llegar bien a fiscalidad',
+        description: 'Certificados, 182 y 347 sin reconstruir datos a última hora.',
+        highlights: ['Certificados', '182', '347'],
+      },
+      projects: {
+        title: 'Seguir proyectos',
+        description: 'Presupuesto, subvenciones y justificación solo si os hace falta este nivel.',
+        highlights: ['Presupuesto', 'Subvenciones', 'Justificación'],
+      },
+    },
   },
   fr: {
-    bankImport: 'Import bancaire',
-    returnedReceipts: 'Retours et incidents',
-    donationCertificates: 'Donateurs et certificats',
-    model347: 'Fiscalité annuelle',
+    eyebrow: 'Fonctionnalités',
+    title: 'Choisissez un bloc et regardez Summa en action',
+    description:
+      'Explorez les fonctionnalités principales depuis la home et regardez l’écran réel de chaque flux avant d’aller plus loin.',
+    coreLabel: 'Socle principal',
+    optionalLabel: 'Module optionnel',
+    viewBlock: 'Voir le bloc',
+    viewOptional: 'Voir les projets',
+    blocks: {
+      treasury: {
+        title: 'Encaisser et rapprocher',
+        description: 'Cotisations, prélèvements, rejets et banque dans le même flux.',
+        highlights: ['Cotisations', 'Prélèvements', 'Banque'],
+      },
+      memberOps: {
+        title: 'Gérer les dépenses',
+        description: 'Factures, salaires et paiements avec les documents au bon endroit.',
+        highlights: ['Factures', 'Paiements', 'Notes de frais'],
+      },
+      expenses: {
+        title: 'Arriver sereinement à la fiscalité',
+        description: 'Certificats, 182 et 347 sans reconstruire les données en fin de course.',
+        highlights: ['Certificats', '182', '347'],
+      },
+      projects: {
+        title: 'Suivre les projets',
+        description: 'Budget, subventions et justification uniquement si vous en avez besoin.',
+        highlights: ['Budget', 'Subventions', 'Justification'],
+      },
+    },
   },
   pt: {
-    bankImport: 'Importação bancária',
-    returnedReceipts: 'Retornos e incidências',
-    donationCertificates: 'Doadores e certificados',
-    model347: 'Fiscalidade anual',
+    eyebrow: 'Funcionalidades',
+    title: 'Escolhe um bloco e vê o Summa em ação',
+    description:
+      'Explora as funcionalidades principais a partir da home e vê o ecrã real de cada fluxo antes de entrares no detalhe.',
+    coreLabel: 'Núcleo base',
+    optionalLabel: 'Módulo opcional',
+    viewBlock: 'Ver bloco',
+    viewOptional: 'Ver projetos',
+    blocks: {
+      treasury: {
+        title: 'Cobrar e reconciliar',
+        description: 'Quotas, remessas, devoluções e banco dentro do mesmo fluxo.',
+        highlights: ['Quotas', 'Remessas', 'Banco'],
+      },
+      memberOps: {
+        title: 'Gerir a despesa',
+        description: 'Faturas, salários e pagamentos com os documentos no lugar certo.',
+        highlights: ['Faturas', 'Pagamentos', 'Liquidações'],
+      },
+      expenses: {
+        title: 'Chegar bem à fiscalidade',
+        description: 'Certificados, 182 e 347 sem reconstruir dados à última hora.',
+        highlights: ['Certificados', '182', '347'],
+      },
+      projects: {
+        title: 'Acompanhar projetos',
+        description: 'Orçamento, subsídios e justificação apenas se precisarem desse nível.',
+        highlights: ['Orçamento', 'Subsídios', 'Justificação'],
+      },
+    },
   },
 };
+
+type HomeExplorerCopy = {
+  helper: string;
+  detailCta: string;
+  contactCta: string;
+  demoBadge: string;
+  landingBadge: string;
+  screenBadge: string;
+  sections: {
+    dashboard: { label: string; title: string; description: string };
+    conciliation: { label: string; title: string; description: string; assignment: { title: string; description: string } };
+    expenses: {
+      label: string;
+      title: string;
+      description: string;
+      invoices: { title: string; description: string };
+      payments: { title: string; description: string };
+      settlements: { title: string; description: string };
+    };
+    members: { label: string; title: string; description: string };
+    fiscal: { label: string; title: string; description: string };
+    projects: {
+      label: string;
+      title: string;
+      description: string;
+      budget: { title: string; description: string };
+      grants: { title: string; description: string };
+      reporting: { title: string; description: string };
+    };
+    dashboardItems: {
+      metrics: { title: string; description: string };
+      reports: { title: string; description: string };
+    };
+  };
+};
+
+const HOME_EXPLORER_COPY: Record<PublicLocale, HomeExplorerCopy> = {
+  ca: {
+    helper:
+      "Clica cada bloc per desplegar-ne les funcionalitats i veure, a la dreta, la pantalla real de Summa que correspon a aquell flux.",
+    detailCta: 'Més informació',
+    contactCta: 'Demana una demo',
+    demoBadge: 'Vídeo demo',
+    landingBadge: 'Landing',
+    screenBadge: 'Pantalla',
+    sections: {
+      dashboard: {
+        label: 'Panell de control',
+        title: 'Visió general del sistema',
+        description:
+          "Una entrada clara per veure estat, alertes i informació preparada per compartir amb l'equip o la junta.",
+      },
+      dashboardItems: {
+        metrics: {
+          title: 'Quadre de comandament',
+          description:
+            'Indicadors, alertes i una lectura ràpida del que està pendent, resolt o preparat.',
+        },
+        reports: {
+          title: 'Informes i exports',
+          description:
+            'Documents i dades llestes per revisar, descarregar o compartir amb gestoria i junta.',
+        },
+      },
+      conciliation: {
+        label: 'Conciliació bancària (amb IA)',
+        title: 'Moviments, extractes i conciliació',
+        description:
+          "Importes l'extracte, relaciones moviments i treballes la conciliació amb criteri i traçabilitat.",
+        assignment: {
+          title: 'Assignació intel·ligent',
+          description:
+            'Summa proposa contactes, categories i relacions a partir de decisions anteriors i patrons detectats.',
+        },
+      },
+      expenses: {
+        label: 'Gestió de factures i liquidacions (amb IA)',
+        title: 'Documents, pagaments i liquidacions',
+        description:
+          'Factures, nòmines, remeses de pagament i tiquets dins del mateix flux, amb menys feina manual.',
+        invoices: {
+          title: 'Factures i nòmines amb IA',
+          description:
+            'Arrossegues documents, revises les dades extretes i els deixes preparats per treballar-los.',
+        },
+        payments: {
+          title: 'Pagaments SEPA',
+          description:
+            'Generes pagaments amb els imports i documents ja ordenats dins del sistema.',
+        },
+        settlements: {
+          title: 'Liquidacions i tiquets',
+          description:
+            'Captura de despeses, viatges i quilometratge amb liquidacions regenerables en PDF.',
+        },
+      },
+      members: {
+        label: 'Gestió de socis i quotes',
+        title: 'Base de socis, quotes i devolucions',
+        description:
+          'Socis, donants, quotes, rebuts retornats i historial econòmic dins d’un mateix fil.',
+      },
+      fiscal: {
+        label: 'Fiscalitat (models AEAT ready)',
+        title: 'Donacions, certificats i models fiscals',
+        description:
+          'Quan arriba el moment fiscal, la informació ja està preparada per generar certificats i models.',
+      },
+      projects: {
+        label: 'Gestió de projectes',
+        title: 'Projectes, subvencions i justificació',
+        description:
+          'Seguiment pressupostari, imputació de despesa i justificació perquè la part econòmica del projecte no vagi per lliure.',
+        budget: {
+          title: 'Seguiment pressupostari',
+          description:
+            'Comparativa entre pressupostat i executat per veure ràpidament on està cada projecte.',
+        },
+        grants: {
+          title: 'Subvencions i imputació',
+          description:
+            'Assignació parcial de despesa i lectura clara de quina despesa pertany a cada projecte.',
+        },
+        reporting: {
+          title: 'Justificació i exportació',
+          description:
+            'Materials exportables i documentació agrupada per preparar justificacions.',
+        },
+      },
+    },
+  },
+  es: {
+    helper:
+      'Haz clic en cada bloque para desplegar sus funcionalidades y ver, a la derecha, la pantalla real de Summa que corresponde a ese flujo.',
+    detailCta: 'Más información',
+    contactCta: 'Pide una demo',
+    demoBadge: 'Vídeo demo',
+    landingBadge: 'Landing',
+    screenBadge: 'Pantalla',
+    sections: {
+      dashboard: {
+        label: 'Panel de control',
+        title: 'Visión general del sistema',
+        description:
+          'Una entrada clara para ver estado, alertas e información preparada para compartir con el equipo o la junta.',
+      },
+      dashboardItems: {
+        metrics: {
+          title: 'Cuadro de mando',
+          description:
+            'Indicadores, alertas y una lectura rápida de lo pendiente, resuelto o preparado.',
+        },
+        reports: {
+          title: 'Informes y exportaciones',
+          description:
+            'Documentos y datos listos para revisar, descargar o compartir con gestoría y junta.',
+        },
+      },
+      conciliation: {
+        label: 'Conciliación bancaria (con IA)',
+        title: 'Movimientos, extractos y conciliación',
+        description:
+          'Importas el extracto, relacionas movimientos y trabajas la conciliación con criterio y trazabilidad.',
+        assignment: {
+          title: 'Asignación inteligente',
+          description:
+            'Summa propone contactos, categorías y relaciones a partir de decisiones anteriores y patrones detectados.',
+        },
+      },
+      expenses: {
+        label: 'Gestión de facturas y liquidaciones (con IA)',
+        title: 'Documentos, pagos y liquidaciones',
+        description:
+          'Facturas, nóminas, remesas de pago y tickets dentro del mismo flujo, con menos trabajo manual.',
+        invoices: {
+          title: 'Facturas y nóminas con IA',
+          description:
+            'Arrastras documentos, revisas los datos extraídos y los dejas preparados para trabajar.',
+        },
+        payments: {
+          title: 'Pagos SEPA',
+          description:
+            'Generas pagos con importes y documentos ya ordenados dentro del sistema.',
+        },
+        settlements: {
+          title: 'Liquidaciones y tickets',
+          description:
+            'Captura de gastos, viajes y kilometraje con liquidaciones regenerables en PDF.',
+        },
+      },
+      members: {
+        label: 'Gestión de socios y cuotas',
+        title: 'Base de socios, cuotas y devoluciones',
+        description:
+          'Socios, donantes, cuotas, recibos devueltos e historial económico dentro del mismo hilo.',
+      },
+      fiscal: {
+        label: 'Fiscalidad (modelos AEAT ready)',
+        title: 'Donaciones, certificados y modelos fiscales',
+        description:
+          'Cuando llega el momento fiscal, la información ya está preparada para generar certificados y modelos.',
+      },
+      projects: {
+        label: 'Gestión de proyectos',
+        title: 'Proyectos, subvenciones y justificación',
+        description:
+          'Seguimiento presupuestario, imputación de gasto y justificación para que la parte económica del proyecto no vaya por libre.',
+        budget: {
+          title: 'Seguimiento presupuestario',
+          description:
+            'Comparativa entre presupuestado y ejecutado para ver rápidamente dónde está cada proyecto.',
+        },
+        grants: {
+          title: 'Subvenciones e imputación',
+          description:
+            'Asignación parcial de gasto y lectura clara de qué gasto pertenece a cada proyecto.',
+        },
+        reporting: {
+          title: 'Justificación y exportación',
+          description:
+            'Materiales exportables y documentación agrupada para preparar justificaciones.',
+        },
+      },
+    },
+  },
+  fr: {
+    helper:
+      'Cliquez sur chaque bloc pour déployer ses fonctionnalités et voir, à droite, l’écran réel de Summa correspondant à ce flux.',
+    detailCta: 'Plus d’informations',
+    contactCta: 'Demander une démo',
+    demoBadge: 'Démo vidéo',
+    landingBadge: 'Landing',
+    screenBadge: 'Écran',
+    sections: {
+      dashboard: {
+        label: 'Tableau de bord',
+        title: 'Vue générale du système',
+        description:
+          'Une entrée claire pour voir état, alertes et information prête à partager avec l’équipe ou le conseil.',
+      },
+      dashboardItems: {
+        metrics: {
+          title: 'Tableau de bord',
+          description:
+            'Indicateurs, alertes et lecture rapide de ce qui est en attente, résolu ou prêt.',
+        },
+        reports: {
+          title: 'Rapports et exports',
+          description:
+            'Documents et données prêts à vérifier, télécharger ou partager.',
+        },
+      },
+      conciliation: {
+        label: 'Rapprochement bancaire (avec IA)',
+        title: 'Mouvements, relevés et rapprochement',
+        description:
+          'Vous importez le relevé, reliez les mouvements et travaillez le rapprochement avec traçabilité.',
+        assignment: {
+          title: 'Affectation intelligente',
+          description:
+            'Summa propose contacts, catégories et relations à partir des décisions précédentes.',
+        },
+      },
+      expenses: {
+        label: 'Gestion des factures et notes de frais (avec IA)',
+        title: 'Documents, paiements et liquidations',
+        description:
+          'Factures, salaires, paiements et justificatifs dans le même flux, avec moins de travail manuel.',
+        invoices: {
+          title: 'Factures et salaires avec IA',
+          description:
+            'Vous déposez les documents, vérifiez les données extraites et les préparez.',
+        },
+        payments: {
+          title: 'Paiements SEPA',
+          description:
+            'Vous générez les paiements à partir de montants et documents déjà ordonnés.',
+        },
+        settlements: {
+          title: 'Notes de frais et justificatifs',
+          description:
+            'Capture des dépenses, déplacements et kilométrage avec PDF régénérables.',
+        },
+      },
+      members: {
+        label: 'Gestion des membres et cotisations',
+        title: 'Base membres, cotisations et rejets',
+        description:
+          'Membres, donateurs, cotisations, rejets et historique économique dans le même fil.',
+      },
+      fiscal: {
+        label: 'Fiscalité (modèles AEAT ready)',
+        title: 'Dons, certificats et modèles fiscaux',
+        description:
+          'Quand vient la fiscalité, l’information est déjà prête pour certificats et déclarations.',
+      },
+      projects: {
+        label: 'Gestion des projets',
+        title: 'Projets, subventions et justification',
+        description:
+          'Suivi budgétaire, affectation des dépenses et justification pour garder la partie économique alignée.',
+        budget: {
+          title: 'Suivi budgétaire',
+          description:
+            'Comparaison entre budgeté et exécuté pour voir rapidement où en est chaque projet.',
+        },
+        grants: {
+          title: 'Subventions et affectation',
+          description:
+            'Affectation partielle des dépenses et lecture claire par projet.',
+        },
+        reporting: {
+          title: 'Justification et export',
+          description:
+            'Matériaux exportables et documentation groupée pour préparer la justification.',
+        },
+      },
+    },
+  },
+  pt: {
+    helper:
+      'Clica em cada bloco para o abrir e ver, à direita, o ecrã real do Summa correspondente a esse fluxo.',
+    detailCta: 'Mais informação',
+    contactCta: 'Pedir demo',
+    demoBadge: 'Vídeo demo',
+    landingBadge: 'Landing',
+    screenBadge: 'Ecrã',
+    sections: {
+      dashboard: {
+        label: 'Painel de controlo',
+        title: 'Visão geral do sistema',
+        description:
+          'Uma entrada clara para ver estado, alertas e informação pronta a partilhar com equipa ou direção.',
+      },
+      dashboardItems: {
+        metrics: {
+          title: 'Painel de controlo',
+          description:
+            'Indicadores, alertas e leitura rápida do que está pendente, resolvido ou pronto.',
+        },
+        reports: {
+          title: 'Relatórios e exportações',
+          description:
+            'Documentos e dados prontos para rever, descarregar ou partilhar.',
+        },
+      },
+      conciliation: {
+        label: 'Reconciliação bancária (com IA)',
+        title: 'Movimentos, extratos e reconciliação',
+        description:
+          'Importas o extrato, relacionas movimentos e trabalhas a reconciliação com rastreabilidade.',
+        assignment: {
+          title: 'Atribuição inteligente',
+          description:
+            'O Summa propõe contactos, categorias e relações a partir de decisões anteriores.',
+        },
+      },
+      expenses: {
+        label: 'Gestão de faturas e liquidações (com IA)',
+        title: 'Documentos, pagamentos e liquidações',
+        description:
+          'Faturas, salários, pagamentos e comprovativos no mesmo fluxo, com menos trabalho manual.',
+        invoices: {
+          title: 'Faturas e salários com IA',
+          description:
+            'Arrastas documentos, revês os dados extraídos e preparas tudo para trabalhar.',
+        },
+        payments: {
+          title: 'Pagamentos SEPA',
+          description:
+            'Gerar pagamentos a partir de montantes e documentos já organizados.',
+        },
+        settlements: {
+          title: 'Liquidações e comprovativos',
+          description:
+            'Captura de despesas, viagens e quilometragem com PDF regenerável.',
+        },
+      },
+      members: {
+        label: 'Gestão de sócios e quotas',
+        title: 'Base de sócios, quotas e devoluções',
+        description:
+          'Sócios, doadores, quotas, recibos devolvidos e histórico económico no mesmo fio.',
+      },
+      fiscal: {
+        label: 'Fiscalidade (modelos AEAT ready)',
+        title: 'Doações, certificados e modelos fiscais',
+        description:
+          'Quando chega a fiscalidade, a informação já está pronta para certificados e modelos.',
+      },
+      projects: {
+        label: 'Gestão de projetos',
+        title: 'Projetos, subsídios e justificação',
+        description:
+          'Seguimento orçamental, imputação de despesa e justificação para manter a parte económica alinhada.',
+        budget: {
+          title: 'Seguimento orçamental',
+          description:
+            'Comparação entre orçamentado e executado para ver rapidamente cada projeto.',
+        },
+        grants: {
+          title: 'Subsídios e imputação',
+          description:
+            'Atribuição parcial de despesas e leitura clara por projeto.',
+        },
+        reporting: {
+          title: 'Justificação e exportação',
+          description:
+            'Materiais exportáveis e documentação agrupada para preparar justificações.',
+        },
+      },
+    },
+  },
+};
+
+function createImageMedia(src: string, alt: string): PublicLandingHeroMedia {
+  return {
+    type: 'image',
+    src,
+    alt,
+  };
+}
 
 interface PageProps {
   params: Promise<{ lang: string }>;
@@ -443,6 +981,7 @@ const SECTION_ANCHORS: Record<
   {
     conciliation: string;
     remittances: string;
+    expenses: string;
     onlineDonations: string;
     fiscalCertificates: string;
     projects: string;
@@ -451,6 +990,7 @@ const SECTION_ANCHORS: Record<
   ca: {
     conciliation: 'conciliacio-bancaria',
     remittances: 'remeses-devolucions',
+    expenses: 'despeses-pagaments-sepa',
     onlineDonations: 'donacions-online',
     fiscalCertificates: 'fiscalitat-certificats',
     projects: 'modul-projectes',
@@ -458,6 +998,7 @@ const SECTION_ANCHORS: Record<
   es: {
     conciliation: 'conciliacion-bancaria',
     remittances: 'remesas-devoluciones',
+    expenses: 'gastos-pagos-sepa',
     onlineDonations: 'donaciones-online',
     fiscalCertificates: 'fiscalidad-certificados',
     projects: 'modulo-proyectos',
@@ -465,6 +1006,7 @@ const SECTION_ANCHORS: Record<
   fr: {
     conciliation: 'rapprochement-bancaire',
     remittances: 'prelevements-rejets',
+    expenses: 'factures-sepa',
     onlineDonations: 'dons-en-ligne',
     fiscalCertificates: 'fiscalite-certificats',
     projects: 'module-projets',
@@ -472,6 +1014,7 @@ const SECTION_ANCHORS: Record<
   pt: {
     conciliation: 'reconciliacao-bancaria',
     remittances: 'remessas-devolucoes',
+    expenses: 'faturas-sepa',
     onlineDonations: 'doacoes-online',
     fiscalCertificates: 'fiscalidade-certificados',
     projects: 'modulo-projetos',
@@ -487,6 +1030,7 @@ const FEATURES_PATH: Record<PublicLocale, string> = {
 
 const HOME_VISUALS = {
   default: {
+    dashboard: '/visuals/web/web_dashboard.webp',
     conciliation: '/visuals/web/web_concilia_bancaria.webp',
     remittances: '/visuals/web/web_divide_remeses.webp',
     donations: '/visuals/web/web_divide_stripe.webp',
@@ -495,6 +1039,7 @@ const HOME_VISUALS = {
     projects: '/visuals/web/web_seguiment_projectes.webp',
   },
   ca: {
+    dashboard: '/visuals/web/web_dashboard.webp',
     conciliation: '/visuals/web/web_concilia_bancaria_ca.webp',
     remittances: '/visuals/web/web_divideix_remeses_ca.webp',
     donations: '/visuals/web/web_divideix_stripe_ca.webp',
@@ -551,33 +1096,6 @@ function trimTrailingArrow(text: string) {
   return text.replace(/\s*[→↗➜]+\s*$/, '');
 }
 
-function getLandingPreviewStill(media: PublicLandingHeroMedia | null): string | null {
-  if (!media) {
-    return null;
-  }
-
-  return media.type === 'image' ? media.src : media.poster ?? null;
-}
-
-function getHomeLandingPreview(slug: string, locale: PublicLocale) {
-  const preview = getPublicLandingPreviewBySlug(slug, locale);
-
-  if (!preview || preview.media || locale === 'ca') {
-    return preview;
-  }
-
-  const fallbackPreview = getPublicLandingPreviewBySlug(slug, 'ca');
-
-  if (!fallbackPreview?.media) {
-    return preview;
-  }
-
-  return {
-    ...preview,
-    media: fallbackPreview.media,
-  };
-}
-
 export default async function HomePage({ params }: PageProps) {
   const { lang } = await params;
 
@@ -598,20 +1116,9 @@ export default async function HomePage({ params }: PageProps) {
   const visuals = locale === 'ca' ? HOME_VISUALS.ca : HOME_VISUALS.default;
   const headlineParts = splitTextAroundPhrase(t.home.heroTagline, HERO_HIGHLIGHTS[locale]);
   const homeSectionCopy = HOME_SECTION_COPY[locale];
-  const secondaryCapabilityLabels = SECONDARY_CAPABILITY_LABELS[locale];
+  const homeFunctionsCopy = HOME_FUNCTIONS_COPY[locale];
+  const homeExplorerCopy = HOME_EXPLORER_COPY[locale];
   const homeReadMoreLabel = trimTrailingArrow(t.home.readMore);
-  const featuredCapabilityPreviews = {
-    conciliation: getHomeLandingPreview('conciliacio-bancaria-ong', detailLocale),
-    remittances: getHomeLandingPreview('remeses-sepa', detailLocale),
-    donations: getHomeLandingPreview('control-donacions-ong', detailLocale),
-    fiscal: getHomeLandingPreview('model-182', detailLocale),
-  } as const;
-  const secondaryCapabilityPreviews = {
-    bankImport: getHomeLandingPreview('importar-extracte-bancari', detailLocale),
-    returnedReceipts: getHomeLandingPreview('devolucions-rebuts-socis', detailLocale),
-    donationCertificates: getHomeLandingPreview('certificats-donacio', detailLocale),
-    model347: getHomeLandingPreview('model-347-ong', detailLocale),
-  } as const;
   let latestUpdate: Awaited<ReturnType<typeof getLatestPublicProductUpdate>> = null;
 
   try {
@@ -672,137 +1179,176 @@ export default async function HomePage({ params }: PageProps) {
     },
   ] as const;
 
-  const capabilityCards = [
-    {
-      eyebrow: t.home.nav.conciliation,
-      title: t.home.capabilities.conciliation.title,
-      description: homeSectionCopy.conciliationCardDescription,
-      image: visuals.conciliation,
-      previewMedia: featuredCapabilityPreviews.conciliation?.media ?? null,
-      href: `/${detailLocale}/conciliacio-bancaria-ong`,
-      wide: true,
-      imageFirst: false,
-      toneClass:
-        'bg-[linear-gradient(135deg,rgba(240,249,255,0.92),rgba(255,255,255,0.92))]',
-    },
-    {
-      eyebrow: t.home.nav.remittances,
-      title: t.home.capabilities.remittances.title,
-      description: t.home.capabilities.remittances.description,
-      image: visuals.remittances,
-      previewMedia: featuredCapabilityPreviews.remittances?.media ?? null,
-      href: `/${detailLocale}/remeses-sepa`,
-      wide: false,
-      imageFirst: false,
-      toneClass:
-        'bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(248,250,252,0.95))]',
-    },
-    {
-      eyebrow: t.home.nav.onlineDonations,
-      title: t.home.capabilities.donations.title,
-      description: t.home.capabilities.donations.description,
-      image: visuals.donations,
-      previewMedia: featuredCapabilityPreviews.donations?.media ?? null,
-      href: `/${detailLocale}/control-donacions-ong`,
-      wide: false,
-      imageFirst: false,
-      toneClass:
-        'bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(240,249,255,0.75))]',
-    },
-    {
-      eyebrow: t.home.nav.fiscalCertificates,
-      title: t.home.capabilities.fiscal.title,
-      description: t.home.capabilities.fiscal.description,
-      image: visuals.fiscal,
-      previewMedia: featuredCapabilityPreviews.fiscal?.media ?? null,
-      href: `/${detailLocale}/model-182`,
-      wide: true,
-      imageFirst: true,
-      toneClass:
-        'bg-[linear-gradient(135deg,rgba(255,251,235,0.9),rgba(255,255,255,0.94))]',
-    },
-  ] as const;
+  const buildLandingExplorerItem = (slug: string, fallbackImage: string) => {
+    const preview =
+      getPublicLandingPreviewBySlug(slug, locale) ??
+      getPublicLandingPreviewBySlug(slug, detailLocale);
 
-  const secondaryCapabilityCards = [
+    if (!preview) {
+      throw new Error(`Landing pública no trobada: ${slug}`);
+    }
+
+    const visualMedia =
+      preview.media?.type === 'video'
+        ? createImageMedia(fallbackImage, preview.title)
+        : preview.media ?? createImageMedia(fallbackImage, preview.title);
+
+    return {
+      id: slug,
+      title: preview.title,
+      description: preview.description,
+      href: `/${detailLocale}/${slug}`,
+      ctaLabel: homeExplorerCopy.detailCta,
+      badgeLabel: homeExplorerCopy.screenBadge,
+      media: visualMedia,
+    };
+  };
+
+  const buildStaticExplorerItem = ({
+    id,
+    title,
+    description,
+    image,
+    href,
+  }: {
+    id: string;
+    title: string;
+    description: string;
+    image: string;
+    href: string;
+  }) => ({
+    id,
+    title,
+    description,
+    href,
+    ctaLabel: href === `/${locale}/contact` ? homeExplorerCopy.contactCta : homeExplorerCopy.detailCta,
+    badgeLabel: homeExplorerCopy.screenBadge,
+    media: createImageMedia(image, title),
+  });
+
+  const homeFeatureExplorerSections: PublicFeaturesExplorerSection[] = [
     {
-      eyebrow: secondaryCapabilityLabels.bankImport,
-      title:
-        secondaryCapabilityPreviews.bankImport?.title ??
-        (locale === 'es'
-          ? 'Importar extractos bancarios'
-          : locale === 'fr'
-            ? 'Importer des relevés bancaires'
-            : locale === 'pt'
-              ? 'Importar extratos bancários'
-              : 'Importar extractes bancaris'),
-      description:
-        secondaryCapabilityPreviews.bankImport?.subtitle ?? secondaryCapabilityPreviews.bankImport?.description,
-      href: `/${detailLocale}/importar-extracte-bancari`,
-      previewMedia: secondaryCapabilityPreviews.bankImport?.media ?? null,
-      icon: Upload,
-      fallbackChip: 'CSV · XLSX',
-      toneClass: 'from-sky-100/90 via-white to-cyan-50/90',
+      id: 'dashboard',
+      label: homeExplorerCopy.sections.dashboard.label,
+      title: homeExplorerCopy.sections.dashboard.title,
+      description: homeExplorerCopy.sections.dashboard.description,
+      items: [
+        buildLandingExplorerItem('software-gestion-ong', visuals.dashboard),
+        buildStaticExplorerItem({
+          id: 'dashboard-metrics',
+          title: homeExplorerCopy.sections.dashboardItems.metrics.title,
+          description: homeExplorerCopy.sections.dashboardItems.metrics.description,
+          image: visuals.dashboard,
+          href: `/${detailLocale}/software-gestion-ong`,
+        }),
+        buildStaticExplorerItem({
+          id: 'dashboard-reports',
+          title: homeExplorerCopy.sections.dashboardItems.reports.title,
+          description: homeExplorerCopy.sections.dashboardItems.reports.description,
+          image: '/visuals/web/web_informes_juntes.webp',
+          href: `/${detailLocale}/programa-associacions`,
+        }),
+      ],
     },
     {
-      eyebrow: secondaryCapabilityLabels.returnedReceipts,
-      title:
-        secondaryCapabilityPreviews.returnedReceipts?.title ??
-        (locale === 'es'
-          ? 'Devoluciones de recibos de socios'
-          : locale === 'fr'
-            ? 'Retours de reçus de membres'
-            : locale === 'pt'
-              ? 'Devoluções de recibos de sócios'
-              : 'Devolucions de rebuts de socis'),
-      description:
-        secondaryCapabilityPreviews.returnedReceipts?.subtitle ??
-        secondaryCapabilityPreviews.returnedReceipts?.description,
-      href: `/${detailLocale}/devolucions-rebuts-socis`,
-      previewMedia: secondaryCapabilityPreviews.returnedReceipts?.media ?? null,
-      icon: Settings,
-      fallbackChip: locale === 'es' ? 'Retornos' : locale === 'fr' ? 'Retours' : locale === 'pt' ? 'Retornos' : 'Retorns',
-      toneClass: 'from-amber-100/90 via-white to-sky-50/70',
+      id: 'conciliation',
+      label: homeExplorerCopy.sections.conciliation.label,
+      title: homeExplorerCopy.sections.conciliation.title,
+      description: homeExplorerCopy.sections.conciliation.description,
+      items: [
+        buildLandingExplorerItem('importar-extracte-bancari', visuals.conciliation),
+        buildLandingExplorerItem('conciliacio-bancaria-ong', visuals.conciliation),
+        buildStaticExplorerItem({
+          id: 'ai-assignment',
+          title: homeExplorerCopy.sections.conciliation.assignment.title,
+          description: homeExplorerCopy.sections.conciliation.assignment.description,
+          image: '/visuals/web/web_pendents.webp',
+          href: `/${detailLocale}/conciliacio-bancaria-ong`,
+        }),
+      ],
     },
     {
-      eyebrow: secondaryCapabilityLabels.donationCertificates,
-      title:
-        secondaryCapabilityPreviews.donationCertificates?.title ??
-        (locale === 'es'
-          ? 'Certificados de donación'
-          : locale === 'fr'
-            ? 'Certificats de don'
-            : locale === 'pt'
-              ? 'Certificados de doação'
-              : 'Certificats de donació'),
-      description:
-        secondaryCapabilityPreviews.donationCertificates?.subtitle ??
-        secondaryCapabilityPreviews.donationCertificates?.description,
-      href: `/${detailLocale}/certificats-donacio`,
-      previewMedia: secondaryCapabilityPreviews.donationCertificates?.media ?? null,
-      icon: FileCheck,
-      fallbackChip: 'PDF · Email',
-      toneClass: 'from-sky-50/85 via-white to-indigo-50/70',
+      id: 'expenses',
+      label: homeExplorerCopy.sections.expenses.label,
+      title: homeExplorerCopy.sections.expenses.title,
+      description: homeExplorerCopy.sections.expenses.description,
+      items: [
+        buildStaticExplorerItem({
+          id: 'expenses-invoices',
+          title: homeExplorerCopy.sections.expenses.invoices.title,
+          description: homeExplorerCopy.sections.expenses.invoices.description,
+          image: visuals.admin,
+          href: `/${locale}/contact`,
+        }),
+        buildStaticExplorerItem({
+          id: 'expenses-payments',
+          title: homeExplorerCopy.sections.expenses.payments.title,
+          description: homeExplorerCopy.sections.expenses.payments.description,
+          image: '/visuals/web/web_pendents.webp',
+          href: `/${locale}/contact`,
+        }),
+        buildStaticExplorerItem({
+          id: 'expenses-settlements',
+          title: homeExplorerCopy.sections.expenses.settlements.title,
+          description: homeExplorerCopy.sections.expenses.settlements.description,
+          image: '/visuals/web/web_liquidacions.webp',
+          href: `/${locale}/contact`,
+        }),
+      ],
     },
     {
-      eyebrow: secondaryCapabilityLabels.model347,
-      title:
-        secondaryCapabilityPreviews.model347?.title ??
-        (locale === 'es'
-          ? 'Modelo 347 para ONG y asociaciones'
-          : locale === 'fr'
-            ? 'Modele 347 pour associations'
-            : locale === 'pt'
-              ? 'Modelo 347 para ONG'
-              : 'Model 347 per a ONG i associacions'),
-      description:
-        secondaryCapabilityPreviews.model347?.subtitle ?? secondaryCapabilityPreviews.model347?.description,
-      href: `/${detailLocale}/model-347-ong`,
-      previewMedia: secondaryCapabilityPreviews.model347?.media ?? null,
-      icon: CalendarDays,
-      fallbackChip: '347',
-      toneClass: 'from-amber-50/90 via-white to-orange-50/75',
+      id: 'members',
+      label: homeExplorerCopy.sections.members.label,
+      title: homeExplorerCopy.sections.members.title,
+      description: homeExplorerCopy.sections.members.description,
+      items: [
+        buildLandingExplorerItem('gestio-donants', visuals.remittances),
+        buildLandingExplorerItem('remeses-sepa', visuals.remittances),
+        buildLandingExplorerItem('devolucions-rebuts-socis', '/visuals/web/web_gestiona_devolucions.webp'),
+      ],
     },
-  ] as const;
+    {
+      id: 'fiscal',
+      label: homeExplorerCopy.sections.fiscal.label,
+      title: homeExplorerCopy.sections.fiscal.title,
+      description: homeExplorerCopy.sections.fiscal.description,
+      items: [
+        buildLandingExplorerItem('control-donacions-ong', visuals.donations),
+        buildLandingExplorerItem('certificats-donacio', visuals.fiscal),
+        buildLandingExplorerItem('model-182', visuals.fiscal),
+        buildLandingExplorerItem('model-347-ong', visuals.fiscal),
+      ],
+    },
+    {
+      id: 'projects',
+      label: homeExplorerCopy.sections.projects.label,
+      title: homeExplorerCopy.sections.projects.title,
+      description: homeExplorerCopy.sections.projects.description,
+      items: [
+        buildStaticExplorerItem({
+          id: 'projects-budget',
+          title: homeExplorerCopy.sections.projects.budget.title,
+          description: homeExplorerCopy.sections.projects.budget.description,
+          image: visuals.projects,
+          href: `/${locale}/contact`,
+        }),
+        buildStaticExplorerItem({
+          id: 'projects-grants',
+          title: homeExplorerCopy.sections.projects.grants.title,
+          description: homeExplorerCopy.sections.projects.grants.description,
+          image: visuals.projects,
+          href: `/${locale}/contact`,
+        }),
+        buildStaticExplorerItem({
+          id: 'projects-reporting',
+          title: homeExplorerCopy.sections.projects.reporting.title,
+          description: homeExplorerCopy.sections.projects.reporting.description,
+          image: visuals.projects,
+          href: `/${locale}/contact`,
+        }),
+      ],
+    },
+  ];
 
   const profileSpotlights = [
     {
@@ -1063,205 +1609,35 @@ export default async function HomePage({ params }: PageProps) {
 
       <section
         id="capabilities"
-        className="scroll-mt-24 bg-[linear-gradient(180deg,rgba(248,250,252,0.85),rgba(255,255,255,1))] px-6 py-16 lg:py-20"
+        className="scroll-mt-24 bg-[linear-gradient(180deg,#eef6ff_0%,#f8fbff_22%,#ffffff_100%)] px-6 py-20 lg:py-24"
       >
         <div className="mx-auto max-w-6xl">
-          <div className="mx-auto max-w-3xl text-center">
+          <div className="mx-auto max-w-4xl text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-              {t.common.features}
+              {homeFunctionsCopy.eyebrow}
             </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight">{t.home.systemOverview.title}</h2>
-            <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
-              {t.home.systemOverview.subtitle}
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2.9rem]">
+              {homeFunctionsCopy.title}
+            </h2>
+            <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
+              {homeFunctionsCopy.description}
             </p>
-            <div className="mt-6 rounded-[1.35rem] border border-sky-100/80 bg-white/82 p-4 text-left shadow-[0_18px_50px_-44px_rgba(15,23,42,0.18)] sm:flex sm:items-center sm:justify-between sm:gap-4">
-              <p className="text-sm leading-6 text-muted-foreground">{homeSectionCopy.capabilitiesNote}</p>
-              <Link href={featuresHref} className="mt-3 inline-flex items-center text-sm font-semibold text-primary sm:mt-0 sm:shrink-0">
-                {homeSectionCopy.capabilitiesCta}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </div>
+            <p className="mx-auto mt-4 max-w-3xl text-sm leading-6 text-slate-500 sm:text-base">
+              {homeExplorerCopy.helper}
+            </p>
           </div>
 
-          <div className="mt-12 grid gap-6 lg:grid-cols-6">
-            {capabilityCards.map((card) => (
-              <article
-                key={card.title}
-                className={`group overflow-hidden rounded-[1.9rem] border border-border/60 ${card.toneClass} shadow-[0_22px_65px_-46px_rgba(15,23,42,0.28)] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-[0_30px_80px_-44px_rgba(15,23,42,0.34)] ${card.wide ? 'lg:col-span-4' : 'lg:col-span-2'}`}
-              >
-                {card.wide ? (
-                  <div className="grid h-full gap-0 lg:grid-cols-[1fr_1.05fr]">
-                    <div
-                      className={`relative flex min-h-[280px] items-center justify-center overflow-hidden bg-white/70 p-6 ${card.imageFirst ? 'border-b border-border/60 lg:order-1 lg:border-b-0 lg:border-r' : 'border-b border-border/60 lg:order-2 lg:border-b-0 lg:border-l'}`}
-                    >
-                      {card.previewMedia ? (
-                        <PublicFeatureDemo
-                          locale={detailLocale}
-                          media={card.previewMedia}
-                          className="w-full max-w-[38rem]"
-                          mediaClassName="aspect-[16/9]"
-                          showDemoBadge={false}
-                          showCaptionsBadge={false}
-                          expandOnPlay
-                          dialogTitle={card.title}
-                          dialogDescription={card.description}
-                        />
-                      ) : (
-                        <Image
-                          src={card.image}
-                          alt={card.title}
-                          width={900}
-                          height={640}
-                          sizes="(min-width: 1024px) 42vw, 100vw"
-                          className="max-h-[320px] h-auto w-full object-contain object-center"
-                        />
-                      )}
-                    </div>
-                    <div className={`flex flex-col justify-between p-7 sm:p-8 ${card.imageFirst ? 'lg:order-2' : 'lg:order-1'}`}>
-                      <div>
-                        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                          {card.eyebrow}
-                        </p>
-                        <h3 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
-                          {card.title}
-                        </h3>
-                        <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
-                          {card.description}
-                        </p>
-                      </div>
-                      <Link href={card.href} className="mt-8 inline-flex items-center text-sm font-semibold text-primary">
-                        {homeReadMoreLabel}
-                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                      </Link>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex h-full flex-col">
-                    <div className="flex min-h-[230px] items-center justify-center overflow-hidden border-b border-border/60 bg-white/72 p-6">
-                      {card.previewMedia ? (
-                        <PublicFeatureDemo
-                          locale={detailLocale}
-                          media={card.previewMedia}
-                          className="w-full"
-                          showDemoBadge={false}
-                          showCaptionsBadge={false}
-                          expandOnPlay
-                          dialogTitle={card.title}
-                          dialogDescription={card.description}
-                        />
-                      ) : (
-                        <Image
-                          src={card.image}
-                          alt={card.title}
-                          width={700}
-                          height={580}
-                          sizes="(min-width: 1024px) 22vw, (min-width: 768px) 50vw, 100vw"
-                          className="max-h-[220px] h-auto w-full object-contain object-center"
-                        />
-                      )}
-                    </div>
-                    <div className="flex flex-1 flex-col justify-between p-6">
-                      <div>
-                        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                          {card.eyebrow}
-                        </p>
-                        <h3 className="mt-3 text-xl font-semibold tracking-tight">{card.title}</h3>
-                        <p className="mt-3 text-sm leading-6 text-muted-foreground">{card.description}</p>
-                      </div>
-                      <Link href={card.href} className="mt-6 inline-flex items-center text-sm font-semibold text-primary">
-                        {homeReadMoreLabel}
-                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
-
-          <div className="mt-10 rounded-[1.85rem] border border-border/60 bg-white/82 p-5 shadow-[0_20px_60px_-46px_rgba(15,23,42,0.2)] backdrop-blur sm:p-6 lg:p-7">
-            <div className="max-w-3xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                {homeSectionCopy.secondaryEyebrow}
-              </p>
-              <h3 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.9rem]">
-                {homeSectionCopy.secondaryTitle}
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
-                {homeSectionCopy.secondaryDescription}
-              </p>
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {secondaryCapabilityCards.map((card) => {
-                const previewStill = getLandingPreviewStill(card.previewMedia);
-                const hasDemo = card.previewMedia?.type === 'video';
-                const Icon = card.icon;
-
-                return (
-                  <Link
-                    key={card.href}
-                    href={card.href}
-                    className="group flex h-full flex-col rounded-[1.55rem] border border-border/60 bg-white/94 p-3 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.22)] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-[0_26px_70px_-42px_rgba(15,23,42,0.26)]"
-                  >
-                    {previewStill ? (
-                      <div className="relative overflow-hidden rounded-[1.2rem] border border-border/60 bg-slate-950 shadow-[0_18px_48px_-36px_rgba(15,23,42,0.32)]">
-                        <Image
-                          src={previewStill}
-                          alt={card.title}
-                          width={1200}
-                          height={760}
-                          sizes="(min-width: 1280px) 18vw, (min-width: 768px) 44vw, 100vw"
-                          className="aspect-[16/10] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                        />
-                        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.04),rgba(15,23,42,0.24))]" />
-                        <span className="absolute left-3 top-3 inline-flex items-center rounded-full border border-white/70 bg-white/92 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary shadow-sm">
-                          {card.eyebrow}
-                        </span>
-                        {hasDemo ? (
-                          <span className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#0ea5e9,#38bdf8)] p-[2px] shadow-[0_18px_36px_-22px_rgba(14,165,233,0.75)]">
-                            <span className="flex h-full w-full items-center justify-center rounded-full bg-white/95">
-                              <Play className="ml-0.5 h-5 w-5 fill-sky-500 text-sky-500" strokeWidth={2.1} />
-                            </span>
-                          </span>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <div
-                        className={`flex aspect-[16/10] items-end rounded-[1.2rem] border border-border/60 bg-gradient-to-br ${card.toneClass} p-4 shadow-[0_18px_48px_-40px_rgba(15,23,42,0.18)]`}
-                      >
-                        <div className="w-full rounded-[1rem] border border-white/80 bg-white/92 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.22)]">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-50 text-primary">
-                              <Icon className="h-4 w-4" />
-                            </span>
-                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-                              {card.fallbackChip}
-                            </span>
-                          </div>
-                          <p className="mt-4 text-sm font-semibold leading-5 text-slate-900">{card.eyebrow}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex flex-1 flex-col justify-between px-1 pb-1 pt-4">
-                      <div>
-                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700">
-                          {hasDemo ? homeSectionCopy.secondaryDemoBadge : homeSectionCopy.secondaryGuideBadge}
-                        </span>
-                        <h3 className="mt-3 text-lg font-semibold tracking-tight text-foreground">{card.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-muted-foreground">{card.description}</p>
-                      </div>
-
-                      <span className="mt-5 inline-flex items-center text-sm font-semibold text-primary">
-                        {homeReadMoreLabel}
-                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+          <div className="mt-14 rounded-[2.4rem] border border-sky-100/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(244,250,255,0.96))] p-5 shadow-[0_28px_90px_-60px_rgba(14,165,233,0.16)] sm:p-7 lg:p-9">
+            <PublicFeaturesExplorer
+              locale={locale}
+              sections={homeFeatureExplorerSections}
+              tabsAlign="center"
+              showSectionIntro={false}
+              resetItemOnSectionChange
+              layout="image-heavy"
+              compactCards
+              showItemBadges={false}
+            />
           </div>
         </div>
       </section>
