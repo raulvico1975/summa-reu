@@ -14,6 +14,11 @@ import {
 } from '@/lib/public-locale';
 import { SUPPORT_EMAIL } from '@/lib/constants';
 import { getPublicTranslations } from '@/i18n/public';
+import {
+  getPublicDetailedGuidesLocale,
+  getPublicEconomicGuideHref,
+  getPublicFeaturesHref,
+} from '@/lib/public-site-paths';
 import { getLatestPublicProductUpdate } from '@/lib/product-updates/public';
 
 const frameClass =
@@ -445,7 +450,9 @@ export default async function HomePage({ params }: PageProps) {
   const landingCopy = LANDING_COPY[locale];
   const anchors = SECTION_ANCHORS[locale];
   const featuresPath = FEATURES_PATH[locale];
-  const capabilitiesHref = `/${locale}#capabilities`;
+  const featuresHref = getPublicFeaturesHref(locale);
+  const detailLocale = getPublicDetailedGuidesLocale(locale);
+  const economicGuideHref = getPublicEconomicGuideHref(locale);
   const howWeWorkHref = `/${locale}#how-we-work`;
   const updatesHref = `/${locale}/novetats`;
   const visuals = locale === 'ca' ? HOME_VISUALS.ca : HOME_VISUALS.default;
@@ -463,19 +470,19 @@ export default async function HomePage({ params }: PageProps) {
       title: landingCopy.valueRail.conciliation.title,
       description: landingCopy.valueRail.conciliation.description,
       icon: Upload,
-      href: `/${locale}/${featuresPath}#${anchors.conciliation}`,
+      href: `/${detailLocale}/conciliacio-bancaria-ong`,
     },
     {
       title: landingCopy.valueRail.remittances.title,
       description: landingCopy.valueRail.remittances.description,
       icon: Settings,
-      href: `/${locale}/${featuresPath}#${anchors.remittances}`,
+      href: `/${detailLocale}/remeses-sepa`,
     },
     {
       title: landingCopy.valueRail.fiscal.title,
       description: landingCopy.valueRail.fiscal.description,
       icon: FileCheck,
-      href: `/${locale}/${featuresPath}#${anchors.fiscalCertificates}`,
+      href: `/${detailLocale}/model-182`,
     },
     {
       title: landingCopy.valueRail.projects.title,
@@ -516,7 +523,7 @@ export default async function HomePage({ params }: PageProps) {
       title: t.home.capabilities.conciliation.title,
       description: t.home.capabilities.conciliation.description,
       image: visuals.conciliation,
-      href: `/${locale}/${featuresPath}#${anchors.conciliation}`,
+      href: `/${detailLocale}/conciliacio-bancaria-ong`,
       wide: true,
       imageFirst: false,
       toneClass:
@@ -527,7 +534,7 @@ export default async function HomePage({ params }: PageProps) {
       title: t.home.capabilities.remittances.title,
       description: t.home.capabilities.remittances.description,
       image: visuals.remittances,
-      href: `/${locale}/${featuresPath}#${anchors.remittances}`,
+      href: `/${detailLocale}/remeses-sepa`,
       wide: false,
       imageFirst: false,
       toneClass:
@@ -538,7 +545,7 @@ export default async function HomePage({ params }: PageProps) {
       title: t.home.capabilities.donations.title,
       description: t.home.capabilities.donations.description,
       image: visuals.donations,
-      href: `/${locale}/${featuresPath}#${anchors.onlineDonations}`,
+      href: `/${detailLocale}/control-donacions-ong`,
       wide: false,
       imageFirst: false,
       toneClass:
@@ -549,7 +556,7 @@ export default async function HomePage({ params }: PageProps) {
       title: t.home.capabilities.fiscal.title,
       description: t.home.capabilities.fiscal.description,
       image: visuals.fiscal,
-      href: `/${locale}/${featuresPath}#${anchors.fiscalCertificates}`,
+      href: `/${detailLocale}/model-182`,
       wide: true,
       imageFirst: true,
       toneClass:
@@ -563,7 +570,7 @@ export default async function HomePage({ params }: PageProps) {
       title: t.home.profiles.admin.title,
       description: t.home.profiles.admin.description,
       image: visuals.admin,
-      href: `/${locale}/${featuresPath}#${anchors.conciliation}`,
+      href: economicGuideHref,
       reverse: false,
       toneClass:
         'bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,249,255,0.72))]',
@@ -626,7 +633,7 @@ export default async function HomePage({ params }: PageProps) {
 
               <div className="flex items-center justify-center lg:justify-start">
                 <Button asChild size="lg">
-                  <Link href={capabilitiesHref}>
+                  <Link href={featuresHref}>
                     {t.common.features}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -999,7 +1006,7 @@ export default async function HomePage({ params }: PageProps) {
                 {t.home.finalCta.subtitle}
               </p>
               <Button asChild size="lg" variant="outline">
-                <Link href={capabilitiesHref}>{t.common.features}</Link>
+                <Link href={featuresHref}>{t.common.features}</Link>
               </Button>
             </div>
 
@@ -1037,7 +1044,7 @@ export default async function HomePage({ params }: PageProps) {
               {FOOTER_COPY[locale].sitemap}
             </p>
             <nav className="grid gap-3 text-sm text-muted-foreground">
-              <Link href={capabilitiesHref} className="hover:text-foreground hover:underline">
+              <Link href={featuresHref} className="hover:text-foreground hover:underline">
                 {t.common.features}
               </Link>
               <Link href={howWeWorkHref} className="hover:text-foreground hover:underline">

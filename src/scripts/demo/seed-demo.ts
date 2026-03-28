@@ -29,6 +29,13 @@ import type { Bucket } from '@google-cloud/storage';
 import { Timestamp } from 'firebase-admin/firestore';
 import { DEMO_DATA_MARKER, DEMO_ID_PREFIX } from '@/lib/demo/isDemoOrg';
 import {
+  DEMO_MEMBER_REMITTANCE_PENDING_PARENT_ID as DEMO_WORK_SEPA_PENDING_PARENT_ID,
+  DEMO_MEMBER_REMITTANCE_PROCESSED_PARENT_ID as DEMO_WORK_SEPA_PARENT_ID,
+  calculateDemoMemberRemittanceTotal,
+  getDemoMemberRemittanceDate,
+  selectDemoMemberRemittanceDonors,
+} from '@/lib/demo/member-remittance-demo';
+import {
   generateDonors,
   generateSuppliers,
   generateWorkers,
@@ -77,8 +84,8 @@ const DEMO_WORK_RETURN_UNASSIGNED_TX_ID = FISCAL_ORACLE_DEMO_IDS.returnWithoutDo
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants IDs per SEPA IN remesa demo (mode 'work')
 // ─────────────────────────────────────────────────────────────────────────────
-const DEMO_WORK_SEPA_PARENT_ID = `${DEMO_ID_PREFIX}tx_sepa_in_parent_001`;
 const DEMO_WORK_SEPA_LINE_PREFIX = `${DEMO_ID_PREFIX}tx_sepa_in_line_`;
+const DEMO_MAIN_BANK_ACCOUNT_ID = `${DEMO_ID_PREFIX}bank_account_main_001`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants IDs per Stripe payout demo (mode 'work')
@@ -117,6 +124,34 @@ async function purgeCollection(
   await batch.commit();
 
   return snapshot.size;
+}
+
+async function purgeTransactionsByParentIds(
+  db: Firestore,
+  collectionPath: string,
+  parentIds: string[]
+): Promise<number> {
+  let totalDeleted = 0;
+
+  for (const parentId of parentIds) {
+    const snapshot = await db
+      .collection(collectionPath)
+      .where('parentTransactionId', '==', parentId)
+      .get();
+
+    if (snapshot.empty) continue;
+
+    for (let index = 0; index < snapshot.docs.length; index += 50) {
+      const batch = db.batch();
+      const chunk = snapshot.docs.slice(index, index + 50);
+      chunk.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
+
+    totalDeleted += snapshot.size;
+  }
+
+  return totalDeleted;
 }
 
 async function purgeStoragePrefix(bucket: Bucket, prefix: string): Promise<number> {
@@ -259,6 +294,7 @@ export interface SeedCounts {
   donors: number;
   suppliers: number;
   workers: number;
+  bankAccounts: number;
   categories: number;
   transactions: number;
   projects: number;
@@ -284,11 +320,12 @@ export async function runDemoSeed(
   console.log('[seed-demo] Purgant dades existents...');
 
   const orgPath = `organizations/${DEMO_ORG_ID}`;
+  const transactionsPath = `${orgPath}/transactions`;
 
   await Promise.all([
     purgeCollection(db, `${orgPath}/contacts`),
+    purgeCollection(db, `${orgPath}/bankAccounts`),
     purgeCollection(db, `${orgPath}/categories`),
-    purgeCollection(db, `${orgPath}/transactions`),
     // Paths per project-module
     purgeCollection(db, `${orgPath}/projectModule/_/projects`),
     purgeCollection(db, `${orgPath}/projectModule/_/expenseLinks`),
@@ -298,6 +335,12 @@ export async function runDemoSeed(
     // Feed d'exports (bank expenses per project-module)
     purgeCollection(db, `${orgPath}/exports/projectExpenses/items`),
     purgeStoragePrefix(bucket, `organizations/${DEMO_ORG_ID}/`),
+  ]);
+
+  await purgeCollection(db, transactionsPath);
+  await purgeTransactionsByParentIds(db, transactionsPath, [
+    DEMO_WORK_SEPA_PENDING_PARENT_ID,
+    DEMO_WORK_SEPA_PARENT_ID,
   ]);
 
   console.log('[seed-demo] Purga completada');
@@ -324,6 +367,15 @@ export async function runDemoSeed(
       email: 'demo@summa-social.demo',
       phone: '931234567',
       language: 'ca',
+      features: {
+        projectModule: true,
+        pendingDocs: true,
+        expenseReports: {
+          kmRateDefault: 0.19,
+        },
+      },
+      signatoryName: 'Laia Serra',
+      signatoryRole: 'Tresorera',
     },
     { merge: true }
   );
@@ -344,12 +396,66 @@ export async function runDemoSeed(
   console.log('[seed-demo] Generant dades...');
 
   // Contactes
-  const donors = generateDonors(VOLUMES.donors);
+  let recurringDonorIndex = 0;
+  const donors = generateDonors(VOLUMES.donors).map((donor) => {
+    if (donor.type !== 'donor' || donor.membershipType !== 'recurring') {
+      return donor;
+    }
+
+    const currentIndex = recurringDonorIndex++;
+    const scheduleType = currentIndex % 5;
+    let periodicityQuota: 'monthly' | 'quarterly' | 'annual';
+    let lastRunAt: string;
+
+    if (scheduleType === 0) {
+      periodicityQuota = 'monthly';
+      lastRunAt = getDemoMemberRemittanceDate(new Date(Date.now() - 22 * 24 * 60 * 60 * 1000));
+    } else if (scheduleType === 1) {
+      periodicityQuota = 'monthly';
+      lastRunAt = getDemoMemberRemittanceDate(new Date(Date.now() + 8 * 24 * 60 * 60 * 1000));
+    } else if (scheduleType === 2) {
+      periodicityQuota = 'quarterly';
+      lastRunAt = getDemoMemberRemittanceDate(new Date(Date.now() - 100 * 24 * 60 * 60 * 1000));
+    } else if (scheduleType === 3) {
+      periodicityQuota = 'quarterly';
+      lastRunAt = getDemoMemberRemittanceDate(new Date(Date.now() - 50 * 24 * 60 * 60 * 1000));
+    } else {
+      periodicityQuota = 'annual';
+      lastRunAt = getDemoMemberRemittanceDate(new Date(Date.now() - 420 * 24 * 60 * 60 * 1000));
+    }
+
+    return {
+      ...donor,
+      periodicityQuota,
+      sepaPain008LastRunAt: lastRunAt,
+      sepaMandate: {
+        scheme: 'CORE' as const,
+        umr: `SUMMA-DEMO-${donor.id.slice(-6).toUpperCase()}`,
+        signatureDate: donor.memberSince ?? donor.createdAt.slice(0, 10),
+        isActive: true,
+        lastCollectedAt: lastRunAt,
+      },
+    };
+  });
   const suppliers = generateSuppliers(VOLUMES.suppliers);
   const workers = generateWorkers(VOLUMES.workers);
+  const nowStr = new Date().toISOString();
+  const bankAccounts = [
+    {
+      id: DEMO_MAIN_BANK_ACCOUNT_ID,
+      name: 'Compte principal quotes',
+      iban: 'ES9821000000000200040200',
+      bankName: 'Banc Cooperatiu Demo',
+      isDefault: true,
+      isActive: true,
+      creditorId: 'ES98ZZZG12345678',
+      createdAt: nowStr,
+      updatedAt: nowStr,
+      isDemoData: true as const,
+    },
+  ];
 
   // Afegir 2 contactes multi-rol (donant+proveïdor) per mostrar potència del model
-  const nowStr = new Date().toISOString();
   const multiRoleContacts = [
     {
       id: `${DEMO_ID_PREFIX}multi_001`,
@@ -366,7 +472,16 @@ export async function runDemoSeed(
       donorType: 'company' as const,
       membershipType: 'recurring' as const,
       monthlyAmount: 500,
+      periodicityQuota: 'monthly' as const,
       memberSince: '2022-01-15',
+      sepaPain008LastRunAt: getDemoMemberRemittanceDate(new Date(Date.now() - 35 * 24 * 60 * 60 * 1000)),
+      sepaMandate: {
+        scheme: 'CORE' as const,
+        umr: 'SUMMA-DEMO-MULTI001',
+        signatureDate: '2022-01-15',
+        isActive: true,
+        lastCollectedAt: getDemoMemberRemittanceDate(new Date(Date.now() - 35 * 24 * 60 * 60 * 1000)),
+      },
       status: 'active' as const,
       createdAt: nowStr,
       updatedAt: nowStr,
@@ -778,6 +893,34 @@ export async function runDemoSeed(
     console.log(`[seed-demo]   - Remesa SEPA IN: 1 pare (${sepaTotal}€) + 8 línies (totes assignades a donants)`);
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Cas especial 3b: Ingrés agrupat pendent de dividir (per gravar el flux)
+    // ─────────────────────────────────────────────────────────────────────────
+    const pendingSplitDonors = selectDemoMemberRemittanceDonors(donors);
+    const pendingSplitTotal = calculateDemoMemberRemittanceTotal(pendingSplitDonors);
+    const pendingSplitDate = getDemoMemberRemittanceDate();
+
+    const sepaPendingParentTx = {
+      id: DEMO_WORK_SEPA_PENDING_PARENT_ID,
+      date: pendingSplitDate,
+      description: 'INGRÉS BANCARI REMESA QUOTES SOCIS',
+      amount: pendingSplitTotal,
+      category: membershipFeeCategory.id,
+      contactId: undefined,
+      contactType: undefined,
+      source: 'bank' as const,
+      transactionType: 'normal' as const,
+      bankAccountId: DEMO_MAIN_BANK_ACCOUNT_ID,
+      note: `Demo pendent de dividir (${pendingSplitDonors.length} quotes)`,
+      createdAt: nowStr,
+      isDemoData: true as const,
+    };
+    transactions.push(sepaPendingParentTx);
+
+    console.log(
+      `[seed-demo]   - Remesa pendent de dividir: 1 pare (${pendingSplitTotal}€) llest per obrir el divisor`
+    );
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Cas especial 4: Stripe payout (1 pare + 6 donacions + 1 fee)
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -859,6 +1002,9 @@ export async function runDemoSeed(
   await writeBatch(db, `${orgPath}/contacts`, allContacts);
   console.log(`[seed-demo]   - Contactes: ${allContacts.length}`);
 
+  await writeBatch(db, `${orgPath}/bankAccounts`, bankAccounts);
+  console.log(`[seed-demo]   - Comptes bancaris: ${bankAccounts.length}`);
+
   await writeBatch(db, `${orgPath}/categories`, categories);
   console.log(`[seed-demo]   - Categories: ${categories.length}`);
 
@@ -911,6 +1057,7 @@ export async function runDemoSeed(
     donors: donors.length,
     suppliers: suppliers.length,
     workers: workers.length,
+    bankAccounts: bankAccounts.length,
     categories: categories.length,
     transactions: transactions.length,
     projects: projects.length,
@@ -950,6 +1097,9 @@ export async function runDemoSeed(
   if (counts.expenseLinks !== 20) {
     invariantErrors.push(`expenseLinks: esperats 20, obtinguts ${counts.expenseLinks}`);
   }
+  if (counts.bankAccounts !== 1) {
+    invariantErrors.push(`bankAccounts: esperats 1, obtinguts ${counts.bankAccounts}`);
+  }
 
   // Invariants específics per mode
   if (demoMode === 'short') {
@@ -960,8 +1110,9 @@ export async function runDemoSeed(
   } else {
     // Work: 100 base + 3 duplicats + 5 pendents + 3 traçabilitat
     //       + 5 casos oracle (donation/non_fiscal/pending + 2 returns)
-    //       + 9 SEPA IN (1 pare + 8 línies) + 8 Stripe (1 pare + 6 donacions + 1 fee) = 133
-    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 5 + 9 + 8;
+    //       + 9 SEPA IN (1 pare + 8 línies) + 1 pare pendent de dividir
+    //       + 8 Stripe (1 pare + 6 donacions + 1 fee) = 134
+    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 5 + 9 + 1 + 8;
     if (counts.transactions !== expectedWorkTx) {
       invariantErrors.push(`[work] transactions: esperats ${expectedWorkTx}, obtinguts ${counts.transactions}`);
     }
@@ -1052,6 +1203,13 @@ export async function runDemoSeed(
     const sepaLinesSum = sepaLines.reduce((sum, tx) => sum + tx.amount, 0);
     if (sepaParent && Math.abs(sepaLinesSum - sepaParent.amount) > 0.01) {
       invariantErrors.push(`[work] SEPA IN: suma línies (${sepaLinesSum}) != pare (${sepaParent.amount})`);
+    }
+
+    const sepaPendingParent = transactions.find((tx) => tx.id === DEMO_WORK_SEPA_PENDING_PARENT_ID);
+    if (!sepaPendingParent) {
+      invariantErrors.push('[work] SEPA IN pendent: pare no existeix');
+    } else if (sepaPendingParent.isRemittance) {
+      invariantErrors.push('[work] SEPA IN pendent: no ha d estar processada');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
