@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { BlogPostView } from '@/components/public/blog/BlogPostView'
 import { getBlogCopy } from '@/lib/blog/copy'
 import { getLocalizedBlogPostBySlug } from '@/lib/blog/firestore'
@@ -47,6 +48,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function BlogPostPage({ params }: PageProps) {
   const { slug } = await params
+  const post = await getLocalizedBlogPostBySlug(slug, locale)
+
+  if (!post) {
+    notFound()
+  }
 
   return (
     <BlogPostView
