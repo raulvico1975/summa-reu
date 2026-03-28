@@ -472,6 +472,7 @@ Quan publiques una novetat del producte, la veritat és `productUpdates`.
 1. Publicació manual o server-to-server ─────────────────────────
    □ Si és manual, crear/publicar des de SuperAdmin
    □ Si ve d'OpenClaw, el punt oficial és `POST /api/product-updates/publish`
+   □ Secret operatiu disponible a App Hosting: `PRODUCT_UPDATES_PUBLISH_SECRET`
    □ El write final sempre acaba a `productUpdates`
 
 2. Web públic ───────────────────────────────────────────────────
@@ -489,6 +490,7 @@ Quan publiques una novetat del producte, la veritat és `productUpdates`.
 ```
 □ App i web pengen de `productUpdates`? → Sí
 □ Flux server-to-server? → `POST /api/product-updates/publish`
+□ Secret de publish present? → `PRODUCT_UPDATES_PUBLISH_SECRET`
 □ Web públic? → lectura SSR, sense ritual de JSON manual
 □ Social? → Copiar textos des de preview, publicar manualment
 ```

@@ -10,6 +10,20 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-03-26
+
+- novetats de producte: web públic més descobrible (enllaç visible a home/header), sitemap amb rutes de detall i publicació/despublicació server-to-server més robusta
+- mòdul projectes: les despeses bancàries negatives sense categoria entren al feed com "Categoria pendent" i queden bloquejades per assignació fins recategoritzar
+- bot d'ajuda: ampliada cobertura operativa amb noves guies i millor desambiguació/retrieval
+- operativa App Hosting: afegit secret `PRODUCT_UPDATES_PUBLISH_SECRET` per al flux oficial `POST /api/product-updates/publish`
+
+### 2026-03-27
+
+- API/integracions: `POST /api/product-updates/publish` admet `locale` base (`ca|es`), `locales.es` opcional i auto-genera variant castellana quan la base és `ca`; el write públic persisteix `web.locale` i `web.locales.es` per servir copy per idioma
+- codi intern: nova capa `src/lib/product-updates/localized.ts` per resoldre copy efectiva d'app i web; FR/PT reutilitzen variant ES quan existeix; cobertura de tests ampliada per publicació i lectura localitzada
+- documentació per usuari: web pública de novetats (home, llistat i detall) mostra contingut per idioma i elimina blocs redundants de copy per deixar context més net
+- operativa: home/llistat/detall de novetats públiques passen a `dynamic = 'force-dynamic'` per evitar HTML congelat després de publish
+
 ### 2026-03-17
 
 - Stripe deixa de dividir remeses: nou flux d'imputació sobre abonament bancari amb persistència a `donations`, anti-duplicació per `stripePaymentId` i undo per `parentTransactionId`

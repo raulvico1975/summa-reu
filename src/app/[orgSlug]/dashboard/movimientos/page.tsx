@@ -50,6 +50,17 @@ export default function MovimientosPage() {
     () => (searchParams.get('fiscal') === 'pending' ? 'pending' : null),
     [searchParams]
   );
+  const initialDemoAction = React.useMemo(() => {
+    const type = searchParams.get('demoAction');
+    const txId = searchParams.get('demoTx')?.trim();
+
+    if (!txId) return null;
+    if (type === 'split' || type === 'detail') {
+      return { type: type as 'split' | 'detail', txId };
+    }
+
+    return null;
+  }, [searchParams]);
   const canImportExtracts = can('moviments.importarExtractes');
   const canEditMovements = can('moviments.editar');
 
@@ -139,6 +150,7 @@ export default function MovimientosPage() {
           <TransactionsTable
             initialDateFilter={initialPeriodFilter ?? undefined}
             initialFiscalFilter={initialFiscalFilter}
+            initialDemoAction={initialDemoAction}
             canEditMovements={canEditMovements}
           />
         </div>

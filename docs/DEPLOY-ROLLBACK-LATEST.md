@@ -1,24 +1,24 @@
 # Rollback Plan (auto) — Summa Social
 
-Generat: 2026-03-28 12:04
-Risc: MITJA
-Backup curt: NO_REQUIRED
-SHA prod abans de publicar: ab8b9223
-SHA branca a publicar (codex/blog-404-removal-fix-20260328): 572f640c
+Generat: 2026-03-28 13:44
+Risc: ALT
+Backup curt: SKIPPED_NO_BUCKET
+SHA prod abans de publicar: 86146550
+SHA branca a publicar (main): ceb2393f
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
-git checkout codex/blog-404-removal-fix-20260328
-git revert 572f640c --no-edit
-git push origin codex/blog-404-removal-fix-20260328
-bash scripts/deploy.sh codex/blog-404-removal-fix-20260328
+git checkout main
+git revert ceb2393f --no-edit
+git push origin main
+bash scripts/deploy.sh main
 ```
 
 Emergencia critica (nomes si la produccio cau i no hi ha alternativa):
 ```bash
 git checkout prod
-git reset --hard ab8b9223
+git reset --hard 86146550
 git push origin prod --force-with-lease
 ```

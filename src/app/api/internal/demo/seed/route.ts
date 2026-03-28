@@ -140,6 +140,7 @@ interface SeedCounts {
   donors: number;
   suppliers: number;
   workers: number;
+  bankAccounts: number;
   categories: number;
   transactions: number;
   projects: number;
