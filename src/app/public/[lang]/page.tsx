@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { PublicFeatureDemo } from '@/components/public/PublicFeatureDemo';
+import { RotatingHeroPhrase } from '@/components/public/RotatingHeroPhrase';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, CheckCircle2, Upload, Settings, FileCheck, Download, CalendarDays, Play } from 'lucide-react';
@@ -29,11 +30,18 @@ const frameClass =
 const surfaceClass =
   'rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_22px_60px_-40px_rgba(15,23,42,0.18)] backdrop-blur';
 
-const HERO_HIGHLIGHTS: Record<PublicLocale, string> = {
-  ca: 'informes fiscals',
-  es: 'informes fiscales',
-  fr: 'rapports fiscaux',
-  pt: 'relatórios fiscais',
+const HERO_ROTATING_SEGMENTS: Record<PublicLocale, string> = {
+  ca: 'donacions, quotes i informes fiscals',
+  es: 'donaciones, cuotas e informes fiscales',
+  fr: 'dons, cotisations et rapports fiscaux',
+  pt: 'doações, quotas e relatórios fiscais',
+};
+
+const HERO_ROTATING_PHRASES: Record<PublicLocale, string[]> = {
+  ca: ['donacions', 'quotes', 'informes fiscals'],
+  es: ['donaciones', 'cuotas', 'informes fiscales'],
+  fr: ['dons', 'cotisations', 'rapports fiscaux'],
+  pt: ['doações', 'quotas', 'relatórios fiscais'],
 };
 
 const LANDING_COPY: Record<
@@ -596,7 +604,10 @@ export default async function HomePage({ params }: PageProps) {
   const howWeWorkHref = `/${locale}#how-we-work`;
   const updatesHref = `/${locale}/novetats`;
   const visuals = locale === 'ca' ? HOME_VISUALS.ca : HOME_VISUALS.default;
-  const headlineParts = splitTextAroundPhrase(t.home.heroTagline, HERO_HIGHLIGHTS[locale]);
+  const headlineParts = splitTextAroundPhrase(t.home.heroTagline, HERO_ROTATING_SEGMENTS[locale]);
+  const headlinePrefix = headlineParts.before.trim();
+  const headlineSuffix = headlineParts.after.trim();
+  const rotatingHeroPhrases = HERO_ROTATING_PHRASES[locale];
   const homeSectionCopy = HOME_SECTION_COPY[locale];
   const secondaryCapabilityLabels = SECONDARY_CAPABILITY_LABELS[locale];
   const homeReadMoreLabel = trimTrailingArrow(t.home.readMore);
@@ -856,14 +867,17 @@ export default async function HomePage({ params }: PageProps) {
                 </p>
 
                 <h1 className="mx-auto max-w-3xl text-[2.65rem] font-black leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[3.25rem] lg:mx-0 lg:text-[4.1rem] 2xl:text-[4.85rem]">
-                  {headlineParts.before}
                   {headlineParts.highlight ? (
-                    <span className="relative inline-block px-1">
-                      <span className="relative z-10">{headlineParts.highlight}</span>
-                      <span className="absolute inset-x-0 bottom-[0.1em] h-[0.34em] rounded-full bg-amber-200/90" />
-                    </span>
-                  ) : null}
-                  {headlineParts.after}
+                    <>
+                      <span className="block">{headlinePrefix}</span>
+                      <span className="mt-2 block">
+                        <RotatingHeroPhrase items={rotatingHeroPhrases} />
+                      </span>
+                      <span className="block">{headlineSuffix}</span>
+                    </>
+                  ) : (
+                    t.home.heroTagline
+                  )}
                 </h1>
 
                 <p className="mx-auto max-w-2xl text-lg leading-8 text-muted-foreground sm:text-xl lg:mx-0">
