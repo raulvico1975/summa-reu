@@ -19,15 +19,16 @@ export interface PublicFeaturesExplorerItem {
   id: string;
   title: string;
   description: string;
-  href: string;
-  ctaLabel: string;
+  href?: string;
+  ctaLabel?: string;
   media: PublicLandingHeroMedia;
   badgeLabel?: string;
 }
 
 export interface PublicFeaturesExplorerSection {
   id: string;
-  label: string;
+  label?: string;
+  tabLabel?: string;
   title: string;
   description: string;
   items: PublicFeaturesExplorerItem[];
@@ -140,7 +141,7 @@ export function PublicFeaturesExplorer({
               value={section.id}
               className="h-auto rounded-full border border-sky-100/80 bg-white/92 px-5 py-3 text-left text-[13px] font-medium leading-5 text-slate-600 shadow-[0_18px_44px_-42px_rgba(15,23,42,0.16)] transition-all hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-950 data-[state=active]:border-sky-300 data-[state=active]:bg-[linear-gradient(180deg,rgba(239,246,255,0.98),rgba(255,255,255,0.98))] data-[state=active]:text-[#133c8b] data-[state=active]:shadow-[0_22px_50px_-42px_rgba(37,99,235,0.2)] lg:text-sm"
             >
-              {section.label}
+              {section.tabLabel ?? section.label ?? section.title}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -170,9 +171,11 @@ export function PublicFeaturesExplorer({
               <div className={showSectionIntro ? 'space-y-6' : ''}>
                 {showSectionIntro ? (
                   <div className="space-y-4">
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                      {section.label}
-                    </p>
+                    {section.label ? (
+                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
+                        {section.label}
+                      </p>
+                    ) : null}
                     <h2 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2.4rem]">
                       {section.title}
                     </h2>
@@ -242,16 +245,18 @@ export function PublicFeaturesExplorer({
                           >
                             {item.description}
                           </p>
-                          <Link
-                            href={item.href}
-                            className={cn(
-                              'inline-flex items-center text-sm font-semibold text-primary',
-                              compactCards ? 'mt-3' : 'mt-4'
-                            )}
-                          >
-                            {item.ctaLabel}
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Link>
+                          {item.href && item.ctaLabel ? (
+                            <Link
+                              href={item.href}
+                              className={cn(
+                                'inline-flex items-center text-sm font-semibold text-primary',
+                                compactCards ? 'mt-3' : 'mt-4'
+                              )}
+                            >
+                              {item.ctaLabel}
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
+                          ) : null}
                         </AccordionContent>
                       </AccordionItem>
                     );

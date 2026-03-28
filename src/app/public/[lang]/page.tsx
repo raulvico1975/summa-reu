@@ -1127,8 +1127,6 @@ export default async function HomePage({ params }: PageProps) {
   const headlineSuffix = headlineParts.after.trim();
   const rotatingHeroPhrases = HERO_ROTATING_PHRASES[locale];
   const homeSectionCopy = HOME_SECTION_COPY[locale];
-  const homeFunctionsCopy = HOME_FUNCTIONS_COPY[locale];
-  const homeExplorerCopy = HOME_EXPLORER_COPY[locale];
   const homeReadMoreLabel = trimTrailingArrow(t.home.readMore);
   const BLOCK_ORDER = [
     'conciliation',
@@ -1173,41 +1171,6 @@ export default async function HomePage({ params }: PageProps) {
     'control.boardReport': '/visuals/web/features/block6_informe_junta.webp',
     'control.dataExport': '/visuals/web/features/block6_exportacio_dades.webp',
   };
-  const BLOCK_ANCHORS: Record<PublicLocale, Record<HomeBlockKey, string>> = {
-    ca: {
-      conciliation: 'conciliacio-bancaria',
-      donorsMembers: 'socis-donants',
-      payments: 'cobraments-pagaments',
-      fiscal: 'fiscalitat',
-      projects: 'projectes',
-      control: 'control-visibilitat',
-    },
-    es: {
-      conciliation: 'conciliacion-bancaria',
-      donorsMembers: 'socios-donantes',
-      payments: 'cobros-pagos',
-      fiscal: 'fiscalidad',
-      projects: 'proyectos',
-      control: 'control-visibilidad',
-    },
-    fr: {
-      conciliation: 'rapprochement-bancaire',
-      donorsMembers: 'adherents-donateurs',
-      payments: 'encaissements-paiements',
-      fiscal: 'fiscalite',
-      projects: 'projets',
-      control: 'controle-visibilite',
-    },
-    pt: {
-      conciliation: 'reconciliacao-bancaria',
-      donorsMembers: 'socios-doadores',
-      payments: 'cobrancas-pagamentos',
-      fiscal: 'fiscalidade',
-      projects: 'projetos',
-      control: 'controlo-visibilidade',
-    },
-  };
-  const blockAnchors = BLOCK_ANCHORS[locale];
   const blockReadMoreAnchors: Partial<Record<HomeBlockKey, string>> = {
     conciliation: anchors.conciliation,
     payments: anchors.remittances,
@@ -1274,175 +1237,42 @@ export default async function HomePage({ params }: PageProps) {
     },
   ] as const;
 
-  const buildLandingExplorerItem = (slug: string, fallbackImage: string) => {
-    const preview =
-      getPublicLandingPreviewBySlug(slug, locale) ??
-      getPublicLandingPreviewBySlug(slug, detailLocale);
-
-    if (!preview) {
-      throw new Error(`Landing pública no trobada: ${slug}`);
-    }
-
-    const visualMedia =
-      preview.media?.type === 'video'
-        ? createImageMedia(fallbackImage, preview.title)
-        : preview.media ?? createImageMedia(fallbackImage, preview.title);
-
-    return {
-      id: slug,
-      title: preview.title,
-      description: preview.description,
-      href: `/${detailLocale}/${slug}`,
-      ctaLabel: homeExplorerCopy.detailCta,
-      badgeLabel: homeExplorerCopy.screenBadge,
-      media: visualMedia,
-    };
-  };
-
-  const buildStaticExplorerItem = ({
-    id,
-    title,
-    description,
-    image,
-    href,
-  }: {
-    id: string;
-    title: string;
-    description: string;
-    image: string;
-    href: string;
-  }) => ({
-    id,
-    title,
-    description,
-    href,
-    ctaLabel: href === `/${locale}/contact` ? homeExplorerCopy.contactCta : homeExplorerCopy.detailCta,
-    badgeLabel: homeExplorerCopy.screenBadge,
-    media: createImageMedia(image, title),
-  });
-
   const homeFeatureExplorerSections: PublicFeaturesExplorerSection[] = [
-    {
-      id: 'dashboard',
-      label: homeExplorerCopy.sections.dashboard.label,
-      title: homeExplorerCopy.sections.dashboard.title,
-      description: homeExplorerCopy.sections.dashboard.description,
-      items: [
-        buildLandingExplorerItem('software-gestion-ong', visuals.dashboard),
-        buildStaticExplorerItem({
-          id: 'dashboard-metrics',
-          title: homeExplorerCopy.sections.dashboardItems.metrics.title,
-          description: homeExplorerCopy.sections.dashboardItems.metrics.description,
-          image: visuals.dashboard,
-          href: `/${detailLocale}/software-gestion-ong`,
-        }),
-        buildStaticExplorerItem({
-          id: 'dashboard-reports',
-          title: homeExplorerCopy.sections.dashboardItems.reports.title,
-          description: homeExplorerCopy.sections.dashboardItems.reports.description,
-          image: '/visuals/web/web_informes_juntes.webp',
-          href: `/${detailLocale}/programa-associacions`,
-        }),
-      ],
-    },
-    {
-      id: 'conciliation',
-      label: homeExplorerCopy.sections.conciliation.label,
-      title: homeExplorerCopy.sections.conciliation.title,
-      description: homeExplorerCopy.sections.conciliation.description,
-      items: [
-        buildLandingExplorerItem('importar-extracte-bancari', visuals.conciliation),
-        buildLandingExplorerItem('conciliacio-bancaria-ong', visuals.conciliation),
-        buildStaticExplorerItem({
-          id: 'ai-assignment',
-          title: homeExplorerCopy.sections.conciliation.assignment.title,
-          description: homeExplorerCopy.sections.conciliation.assignment.description,
-          image: '/visuals/web/web_pendents.webp',
-          href: `/${detailLocale}/conciliacio-bancaria-ong`,
-        }),
-      ],
-    },
-    {
-      id: 'expenses',
-      label: homeExplorerCopy.sections.expenses.label,
-      title: homeExplorerCopy.sections.expenses.title,
-      description: homeExplorerCopy.sections.expenses.description,
-      items: [
-        buildStaticExplorerItem({
-          id: 'expenses-invoices',
-          title: homeExplorerCopy.sections.expenses.invoices.title,
-          description: homeExplorerCopy.sections.expenses.invoices.description,
-          image: visuals.admin,
-          href: `/${locale}/contact`,
-        }),
-        buildStaticExplorerItem({
-          id: 'expenses-payments',
-          title: homeExplorerCopy.sections.expenses.payments.title,
-          description: homeExplorerCopy.sections.expenses.payments.description,
-          image: '/visuals/web/web_pendents.webp',
-          href: `/${locale}/contact`,
-        }),
-        buildStaticExplorerItem({
-          id: 'expenses-settlements',
-          title: homeExplorerCopy.sections.expenses.settlements.title,
-          description: homeExplorerCopy.sections.expenses.settlements.description,
-          image: '/visuals/web/web_liquidacions.webp',
-          href: `/${locale}/contact`,
-        }),
-      ],
-    },
-    {
-      id: 'members',
-      label: homeExplorerCopy.sections.members.label,
-      title: homeExplorerCopy.sections.members.title,
-      description: homeExplorerCopy.sections.members.description,
-      items: [
-        buildLandingExplorerItem('gestio-donants', visuals.remittances),
-        buildLandingExplorerItem('remeses-sepa', visuals.remittances),
-        buildLandingExplorerItem('devolucions-rebuts-socis', '/visuals/web/web_gestiona_devolucions.webp'),
-      ],
-    },
-    {
-      id: 'fiscal',
-      label: homeExplorerCopy.sections.fiscal.label,
-      title: homeExplorerCopy.sections.fiscal.title,
-      description: homeExplorerCopy.sections.fiscal.description,
-      items: [
-        buildLandingExplorerItem('control-donacions-ong', visuals.donations),
-        buildLandingExplorerItem('certificats-donacio', visuals.fiscal),
-        buildLandingExplorerItem('model-182', visuals.fiscal),
-        buildLandingExplorerItem('model-347-ong', visuals.fiscal),
-      ],
-    },
-    {
-      id: 'projects',
-      label: homeExplorerCopy.sections.projects.label,
-      title: homeExplorerCopy.sections.projects.title,
-      description: homeExplorerCopy.sections.projects.description,
-      items: [
-        buildStaticExplorerItem({
-          id: 'projects-budget',
-          title: homeExplorerCopy.sections.projects.budget.title,
-          description: homeExplorerCopy.sections.projects.budget.description,
-          image: visuals.projects,
-          href: `/${locale}/contact`,
-        }),
-        buildStaticExplorerItem({
-          id: 'projects-grants',
-          title: homeExplorerCopy.sections.projects.grants.title,
-          description: homeExplorerCopy.sections.projects.grants.description,
-          image: visuals.projects,
-          href: `/${locale}/contact`,
-        }),
-        buildStaticExplorerItem({
-          id: 'projects-reporting',
-          title: homeExplorerCopy.sections.projects.reporting.title,
-          description: homeExplorerCopy.sections.projects.reporting.description,
-          image: visuals.projects,
-          href: `/${locale}/contact`,
-        }),
-      ],
-    },
+    ...BLOCK_ORDER.map((blockKey) => {
+      const block = t.home.blocks[blockKey];
+      const readMoreAnchor = blockReadMoreAnchors[blockKey];
+      const readMoreHref = readMoreAnchor ? `${featuresHref}#${readMoreAnchor}` : undefined;
+      const items = BLOCK_CARDS[blockKey].reduce<PublicFeaturesExplorerSection['items']>(
+        (accumulator, cardKey) => {
+          const card = block.cards[cardKey];
+          const screenshot = CARD_SCREENSHOTS[`${blockKey}.${cardKey}`];
+
+          if (!card || !screenshot) {
+            return accumulator;
+          }
+
+          accumulator.push({
+            id: `${blockKey}.${cardKey}`,
+            title: card.title,
+            description: card.description,
+            href: readMoreHref,
+            ctaLabel: readMoreHref ? homeReadMoreLabel : undefined,
+            media: createImageMedia(screenshot, card.screenshotAlt),
+          });
+
+          return accumulator;
+        },
+        []
+      );
+
+      return {
+        id: blockKey,
+        tabLabel: block.title,
+        title: block.title,
+        description: block.subtitle,
+        items,
+      };
+    }),
   ];
 
   const profileSpotlights = [
@@ -1705,7 +1535,7 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* D) FUNCIONALITATS — 6 BLOCS */}
+      {/* D) FUNCIONALITATS — EXPLORADOR */}
       <section
         id="capabilities"
         className="scroll-mt-24 bg-[linear-gradient(180deg,#eef6ff_0%,#f8fbff_22%,#ffffff_100%)] px-6 py-20 lg:py-24"
@@ -1722,76 +1552,21 @@ export default async function HomePage({ params }: PageProps) {
               {t.home.systemOverview.subtitle}
             </p>
           </div>
+
+          <div className="mt-14 rounded-[2.4rem] border border-sky-100/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(244,250,255,0.96))] p-5 shadow-[0_28px_90px_-60px_rgba(14,165,233,0.16)] sm:p-7 lg:p-9">
+            <PublicFeaturesExplorer
+              locale={locale}
+              sections={homeFeatureExplorerSections}
+              tabsAlign="center"
+              showSectionIntro
+              resetItemOnSectionChange
+              layout="image-heavy"
+              compactCards
+              showItemBadges={false}
+            />
+          </div>
         </div>
       </section>
-
-      {BLOCK_ORDER.map((blockKey, blockIndex) => {
-        const block = t.home.blocks[blockKey];
-        const cards = BLOCK_CARDS[blockKey];
-        const readMoreAnchor = blockReadMoreAnchors[blockKey];
-        const readMoreHref = readMoreAnchor ? `${featuresHref}#${readMoreAnchor}` : null;
-        const isEven = blockIndex % 2 === 0;
-
-        return (
-          <section
-            key={blockKey}
-            id={blockAnchors[blockKey]}
-            className={`scroll-mt-24 px-6 py-16 lg:py-20 ${isEven ? 'bg-muted/30' : ''}`}
-          >
-            <div className="mx-auto max-w-6xl">
-              <div className="mx-auto max-w-3xl text-center">
-                <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
-                  {block.title}
-                </h2>
-                <p className="mx-auto mt-2 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                  {block.subtitle}
-                </p>
-              </div>
-
-              <div className="mt-12 grid gap-6 md:grid-cols-2">
-                {cards.map((cardKey) => {
-                  const card = block.cards[cardKey];
-                  if (!card) {
-                    return null;
-                  }
-
-                  const screenshot = CARD_SCREENSHOTS[`${blockKey}.${cardKey}`];
-
-                  return (
-                    <article key={cardKey} className={frameClass}>
-                      <div className="aspect-video overflow-hidden bg-muted/20">
-                        <Image
-                          src={screenshot}
-                          alt={card.screenshotAlt}
-                          width={600}
-                          height={340}
-                          sizes="(min-width: 768px) 50vw, 100vw"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="space-y-2 p-6">
-                        <h3 className="text-lg font-semibold tracking-tight text-foreground">
-                          {card.title}
-                        </h3>
-                        <p className="text-sm leading-6 text-muted-foreground">{card.description}</p>
-                        {readMoreHref ? (
-                          <Link
-                            href={readMoreHref}
-                            className="inline-flex items-center text-sm font-medium text-primary hover:underline"
-                          >
-                            {homeReadMoreLabel}
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Link>
-                        ) : null}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        );
-      })}
 
       {/* E) BLOCS "Per a qui és" */}
       <section className="px-6 py-16 lg:py-20">
