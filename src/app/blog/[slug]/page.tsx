@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { BlogPostView } from '@/components/public/blog/BlogPostView'
 import { getBlogCopy } from '@/lib/blog/copy'
 import { getLocalizedBlogPostBySlug } from '@/lib/blog/firestore'
@@ -51,7 +51,7 @@ export default async function BlogPostPage({ params }: PageProps) {
   const post = await getLocalizedBlogPostBySlug(slug, locale)
 
   if (!post) {
-    notFound()
+    redirect('/blog')
   }
 
   return (
