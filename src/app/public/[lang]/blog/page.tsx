@@ -63,7 +63,6 @@ export default async function PublicBlogPage({ params }: PageProps) {
     <BlogIndexView
       locale={locale}
       blogBasePath={`/${locale}/blog`}
-      homeHref={`/${locale}`}
     />
   )
 }

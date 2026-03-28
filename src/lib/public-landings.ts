@@ -1,4 +1,5 @@
 import type { PublicLocale } from '@/lib/public-locale';
+import { getPublicDetailedGuidesLocale } from '@/lib/public-site-paths';
 
 interface PublicLandingMetadata {
   title: string;
@@ -39,6 +40,16 @@ export interface PublicLandingContent {
       alt: string;
       poster?: string;
       mp4FallbackSrc?: string;
+      captionsSrc?: string;
+      captionsLang?: string;
+      captionsLabel?: string;
+      captionsDefault?: boolean;
+      captionsDisplay?: 'native' | 'overlay';
+      durationLabel?: string;
+      autoPlay?: boolean;
+      loop?: boolean;
+      controls?: boolean;
+      muted?: boolean;
     };
   };
   problem: {
@@ -75,13 +86,15 @@ export interface PublicLandingContent {
   relatedLandings?: PublicLandingRelatedSection;
 }
 
+export type PublicLandingHeroMedia = NonNullable<PublicLandingContent['hero']['media']>;
+
 interface PublicLandingDefinition {
   slug: string;
   metadata: Record<PublicLocale, PublicLandingMetadata>;
   content: Partial<Record<PublicLocale, PublicLandingContent>> & { ca: PublicLandingContent };
 }
 
-type PublicLandingSlug =
+export type PublicLandingSlug =
   | 'model-182'
   | 'certificats-donacio'
   | 'model-347-ong'
@@ -168,19 +181,20 @@ function contactHref(locale: PublicLocale) {
 }
 
 function publicGuideHref(locale: PublicLocale) {
-  return `/${locale}/gestio-economica-ong`;
+  const guideLocale = getPublicDetailedGuidesLocale(locale);
+  return `/${guideLocale}/gestio-economica-ong`;
 }
 
 const RELATED_LANDINGS_BY_SLUG: Record<PublicLandingSlug, PublicLandingSlug[]> = {
-  'model-182': ['certificats-donacio', 'gestio-donants', 'model-347-ong'],
-  'certificats-donacio': ['model-182', 'gestio-donants', 'control-donacions-ong'],
-  'model-347-ong': ['importar-extracte-bancari', 'conciliacio-bancaria-ong', 'software-gestion-ong'],
-  'remeses-sepa': ['devolucions-rebuts-socis', 'gestio-donants', 'control-donacions-ong'],
-  'devolucions-rebuts-socis': ['remeses-sepa', 'gestio-donants', 'model-182'],
+  'model-182': ['certificats-donacio', 'control-donacions-ong', 'devolucions-rebuts-socis'],
+  'certificats-donacio': ['model-182', 'control-donacions-ong', 'devolucions-rebuts-socis'],
+  'model-347-ong': ['importar-extracte-bancari', 'conciliacio-bancaria-ong', 'model-182'],
+  'remeses-sepa': ['devolucions-rebuts-socis', 'control-donacions-ong', 'conciliacio-bancaria-ong'],
+  'devolucions-rebuts-socis': ['remeses-sepa', 'control-donacions-ong', 'model-182'],
   'conciliacio-bancaria-ong': ['importar-extracte-bancari', 'control-donacions-ong', 'model-347-ong'],
   'importar-extracte-bancari': ['conciliacio-bancaria-ong', 'model-347-ong', 'control-donacions-ong'],
   'gestio-donants': ['control-donacions-ong', 'certificats-donacio', 'model-182'],
-  'control-donacions-ong': ['gestio-donants', 'certificats-donacio', 'model-182'],
+  'control-donacions-ong': ['certificats-donacio', 'model-182', 'remeses-sepa'],
   'software-gestion-ong': ['programa-associacions', 'gestio-donants', 'control-donacions-ong'],
   'programa-associacions': ['software-gestion-ong', 'gestio-donants', 'remeses-sepa'],
 };
@@ -575,8 +589,9 @@ const MODEL_182_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
       "Com preparar el Model 182 d'una associació sense Excel ni errors. Controla donacions, devolucions i donants amb Summa Social.",
   },
   es: {
-    title: 'Modelo 182 | Summa Social',
-    description: 'Landing en preparacion para Modelo 182 de entidades sin animo de lucro.',
+    title: 'Modelo 182 para ONG | Software de gestión para entidades | Summa Social',
+    description:
+      'Cómo preparar el Modelo 182 de una asociación sin Excel ni errores. Controla donaciones, devoluciones y donantes con Summa Social.',
   },
   fr: {
     title: 'Modele 182 | Summa Social',
@@ -595,8 +610,9 @@ const DONATION_CERTIFICATES_METADATA: Record<PublicLocale, PublicLandingMetadata
       'Genera i envia els certificats de donació sense plantilles manuals, sense errors i sense perdre hores cada any.',
   },
   es: {
-    title: 'Certificados de donacion | Summa Social',
-    description: 'Landing en preparacion para certificados de donacion de entidades sin animo de lucro.',
+    title: 'Certificados de donación para ONG | Software de gestión para entidades | Summa Social',
+    description:
+      'Genera y envía los certificados de donación sin plantillas manuales, sin errores y sin perder horas cada año.',
   },
   fr: {
     title: 'Certificats de don | Summa Social',
@@ -704,6 +720,96 @@ const DONATION_CERTIFICATES_CONTENT_CA: PublicLandingContent = {
   },
 };
 
+const DONATION_CERTIFICATES_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Certificados de donación para ONG y asociaciones',
+    subtitle: 'Genera y envía los certificados de donación sin plantillas manuales, sin errores y sin perder horas cada año.',
+    introParagraphs: [
+      'Para muchas entidades, la emisión de certificados de donación sigue siendo una tarea lenta y repetitiva. Hay que revisar qué ha donado cada persona, comprobar si hay devoluciones, generar el documento correcto y hacer llegar el certificado al donante.',
+      'Cuando este proceso se hace con hojas de cálculo, plantillas y correos manuales, es fácil que aparezcan errores, duplicidades o simplemente demasiado trabajo acumulado en pocos días.',
+      'Summa Social simplifica este proceso.',
+      'Es una aplicación pensada específicamente para entidades sociales que permite generar los certificados de donación a partir de los datos reales del año y enviarlos de forma ordenada desde un único lugar.',
+    ],
+  },
+  problem: {
+    title: 'El problema real de los certificados de donación',
+    intro: 'Cuando llega el momento de emitir certificados, muchas entidades se encuentran con situaciones como estas:',
+    points: [
+      'hay que revisar manualmente qué ha aportado cada donante',
+      'hay que restar devoluciones o recibos devueltos',
+      'faltan datos fiscales',
+      'los documentos se generan uno a uno',
+      'los correos deben enviarse manualmente',
+    ],
+    outroParagraphs: [
+      'El resultado suele ser el mismo: horas de trabajo administrativo para completar una tarea que debería ser mucho más simple.',
+    ],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro:
+      'Summa Social genera los certificados a partir de la misma información económica que la entidad ya trabaja durante el año. Esto hace que el proceso sea mucho más claro y fiable.',
+    steps: [
+      {
+        title: 'El sistema calcula el importe correcto',
+        body: 'Cada certificado se genera a partir de las donaciones reales registradas en el sistema.',
+      },
+      {
+        title: 'Las devoluciones quedan reflejadas',
+        body: 'Si hay recibos devueltos o ajustes, el certificado recoge el importe neto real del donante.',
+      },
+      {
+        title: 'El certificado se genera automáticamente',
+        body: 'No hace falta preparar plantillas manuales ni copiar datos de un sitio a otro.',
+      },
+      {
+        title: 'Puede enviarse desde la misma aplicación',
+        body: 'La entidad puede gestionar el envío de los certificados sin salir del sistema.',
+      },
+      {
+        title: 'También puede trabajarse en bloque',
+        body: 'Cuando hay que emitir muchos certificados, el proceso sigue siendo ordenado y asumible.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar Summa Social',
+    intro: 'Con Summa Social, la entidad puede:',
+    items: [
+      'generar certificados individuales para un donante concreto',
+      'preparar certificados anuales a partir de la actividad real del donante',
+      'gestionar la emisión de certificados de forma masiva',
+      'mantener coherencia entre certificados, donaciones y devoluciones',
+      'centralizar el proceso dentro de la misma aplicación',
+    ],
+    outroParagraphs: [
+      'Esto evita repartir el trabajo entre Excel, PDFs sueltos y correos enviados manualmente.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos para la entidad',
+    items: [
+      'Menos tiempo administrativo: los certificados se generan a partir de datos que ya están trabajados en el sistema.',
+      'Menos riesgo de errores: el importe del certificado no depende de cálculos manuales de última hora.',
+      'Proceso más ordenado: la generación y el envío se hacen desde un único entorno.',
+      'Más tranquilidad para el equipo: cuando llega el momento de emitir certificados, el trabajo ya no empieza de cero.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades pequeñas y medianas',
+    paragraphs: [
+      'Summa Social está diseñado para organizaciones que necesitan cumplir con sus obligaciones fiscales sin añadir complejidad innecesaria. Es especialmente útil para entidades que gestionan socios o donantes recurrentes, deben emitir certificados cada año, quieren evitar procesos manuales con hojas de cálculo y necesitan una manera clara de controlar donaciones y devoluciones.',
+      'No es una herramienta pensada para hacer más grande la burocracia. Es una herramienta pensada para reducirla. Lo mejor es no esperar al momento de emitir los certificados: si durante el año las donaciones y devoluciones ya quedan bien registradas, el proceso final se simplifica mucho.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra entidad',
+    text: 'Si cada año la generación de certificados de donación os consume demasiadas horas o demasiadas revisiones manuales, escribidnos y os explicaremos si Summa Social puede ayudaros a simplificar este proceso.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
 const SEPA_REMITTANCES_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: 'Remeses SEPA per a quotes de socis | Software de gestió per a entitats | Summa Social',
@@ -711,8 +817,9 @@ const SEPA_REMITTANCES_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
       'Prepara remeses SEPA de quotes de socis sense fulls de càlcul. Revisa IBAN, imports i genera el fitxer per al banc amb Summa Social.',
   },
   es: {
-    title: 'Remesas SEPA | Summa Social',
-    description: 'Landing en preparacion para remesas SEPA de entidades sin animo de lucro.',
+    title: 'Remesas SEPA para cuotas de socios | Software de gestión para entidades | Summa Social',
+    description:
+      'Prepara remesas SEPA de cuotas de socios sin hojas de cálculo. Revisa IBAN, importes y genera el fichero para el banco con Summa Social.',
   },
   fr: {
     title: 'Prelevements SEPA | Summa Social',
@@ -728,6 +835,21 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
   hero: {
     title: 'Cobrar quotes de socis amb remeses SEPA sense fulls de càlcul',
     subtitle: 'Genera les remeses de cobrament de manera clara i ordenada.',
+    media: {
+      type: 'video',
+      src: '/visuals/landings/remeses-sepa/animations/remeses-sepa-demo-ca.mp4',
+      poster: '/visuals/landings/remeses-sepa/optimized/remeses-sepa-demo-poster.webp',
+      captionsSrc: '/visuals/landings/remeses-sepa/animations/remeses-sepa-demo-ca.vtt',
+      captionsLang: 'ca',
+      captionsLabel: 'Català',
+      captionsDisplay: 'overlay',
+      durationLabel: '14 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+      alt: 'Vídeo demostratiu de la generació de remeses SEPA de quotes de socis amb Summa Social',
+    },
     introParagraphs: [
       'Moltes entitats cobren les quotes dels seus socis mitjançant domiciliació bancària. Però preparar les remeses SEPA acostuma a implicar fulls de càlcul, revisions manuals i molta cura per evitar errors.',
       'Cal comprovar els IBAN, revisar qui toca cobrar aquell mes, generar el fitxer correcte i enviar-lo al banc.',
@@ -809,6 +931,106 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
   },
 };
 
+const SEPA_REMITTANCES_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Cobrar cuotas de socios con remesas SEPA sin hojas de cálculo',
+    subtitle: 'Genera las remesas de cobro de forma clara y ordenada.',
+    media: {
+      type: 'video',
+      src: '/visuals/landings/remeses-sepa/animations/remeses-sepa-demo-es.mp4',
+      poster: '/visuals/landings/remeses-sepa/optimized/remeses-sepa-demo-poster.webp',
+      captionsSrc: '/visuals/landings/remeses-sepa/animations/remeses-sepa-demo-es.vtt',
+      captionsLang: 'es',
+      captionsLabel: 'Español',
+      captionsDisplay: 'overlay',
+      durationLabel: '14 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+      alt: 'Vídeo demostrativo de la generación de remesas SEPA de cuotas de socios con Summa Social',
+    },
+    introParagraphs: [
+      'Muchas entidades cobran las cuotas de sus socios mediante domiciliación bancaria. Pero preparar las remesas SEPA suele implicar hojas de cálculo, revisiones manuales y mucho cuidado para evitar errores.',
+      'Hay que comprobar los IBAN, revisar a quién toca cobrar ese mes, generar el fichero correcto y enviarlo al banco.',
+      'Summa Social simplifica este proceso. La aplicación permite preparar las remesas de cobro de cuotas a partir de los datos reales de los socios y generar el fichero que el banco necesita.',
+    ],
+  },
+  problem: {
+    title: 'El problema habitual con las remesas de cuotas',
+    intro: 'Cuando las remesas se preparan manualmente, es fácil encontrarse con situaciones como estas:',
+    points: [
+      'socios con IBAN incorrecto o incompleto',
+      'dificultad para saber a quién toca cobrar ese mes',
+      'errores en los importes de las cuotas',
+      'ficheros generados con Excel que después el banco rechaza',
+    ],
+    outroParagraphs: [
+      'Además, cuando la entidad tiene muchos socios, el proceso puede convertirse en una tarea administrativa muy pesada.',
+    ],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social permite preparar las remesas de cobro directamente desde la información de los socios. El proceso es simple:',
+    steps: [
+      {
+        title: 'Selecciona la cuenta bancaria de la entidad',
+        body: 'El sistema utiliza los datos de la cuenta que cobrará las cuotas.',
+      },
+      {
+        title: 'El sistema identifica a los socios que toca cobrar',
+        body: 'Según la periodicidad de la cuota, puede prepararse la remesa correspondiente.',
+      },
+      {
+        title: 'Revisas la selección',
+        body: 'Antes de generar la remesa, puede comprobarse quién se incluye y quién no.',
+      },
+      {
+        title: 'Se genera el fichero SEPA',
+        body: 'La entidad descarga el fichero con el formato que necesita el banco.',
+      },
+      {
+        title: 'Subes el fichero al banco',
+        body: 'Con el fichero cargado en el banco, ya puede ejecutarse el cobro de las cuotas.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar Summa Social',
+    intro: 'Con Summa Social, la entidad puede:',
+    items: [
+      'preparar remesas de cobro de cuotas',
+      'gestionar socios con distintas periodicidades de pago',
+      'detectar socios con datos bancarios incompletos',
+      'revisar fácilmente los cobros antes de enviarlos al banco',
+    ],
+    outroParagraphs: [
+      'Todo el proceso queda integrado con la base de datos de donantes y con la gestión económica de la entidad.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Menos trabajo administrativo: no hace falta preparar ficheros manuales cada vez.',
+      'Menos riesgo de errores: los cobros se generan a partir de los datos de los socios.',
+      'Más control sobre las cuotas: es más fácil ver quién paga, cuándo paga y cuánto paga.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades sociales',
+    paragraphs: [
+      'Este sistema es especialmente útil para entidades que tienen socios con cuotas recurrentes, cobran por domiciliación bancaria y quieren simplificar la gestión de las remesas.',
+      'Summa Social no es un gestor bancario completo. Es una herramienta pensada para que las entidades sociales puedan gestionar las cuotas de forma clara y ordenada.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra entidad',
+    text: 'Si vuestra entidad cobra cuotas de socios cada mes o cada trimestre, contactad con nosotros y veremos si Summa Social puede ayudaros a ordenar este proceso.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
 const BANK_STATEMENT_IMPORT_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: "Importar l'extracte bancari per a entitats | Software de gestió | Summa Social",
@@ -816,8 +1038,9 @@ const BANK_STATEMENT_IMPORT_METADATA: Record<PublicLocale, PublicLandingMetadata
       "Importa l'extracte bancari i centralitza ingressos i despeses en un únic lloc. Classifica moviments i vincula transaccions amb donants o proveïdors.",
   },
   es: {
-    title: 'Importar extracto bancario | Summa Social',
-    description: 'Landing en preparacion para importacion de extractos bancarios de entidades.',
+    title: 'Importar extracto bancario para entidades | Software de gestión | Summa Social',
+    description:
+      'Importa el extracto bancario y centraliza ingresos y gastos en un único lugar. Clasifica movimientos y vincula transacciones con donantes o proveedores.',
   },
   fr: {
     title: 'Importer un extrait bancaire | Summa Social',
@@ -833,6 +1056,21 @@ const BANK_STATEMENT_IMPORT_CONTENT_CA: PublicLandingContent = {
   hero: {
     title: "Importar l'extracte bancari i tenir tots els moviments controlats",
     subtitle: 'Porta els moviments del banc a un únic lloc.',
+    media: {
+      type: 'video',
+      src: '/visuals/landings/importar-extracte-bancari/animations/importar-extracte-bancari-demo-ca.mp4',
+      poster: '/visuals/landings/importar-extracte-bancari/optimized/importar-extracte-bancari-demo-poster.webp',
+      captionsSrc: '/visuals/landings/importar-extracte-bancari/animations/importar-extracte-bancari-demo-ca.vtt',
+      captionsLang: 'ca',
+      captionsLabel: 'Subtítols en català',
+      captionsDisplay: 'overlay',
+      durationLabel: '21 s',
+      alt: "Vídeo de demostració de la importació d'extracte bancari a Summa Social",
+      controls: true,
+      autoPlay: false,
+      loop: false,
+      muted: false,
+    },
     introParagraphs: [
       'Moltes entitats gestionen la seva informació econòmica amb extractes bancaris, fulls de càlcul i notes disperses. Això fa difícil tenir una visió clara de què ha passat realment durant el mes.',
       "Summa Social permet importar l'extracte bancari i treballar directament sobre els moviments.",
@@ -910,14 +1148,110 @@ const BANK_STATEMENT_IMPORT_CONTENT_CA: PublicLandingContent = {
   },
 };
 
+const BANK_STATEMENT_IMPORT_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Importar el extracto bancario y tener todos los movimientos controlados',
+    subtitle: 'Lleva los movimientos del banco a un único lugar.',
+    media: {
+      type: 'video',
+      src: '/visuals/landings/importar-extracte-bancari/animations/importar-extracte-bancari-demo-es.mp4',
+      poster: '/visuals/landings/importar-extracte-bancari/optimized/importar-extracte-bancari-demo-poster.webp',
+      captionsSrc: '/visuals/landings/importar-extracte-bancari/animations/importar-extracte-bancari-demo-es.vtt',
+      captionsLang: 'es',
+      captionsLabel: 'Subtítulos en castellano',
+      captionsDisplay: 'overlay',
+      durationLabel: '21 s',
+      alt: 'Vídeo demostrativo de la importación de extracto bancario en Summa Social',
+      controls: true,
+      autoPlay: false,
+      loop: false,
+      muted: false,
+    },
+    introParagraphs: [
+      'Muchas entidades gestionan su información económica con extractos bancarios, hojas de cálculo y notas dispersas. Eso hace difícil tener una visión clara de lo que ha pasado realmente durante el mes.',
+      'Summa Social permite importar el extracto bancario y trabajar directamente sobre los movimientos.',
+      'Así, todas las entradas y salidas de dinero pueden revisarse, clasificarse y vincularse con donantes o proveedores.',
+    ],
+  },
+  problem: {
+    title: 'El problema habitual con los extractos bancarios',
+    intro: 'Cuando los movimientos del banco se gestionan manualmente, aparecen dificultades como:',
+    points: [
+      'movimientos duplicados o mal registrados',
+      'dificultad para saber a qué corresponde cada gasto',
+      'pérdida de tiempo clasificando transacciones',
+      'información repartida entre varios documentos',
+    ],
+    outroParagraphs: ['El resultado suele ser una gestión económica poco clara.'],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social permite importar los movimientos del banco de forma sencilla.',
+    steps: [
+      {
+        title: 'Subes el fichero del banco',
+        body: 'Los extractos pueden importarse en formatos habituales como CSV o Excel.',
+      },
+      {
+        title: 'El sistema detecta los movimientos',
+        body: 'Cada línea del extracto queda identificada como un movimiento nuevo.',
+      },
+      {
+        title: 'Cada movimiento queda registrado',
+        body: 'Se guarda la fecha, la descripción y el importe para trabajarlo desde el sistema.',
+      },
+      {
+        title: 'Asignación de contactos y categorías',
+        body: 'Los movimientos pueden vincularse con donantes, proveedores o categorías de gasto.',
+      },
+      {
+        title: 'Revisión y clasificación',
+        body: 'El equipo de la entidad puede revisar los movimientos y completar la información necesaria.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar Summa Social',
+    intro: 'Con los movimientos importados, la entidad puede:',
+    items: [
+      'tener todos los ingresos y gastos en un único lugar',
+      'clasificar movimientos por categoría',
+      'vincular transacciones con donantes o proveedores',
+      'adjuntar facturas o documentos relacionados',
+    ],
+    outroParagraphs: ['Esto permite tener una base económica clara para informes, certificados o justificaciones.'],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Visión clara de las finanzas: todos los movimientos del banco pueden consultarse y revisarse fácilmente.',
+      'Menos trabajo manual: no hace falta copiar datos del banco a Excel.',
+      'Base fiable para los informes fiscales: la información económica ya queda preparada para generar informes o certificados.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades pequeñas y medianas',
+    paragraphs: [
+      'Summa Social está pensado para entidades que gestionan sus cuentas con extractos bancarios, quieren tener mejor control de gastos e ingresos y necesitan preparar informes fiscales o justificaciones.',
+      'No es un sistema contable complejo. Es una herramienta para organizar la información económica de la entidad.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra entidad',
+    text: 'Si vuestra entidad trabaja con extractos bancarios cada mes, contactad con nosotros y veremos si Summa Social puede ayudaros a ordenar esta operativa.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
 const BANK_RECONCILIATION_ONG_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: 'Conciliació bancària per ONG | Summa Social',
     description: "Com controlar els moviments bancaris d'una ONG i classificar ingressos i despeses sense Excel.",
   },
   es: {
-    title: 'Conciliacion bancaria para ONG | Summa Social',
-    description: 'Landing en preparacion para conciliacion bancaria de entidades sin animo de lucro.',
+    title: 'Conciliación bancaria para ONG | Summa Social',
+    description: 'Cómo controlar los movimientos bancarios de una ONG y clasificar ingresos y gastos sin Excel.',
   },
   fr: {
     title: 'Conciliation bancaire pour associations | Summa Social',
@@ -939,6 +1273,21 @@ const BANK_RECONCILIATION_ONG_CONTENT_CA: PublicLandingContent = {
       "Summa Social permet fer la conciliació bancària d'una manera clara i ordenada.",
       'Els moviments del banc es poden importar al sistema i treballar directament sobre ells per entendre què correspon a cada ingrés o despesa.',
     ],
+    media: {
+      type: 'video',
+      src: '/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-ca.mp4',
+      poster: '/visuals/landings/conciliacio-bancaria-ong/optimized/conciliacio-bancaria-demo-ca-poster.webp',
+      captionsSrc: '/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-ca.vtt',
+      captionsLang: 'ca',
+      captionsLabel: 'Subtítols en català',
+      captionsDisplay: 'overlay',
+      durationLabel: '21 s',
+      alt: 'Vídeo de demostració de la conciliació bancària a Summa Social',
+      controls: true,
+      autoPlay: false,
+      loop: false,
+      muted: false,
+    },
   },
   problem: {
     title: 'El problema habitual amb els moviments del banc',
@@ -1013,6 +1362,105 @@ const BANK_RECONCILIATION_ONG_CONTENT_CA: PublicLandingContent = {
   },
 };
 
+const BANK_RECONCILIATION_ONG_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Conciliación bancaria para ONG y asociaciones',
+    subtitle: 'Tener los movimientos del banco claros, clasificados y bajo control.',
+    media: {
+      type: 'video',
+      src: '/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-es.mp4',
+      poster: '/visuals/landings/conciliacio-bancaria-ong/optimized/conciliacio-bancaria-demo-ca-poster.webp',
+      captionsSrc: '/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-es.vtt',
+      captionsLang: 'es',
+      captionsLabel: 'Subtítulos en castellano',
+      captionsDisplay: 'overlay',
+      durationLabel: '21 s',
+      alt: 'Vídeo demostrativo de la conciliación bancaria en Summa Social',
+      controls: true,
+      autoPlay: false,
+      loop: false,
+      muted: false,
+    },
+    introParagraphs: [
+      'Muchas entidades gestionan sus cuentas a partir de extractos bancarios y hojas de cálculo. Con el tiempo, eso hace difícil entender realmente qué ha pasado durante el mes.',
+      'Ingresos, gastos, cuotas de socios, donaciones, devoluciones... toda esa información acaba dispersa entre documentos y revisiones manuales.',
+      'Summa Social permite hacer la conciliación bancaria de una forma clara y ordenada.',
+      'Los movimientos del banco pueden importarse al sistema y trabajarse directamente sobre ellos para entender qué corresponde a cada ingreso o gasto.',
+    ],
+  },
+  problem: {
+    title: 'El problema habitual con los movimientos del banco',
+    intro: 'Cuando la conciliación bancaria se hace manualmente, aparecen situaciones como estas:',
+    points: [
+      'movimientos sin identificar',
+      'gastos que no sabes a qué corresponden',
+      'ingresos sin saber de qué donante proceden',
+      'dificultad para cuadrar los números con el banco',
+    ],
+    outroParagraphs: [
+      'A medida que pasan los meses, esta información se vuelve cada vez más difícil de revisar.',
+    ],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social permite trabajar con los movimientos bancarios como base de la gestión económica de la entidad. El proceso es sencillo:',
+    steps: [
+      {
+        title: 'Importas el extracto bancario',
+        body: 'Los movimientos del banco pueden subirse en formatos habituales como Excel o CSV.',
+      },
+      {
+        title: 'El sistema registra todos los movimientos',
+        body: 'Cada transacción queda registrada con su fecha, descripción e importe.',
+      },
+      {
+        title: 'Asignación de contactos y categorías',
+        body: 'Los ingresos y gastos pueden vincularse con donantes, proveedores o categorías.',
+      },
+      {
+        title: 'Revisión y clasificación',
+        body: 'El equipo de la entidad puede revisar los movimientos y completar la información que falta.',
+      },
+      {
+        title: 'Tienes una base económica fiable',
+        body: 'Con los movimientos clasificados, la conciliación deja de depender de revisiones manuales dispersas.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar Summa Social',
+    intro: 'Trabajar con la conciliación bancaria dentro de Summa Social permite:',
+    items: [
+      'tener todos los movimientos económicos en un único lugar',
+      'identificar ingresos de donantes o cuotas de socios',
+      'clasificar gastos por categoría',
+      'adjuntar facturas o documentos relacionados',
+    ],
+    outroParagraphs: ['Esto crea una base clara para la gestión económica de la entidad.'],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Más claridad en los movimientos del banco: es fácil ver qué corresponde a cada ingreso o gasto.',
+      'Menos trabajo manual: no hace falta copiar información entre extractos y Excel.',
+      'Base fiable para informes fiscales: los movimientos ya quedan preparados para generar certificados o informes.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades pequeñas y medianas',
+    paragraphs: [
+      'Summa Social está pensado para organizaciones que gestionan sus cuentas con extractos bancarios, necesitan entender mejor ingresos y gastos y quieren tener la información económica ordenada.',
+      'No es un sistema contable complejo. Es una herramienta para tener control real de los movimientos económicos de la entidad.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra entidad',
+    text: 'Si cada mes el equipo tiene que revisar extractos bancarios y hojas de cálculo para entender qué ha pasado, contactad con nosotros y valoraremos si Summa Social puede ayudaros a simplificar este trabajo.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
 const DONATIONS_CONTROL_ONG_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: 'Control de donacions per ONG | Summa Social',
@@ -1020,7 +1468,7 @@ const DONATIONS_CONTROL_ONG_METADATA: Record<PublicLocale, PublicLandingMetadata
   },
   es: {
     title: 'Control de donaciones para ONG | Summa Social',
-    description: 'Landing en preparacion para control y seguimiento de donaciones de entidades sin animo de lucro.',
+    description: 'Cómo controlar las donaciones de una ONG y tener una base clara de donantes y aportaciones.',
   },
   fr: {
     title: 'Controle des dons pour associations | Summa Social',
@@ -1042,6 +1490,20 @@ const DONATIONS_CONTROL_ONG_CONTENT_CA: PublicLandingContent = {
       "Summa Social permet tenir una visió clara de totes les donacions de l'entitat.",
       "L'aplicació centralitza la informació dels donants i les seves aportacions perquè l'equip de l'entitat pugui entendre millor d'on provenen els ingressos.",
     ],
+    media: {
+      type: 'video',
+      alt: 'Vídeo demo del control de donacions a Summa Social',
+      durationLabel: '15 s',
+      src: '/visuals/landings/control-donacions-ong/animations/control-donacions-demo-ca.mp4',
+      poster: '/visuals/landings/control-donacions-ong/optimized/control-donacions-demo-poster.webp',
+      captionsSrc: '/visuals/landings/control-donacions-ong/animations/control-donacions-demo-ca.vtt',
+      captionsLang: 'ca',
+      captionsLabel: 'Català',
+      captionsDisplay: 'overlay',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+    },
   },
   problem: {
     title: 'El problema habitual amb el seguiment de donacions',
@@ -1111,6 +1573,102 @@ const DONATIONS_CONTROL_ONG_CONTENT_CA: PublicLandingContent = {
     text: "Si la informació sobre donacions de la teva entitat està repartida entre diversos documents o fulls de càlcul, contacta amb nosaltres i veurem si Summa Social us pot ajudar a centralitzar-la.",
     linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
+  },
+};
+
+const DONATIONS_CONTROL_ONG_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Controlar las donaciones de una ONG sin hojas de cálculo',
+    subtitle: 'Tener claro quién dona, cuánto dona y cuándo dona.',
+    introParagraphs: [
+      'Para muchas entidades, las donaciones llegan por distintos canales: transferencias, cuotas de socios, aportaciones puntuales o plataformas online.',
+      'Con el tiempo, esa información acaba repartida entre extractos bancarios, hojas de cálculo y listas de donantes.',
+      'Summa Social permite tener una visión clara de todas las donaciones de la entidad.',
+      'La aplicación centraliza la información de los donantes y sus aportaciones para que el equipo pueda entender mejor de dónde proceden los ingresos.',
+    ],
+    media: {
+      type: 'video',
+      alt: 'Vídeo demo del control de donaciones en Summa Social',
+      durationLabel: '15 s',
+      src: '/visuals/landings/control-donacions-ong/animations/control-donacions-demo-es.mp4',
+      poster: '/visuals/landings/control-donacions-ong/optimized/control-donacions-demo-poster.webp',
+      captionsSrc: '/visuals/landings/control-donacions-ong/animations/control-donacions-demo-es.vtt',
+      captionsLang: 'es',
+      captionsLabel: 'Español',
+      captionsDisplay: 'overlay',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+    },
+  },
+  problem: {
+    title: 'El problema habitual con el seguimiento de donaciones',
+    intro: 'Cuando las donaciones se gestionan manualmente, aparecen situaciones como:',
+    points: [
+      'dificultad para saber cuánto ha donado cada persona durante el año',
+      'información dispersa entre extractos y listas de donantes',
+      'errores al preparar certificados de donación',
+      'falta de visión sobre los donantes recurrentes',
+    ],
+    outroParagraphs: ['Con el tiempo, eso hace difícil tener una base clara de apoyo de la entidad.'],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social permite vincular las donaciones con los donantes de forma directa. El proceso es simple:',
+    steps: [
+      {
+        title: 'Las donaciones se registran en los movimientos',
+        body: 'Los ingresos de la entidad quedan registrados a partir de los movimientos del banco.',
+      },
+      {
+        title: 'Las aportaciones se vinculan con los donantes',
+        body: 'Cada donación queda asociada a la persona o empresa que la ha realizado.',
+      },
+      {
+        title: 'El sistema calcula el historial de cada donante',
+        body: 'La ficha del donante muestra todas las aportaciones y devoluciones.',
+      },
+      {
+        title: 'La información sirve para los informes fiscales',
+        body: 'Los datos pueden utilizarse para generar certificados o preparar el Modelo 182.',
+      },
+      {
+        title: 'Todo queda conectado en un único flujo',
+        body: 'Eso evita repetir la revisión en Excel y mantiene la base de donantes ligada a los movimientos reales.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar Summa Social',
+    intro: 'Con Summa Social, la entidad puede:',
+    items: [
+      'ver el historial de donaciones de cada persona',
+      'identificar donantes recurrentes',
+      'controlar la evolución de las aportaciones',
+      'tener una base de donantes vinculada a la realidad económica',
+    ],
+    outroParagraphs: ['Todo esto ayuda a entender mejor cómo se financia la actividad de la entidad.'],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Visión clara de las donaciones: es fácil saber quién ha aportado y cuánto.',
+      'Menos errores administrativos: la información de los donantes está vinculada a los movimientos reales.',
+      'Base sólida para informes fiscales: los certificados e informes utilizan la misma información.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades sociales',
+    paragraphs: [
+      'Summa Social está pensado para organizaciones que reciben donaciones o cuotas de socios, quieren entender mejor su base de apoyo y necesitan preparar informes fiscales.',
+      'No es una herramienta de marketing compleja. Es una herramienta para tener una base clara de donantes y aportaciones.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra entidad',
+    text: 'Si la información sobre donaciones de vuestra entidad está repartida entre varios documentos u hojas de cálculo, contactad con nosotros y veremos si Summa Social puede ayudaros a centralizarla.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
   },
 };
 
@@ -1433,8 +1991,9 @@ const MODEL_347_ONG_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
       'Prepara el Model 347 amb els proveïdors ben identificats i les operacions amb tercers ordenades dins de Summa Social.',
   },
   es: {
-    title: 'Modelo 347 para ONG | Summa Social',
-    description: 'Landing en preparacion para el Modelo 347 de entidades sin animo de lucro.',
+    title: 'Modelo 347 para ONG | Software de gestión para entidades | Summa Social',
+    description:
+      'Prepara el Modelo 347 con los proveedores bien identificados y las operaciones con terceros ordenadas dentro de Summa Social.',
   },
   fr: {
     title: 'Modele 347 pour associations | Summa Social',
@@ -1531,6 +2090,91 @@ const MODEL_347_ONG_CONTENT_CA: PublicLandingContent = {
   },
 };
 
+const MODEL_347_ONG_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Modelo 347 para ONG y asociaciones',
+    subtitle: 'Prepara el informe de operaciones con terceros sin reconstruir datos a última hora.',
+    introParagraphs: [
+      'El Modelo 347 obliga a revisar las operaciones con terceros que superan el umbral anual y a verificar que los datos de los proveedores sean correctos antes de exportar.',
+      'Cuando este trabajo se hace con extractos, Excel y comprobaciones manuales, es habitual llegar al cierre con CIF incompletos, importes dudosos u operaciones que todavía deben revisarse.',
+      'Summa Social ayuda a preparar esta parte de la fiscalidad a partir de los movimientos y de los proveedores que la entidad ya trabaja durante el año.',
+    ],
+  },
+  problem: {
+    title: 'El problema habitual del Modelo 347',
+    intro: 'Cuando las operaciones con terceros no están ordenadas, suelen aparecer estos bloqueos:',
+    points: [
+      'proveedores sin CIF o con datos incompletos',
+      'pagos repartidos entre extractos y hojas de cálculo',
+      'dudas sobre qué operaciones entran realmente en el 347',
+      'revisión de última hora antes de enviar la exportación a la gestoría',
+    ],
+    outroParagraphs: [
+      'El resultado es un proceso fiscal lento y poco fiable justo en el momento en el que menos margen hay para corregir datos.',
+    ],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social prepara el Modelo 347 a partir de la información económica y de los terceros que la entidad ya tiene registrados.',
+    steps: [
+      {
+        title: 'Tienes los proveedores identificados',
+        body: 'Cada tercero se trabaja desde su ficha, con el nombre y el CIF como dato crítico.',
+      },
+      {
+        title: 'Los pagos quedan vinculados a los movimientos reales',
+        body: 'La base del 347 sale de los movimientos económicos que ya se han revisado dentro del sistema.',
+      },
+      {
+        title: 'Revisas quién supera el umbral anual',
+        body: 'El sistema ayuda a focalizar la revisión en los proveedores que pueden entrar en el informe.',
+      },
+      {
+        title: 'Verificas el detalle antes de exportar',
+        body: 'El equipo puede revisar las operaciones mostradas y dejar limpio el conjunto antes de generar el fichero.',
+      },
+      {
+        title: 'Generas la salida para la gestoría o la AEAT',
+        body: 'Cuando los datos son correctos, la exportación sale a partir del mismo sistema.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar Summa Social',
+    intro: 'Con Summa Social, la entidad puede:',
+    items: [
+      'mantener a los proveedores bien identificados durante el año',
+      'centralizar los pagos que después alimentan el Modelo 347',
+      'revisar los terceros que superan el umbral anual de 3.005,06 €',
+      'preparar la exportación con una base mucho más limpia para la gestoría',
+    ],
+    outroParagraphs: [
+      'Esto evita tener que reconstruir el informe cuando el plazo fiscal ya está encima.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Menos limpieza de última hora: la información de los proveedores ya se trabaja durante el año.',
+      'Más coherencia fiscal: el 347 sale de movimientos y terceros que comparten la misma base.',
+      'Más control sobre los pagos relevantes para el cierre anual.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades pequeñas y medianas',
+    paragraphs: [
+      'Summa Social está pensado para organizaciones que necesitan entregar el Modelo 347 a la gestoría sin dedicar días enteros a revisar terceros y pagos.',
+      'No es un sistema fiscal genérico. Es una herramienta para tener ordenada la información económica que después debe declararse.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra entidad',
+    text: 'Si el Modelo 347 os obliga a revisar proveedores y pagos desde cero cada año, contactad con nosotros y valoraremos si Summa Social puede ayudaros a ordenar esta parte fiscal.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
 const RETURNED_RECEIPTS_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: 'Devolucions de rebuts de socis | Software de gestió per a entitats | Summa Social',
@@ -1538,8 +2182,9 @@ const RETURNED_RECEIPTS_METADATA: Record<PublicLocale, PublicLandingMetadata> = 
       'Gestiona rebuts retornats i devolucions bancàries sense perdre el fil fiscal. Assigna cada devolució al soci correcte dins de Summa Social.',
   },
   es: {
-    title: 'Devoluciones de recibos de socios | Summa Social',
-    description: 'Landing en preparacion para devoluciones bancarias y recibos devueltos.',
+    title: 'Devoluciones de recibos de socios | Software de gestión para entidades | Summa Social',
+    description:
+      'Gestiona recibos devueltos y devoluciones bancarias sin perder el hilo fiscal. Asigna cada devolución al socio correcto dentro de Summa Social.',
   },
   fr: {
     title: 'Rejets de recus de membres | Summa Social',
@@ -1636,6 +2281,91 @@ const RETURNED_RECEIPTS_CONTENT_CA: PublicLandingContent = {
   },
 };
 
+const RETURNED_RECEIPTS_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Gestionar devoluciones de recibos de socios sin perder el control fiscal',
+    subtitle: 'Asigna cada recibo devuelto al socio correcto y evita totales inflados en certificados y Modelo 182.',
+    introParagraphs: [
+      'Cuando el banco devuelve recibos de cuotas o donaciones recurrentes, el trabajo no termina al ver el importe negativo en el extracto.',
+      'Hay que saber de qué socio o donante es cada devolución, revisar si forma parte de una remesa y asegurarse de que el total neto quede bien calculado.',
+      'Summa Social ayuda a gestionar este proceso dentro del mismo flujo económico de la entidad, sin tener que llevar un control separado en Excel.',
+    ],
+  },
+  problem: {
+    title: 'El problema habitual con los recibos devueltos',
+    intro: 'Cuando las devoluciones se dejan fuera del sistema, pasan cosas como estas:',
+    points: [
+      'importes negativos sin socio asignado',
+      'remesas de devoluciones revisadas solo por el movimiento padre',
+      'certificados o Modelo 182 con totales inflados',
+      'falta de seguimiento sobre qué socios acumulan recibos devueltos',
+    ],
+    outroParagraphs: [
+      'Esta es una de esas tareas pequeñas que, si se dejan pendientes, acaban afectando directamente al cierre fiscal.',
+    ],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social permite trabajar las devoluciones dentro del mismo circuito de movimientos y donantes.',
+    steps: [
+      {
+        title: 'Detectas las devoluciones pendientes',
+        body: 'Los movimientos devueltos pueden revisarse desde el mismo entorno de trabajo económico.',
+      },
+      {
+        title: 'Importas el detalle del banco cuando lo tienes',
+        body: 'Si el banco facilita el fichero de devoluciones, el sistema lo aprovecha para avanzar la identificación.',
+      },
+      {
+        title: 'Asignas cada devolución al socio correcto',
+        body: 'La devolución debe quedar vinculada al donante o socio que realmente corresponde.',
+      },
+      {
+        title: 'Mantienes pendientes conscientes cuando falta información',
+        body: 'Si alguna devolución no puede resolverse al momento, puede dejarse localizada para revisarla después.',
+      },
+      {
+        title: 'El total neto queda bien reflejado',
+        body: 'Cuando la devolución está bien asignada, el sistema la tiene en cuenta donde corresponde.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar Summa Social',
+    intro: 'Con Summa Social, la entidad puede:',
+    items: [
+      'revisar devoluciones bancarias desde el mismo espacio de movimientos',
+      'importar el detalle de devoluciones facilitado por el banco',
+      'mantener trazabilidad de las devoluciones dentro de la ficha del donante',
+      'llegar al cierre anual con menos riesgo de totales fiscales incorrectos',
+    ],
+    outroParagraphs: [
+      'La clave es simple: una devolución solo resta donde toca si está bien asignada.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Menos errores fiscales: los totales netos de cada donante pueden revisarse con base real.',
+      'Más orden mensual: las devoluciones dejan de ser una carpeta pendiente fuera del sistema.',
+      'Más visibilidad sobre socios con recibos devueltos o incidencias recurrentes.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades pequeñas y medianas',
+    paragraphs: [
+      'Summa Social es útil para entidades que cobran cuotas o donaciones recurrentes y necesitan controlar las devoluciones sin perder tiempo en seguimientos manuales.',
+      'Es una herramienta pensada para resolver la parte operativa y fiscal del día a día, no para añadir más burocracia.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra entidad',
+    text: 'Si las devoluciones bancarias os hacen perder tiempo y os generan dudas antes del cierre anual, contactad con nosotros y veremos si Summa Social puede ayudaros a controlarlas mejor.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
 const MODEL_182_CONTENT_CA: PublicLandingContent = {
   hero: {
     title: 'Model 182 per a ONG i associacions',
@@ -1648,10 +2378,18 @@ const MODEL_182_CONTENT_CA: PublicLandingContent = {
     ],
     media: {
       type: 'video',
-      src: '/visuals/landings/model-182/animations/anima-182.webm',
-      mp4FallbackSrc: '/visuals/landings/model-182/animations/anima-182.mp4',
-      poster: '/visuals/landings/model-182/optimized/anima-182-poster.webp',
-      alt: 'Animacio de flux del Model 182 a Summa Social',
+      src: '/visuals/landings/model-182/animations/model-182-demo-ca.mp4',
+      poster: '/visuals/landings/model-182/optimized/model-182-demo-poster.webp',
+      captionsSrc: '/visuals/landings/model-182/animations/model-182-demo-ca.vtt',
+      captionsLang: 'ca',
+      captionsLabel: 'Subtítols en català',
+      captionsDisplay: 'overlay',
+      autoPlay: false,
+      loop: false,
+      durationLabel: '10 s',
+      alt: 'Vídeo de demostració del Model 182 a Summa Social',
+      controls: true,
+      muted: false,
     },
   },
   problem: {
@@ -1733,13 +2471,118 @@ const MODEL_182_CONTENT_CA: PublicLandingContent = {
   },
 };
 
+const MODEL_182_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Modelo 182 para ONG y asociaciones',
+    subtitle: 'Genera el Modelo 182 sin Excel, sin errores y sin sufrir en enero.',
+    introParagraphs: [
+      'El Modelo 182 es una de las obligaciones fiscales más delicadas para una entidad. Cada año hay que recopilar todas las donaciones, verificar los datos de los donantes, restar las devoluciones y preparar el fichero para la gestoría o para la AEAT.',
+      'Muchas entidades todavía lo hacen con Excel y extractos bancarios. Eso implica horas de revisión manual, riesgo de errores y mucha presión a finales de enero.',
+      'Summa Social resuelve este problema.',
+      'Es una aplicación pensada específicamente para entidades sin ánimo de lucro que centraliza los movimientos bancarios, los donantes y la información fiscal necesaria para preparar el Modelo 182 de forma segura y rápida.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/landings/model-182/animations/model-182-demo-es.mp4',
+      poster: '/visuals/landings/model-182/optimized/model-182-demo-poster.webp',
+      captionsSrc: '/visuals/landings/model-182/animations/model-182-demo-es.vtt',
+      captionsLang: 'es',
+      captionsLabel: 'Subtítulos en castellano',
+      captionsDisplay: 'overlay',
+      autoPlay: false,
+      loop: false,
+      durationLabel: '10 s',
+      alt: 'Vídeo de demostración del Modelo 182 en Summa Social',
+      controls: true,
+      muted: false,
+    },
+  },
+  problem: {
+    title: 'El problema real del Modelo 182',
+    intro: 'Cuando llega enero, muchas entidades se encuentran con situaciones como estas:',
+    points: [
+      'donaciones repartidas entre extractos bancarios, remesas y Stripe',
+      'donantes sin DNI o con datos incompletos',
+      'devoluciones bancarias que hay que restar manualmente',
+      'dudas sobre quién ha donado realmente durante el año',
+      'Excel que no cuadra con la cuenta bancaria',
+    ],
+    outroParagraphs: [
+      'El resultado suele ser el mismo: días enteros revisando datos antes de poder enviar el Modelo 182 a la gestoría.',
+    ],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social está diseñado para que el Modelo 182 salga prácticamente solo a partir de los datos reales del banco.',
+    steps: [
+      {
+        title: 'Importas el extracto bancario',
+        body: 'Puedes subir ficheros CSV o Excel del banco. Los movimientos se detectan automáticamente y el sistema evita duplicados.',
+      },
+      {
+        title: 'Asignas los donantes',
+        body: 'Las donaciones se asocian a los donantes por nombre, IBAN o DNI. También puedes importar los donantes desde Excel.',
+      },
+      {
+        title: 'Las devoluciones se restan automáticamente',
+        body: 'Si un recibo se devuelve, el sistema lo registra y descuenta la devolución del cálculo fiscal.',
+      },
+      {
+        title: 'El sistema calcula el total por donante',
+        body: 'Summa Social consolida todas las donaciones del año y calcula el neto real por cada persona.',
+      },
+      {
+        title: 'Generas el Modelo 182',
+        body: 'Con un clic obtienes un Excel preparado para la gestoría o el fichero oficial para presentar a la AEAT.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué incluye el Modelo 182 generado por Summa Social',
+    intro: 'El sistema prepara automáticamente la información que exige Hacienda:',
+    items: [
+      'NIF del donante.',
+      'Nombre completo.',
+      'Código de provincia.',
+      'Importe anual de donaciones.',
+      'Recurrencia de donaciones.',
+      'Naturaleza (persona física o jurídica).',
+    ],
+    outroParagraphs: [
+      'También aplica automáticamente el cálculo de donaciones menos devoluciones y valida que los datos mínimos sean correctos antes de generar el fichero.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos para la entidad',
+    items: [
+      'Menos horas de preparación del Modelo 182.',
+      'Menos riesgo de errores en importes o donantes.',
+      'Control real de las donaciones durante todo el año.',
+      'Trazabilidad completa desde el Modelo 182 hasta el movimiento bancario.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades pequeñas y medianas',
+    paragraphs: [
+      'Summa Social está diseñado para organizaciones que llevan la gestión económica con hojas de cálculo y necesitan cumplir con la fiscalidad sin un sistema complejo.',
+      'No es un ERP generalista ni un sistema de contabilidad avanzada. Es una herramienta de gestión económica y fiscal pensada específicamente para entidades sociales.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra entidad',
+    text: 'Si lleváis la gestión económica de una entidad y cada año sufrís con el Modelo 182, contactad con nosotros y valoraremos si Summa Social puede ayudaros a simplificar este cierre.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
 const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'model-182',
     metadata: MODEL_182_METADATA,
     content: {
       ca: withRelatedLandings(MODEL_182_CONTENT_CA, 'ca', 'model-182'),
-      es: buildPendingContent('es', LANDING_NAMES['model-182'].es),
+      es: withRelatedLandings(MODEL_182_CONTENT_ES, 'es', 'model-182'),
       fr: buildPendingContent('fr', LANDING_NAMES['model-182'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['model-182'].pt),
     },
@@ -1749,7 +2592,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
     metadata: DONATION_CERTIFICATES_METADATA,
     content: {
       ca: withRelatedLandings(DONATION_CERTIFICATES_CONTENT_CA, 'ca', 'certificats-donacio'),
-      es: buildPendingContent('es', LANDING_NAMES['certificats-donacio'].es),
+      es: withRelatedLandings(DONATION_CERTIFICATES_CONTENT_ES, 'es', 'certificats-donacio'),
       fr: buildPendingContent('fr', LANDING_NAMES['certificats-donacio'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['certificats-donacio'].pt),
     },
@@ -1759,7 +2602,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
     metadata: MODEL_347_ONG_METADATA,
     content: {
       ca: withRelatedLandings(MODEL_347_ONG_CONTENT_CA, 'ca', 'model-347-ong'),
-      es: buildPendingContent('es', LANDING_NAMES['model-347-ong'].es),
+      es: withRelatedLandings(MODEL_347_ONG_CONTENT_ES, 'es', 'model-347-ong'),
       fr: buildPendingContent('fr', LANDING_NAMES['model-347-ong'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['model-347-ong'].pt),
     },
@@ -1769,7 +2612,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
     metadata: SEPA_REMITTANCES_METADATA,
     content: {
       ca: withRelatedLandings(SEPA_REMITTANCES_CONTENT_CA, 'ca', 'remeses-sepa'),
-      es: buildPendingContent('es', LANDING_NAMES['remeses-sepa'].es),
+      es: withRelatedLandings(SEPA_REMITTANCES_CONTENT_ES, 'es', 'remeses-sepa'),
       fr: buildPendingContent('fr', LANDING_NAMES['remeses-sepa'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['remeses-sepa'].pt),
     },
@@ -1779,7 +2622,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
     metadata: RETURNED_RECEIPTS_METADATA,
     content: {
       ca: withRelatedLandings(RETURNED_RECEIPTS_CONTENT_CA, 'ca', 'devolucions-rebuts-socis'),
-      es: buildPendingContent('es', LANDING_NAMES['devolucions-rebuts-socis'].es),
+      es: withRelatedLandings(RETURNED_RECEIPTS_CONTENT_ES, 'es', 'devolucions-rebuts-socis'),
       fr: buildPendingContent('fr', LANDING_NAMES['devolucions-rebuts-socis'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['devolucions-rebuts-socis'].pt),
     },
@@ -1789,7 +2632,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
     metadata: BANK_STATEMENT_IMPORT_METADATA,
     content: {
       ca: withRelatedLandings(BANK_STATEMENT_IMPORT_CONTENT_CA, 'ca', 'importar-extracte-bancari'),
-      es: buildPendingContent('es', LANDING_NAMES['importar-extracte-bancari'].es),
+      es: withRelatedLandings(BANK_STATEMENT_IMPORT_CONTENT_ES, 'es', 'importar-extracte-bancari'),
       fr: buildPendingContent('fr', LANDING_NAMES['importar-extracte-bancari'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['importar-extracte-bancari'].pt),
     },
@@ -1799,7 +2642,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
     metadata: BANK_RECONCILIATION_ONG_METADATA,
     content: {
       ca: withRelatedLandings(BANK_RECONCILIATION_ONG_CONTENT_CA, 'ca', 'conciliacio-bancaria-ong'),
-      es: buildPendingContent('es', LANDING_NAMES['conciliacio-bancaria-ong'].es),
+      es: withRelatedLandings(BANK_RECONCILIATION_ONG_CONTENT_ES, 'es', 'conciliacio-bancaria-ong'),
       fr: buildPendingContent('fr', LANDING_NAMES['conciliacio-bancaria-ong'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['conciliacio-bancaria-ong'].pt),
     },
@@ -1809,7 +2652,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
     metadata: DONATIONS_CONTROL_ONG_METADATA,
     content: {
       ca: withRelatedLandings(DONATIONS_CONTROL_ONG_CONTENT_CA, 'ca', 'control-donacions-ong'),
-      es: buildPendingContent('es', LANDING_NAMES['control-donacions-ong'].es),
+      es: withRelatedLandings(DONATIONS_CONTROL_ONG_CONTENT_ES, 'es', 'control-donacions-ong'),
       fr: buildPendingContent('fr', LANDING_NAMES['control-donacions-ong'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['control-donacions-ong'].pt),
     },
@@ -1862,4 +2705,23 @@ export function getPublicLandingMetadata(landing: PublicLandingDefinition, local
 
 export function getPublicLandingContent(landing: PublicLandingDefinition, locale: PublicLocale): PublicLandingContent {
   return landing.content[locale] ?? landing.content.ca;
+}
+
+export function getPublicLandingPreviewBySlug(slug: string, locale: PublicLocale) {
+  const landing = getPublicLandingBySlug(slug);
+
+  if (!landing) {
+    return null;
+  }
+
+  const content = getPublicLandingContent(landing, locale);
+  const metadata = getPublicLandingMetadata(landing, locale);
+
+  return {
+    slug: landing.slug,
+    title: content.hero.title,
+    subtitle: content.hero.subtitle,
+    description: metadata.description,
+    media: content.hero.media ?? null,
+  };
 }

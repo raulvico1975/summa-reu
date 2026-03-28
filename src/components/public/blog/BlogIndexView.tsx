@@ -1,74 +1,145 @@
+import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { PublicSiteFooter } from '@/components/public/PublicSiteFooter'
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { getBlogCopy } from '@/lib/blog/copy'
-import { formatBlogDate, listLocalizedBlogPosts } from '@/lib/blog/firestore'
-import { getBlogCategoryLabel } from '@/lib/blog/presentation'
+import { listLocalizedBlogPosts } from '@/lib/blog/firestore'
+import type { LocalizedBlogPost } from '@/lib/blog/localized'
 import type { PublicLocale } from '@/lib/public-locale'
-import { getPublicTranslations } from '@/i18n/public'
 import { cn } from '@/lib/utils'
 
 const pageShellClass =
-  'min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#ffffff_26%,#ffffff_100%)]'
+  'min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#ffffff_28%,#f8fbff_100%)]'
 const cardClass =
-  'overflow-hidden rounded-[1.9rem] border border-border/60 bg-white/92 shadow-[0_24px_70px_-48px_rgba(15,23,42,0.2)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_32px_90px_-54px_rgba(15,23,42,0.26)]'
+  'group overflow-hidden rounded-[2.2rem] border border-white/75 bg-white/94 shadow-[0_28px_90px_-62px_rgba(15,23,42,0.24)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_36px_100px_-58px_rgba(15,23,42,0.28)]'
 
 function isBlogConfigured() {
   return Boolean(process.env.BLOG_ORG_ID?.trim())
 }
 
+function stripHtmlTags(value: string) {
+  return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function normalizePreviewText(value: string) {
+  return value
+    .replace(/\s+/g, ' ')
+    .replace(/\s+,/g, ',')
+    .replace(/\s+\./g, '.')
+    .replace(/\.\s+,/g, '. ')
+    .trim()
+}
+
+function truncateText(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value
+  return `${value.slice(0, maxLength).replace(/\s+\S*$/, '')}…`
+}
+
+function getPostPreview(post: LocalizedBlogPost) {
+  const excerpt = normalizePreviewText(post.excerpt)
+  if (excerpt.length >= 96) {
+    return truncateText(excerpt, 180)
+  }
+
+  return truncateText(normalizePreviewText(stripHtmlTags(post.contentHtml)), 180)
+}
+
+function formatCompactBlogDate(iso: string, locale: PublicLocale = 'ca') {
+  const date = new Date(iso)
+  if (!Number.isFinite(date.getTime())) return iso
+
+  const localeMap: Record<PublicLocale, string> = {
+    ca: 'ca-ES',
+    es: 'es-ES',
+    fr: 'fr-FR',
+    pt: 'pt-PT',
+  }
+
+  return date.toLocaleDateString(localeMap[locale], {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function BlogPostMedia({
+  post,
+  featured = false,
+}: {
+  post: LocalizedBlogPost
+  featured?: boolean
+}) {
+  const shellClass = featured
+    ? 'p-5 lg:p-6'
+    : 'border-b border-border/40 p-4'
+  const frameClass = featured
+    ? 'aspect-[1.05/0.8] rounded-[1.8rem]'
+    : 'aspect-[1.18/0.82] rounded-[1.4rem]'
+
+  return (
+    <div className={cn('bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.74))]', shellClass)}>
+      <div
+        className={cn(
+          'relative overflow-hidden border border-white/80 bg-[linear-gradient(140deg,rgba(255,255,255,0.94),rgba(244,249,255,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]',
+          frameClass
+        )}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.12),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.08),transparent_20%)]" />
+
+        {post.coverImageUrl ? (
+          <div className="absolute inset-0">
+            <Image
+              src={post.coverImageUrl}
+              alt={post.coverImageAlt || post.title}
+              fill
+              unoptimized
+              sizes={featured ? '(min-width: 1024px) 42vw, 100vw' : '(min-width: 768px) 38vw, 100vw'}
+              className="object-contain p-6 sm:p-7"
+            />
+          </div>
+        ) : (
+          <div className="absolute inset-0">
+            <div className="absolute right-[-2.25rem] top-[-2.25rem] h-32 w-32 rounded-full bg-sky-100/80" />
+            <div className="absolute bottom-[-1.4rem] left-[-1.1rem] h-24 w-24 rounded-full bg-sky-50/90" />
+            <div className="absolute inset-x-7 bottom-8 space-y-3">
+              <div className="h-3 rounded-full bg-slate-200/75" />
+              <div className="h-3 w-3/4 rounded-full bg-slate-200/65" />
+              <div className="h-3 w-1/2 rounded-full bg-slate-200/55" />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 interface BlogIndexViewProps {
   locale: PublicLocale
   blogBasePath: string
-  homeHref: string
 }
 
 export async function BlogIndexView({
   locale,
   blogBasePath,
-  homeHref,
 }: BlogIndexViewProps) {
   const copy = getBlogCopy(locale)
-  const t = getPublicTranslations(locale)
 
   if (!isBlogConfigured()) {
     return (
       <main className={pageShellClass}>
         <PublicSiteHeader locale={locale} currentSection="blog" />
 
-        <section className="px-6 pb-20 pt-8 lg:pt-12">
-          <div className="mx-auto max-w-6xl">
-            <Button asChild variant="ghost" size="sm" className="rounded-full px-4 text-muted-foreground hover:text-foreground">
-              <Link href={homeHref}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {copy.backToHome}
-              </Link>
-            </Button>
-
-            <div className="mt-6 grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">
-              <div className="space-y-5">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                  {copy.eyebrow}
-                </p>
-                <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-                  {copy.title}
-                </h1>
-                <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                  {copy.description}
-                </p>
-              </div>
-
-              <div className="rounded-[2rem] border border-border/60 bg-white/92 p-6 shadow-[0_28px_80px_-56px_rgba(15,23,42,0.22)] sm:p-7">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                  {copy.panelTitle}
-                </p>
-                <p className="mt-4 text-base leading-7 text-muted-foreground">
-                  {copy.notConfigured}
-                </p>
-              </div>
+        <section className="px-6 pb-20 pt-12 lg:pt-16">
+          <div className="mx-auto max-w-5xl">
+            <div className="max-w-[43rem] space-y-3">
+              <h1 className="text-[2.45rem] font-semibold tracking-[-0.05em] text-foreground sm:text-[3.2rem]">
+                {copy.title}
+              </h1>
+              <p className="text-base leading-7 text-muted-foreground sm:text-[1.04rem]">
+                {copy.description}
+              </p>
+              <p className="text-sm text-muted-foreground">{copy.notConfigured}</p>
             </div>
           </div>
         </section>
@@ -85,106 +156,51 @@ export async function BlogIndexView({
     <main className={pageShellClass}>
       <PublicSiteHeader locale={locale} currentSection="blog" />
 
-      <section className="px-6 pb-12 pt-8 lg:pt-12">
-        <div className="mx-auto max-w-6xl">
-          <Button asChild variant="ghost" size="sm" className="rounded-full px-4 text-muted-foreground hover:text-foreground">
-            <Link href={homeHref}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              {copy.backToHome}
-            </Link>
-          </Button>
-
-          <div className="mt-6 grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-end">
-            <div className="space-y-5">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                {copy.eyebrow}
-              </p>
-              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-                {copy.title}
-              </h1>
-              <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                {copy.description}
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Button asChild size="lg">
-                  <Link href={`/${locale}#capabilities`}>{copy.discoverFeatures}</Link>
-                </Button>
-                <Button asChild size="lg" variant="outline">
-                  <Link href={`/${locale}/novetats`}>{copy.browseUpdates}</Link>
-                </Button>
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-sky-200/70 bg-white/92 p-6 shadow-[0_30px_90px_-56px_rgba(14,165,233,0.36)] sm:p-7">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                {copy.panelTitle}
-              </p>
-              <div className="mt-5 grid gap-4">
-                {copy.panelPoints.map((point) => (
-                  <div
-                    key={point}
-                    className="rounded-[1.35rem] border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm leading-6 text-muted-foreground"
-                  >
-                    {point}
-                  </div>
-                ))}
-              </div>
-            </div>
+      <section className="px-6 pb-10 pt-12 lg:pt-16">
+        <div className="mx-auto max-w-5xl">
+          <div className="max-w-[43rem] space-y-3">
+            <h1 className="text-[2.45rem] font-semibold tracking-[-0.05em] text-foreground sm:text-[3.2rem]">
+              {copy.title}
+            </h1>
+            <p className="text-base leading-7 text-muted-foreground sm:text-[1.04rem]">
+              {copy.description}
+            </p>
           </div>
         </div>
       </section>
 
       <section className="px-6 pb-20">
-        <div className="mx-auto max-w-6xl space-y-6">
+        <div className="mx-auto max-w-5xl space-y-7">
           {featuredPost ? (
-            <article className={cn(cardClass, 'border-sky-200/70 bg-white/95')}>
-              <Link href={`${blogBasePath}/${featuredPost.slug}`} className="grid gap-0 lg:grid-cols-[0.92fr_1.08fr]">
-                <div className="border-b border-border/60 bg-[linear-gradient(135deg,rgba(14,165,233,0.1),rgba(255,255,255,0.96)_45%,rgba(240,249,255,0.9))] p-6 lg:border-b-0 lg:border-r lg:p-8">
-                  {featuredPost.coverImageUrl ? (
-                    <div className="flex min-h-[280px] items-center justify-center rounded-[1.6rem] border border-white/80 bg-white/92 p-6 shadow-[0_20px_60px_-44px_rgba(15,23,42,0.2)]">
-                      <img
-                        src={featuredPost.coverImageUrl}
-                        alt={featuredPost.coverImageAlt || featuredPost.title}
-                        className="h-full max-h-[320px] w-full object-contain object-center"
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex min-h-[280px] items-center justify-center rounded-[1.6rem] border border-dashed border-border/60 bg-white/80 p-6 text-sm text-muted-foreground">
-                      {t.common.appName}
-                    </div>
-                  )}
-                </div>
+            <article className={cardClass}>
+              <Link
+                href={`${blogBasePath}/${featuredPost.slug}`}
+                className="grid gap-0 lg:grid-cols-[0.92fr_1.08fr]"
+              >
+                <BlogPostMedia post={featuredPost} featured />
 
-                <div className="flex flex-col justify-between p-6 sm:p-8">
-                  <div className="space-y-5">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Badge variant="outline" className="border-sky-200 bg-sky-50 text-primary">
-                        {getBlogCategoryLabel(featuredPost.category, locale)}
-                      </Badge>
-                      <time dateTime={featuredPost.publishedAt} className="text-sm text-muted-foreground">
-                        {formatBlogDate(featuredPost.publishedAt, locale)}
-                      </time>
-                    </div>
-
-                    <div className="space-y-3">
-                      <h2 className="max-w-3xl text-3xl font-semibold tracking-tight text-foreground sm:text-[2.25rem]">
-                        {featuredPost.title}
-                      </h2>
-                      <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-                        {featuredPost.excerpt}
-                      </p>
-                    </div>
+                <div className="flex flex-col justify-between p-7 sm:p-9">
+                  <div className="space-y-4">
+                    <p className="text-sm font-medium text-foreground/46">
+                      {formatCompactBlogDate(featuredPost.publishedAt, locale)}
+                    </p>
+                    <h2 className="max-w-3xl text-[2.2rem] font-semibold leading-[1.02] tracking-[-0.055em] text-foreground sm:text-[3rem]">
+                      {featuredPost.title}
+                    </h2>
+                    <p className="max-w-3xl text-[1.02rem] leading-8 text-foreground/68">
+                      {getPostPreview(featuredPost)}
+                    </p>
                   </div>
 
-                  <span className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-primary">
+                  <span className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-primary">
                     {copy.readArticle}
-                    <ArrowRight className="h-4 w-4" />
+                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                   </span>
                 </div>
               </Link>
             </article>
           ) : (
-            <div className="rounded-[2rem] border border-dashed border-border/70 bg-white/75 px-6 py-16 text-center shadow-[0_22px_70px_-50px_rgba(15,23,42,0.18)]">
+            <div className="rounded-[2rem] border border-dashed border-border/70 bg-white/82 px-6 py-16 text-center shadow-[0_22px_70px_-50px_rgba(15,23,42,0.18)]">
               <h2 className="text-2xl font-semibold tracking-tight text-foreground">
                 {copy.emptyTitle}
               </h2>
@@ -197,38 +213,23 @@ export async function BlogIndexView({
           {otherPosts.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2">
               {otherPosts.map((post) => (
-                <article key={post.id} className={cardClass}>
-                  <Link href={`${blogBasePath}/${post.slug}`} className="block">
-                    {post.coverImageUrl ? (
-                      <div className="border-b border-border/60 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.8))] p-5">
-                        <div className="flex min-h-[220px] items-center justify-center rounded-[1.35rem] border border-white/80 bg-white/92 p-5">
-                          <img
-                            src={post.coverImageUrl}
-                            alt={post.coverImageAlt || post.title}
-                            className="h-full max-h-[240px] w-full object-contain object-center"
-                          />
-                        </div>
-                      </div>
-                    ) : null}
+                <article key={post.id} className={cn(cardClass, 'h-full')}>
+                  <Link href={`${blogBasePath}/${post.slug}`} className="block h-full">
+                    <BlogPostMedia post={post} />
 
-                    <div className="space-y-4 p-6">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Badge variant="outline" className="border-sky-200 bg-sky-50 text-primary">
-                          {getBlogCategoryLabel(post.category, locale)}
-                        </Badge>
-                        <time dateTime={post.publishedAt} className="text-sm text-muted-foreground">
-                          {formatBlogDate(post.publishedAt, locale)}
-                        </time>
-                      </div>
-
-                      <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                    <div className="space-y-4 p-6 sm:p-7">
+                      <p className="text-sm font-medium text-foreground/46">
+                        {formatCompactBlogDate(post.publishedAt, locale)}
+                      </p>
+                      <h2 className="text-[1.9rem] font-semibold leading-[1.08] tracking-[-0.045em] text-foreground">
                         {post.title}
                       </h2>
-                      <p className="text-base leading-7 text-muted-foreground">{post.excerpt}</p>
-
-                      <span className="inline-flex items-center gap-2 text-sm font-medium text-primary">
+                      <p className="text-[0.98rem] leading-7 text-foreground/68 line-clamp-4">
+                        {getPostPreview(post)}
+                      </p>
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
                         {copy.readArticle}
-                        <ArrowRight className="h-4 w-4" />
+                        <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                       </span>
                     </div>
                   </Link>

@@ -31,5 +31,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function BlogPage() {
-  return <BlogIndexView locale={locale} blogBasePath="/blog" homeHref="/ca" />
+  return <BlogIndexView locale={locale} blogBasePath="/blog" />
 }

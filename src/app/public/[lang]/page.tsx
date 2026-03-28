@@ -3,9 +3,10 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
+import { PublicFeatureDemo } from '@/components/public/PublicFeatureDemo';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle2, Upload, Settings, FileCheck, Download, CalendarDays } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Upload, Settings, FileCheck, Download, CalendarDays, Play } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -14,7 +15,13 @@ import {
 } from '@/lib/public-locale';
 import { SUPPORT_EMAIL } from '@/lib/constants';
 import { getPublicTranslations } from '@/i18n/public';
+import {
+  getPublicDetailedGuidesLocale,
+  getPublicEconomicGuideHref,
+  getPublicFeaturesHref,
+} from '@/lib/public-site-paths';
 import { getLatestPublicProductUpdate } from '@/lib/product-updates/public';
+import { getPublicLandingPreviewBySlug, type PublicLandingHeroMedia } from '@/lib/public-landings';
 
 const frameClass =
   'overflow-hidden rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_28px_80px_-44px_rgba(15,23,42,0.28)] backdrop-blur';
@@ -302,6 +309,113 @@ const FOOTER_COPY: Record<
   },
 };
 
+const HOME_SECTION_COPY: Record<
+  PublicLocale,
+  {
+    capabilitiesNote: string;
+    capabilitiesCta: string;
+    conciliationCardDescription: string;
+    updatesBadge: string;
+    secondaryEyebrow: string;
+    secondaryTitle: string;
+    secondaryDescription: string;
+    secondaryDemoBadge: string;
+    secondaryGuideBadge: string;
+  }
+> = {
+  ca: {
+    capabilitiesNote:
+      'Comencem per 4 demos premium destacades i, just a sota, hi tens més processos clau que Summa també cobreix. N’anirem obrint més a poc a poc.',
+    capabilitiesCta: 'Veure totes les funcionalitats',
+    conciliationCardDescription:
+      'Importa extractes, categoritza automàticament amb IA i concilia amb la documentació existent.',
+    updatesBadge: 'NOU A SUMMA',
+    secondaryEyebrow: 'Més recorreguts',
+    secondaryTitle: 'Altres funcionalitats que ja pots explorar',
+    secondaryDescription:
+      'Perquè es vegi més clar l’abast real de Summa, aquí tens 4 landings més amb processos complementaris de tresoreria, donants i fiscalitat.',
+    secondaryDemoBadge: 'Amb demo',
+    secondaryGuideBadge: 'Landing detallada',
+  },
+  es: {
+    capabilitiesNote:
+      'Empezamos por 4 demos premium destacadas y, justo debajo, tienes más procesos clave que Summa también cubre. Iremos abriendo más landings poco a poco.',
+    capabilitiesCta: 'Ver todas las funcionalidades',
+    conciliationCardDescription:
+      'Importa extractos, categoriza automáticamente con IA y concilia con la documentación existente.',
+    updatesBadge: 'NUEVO EN SUMMA',
+    secondaryEyebrow: 'Más recorridos',
+    secondaryTitle: 'Otras funcionalidades que ya puedes explorar',
+    secondaryDescription:
+      'Para que se entienda mejor el alcance real de Summa, aquí tienes 4 landings más con procesos complementarios de tesorería, donantes y fiscalidad.',
+    secondaryDemoBadge: 'Con demo',
+    secondaryGuideBadge: 'Landing detallada',
+  },
+  fr: {
+    capabilitiesNote:
+      'Nous commençons par 4 démos premium mises en avant et, juste en dessous, vous voyez déjà d’autres processus clés que Summa couvre aussi. D’autres landings arriveront progressivement.',
+    capabilitiesCta: 'Voir toutes les fonctionnalités',
+    conciliationCardDescription:
+      'Importez les relevés, catégorisez automatiquement avec l’IA et rapprochez avec la documentation existante.',
+    updatesBadge: 'NOUVEAU SUR SUMMA',
+    secondaryEyebrow: 'Plus de parcours',
+    secondaryTitle: 'D’autres fonctionnalités déjà à explorer',
+    secondaryDescription:
+      'Pour mieux montrer l’étendue réelle de Summa, voici 4 landings supplémentaires autour de la trésorerie, des donateurs et de la fiscalité.',
+    secondaryDemoBadge: 'Avec démo',
+    secondaryGuideBadge: 'Landing détaillée',
+  },
+  pt: {
+    capabilitiesNote:
+      'Começamos por 4 demos premium em destaque e, logo abaixo, tens mais processos-chave que o Summa também cobre. Iremos abrir mais landings aos poucos.',
+    capabilitiesCta: 'Ver todas as funcionalidades',
+    conciliationCardDescription:
+      'Importa extratos, categoriza automaticamente com IA e concilia com a documentação existente.',
+    updatesBadge: 'NOVO NO SUMMA',
+    secondaryEyebrow: 'Mais percursos',
+    secondaryTitle: 'Outras funcionalidades que já podes explorar',
+    secondaryDescription:
+      'Para tornar o alcance real do Summa mais visível, aqui tens mais 4 landings com processos complementares de tesouraria, doadores e fiscalidade.',
+    secondaryDemoBadge: 'Com demo',
+    secondaryGuideBadge: 'Landing detalhada',
+  },
+};
+
+const SECONDARY_CAPABILITY_LABELS: Record<
+  PublicLocale,
+  {
+    bankImport: string;
+    returnedReceipts: string;
+    donationCertificates: string;
+    model347: string;
+  }
+> = {
+  ca: {
+    bankImport: 'Importació bancària',
+    returnedReceipts: 'Retorns i incidències',
+    donationCertificates: 'Donants i certificats',
+    model347: 'Fiscalitat anual',
+  },
+  es: {
+    bankImport: 'Importación bancaria',
+    returnedReceipts: 'Retornos e incidencias',
+    donationCertificates: 'Donantes y certificados',
+    model347: 'Fiscalidad anual',
+  },
+  fr: {
+    bankImport: 'Import bancaire',
+    returnedReceipts: 'Retours et incidents',
+    donationCertificates: 'Donateurs et certificats',
+    model347: 'Fiscalité annuelle',
+  },
+  pt: {
+    bankImport: 'Importação bancária',
+    returnedReceipts: 'Retornos e incidências',
+    donationCertificates: 'Doadores e certificados',
+    model347: 'Fiscalidade anual',
+  },
+};
+
 interface PageProps {
   params: Promise<{ lang: string }>;
 }
@@ -433,6 +547,37 @@ function formatPublicDate(value: string | null, locale: PublicLocale): string | 
   }).format(date);
 }
 
+function trimTrailingArrow(text: string) {
+  return text.replace(/\s*[→↗➜]+\s*$/, '');
+}
+
+function getLandingPreviewStill(media: PublicLandingHeroMedia | null): string | null {
+  if (!media) {
+    return null;
+  }
+
+  return media.type === 'image' ? media.src : media.poster ?? null;
+}
+
+function getHomeLandingPreview(slug: string, locale: PublicLocale) {
+  const preview = getPublicLandingPreviewBySlug(slug, locale);
+
+  if (!preview || preview.media || locale === 'ca') {
+    return preview;
+  }
+
+  const fallbackPreview = getPublicLandingPreviewBySlug(slug, 'ca');
+
+  if (!fallbackPreview?.media) {
+    return preview;
+  }
+
+  return {
+    ...preview,
+    media: fallbackPreview.media,
+  };
+}
+
 export default async function HomePage({ params }: PageProps) {
   const { lang } = await params;
 
@@ -445,11 +590,28 @@ export default async function HomePage({ params }: PageProps) {
   const landingCopy = LANDING_COPY[locale];
   const anchors = SECTION_ANCHORS[locale];
   const featuresPath = FEATURES_PATH[locale];
-  const capabilitiesHref = `/${locale}#capabilities`;
+  const featuresHref = getPublicFeaturesHref(locale);
+  const detailLocale = getPublicDetailedGuidesLocale(locale);
+  const economicGuideHref = getPublicEconomicGuideHref(locale);
   const howWeWorkHref = `/${locale}#how-we-work`;
   const updatesHref = `/${locale}/novetats`;
   const visuals = locale === 'ca' ? HOME_VISUALS.ca : HOME_VISUALS.default;
   const headlineParts = splitTextAroundPhrase(t.home.heroTagline, HERO_HIGHLIGHTS[locale]);
+  const homeSectionCopy = HOME_SECTION_COPY[locale];
+  const secondaryCapabilityLabels = SECONDARY_CAPABILITY_LABELS[locale];
+  const homeReadMoreLabel = trimTrailingArrow(t.home.readMore);
+  const featuredCapabilityPreviews = {
+    conciliation: getHomeLandingPreview('conciliacio-bancaria-ong', detailLocale),
+    remittances: getHomeLandingPreview('remeses-sepa', detailLocale),
+    donations: getHomeLandingPreview('control-donacions-ong', detailLocale),
+    fiscal: getHomeLandingPreview('model-182', detailLocale),
+  } as const;
+  const secondaryCapabilityPreviews = {
+    bankImport: getHomeLandingPreview('importar-extracte-bancari', detailLocale),
+    returnedReceipts: getHomeLandingPreview('devolucions-rebuts-socis', detailLocale),
+    donationCertificates: getHomeLandingPreview('certificats-donacio', detailLocale),
+    model347: getHomeLandingPreview('model-347-ong', detailLocale),
+  } as const;
   let latestUpdate: Awaited<ReturnType<typeof getLatestPublicProductUpdate>> = null;
 
   try {
@@ -463,19 +625,19 @@ export default async function HomePage({ params }: PageProps) {
       title: landingCopy.valueRail.conciliation.title,
       description: landingCopy.valueRail.conciliation.description,
       icon: Upload,
-      href: `/${locale}/${featuresPath}#${anchors.conciliation}`,
+      href: `/${detailLocale}/conciliacio-bancaria-ong`,
     },
     {
       title: landingCopy.valueRail.remittances.title,
       description: landingCopy.valueRail.remittances.description,
       icon: Settings,
-      href: `/${locale}/${featuresPath}#${anchors.remittances}`,
+      href: `/${detailLocale}/remeses-sepa`,
     },
     {
       title: landingCopy.valueRail.fiscal.title,
       description: landingCopy.valueRail.fiscal.description,
       icon: FileCheck,
-      href: `/${locale}/${featuresPath}#${anchors.fiscalCertificates}`,
+      href: `/${detailLocale}/model-182`,
     },
     {
       title: landingCopy.valueRail.projects.title,
@@ -514,9 +676,10 @@ export default async function HomePage({ params }: PageProps) {
     {
       eyebrow: t.home.nav.conciliation,
       title: t.home.capabilities.conciliation.title,
-      description: t.home.capabilities.conciliation.description,
+      description: homeSectionCopy.conciliationCardDescription,
       image: visuals.conciliation,
-      href: `/${locale}/${featuresPath}#${anchors.conciliation}`,
+      previewMedia: featuredCapabilityPreviews.conciliation?.media ?? null,
+      href: `/${detailLocale}/conciliacio-bancaria-ong`,
       wide: true,
       imageFirst: false,
       toneClass:
@@ -527,7 +690,8 @@ export default async function HomePage({ params }: PageProps) {
       title: t.home.capabilities.remittances.title,
       description: t.home.capabilities.remittances.description,
       image: visuals.remittances,
-      href: `/${locale}/${featuresPath}#${anchors.remittances}`,
+      previewMedia: featuredCapabilityPreviews.remittances?.media ?? null,
+      href: `/${detailLocale}/remeses-sepa`,
       wide: false,
       imageFirst: false,
       toneClass:
@@ -538,7 +702,8 @@ export default async function HomePage({ params }: PageProps) {
       title: t.home.capabilities.donations.title,
       description: t.home.capabilities.donations.description,
       image: visuals.donations,
-      href: `/${locale}/${featuresPath}#${anchors.onlineDonations}`,
+      previewMedia: featuredCapabilityPreviews.donations?.media ?? null,
+      href: `/${detailLocale}/control-donacions-ong`,
       wide: false,
       imageFirst: false,
       toneClass:
@@ -549,11 +714,93 @@ export default async function HomePage({ params }: PageProps) {
       title: t.home.capabilities.fiscal.title,
       description: t.home.capabilities.fiscal.description,
       image: visuals.fiscal,
-      href: `/${locale}/${featuresPath}#${anchors.fiscalCertificates}`,
+      previewMedia: featuredCapabilityPreviews.fiscal?.media ?? null,
+      href: `/${detailLocale}/model-182`,
       wide: true,
       imageFirst: true,
       toneClass:
         'bg-[linear-gradient(135deg,rgba(255,251,235,0.9),rgba(255,255,255,0.94))]',
+    },
+  ] as const;
+
+  const secondaryCapabilityCards = [
+    {
+      eyebrow: secondaryCapabilityLabels.bankImport,
+      title:
+        secondaryCapabilityPreviews.bankImport?.title ??
+        (locale === 'es'
+          ? 'Importar extractos bancarios'
+          : locale === 'fr'
+            ? 'Importer des relevés bancaires'
+            : locale === 'pt'
+              ? 'Importar extratos bancários'
+              : 'Importar extractes bancaris'),
+      description:
+        secondaryCapabilityPreviews.bankImport?.subtitle ?? secondaryCapabilityPreviews.bankImport?.description,
+      href: `/${detailLocale}/importar-extracte-bancari`,
+      previewMedia: secondaryCapabilityPreviews.bankImport?.media ?? null,
+      icon: Upload,
+      fallbackChip: 'CSV · XLSX',
+      toneClass: 'from-sky-100/90 via-white to-cyan-50/90',
+    },
+    {
+      eyebrow: secondaryCapabilityLabels.returnedReceipts,
+      title:
+        secondaryCapabilityPreviews.returnedReceipts?.title ??
+        (locale === 'es'
+          ? 'Devoluciones de recibos de socios'
+          : locale === 'fr'
+            ? 'Retours de reçus de membres'
+            : locale === 'pt'
+              ? 'Devoluções de recibos de sócios'
+              : 'Devolucions de rebuts de socis'),
+      description:
+        secondaryCapabilityPreviews.returnedReceipts?.subtitle ??
+        secondaryCapabilityPreviews.returnedReceipts?.description,
+      href: `/${detailLocale}/devolucions-rebuts-socis`,
+      previewMedia: secondaryCapabilityPreviews.returnedReceipts?.media ?? null,
+      icon: Settings,
+      fallbackChip: locale === 'es' ? 'Retornos' : locale === 'fr' ? 'Retours' : locale === 'pt' ? 'Retornos' : 'Retorns',
+      toneClass: 'from-amber-100/90 via-white to-sky-50/70',
+    },
+    {
+      eyebrow: secondaryCapabilityLabels.donationCertificates,
+      title:
+        secondaryCapabilityPreviews.donationCertificates?.title ??
+        (locale === 'es'
+          ? 'Certificados de donación'
+          : locale === 'fr'
+            ? 'Certificats de don'
+            : locale === 'pt'
+              ? 'Certificados de doação'
+              : 'Certificats de donació'),
+      description:
+        secondaryCapabilityPreviews.donationCertificates?.subtitle ??
+        secondaryCapabilityPreviews.donationCertificates?.description,
+      href: `/${detailLocale}/certificats-donacio`,
+      previewMedia: secondaryCapabilityPreviews.donationCertificates?.media ?? null,
+      icon: FileCheck,
+      fallbackChip: 'PDF · Email',
+      toneClass: 'from-sky-50/85 via-white to-indigo-50/70',
+    },
+    {
+      eyebrow: secondaryCapabilityLabels.model347,
+      title:
+        secondaryCapabilityPreviews.model347?.title ??
+        (locale === 'es'
+          ? 'Modelo 347 para ONG y asociaciones'
+          : locale === 'fr'
+            ? 'Modele 347 pour associations'
+            : locale === 'pt'
+              ? 'Modelo 347 para ONG'
+              : 'Model 347 per a ONG i associacions'),
+      description:
+        secondaryCapabilityPreviews.model347?.subtitle ?? secondaryCapabilityPreviews.model347?.description,
+      href: `/${detailLocale}/model-347-ong`,
+      previewMedia: secondaryCapabilityPreviews.model347?.media ?? null,
+      icon: CalendarDays,
+      fallbackChip: '347',
+      toneClass: 'from-amber-50/90 via-white to-orange-50/75',
     },
   ] as const;
 
@@ -563,7 +810,7 @@ export default async function HomePage({ params }: PageProps) {
       title: t.home.profiles.admin.title,
       description: t.home.profiles.admin.description,
       image: visuals.admin,
-      href: `/${locale}/${featuresPath}#${anchors.conciliation}`,
+      href: economicGuideHref,
       reverse: false,
       toneClass:
         'bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,249,255,0.72))]',
@@ -626,7 +873,7 @@ export default async function HomePage({ params }: PageProps) {
 
               <div className="flex items-center justify-center lg:justify-start">
                 <Button asChild size="lg">
-                  <Link href={capabilitiesHref}>
+                  <Link href={featuresHref}>
                     {t.common.features}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -723,25 +970,30 @@ export default async function HomePage({ params }: PageProps) {
       </section>
 
       {latestUpdate ? (
-        <section className="border-y border-border/50 bg-[linear-gradient(180deg,rgba(240,249,255,0.75),rgba(255,255,255,0.92))] px-6 py-6">
+        <section className="px-6 py-5 lg:py-6">
           <div className="mx-auto max-w-6xl">
-            <div className="rounded-[1.75rem] border border-sky-100 bg-white/90 p-5 shadow-[0_24px_60px_-44px_rgba(14,165,233,0.55)] backdrop-blur sm:p-6">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div className="space-y-3">
-                  {formatPublicDate(latestUpdate.publishedAt, locale) ? (
-                    <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                      <CalendarDays className="h-4 w-4 text-primary" />
-                      {formatPublicDate(latestUpdate.publishedAt, locale)}
-                    </p>
-                  ) : null}
-                  <h2 className="text-2xl font-semibold tracking-tight">{latestUpdate.title}</h2>
-                  <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
+            <div className="rounded-[1.5rem] border border-sky-100/90 bg-white/88 p-4 shadow-[0_18px_50px_-42px_rgba(14,165,233,0.28)] backdrop-blur sm:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                      {homeSectionCopy.updatesBadge}
+                    </span>
+                    {formatPublicDate(latestUpdate.publishedAt, locale) ? (
+                      <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                        <CalendarDays className="h-4 w-4 text-primary" />
+                        {formatPublicDate(latestUpdate.publishedAt, locale)}
+                      </p>
+                    ) : null}
+                  </div>
+                  <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">{latestUpdate.title}</h2>
+                  <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
                     {latestUpdate.excerpt ?? t.updates.latestDescription}
                   </p>
                 </div>
 
-                <div className="flex sm:flex-row lg:items-end">
-                  <Button asChild size="sm">
+                <div className="flex sm:flex-row lg:items-end lg:justify-end">
+                  <Button asChild size="sm" variant="outline">
                     <Link href={`/${locale}/novetats/${latestUpdate.slug}`}>
                       {t.updates.readMore}
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -822,13 +1074,19 @@ export default async function HomePage({ params }: PageProps) {
             <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
               {t.home.systemOverview.subtitle}
             </p>
+            <div className="mt-6 rounded-[1.35rem] border border-sky-100/80 bg-white/82 p-4 text-left shadow-[0_18px_50px_-44px_rgba(15,23,42,0.18)] sm:flex sm:items-center sm:justify-between sm:gap-4">
+              <p className="text-sm leading-6 text-muted-foreground">{homeSectionCopy.capabilitiesNote}</p>
+              <Link href={featuresHref} className="mt-3 inline-flex items-center text-sm font-semibold text-primary sm:mt-0 sm:shrink-0">
+                {homeSectionCopy.capabilitiesCta}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </div>
           </div>
 
           <div className="mt-12 grid gap-6 lg:grid-cols-6">
             {capabilityCards.map((card) => (
-              <Link
+              <article
                 key={card.title}
-                href={card.href}
                 className={`group overflow-hidden rounded-[1.9rem] border border-border/60 ${card.toneClass} shadow-[0_22px_65px_-46px_rgba(15,23,42,0.28)] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-[0_30px_80px_-44px_rgba(15,23,42,0.34)] ${card.wide ? 'lg:col-span-4' : 'lg:col-span-2'}`}
               >
                 {card.wide ? (
@@ -836,14 +1094,28 @@ export default async function HomePage({ params }: PageProps) {
                     <div
                       className={`relative flex min-h-[280px] items-center justify-center overflow-hidden bg-white/70 p-6 ${card.imageFirst ? 'border-b border-border/60 lg:order-1 lg:border-b-0 lg:border-r' : 'border-b border-border/60 lg:order-2 lg:border-b-0 lg:border-l'}`}
                     >
-                      <Image
-                        src={card.image}
-                        alt={card.title}
-                        width={900}
-                        height={640}
-                        sizes="(min-width: 1024px) 42vw, 100vw"
-                        className="max-h-[320px] h-auto w-full object-contain object-center"
-                      />
+                      {card.previewMedia ? (
+                        <PublicFeatureDemo
+                          locale={detailLocale}
+                          media={card.previewMedia}
+                          className="w-full max-w-[38rem]"
+                          mediaClassName="aspect-[16/9]"
+                          showDemoBadge={false}
+                          showCaptionsBadge={false}
+                          expandOnPlay
+                          dialogTitle={card.title}
+                          dialogDescription={card.description}
+                        />
+                      ) : (
+                        <Image
+                          src={card.image}
+                          alt={card.title}
+                          width={900}
+                          height={640}
+                          sizes="(min-width: 1024px) 42vw, 100vw"
+                          className="max-h-[320px] h-auto w-full object-contain object-center"
+                        />
+                      )}
                     </div>
                     <div className={`flex flex-col justify-between p-7 sm:p-8 ${card.imageFirst ? 'lg:order-2' : 'lg:order-1'}`}>
                       <div>
@@ -857,23 +1129,36 @@ export default async function HomePage({ params }: PageProps) {
                           {card.description}
                         </p>
                       </div>
-                      <span className="mt-8 inline-flex items-center text-sm font-semibold text-primary">
-                        {t.home.readMore}
+                      <Link href={card.href} className="mt-8 inline-flex items-center text-sm font-semibold text-primary">
+                        {homeReadMoreLabel}
                         <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                      </span>
+                      </Link>
                     </div>
                   </div>
                 ) : (
                   <div className="flex h-full flex-col">
                     <div className="flex min-h-[230px] items-center justify-center overflow-hidden border-b border-border/60 bg-white/72 p-6">
-                      <Image
-                        src={card.image}
-                        alt={card.title}
-                        width={700}
-                        height={580}
-                        sizes="(min-width: 1024px) 22vw, (min-width: 768px) 50vw, 100vw"
-                        className="max-h-[220px] h-auto w-full object-contain object-center"
-                      />
+                      {card.previewMedia ? (
+                        <PublicFeatureDemo
+                          locale={detailLocale}
+                          media={card.previewMedia}
+                          className="w-full"
+                          showDemoBadge={false}
+                          showCaptionsBadge={false}
+                          expandOnPlay
+                          dialogTitle={card.title}
+                          dialogDescription={card.description}
+                        />
+                      ) : (
+                        <Image
+                          src={card.image}
+                          alt={card.title}
+                          width={700}
+                          height={580}
+                          sizes="(min-width: 1024px) 22vw, (min-width: 768px) 50vw, 100vw"
+                          className="max-h-[220px] h-auto w-full object-contain object-center"
+                        />
+                      )}
                     </div>
                     <div className="flex flex-1 flex-col justify-between p-6">
                       <div>
@@ -883,15 +1168,100 @@ export default async function HomePage({ params }: PageProps) {
                         <h3 className="mt-3 text-xl font-semibold tracking-tight">{card.title}</h3>
                         <p className="mt-3 text-sm leading-6 text-muted-foreground">{card.description}</p>
                       </div>
-                      <span className="mt-6 inline-flex items-center text-sm font-semibold text-primary">
-                        {t.home.readMore}
+                      <Link href={card.href} className="mt-6 inline-flex items-center text-sm font-semibold text-primary">
+                        {homeReadMoreLabel}
                         <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                      </span>
+                      </Link>
                     </div>
                   </div>
                 )}
-              </Link>
+              </article>
             ))}
+          </div>
+
+          <div className="mt-10 rounded-[1.85rem] border border-border/60 bg-white/82 p-5 shadow-[0_20px_60px_-46px_rgba(15,23,42,0.2)] backdrop-blur sm:p-6 lg:p-7">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
+                {homeSectionCopy.secondaryEyebrow}
+              </p>
+              <h3 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-[1.9rem]">
+                {homeSectionCopy.secondaryTitle}
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
+                {homeSectionCopy.secondaryDescription}
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {secondaryCapabilityCards.map((card) => {
+                const previewStill = getLandingPreviewStill(card.previewMedia);
+                const hasDemo = card.previewMedia?.type === 'video';
+                const Icon = card.icon;
+
+                return (
+                  <Link
+                    key={card.href}
+                    href={card.href}
+                    className="group flex h-full flex-col rounded-[1.55rem] border border-border/60 bg-white/94 p-3 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.22)] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-[0_26px_70px_-42px_rgba(15,23,42,0.26)]"
+                  >
+                    {previewStill ? (
+                      <div className="relative overflow-hidden rounded-[1.2rem] border border-border/60 bg-slate-950 shadow-[0_18px_48px_-36px_rgba(15,23,42,0.32)]">
+                        <Image
+                          src={previewStill}
+                          alt={card.title}
+                          width={1200}
+                          height={760}
+                          sizes="(min-width: 1280px) 18vw, (min-width: 768px) 44vw, 100vw"
+                          className="aspect-[16/10] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                        />
+                        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.04),rgba(15,23,42,0.24))]" />
+                        <span className="absolute left-3 top-3 inline-flex items-center rounded-full border border-white/70 bg-white/92 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary shadow-sm">
+                          {card.eyebrow}
+                        </span>
+                        {hasDemo ? (
+                          <span className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#0ea5e9,#38bdf8)] p-[2px] shadow-[0_18px_36px_-22px_rgba(14,165,233,0.75)]">
+                            <span className="flex h-full w-full items-center justify-center rounded-full bg-white/95">
+                              <Play className="ml-0.5 h-5 w-5 fill-sky-500 text-sky-500" strokeWidth={2.1} />
+                            </span>
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div
+                        className={`flex aspect-[16/10] items-end rounded-[1.2rem] border border-border/60 bg-gradient-to-br ${card.toneClass} p-4 shadow-[0_18px_48px_-40px_rgba(15,23,42,0.18)]`}
+                      >
+                        <div className="w-full rounded-[1rem] border border-white/80 bg-white/92 p-4 shadow-[0_16px_40px_-34px_rgba(15,23,42,0.22)]">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-50 text-primary">
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+                              {card.fallbackChip}
+                            </span>
+                          </div>
+                          <p className="mt-4 text-sm font-semibold leading-5 text-slate-900">{card.eyebrow}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-1 flex-col justify-between px-1 pb-1 pt-4">
+                      <div>
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+                          {hasDemo ? homeSectionCopy.secondaryDemoBadge : homeSectionCopy.secondaryGuideBadge}
+                        </span>
+                        <h3 className="mt-3 text-lg font-semibold tracking-tight text-foreground">{card.title}</h3>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">{card.description}</p>
+                      </div>
+
+                      <span className="mt-5 inline-flex items-center text-sm font-semibold text-primary">
+                        {homeReadMoreLabel}
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
@@ -943,7 +1313,7 @@ export default async function HomePage({ params }: PageProps) {
                     href={profile.href}
                     className="inline-flex items-center text-sm font-semibold text-primary"
                   >
-                    {t.home.readMore}
+                    {homeReadMoreLabel}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </div>
@@ -999,7 +1369,7 @@ export default async function HomePage({ params }: PageProps) {
                 {t.home.finalCta.subtitle}
               </p>
               <Button asChild size="lg" variant="outline">
-                <Link href={capabilitiesHref}>{t.common.features}</Link>
+                <Link href={featuresHref}>{t.common.features}</Link>
               </Button>
             </div>
 
@@ -1037,7 +1407,7 @@ export default async function HomePage({ params }: PageProps) {
               {FOOTER_COPY[locale].sitemap}
             </p>
             <nav className="grid gap-3 text-sm text-muted-foreground">
-              <Link href={capabilitiesHref} className="hover:text-foreground hover:underline">
+              <Link href={featuresHref} className="hover:text-foreground hover:underline">
                 {t.common.features}
               </Link>
               <Link href={howWeWorkHref} className="hover:text-foreground hover:underline">

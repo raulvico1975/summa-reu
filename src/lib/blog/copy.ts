@@ -12,111 +12,64 @@ const TR_BY_LOCALE = {
   pt: trFactory(ptMessages),
 } as const
 
-const EXTRA_COPY: Record<
-  PublicLocale,
-  {
-    description: string
-    backToHome: string
-    readArticle: string
-    browseBlog: string
-    editorialLabel: string
-    browseUpdates: string
-    discoverFeatures: string
-    panelTitle: string
-    panelPoints: string[]
-    emptyTitle: string
-    emptyDescription: string
-    continueTitle: string
-    continueDescription: string
-  }
-> = {
+type BlogExtraCopy = {
+  title: string
+  metaDescription: string
+  description: string
+  readArticle: string
+  browseBlog: string
+  emptyTitle: string
+  emptyDescription: string
+}
+
+const EXTRA_COPY: Record<PublicLocale, BlogExtraCopy> = {
   ca: {
+    title: 'El blog de Summa Social',
+    metaDescription:
+      'Criteri operatiu i lectures útils per a entitats que volen ordenar tresoreria, quotes, donacions i fiscalitat amb més seguretat.',
     description:
-      'Articles i criteri operatiu sobre tresoreria, quotes, donacions i fiscalitat per a entitats.',
-    backToHome: "Tornar a l'inici",
-    readArticle: 'Llegir article',
+      'Articles pensats per responsables d’administració d’entitats que volen decidir amb context, evitar urgències d’última hora i arribar als tancaments amb la base ben feta.',
+    readArticle: 'Llegir ara',
     browseBlog: 'Veure tots els articles',
-    editorialLabel: 'Criteri editorial',
-    browseUpdates: 'Veure novetats',
-    discoverFeatures: 'Veure funcionalitats',
-    panelTitle: 'Què hi trobaràs',
-    panelPoints: [
-      'Criteri operatiu per ordenar tresoreria i administració.',
-      'Context fiscal perquè els tancaments arribin amb la base preparada.',
-      'Novetats que afecten la manera de treballar amb Summa.',
-    ],
     emptyTitle: 'Encara no hi ha articles publicats',
     emptyDescription:
       'Quan activem noves peces editorials, apareixeran aquí amb el mateix criteri visual que la resta del web.',
-    continueTitle: 'Continueu explorant',
-    continueDescription:
-      'Si voleu entendre el producte abans d’entrar al detall, a la home hi trobareu una visió més clara del nucli de Summa.',
   },
   es: {
+    title: 'El blog de Summa Social',
+    metaDescription:
+      'Criterio operativo y lecturas útiles para entidades que quieren ordenar tesorería, cuotas, donaciones y fiscalidad con más seguridad.',
     description:
-      'Artículos y criterio operativo sobre tesorería, cuotas, donaciones y fiscalidad para entidades.',
-    backToHome: 'Volver al inicio',
-    readArticle: 'Leer artículo',
+      'Artículos pensados para responsables de administración de entidades que quieren decidir con contexto, evitar urgencias de última hora y llegar a los cierres con la base bien hecha.',
+    readArticle: 'Leer ahora',
     browseBlog: 'Ver todos los artículos',
-    editorialLabel: 'Criterio editorial',
-    browseUpdates: 'Ver novedades',
-    discoverFeatures: 'Ver funcionalidades',
-    panelTitle: 'Qué encontrarás',
-    panelPoints: [
-      'Criterio operativo para ordenar tesorería y administración.',
-      'Contexto fiscal para que los cierres lleguen con la base preparada.',
-      'Novedades que afectan a la forma de trabajar con Summa.',
-    ],
     emptyTitle: 'Todavía no hay artículos publicados',
     emptyDescription:
       'Cuando activemos nuevas piezas editoriales, aparecerán aquí con el mismo criterio visual que el resto de la web.',
-    continueTitle: 'Sigue explorando',
-    continueDescription:
-      'Si quieres entender el producto antes de entrar en detalle, en la home encontrarás una visión más clara del núcleo de Summa.',
   },
   fr: {
+    title: 'Le blog de Summa Social',
+    metaDescription:
+      'Critères opérationnels et lectures utiles pour les entités qui veulent mieux structurer trésorerie, cotisations, dons et fiscalité.',
     description:
-      'Articles et critères opérationnels sur la trésorerie, les cotisations, les dons et la fiscalité pour les entités.',
-    backToHome: "Retour à l'accueil",
-    readArticle: "Lire l'article",
+      'Des articles pensés pour les responsables administratifs d’entités qui veulent décider avec contexte, éviter les reconstructions de dernière minute et arriver aux clôtures avec une base solide.',
+    readArticle: 'Lire maintenant',
     browseBlog: 'Voir tous les articles',
-    editorialLabel: 'Perspective éditoriale',
-    browseUpdates: 'Voir les nouveautés',
-    discoverFeatures: 'Voir les fonctionnalités',
-    panelTitle: 'Ce que vous y trouverez',
-    panelPoints: [
-      'Des critères opérationnels pour mettre de l’ordre dans la trésorerie et l’administration.',
-      'Du contexte fiscal pour préparer les clôtures avec une base claire.',
-      'Des nouveautés qui touchent la manière de travailler avec Summa.',
-    ],
     emptyTitle: 'Aucun article publié pour le moment',
     emptyDescription:
       'Quand nous activerons de nouvelles pièces éditoriales, elles apparaîtront ici avec le même langage visuel que le reste du site.',
-    continueTitle: 'Continuez à explorer',
-    continueDescription:
-      'Si vous voulez comprendre le produit avant d’entrer dans le détail, la page d’accueil vous donne une vision plus claire du cœur de Summa.',
   },
   pt: {
+    title: 'O blog da Summa Social',
+    metaDescription:
+      'Critério operacional e leituras úteis para entidades que querem organizar tesouraria, quotas, doações e fiscalidade com mais segurança.',
     description:
-      'Artigos e critério operacional sobre tesouraria, quotas, doações e fiscalidade para entidades.',
-    backToHome: 'Voltar ao início',
-    readArticle: 'Ler artigo',
+      'Artigos pensados para responsáveis de administração de entidades que querem decidir com contexto, evitar reconstruções de última hora e chegar aos fechos com a base bem feita.',
+    readArticle: 'Ler agora',
     browseBlog: 'Ver todos os artigos',
-    editorialLabel: 'Critério editorial',
-    browseUpdates: 'Ver novidades',
-    discoverFeatures: 'Ver funcionalidades',
-    panelTitle: 'O que vais encontrar',
-    panelPoints: [
-      'Critério operacional para organizar tesouraria e administração.',
-      'Contexto fiscal para que os fechos cheguem com a base preparada.',
-      'Novidades que afetam a forma de trabalhar com a Summa.',
-    ],
     emptyTitle: 'Ainda não há artigos publicados',
     emptyDescription:
       'Quando ativarmos novas peças editoriais, elas aparecerão aqui com o mesmo critério visual do resto do site.',
-    continueTitle: 'Continua a explorar',
-    continueDescription:
-      'Se quiseres perceber o produto antes de entrar no detalhe, na home encontrarás uma visão mais clara do núcleo da Summa.',
   },
 }
 
@@ -125,23 +78,14 @@ export function getBlogCopy(locale: PublicLocale = 'ca') {
   const extra = EXTRA_COPY[locale]
 
   return {
-    eyebrow: tr('blog.eyebrow', 'Blog'),
-    metaDescription: tr('blog.metaDescription', 'Articles i novetats de Summa Social.'),
+    metaDescription: extra.metaDescription,
     metaTitle: tr('blog.metaTitle', 'Blog | Summa Social'),
     notConfigured: tr('blog.notConfigured', "El blog no està configurat en aquest entorn."),
-    title: tr('blog.title', 'Articles i novetats'),
+    title: extra.title,
     description: extra.description,
-    backToHome: extra.backToHome,
     readArticle: extra.readArticle,
     browseBlog: extra.browseBlog,
-    editorialLabel: extra.editorialLabel,
-    browseUpdates: extra.browseUpdates,
-    discoverFeatures: extra.discoverFeatures,
-    panelTitle: extra.panelTitle,
-    panelPoints: extra.panelPoints,
     emptyTitle: extra.emptyTitle,
     emptyDescription: extra.emptyDescription,
-    continueTitle: extra.continueTitle,
-    continueDescription: extra.continueDescription,
   }
 }

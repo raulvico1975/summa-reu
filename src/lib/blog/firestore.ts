@@ -305,12 +305,17 @@ export async function getBlogPostBySlug(
   const resolvedOrgId = await resolveBlogOrgId(db, orgId)
   const postSnap = await db.doc(`${getBlogPostsCollectionPath(resolvedOrgId)}/${slug}`).get()
   if (!postSnap.exists) {
-    const fallbackSnap = await db.collectionGroup('blogPosts').where('slug', '==', slug).limit(2).get()
-    const fallbackPosts = fallbackSnap.docs
-      .map((doc) => mapBlogPost(doc.id, doc.data()))
-      .filter((post): post is BlogPost => post !== null)
+    try {
+      const fallbackSnap = await db.collectionGroup('blogPosts').where('slug', '==', slug).limit(2).get()
+      const fallbackPosts = fallbackSnap.docs
+        .map((doc) => mapBlogPost(doc.id, doc.data()))
+        .filter((post): post is BlogPost => post !== null)
 
-    return fallbackPosts.length === 1 ? fallbackPosts[0] : null
+      return fallbackPosts.length === 1 ? fallbackPosts[0] : null
+    } catch (error) {
+      console.warn('[blog] fallback slug lookup unavailable:', error)
+      return null
+    }
   }
 
   return mapBlogPost(postSnap.id, postSnap.data())

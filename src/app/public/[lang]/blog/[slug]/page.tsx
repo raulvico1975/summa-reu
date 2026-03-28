@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { BlogPostView } from '@/components/public/blog/BlogPostView'
 import { getBlogCopy } from '@/lib/blog/copy'
 import { getLocalizedBlogPostBySlug } from '@/lib/blog/firestore'
@@ -61,13 +61,17 @@ export default async function PublicBlogPostPage({ params }: PageProps) {
   }
 
   const locale = lang as PublicLocale
+  const post = await getLocalizedBlogPostBySlug(slug, locale)
+
+  if (!post) {
+    redirect(`/${locale}/blog`)
+  }
 
   return (
     <BlogPostView
       locale={locale}
       slug={slug}
       blogBasePath={`/${locale}/blog`}
-      homeHref={`/${locale}`}
     />
   )
 }
