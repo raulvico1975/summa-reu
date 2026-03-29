@@ -1210,7 +1210,7 @@ const ca: PublicTranslations = {
     heroTagline: 'Controla donacions, quotes i informes fiscals de la teva entitat',
     hero: {
       visualAlt: 'Captura de pantalla de Summa Social',
-      bridgeLine: 'Gestió econòmica clara per a entitats',
+      bridgeLine: "Programari per gestió econòmica d'entitats",
     },
     nav: {
       conciliation: 'Conciliació',

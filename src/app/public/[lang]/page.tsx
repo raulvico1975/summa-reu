@@ -7,7 +7,7 @@ import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { RotatingHeroPhrase } from '@/components/public/RotatingHeroPhrase';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle2, Upload, Settings, FileCheck, Download, CalendarDays } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Upload, Settings, FileCheck, Download } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -16,22 +16,17 @@ import {
 } from '@/lib/public-locale';
 import { SUPPORT_EMAIL } from '@/lib/constants';
 import { getPublicTranslations } from '@/i18n/public';
-import {
-  getPublicLandingPreviewBySlug,
-  type PublicLandingHeroMedia,
-} from '@/lib/public-landings';
-import {
-  getPublicDetailedGuidesLocale,
-  getPublicEconomicGuideHref,
-  getPublicFeaturesHref,
-} from '@/lib/public-site-paths';
-import { getLatestPublicProductUpdate } from '@/lib/product-updates/public';
+import { type PublicLandingHeroMedia } from '@/lib/public-landings';
+import { getPublicFeaturesHref } from '@/lib/public-site-paths';
 
 const frameClass =
   'overflow-hidden rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_28px_80px_-44px_rgba(15,23,42,0.28)] backdrop-blur';
 
 const surfaceClass =
   'rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_22px_60px_-40px_rgba(15,23,42,0.18)] backdrop-blur';
+
+const FRAME_CLASS = frameClass;
+const SURFACE_CLASS = surfaceClass;
 
 const HERO_ROTATING_SEGMENTS: Record<PublicLocale, string> = {
   ca: 'donacions, quotes i informes fiscals',
@@ -82,27 +77,28 @@ const LANDING_COPY: Record<
 > = {
   ca: {
     heroSupport:
-      'Centralitza banc, quotes, donacions i fiscalitat des d’un sol lloc.',
+      'Conciliació bancària, remeses, devolucions i Model 182 en un sol sistema.',
     valueRailIntro: {
       eyebrow: 'On et treu feina',
-      title: 'El nucli que resol el dia a dia econòmic',
+      title: 'El control econòmic que et treu hores de banc, quotes i justificacions',
     },
     valueRail: {
       conciliation: {
-        title: 'Quadra el banc',
-        description: 'Relaciona extractes i comprovants sense repassar-los un a un.',
+        title: 'Importa l’extracte bancari',
+        description: 'El moviment entra al sistema amb compte, data i import llestos per treballar.',
       },
       remittances: {
-        title: 'Controla quotes i retorns',
-        description: 'Divideix remeses agrupades i resol devolucions amb traçabilitat.',
+        title: 'Relaciona moviments, contactes i documents',
+        description: 'Cada cobrament o despesa queda connectat amb la seva fitxa i suport.',
       },
       fiscal: {
-        title: 'Tanca fiscalitat',
-        description: "Prepara 182, 347 i certificats sense reconstruir l'històric.",
+        title: 'Prepara la fiscalitat sense reconstruir dades',
+        description: 'Quan arriba el 182 o un certificat, la base econòmica ja està ordenada.',
       },
       projects: {
-        title: 'Segueix projectes',
-        description: 'Afegeix execució pressupostària i justificació quan realment us cal.',
+        title: 'Segueix i justifica projectes de cooperació',
+        description:
+          'Quan hi ha subvencions o cooperació, feu seguiment pressupostari, relacioneu despesa i prepareu la justificació sense separar la part econòmica del projecte.',
       },
     },
     trust: {
@@ -134,27 +130,28 @@ const LANDING_COPY: Record<
   },
   es: {
     heroSupport:
-      'Centraliza banco, cuotas, donaciones y fiscalidad desde un solo lugar.',
+      'Conciliación bancaria, remesas, devoluciones y Modelo 182 en un solo sistema.',
     valueRailIntro: {
       eyebrow: 'Dónde te ahorra trabajo',
-      title: 'El núcleo que resuelve el día a día económico',
+      title: 'El control económico que te quita horas de banco, cuotas y justificaciones',
     },
     valueRail: {
       conciliation: {
-        title: 'Cuadra el banco',
-        description: 'Relaciona extractos y comprobantes sin revisarlos uno a uno.',
+        title: 'Importa el extracto bancario',
+        description: 'El movimiento entra en el sistema con cuenta, fecha e importe listos para trabajar.',
       },
       remittances: {
-        title: 'Controla cuotas y retornos',
-        description: 'Divide remesas agrupadas y resuelve devoluciones con trazabilidad.',
+        title: 'Relaciona movimientos, contactos y documentos',
+        description: 'Cada cobro o gasto queda conectado con su ficha y soporte.',
       },
       fiscal: {
-        title: 'Cierra fiscalidad',
-        description: 'Prepara 182, 347 y certificados sin reconstruir el histórico.',
+        title: 'Prepara la fiscalidad sin reconstruir datos',
+        description: 'Cuando llega el 182 o un certificado, la base económica ya está ordenada.',
       },
       projects: {
-        title: 'Sigue proyectos',
-        description: 'Añade ejecución presupuestaria y justificación cuando de verdad os haga falta.',
+        title: 'Sigue y justifica proyectos de cooperación',
+        description:
+          'Cuando hay subvenciones o cooperación, hacéis seguimiento presupuestario, relacionáis gasto y preparáis la justificación sin separar la parte económica del proyecto.',
       },
     },
     trust: {
@@ -317,6 +314,339 @@ const FOOTER_COPY: Record<
     sitemap: 'Mapa do site',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram em breve.',
+  },
+};
+
+const HOME_REFRESH_COPY: Record<
+  PublicLocale,
+  {
+    hero: {
+      cta: string;
+      ctaCaption: string;
+    };
+    beforeAfter: {
+      eyebrow: string;
+      title: string;
+      description: string;
+      beforeTitle: string;
+      beforeItems: string[];
+      afterTitle: string;
+      afterItems: string[];
+    };
+    metrics: {
+      eyebrow: string;
+      title: string;
+      description: string;
+      items: {
+        entities: string;
+        movements: string;
+        countries: string;
+      };
+    };
+    functionality: {
+      cta: string;
+    };
+    fit: {
+      eyebrow: string;
+      title: string;
+      fitTitle: string;
+      fitItems: string[];
+      notFitTitle: string;
+      notFitItems: string[];
+    };
+    work: {
+      eyebrow: string;
+      title: string;
+      description: string;
+      note: string;
+    };
+    final: {
+      eyebrow: string;
+      title: string;
+      subtitle: string;
+      supportNote: string;
+    };
+  }
+> = {
+  ca: {
+    hero: {
+      cta: 'Parla amb nosaltres',
+      ctaCaption: 'Valorem primer si encaixa amb la vostra operativa real.',
+    },
+    beforeAfter: {
+      eyebrow: '',
+      title: 'Del desordre a criteri operatiu',
+      description: 'El canvi no és estètic: és passar de peces soltes a un sistema treballable.',
+      beforeTitle: 'Abans',
+      beforeItems: [
+        'Extractes dispersos',
+        'Remeses difícils de reconstruir',
+        'Devolucions poc traçables',
+        'Model 182 preparat a mà',
+      ],
+      afterTitle: 'Amb Summa',
+      afterItems: [
+        'Conciliació centralitzada',
+        'Quotes i devolucions sota control',
+        'Donants relacionats correctament',
+        'Fiscalitat preparada amb criteri',
+      ],
+    },
+    metrics: {
+      eyebrow: 'Credibilitat',
+      title: 'Operativa real, no narrativa',
+      description: 'Les xifres ajuden a entendre l’escala i el tipus de feina que Summa ja cobreix.',
+      items: {
+        entities: 'Entitats amb operativa real',
+        movements: 'Moviments treballats cada mes',
+        countries: 'Contextos de treball internacionals',
+      },
+    },
+    functionality: {
+      cta: 'Veure funcionalitat',
+    },
+    fit: {
+      eyebrow: 'Per a qui és',
+      title: 'Summa encaixa quan hi ha operativa econòmica real.',
+      fitTitle: 'Encaixa si',
+      fitItems: [
+        'Gestioneu quotes o donacions recurrents',
+        'Teniu remeses o devolucions',
+        'Prepareu Model 182 o certificats',
+        'Voleu deixar enrere Excel com a centre de control',
+      ],
+      notFitTitle: 'No és per a vosaltres si',
+      notFitItems: [
+        'Busqueu un ERP generalista',
+        'Només necessiteu facturació',
+        'No teniu pràcticament operativa econòmica',
+        'Voleu comptabilitat formal completa dins l’eina',
+      ],
+    },
+    work: {
+      eyebrow: 'Com treballem',
+      title: 'Primer mirem si encaixa amb la vostra operativa.',
+      description:
+        'No comencem amb una demo genèrica. Primer entenem com porteu banc, quotes, devolucions i fiscalitat, i després us ensenyem només allò que us ha de resoldre feina.',
+      note: 'Si no hi ha encaix clar amb la vostra manera de treballar, us ho direm abans de fer-vos perdre temps.',
+    },
+    final: {
+      eyebrow: 'Parla amb nosaltres',
+      title: 'Parla amb nosaltres',
+      subtitle: 'Valorem si Summa encaixa amb la vostra entitat.',
+      supportNote:
+        'Ens agrada entendre primer la realitat de cada entitat abans de proposar res.',
+    },
+  },
+  es: {
+    hero: {
+      cta: 'Habla con nosotros',
+      ctaCaption: 'Valoramos primero si encaja con vuestra operativa real.',
+    },
+    beforeAfter: {
+      eyebrow: '',
+      title: 'Del desorden a criterio operativo',
+      description: 'El cambio no es estético: es pasar de piezas sueltas a un sistema trabajable.',
+      beforeTitle: 'Antes',
+      beforeItems: [
+        'Extractos dispersos',
+        'Remesas difíciles de reconstruir',
+        'Devoluciones poco trazables',
+        'Modelo 182 preparado a mano',
+      ],
+      afterTitle: 'Con Summa',
+      afterItems: [
+        'Conciliación centralizada',
+        'Cuotas y devoluciones bajo control',
+        'Donantes relacionados correctamente',
+        'Fiscalidad preparada con criterio',
+      ],
+    },
+    metrics: {
+      eyebrow: 'Credibilidad',
+      title: 'Operativa real, no decoración',
+      description: 'Las cifras ayudan a entender la escala y el tipo de trabajo que Summa ya cubre.',
+      items: {
+        entities: 'Entidades con operativa real',
+        movements: 'Movimientos trabajados cada mes',
+        countries: 'Contextos de trabajo internacionales',
+      },
+    },
+    functionality: {
+      cta: 'Ver funcionalidad',
+    },
+    fit: {
+      eyebrow: 'Para quién es',
+      title: 'Summa encaja cuando hay operativa económica real.',
+      fitTitle: 'Encaja si',
+      fitItems: [
+        'Gestionáis cuotas o donaciones recurrentes',
+        'Tenéis remesas o devoluciones',
+        'Preparáis Modelo 182 o certificados',
+        'Queréis dejar atrás Excel como centro de control',
+      ],
+      notFitTitle: 'No es para vosotros si',
+      notFitItems: [
+        'Buscáis un ERP generalista',
+        'Solo necesitáis facturación',
+        'No tenéis apenas operativa económica',
+        'Queréis contabilidad formal completa dentro de la herramienta',
+      ],
+    },
+    work: {
+      eyebrow: 'Cómo trabajamos',
+      title: 'Primero miramos si encaja con vuestra operativa.',
+      description:
+        'No empezamos con una demo genérica. Primero entendemos cómo lleváis banco, cuotas, devoluciones y fiscalidad, y después os enseñamos solo lo que os tiene que resolver trabajo.',
+      note: 'Si no hay un encaje claro con vuestra manera de trabajar, os lo diremos antes de haceros perder tiempo.',
+    },
+    final: {
+      eyebrow: 'Habla con nosotros',
+      title: 'Habla con nosotros',
+      subtitle: 'Valoramos si Summa encaja con vuestra entidad.',
+      supportNote:
+        'Nos gusta entender primero la realidad de cada entidad antes de proponer nada.',
+    },
+  },
+  fr: {
+    hero: {
+      cta: 'Parlez avec nous',
+      ctaCaption: "Nous vérifions d'abord si cela correspond à votre réalité opérationnelle.",
+    },
+    beforeAfter: {
+      eyebrow: '',
+      title: "Du désordre à un cadre opérationnel",
+      description: "Le changement n'est pas esthétique : il s'agit de passer de pièces dispersées à un système exploitable.",
+      beforeTitle: 'Avant',
+      beforeItems: [
+        'Relevés dispersés',
+        'Prélèvements difficiles à reconstituer',
+        'Rejets peu traçables',
+        'Modèle 182 préparé à la main',
+      ],
+      afterTitle: 'Avec Summa',
+      afterItems: [
+        'Rapprochement centralisé',
+        'Cotisations et rejets sous contrôle',
+        'Donateurs correctement liés',
+        'Fiscalité préparée avec méthode',
+      ],
+    },
+    metrics: {
+      eyebrow: 'Crédibilité',
+      title: 'Du travail réel, pas de la décoration',
+      description: "Les chiffres aident à comprendre l'échelle et le type d'opérations que Summa couvre déjà.",
+      items: {
+        entities: 'Structures avec une vraie opération économique',
+        movements: 'Mouvements traités chaque mois',
+        countries: 'Contextes de travail internationaux',
+      },
+    },
+    functionality: {
+      cta: 'Voir la fonctionnalité',
+    },
+    fit: {
+      eyebrow: "Pour qui c'est",
+      title: 'Summa convient quand il y a une vraie opération économique.',
+      fitTitle: 'Cela convient si',
+      fitItems: [
+        'Vous gérez des cotisations ou des dons récurrents',
+        'Vous avez des prélèvements ou des rejets',
+        'Vous préparez le modèle 182 ou des certificats',
+        'Vous voulez sortir d’Excel comme centre de contrôle',
+      ],
+      notFitTitle: "Ce n'est pas pour vous si",
+      notFitItems: [
+        'Vous cherchez un ERP généraliste',
+        'Vous avez seulement besoin de facturation',
+        'Vous avez très peu d’opérations économiques',
+        'Vous voulez une comptabilité formelle complète dans l’outil',
+      ],
+    },
+    work: {
+      eyebrow: 'Comment nous travaillons',
+      title: "Nous vérifions d'abord si cela colle à votre fonctionnement.",
+      description:
+        "Nous ne commençons pas par une démo générique. Nous comprenons d'abord comment vous gérez banque, cotisations, rejets et fiscalité, puis nous montrons uniquement ce qui doit réellement vous faire gagner du temps.",
+      note: "S'il n'y a pas de bon fit avec votre manière de travailler, nous vous le dirons avant de vous faire perdre du temps.",
+    },
+    final: {
+      eyebrow: 'Parlez avec nous',
+      title: 'Parlez avec nous',
+      subtitle: 'Nous évaluons si Summa convient à votre structure.',
+      supportNote:
+        "Nous aimons comprendre d'abord la réalité de chaque structure avant de proposer quoi que ce soit.",
+    },
+  },
+  pt: {
+    hero: {
+      cta: 'Fale connosco',
+      ctaCaption: 'Avaliamos primeiro se encaixa na vossa operativa real.',
+    },
+    beforeAfter: {
+      eyebrow: '',
+      title: 'Da desordem ao critério operativo',
+      description: 'A mudança não é estética: é passar de peças soltas para um sistema trabalhável.',
+      beforeTitle: 'Antes',
+      beforeItems: [
+        'Extratos dispersos',
+        'Remessas difíceis de reconstruir',
+        'Devoluções pouco rastreáveis',
+        'Modelo 182 preparado à mão',
+      ],
+      afterTitle: 'Com Summa',
+      afterItems: [
+        'Reconciliação centralizada',
+        'Quotas e devoluções sob controlo',
+        'Doadores relacionados corretamente',
+        'Fiscalidade preparada com critério',
+      ],
+    },
+    metrics: {
+      eyebrow: 'Credibilidade',
+      title: 'Operativa real, não decoração',
+      description: 'Os números ajudam a perceber a escala e o tipo de trabalho que o Summa já cobre.',
+      items: {
+        entities: 'Entidades com operativa real',
+        movements: 'Movimentos trabalhados todos os meses',
+        countries: 'Contextos de trabalho internacionais',
+      },
+    },
+    functionality: {
+      cta: 'Ver funcionalidade',
+    },
+    fit: {
+      eyebrow: 'Para quem é',
+      title: 'O Summa encaixa quando existe operativa económica real.',
+      fitTitle: 'Encaixa se',
+      fitItems: [
+        'Gerem quotas ou doações recorrentes',
+        'Têm remessas ou devoluções',
+        'Preparam Modelo 182 ou certificados',
+        'Querem deixar o Excel como centro de controlo',
+      ],
+      notFitTitle: 'Não é para vocês se',
+      notFitItems: [
+        'Procuram um ERP generalista',
+        'Só precisam de faturação',
+        'Quase não têm operativa económica',
+        'Querem contabilidade formal completa dentro da ferramenta',
+      ],
+    },
+    work: {
+      eyebrow: 'Como trabalhamos',
+      title: 'Primeiro vemos se encaixa com a vossa operativa.',
+      description:
+        'Não começamos com uma demo genérica. Primeiro percebemos como trabalham banco, quotas, devoluções e fiscalidade, e depois mostramos apenas o que vos deve realmente poupar trabalho.',
+      note: 'Se não houver um encaixe claro com a vossa forma de trabalhar, diremo-lo antes de vos fazer perder tempo.',
+    },
+    final: {
+      eyebrow: 'Fale connosco',
+      title: 'Fale connosco',
+      subtitle: 'Avaliamos se o Summa encaixa com a vossa entidade.',
+      supportNote:
+        'Gostamos de perceber primeiro a realidade de cada entidade antes de propor seja o que for.',
+    },
   },
 };
 
@@ -1114,20 +1444,15 @@ export default async function HomePage({ params }: PageProps) {
   const locale = lang as PublicLocale;
   const t = getPublicTranslations(locale);
   const landingCopy = LANDING_COPY[locale];
-  const anchors = SECTION_ANCHORS[locale];
-  const featuresPath = FEATURES_PATH[locale];
+  const copy = HOME_REFRESH_COPY[locale];
   const featuresHref = getPublicFeaturesHref(locale);
-  const detailLocale = getPublicDetailedGuidesLocale(locale);
-  const economicGuideHref = getPublicEconomicGuideHref(locale);
+  const contactHref = `/${locale}/contact`;
   const howWeWorkHref = `/${locale}#how-we-work`;
   const updatesHref = `/${locale}/novetats`;
-  const visuals = locale === 'ca' ? HOME_VISUALS.ca : HOME_VISUALS.default;
   const headlineParts = splitTextAroundPhrase(t.home.heroTagline, HERO_ROTATING_SEGMENTS[locale]);
   const headlinePrefix = headlineParts.before.trim();
   const headlineSuffix = headlineParts.after.trim();
   const rotatingHeroPhrases = HERO_ROTATING_PHRASES[locale];
-  const homeSectionCopy = HOME_SECTION_COPY[locale];
-  const homeReadMoreLabel = trimTrailingArrow(t.home.readMore);
   const BLOCK_ORDER = [
     'conciliation',
     'donorsMembers',
@@ -1137,6 +1462,14 @@ export default async function HomePage({ params }: PageProps) {
     'control',
   ] as const;
   type HomeBlockKey = (typeof BLOCK_ORDER)[number];
+  const functionalityHrefs: Record<HomeBlockKey, string> = {
+    conciliation: `/${locale}/conciliacio-bancaria-ong`,
+    donorsMembers: `/${locale}/gestio-donants`,
+    payments: `/${locale}/remeses-sepa`,
+    fiscal: `/${locale}/model-182`,
+    projects: `/${locale}/gestio-projectes-justificacio`,
+    control: `/${locale}/control-operatiu-entitats`,
+  };
   const BLOCK_CARDS: Record<HomeBlockKey, readonly string[]> = {
     conciliation: ['importStatements', 'autoClassification', 'contactAssignment', 'multiBankAccount'],
     donorsMembers: ['donorProfile', 'bulkImport', 'donorHistory', 'operationalStatus'],
@@ -1171,77 +1504,66 @@ export default async function HomePage({ params }: PageProps) {
     'control.boardReport': '/visuals/web/features/block6_informe_junta.webp',
     'control.dataExport': '/visuals/web/features/block6_exportacio_dades.webp',
   };
-  const blockReadMoreAnchors: Partial<Record<HomeBlockKey, string>> = {
-    conciliation: anchors.conciliation,
-    payments: anchors.remittances,
-    fiscal: anchors.fiscalCertificates,
-    projects: anchors.projects,
-  };
-  let latestUpdate: Awaited<ReturnType<typeof getLatestPublicProductUpdate>> = null;
-
-  try {
-    latestUpdate = await getLatestPublicProductUpdate({ locale });
-  } catch (error) {
-    console.warn('[public-home] latest product update unavailable:', error);
-  }
 
   const valueRail = [
     {
       title: landingCopy.valueRail.conciliation.title,
       description: landingCopy.valueRail.conciliation.description,
       icon: Upload,
-      href: `/${detailLocale}/conciliacio-bancaria-ong`,
+      href: functionalityHrefs.conciliation,
     },
     {
       title: landingCopy.valueRail.remittances.title,
       description: landingCopy.valueRail.remittances.description,
       icon: Settings,
-      href: `/${detailLocale}/remeses-sepa`,
+      href: functionalityHrefs.payments,
     },
     {
       title: landingCopy.valueRail.fiscal.title,
       description: landingCopy.valueRail.fiscal.description,
       icon: FileCheck,
-      href: `/${detailLocale}/model-182`,
+      href: functionalityHrefs.fiscal,
     },
     {
       title: landingCopy.valueRail.projects.title,
       description: landingCopy.valueRail.projects.description,
       icon: Download,
-      href: `/${locale}/${featuresPath}#${anchors.projects}`,
+      href: functionalityHrefs.projects,
     },
   ] as const;
 
-  const heroPanels = [
-    {
-      badge: t.home.stats.movements,
-      title: t.home.capabilities.conciliation.title,
-      description: getLeadSentence(t.home.capabilities.conciliation.description),
-      icon: Upload,
-      className: 'left-3 top-4 sm:left-5 sm:top-6 lg:-left-10 lg:top-12',
-    },
-    {
-      badge: 'SEPA',
-      title: t.home.capabilities.remittances.title,
-      description: getLeadSentence(t.home.capabilities.remittances.description),
-      icon: Settings,
-      className: 'right-3 top-6 hidden sm:block lg:-right-10 lg:top-20',
-    },
-    {
-      badge: '182 · 347',
-      title: t.home.capabilities.fiscal.title,
-      description: getLeadSentence(t.home.capabilities.fiscal.description),
-      icon: FileCheck,
-      className:
-        'bottom-4 left-1/2 -translate-x-1/2 sm:bottom-6 lg:bottom-6 lg:left-8 lg:translate-x-0',
-    },
-  ] as const;
+  const heroHighlightsByLocale: Record<PublicLocale, string[]> = {
+    ca: [
+      'Conciliació bancària',
+      'Fiscalitat i certificats',
+      'Remeses i devolucions',
+      'Gestió de projectes',
+    ],
+    es: [
+      'Conciliación bancaria',
+      'Fiscalidad y certificados',
+      'Remesas y devoluciones',
+      'Gestión de proyectos',
+    ],
+    fr: [
+      'Rapprochement bancaire',
+      'Fiscalité et certificats',
+      'Prélèvements et rejets',
+      'Gestion de projets',
+    ],
+    pt: [
+      'Reconciliação bancária',
+      'Fiscalidade e certificados',
+      'Remessas e devoluções',
+      'Gestão de projetos',
+    ],
+  };
+  const heroHighlights = heroHighlightsByLocale[locale];
 
   const homeFeatureExplorerSections: PublicFeaturesExplorerSection[] = [
     ...BLOCK_ORDER.map((blockKey) => {
       const block = t.home.blocks[blockKey];
-      const readMoreAnchor = blockReadMoreAnchors[blockKey];
-      const readMoreHref = readMoreAnchor ? `${featuresHref}#${readMoreAnchor}` : undefined;
+      const readMoreHref = functionalityHrefs[blockKey];
       const items = BLOCK_CARDS[blockKey].reduce<PublicFeaturesExplorerSection['items']>(
         (accumulator, cardKey) => {
           const card = block.cards[cardKey];
@@ -1256,7 +1578,7 @@ export default async function HomePage({ params }: PageProps) {
             title: card.title,
             description: card.description,
             href: readMoreHref,
-            ctaLabel: readMoreHref ? homeReadMoreLabel : undefined,
+            ctaLabel: copy.functionality.cta,
             media: createImageMedia(screenshot, card.screenshotAlt),
           });
 
@@ -1274,31 +1596,6 @@ export default async function HomePage({ params }: PageProps) {
       };
     }),
   ];
-
-  const profileSpotlights = [
-    {
-      label: landingCopy.profiles.coreLabel,
-      title: t.home.profiles.admin.title,
-      description: t.home.profiles.admin.description,
-      image: visuals.admin,
-      href: economicGuideHref,
-      reverse: false,
-      toneClass:
-        'bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(240,249,255,0.72))]',
-    },
-    {
-      label: landingCopy.profiles.optionalLabel,
-      title: t.home.profiles.projects.title,
-      description: t.home.profiles.projects.description,
-      image: visuals.projects,
-      href: `/${locale}/${featuresPath}#${anchors.projects}`,
-      reverse: true,
-      toneClass:
-        'bg-[linear-gradient(135deg,rgba(248,250,252,0.96),rgba(255,255,255,0.96))]',
-    },
-  ] as const;
-
-  const proofPoints = landingCopy.trust.points;
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -1319,7 +1616,7 @@ export default async function HomePage({ params }: PageProps) {
         </div>
 
         <div className="relative mx-auto max-w-6xl">
-          <div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
+          <div className="grid items-center gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14">
             <div className="space-y-5 text-center lg:space-y-6 lg:text-left">
               <div className="space-y-5">
                 <p className="mx-auto inline-flex w-fit items-center rounded-full border border-sky-200/80 bg-white/80 px-4 py-2 text-sm font-semibold text-primary/90 shadow-[0_16px_40px_-28px_rgba(14,165,233,0.55)] lg:mx-0">
@@ -1345,34 +1642,37 @@ export default async function HomePage({ params }: PageProps) {
                 </p>
               </div>
 
-              <div className="flex items-center justify-center lg:justify-start">
-                <Button asChild size="lg">
-                  <Link href={featuresHref}>
-                    {t.common.features}
+              <div className="flex flex-col items-center gap-3 lg:items-start">
+                <Button asChild size="lg" className="rounded-full px-8">
+                  <Link href={contactHref}>
+                    {copy.hero.cta}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
+                <p className="max-w-sm text-sm leading-6 text-muted-foreground">
+                  {copy.hero.ctaCaption}
+                </p>
               </div>
             </div>
 
-            <div className="relative mx-auto w-full max-w-2xl lg:max-w-none">
+            <div className="relative mx-auto w-full max-w-none">
               <div className="pointer-events-none absolute inset-x-10 top-8 h-32 rounded-full bg-sky-100/80 blur-3xl" />
               <div className="pointer-events-none absolute bottom-8 left-8 h-24 w-24 rounded-full bg-amber-100/80 blur-3xl" />
 
-              <div className="relative mx-auto max-w-[46rem] pt-2">
-                <div className={`${frameClass} border-white/70 p-2 shadow-[0_40px_120px_-52px_rgba(15,23,42,0.42)]`}>
-                  <div className="rounded-[1.35rem] border border-border/50 bg-white/95 px-4 py-3">
+              <div className="relative mx-auto max-w-[60rem] pt-2">
+                <div className={`${FRAME_CLASS} border-white/75 p-2.5 shadow-[0_46px_132px_-58px_rgba(15,23,42,0.4)]`}>
+                  <div className="rounded-[1.45rem] border border-border/50 bg-white/96 px-4 py-3">
                     <div className="mb-3 flex items-center justify-between text-xs font-medium text-muted-foreground">
                       <span>Summa Social</span>
                       <span>{t.home.workflow.title}</span>
                     </div>
-                    <div className="overflow-hidden rounded-[1.2rem] border border-border/50">
+                    <div className="overflow-hidden rounded-[1.35rem] border border-border/50 bg-white">
                       <Image
                         src="/visuals/web/web_pantalla_summa.webp"
                         alt={t.home.hero.visualAlt}
-                        width={800}
-                        height={500}
-                        sizes="(min-width: 1024px) 50vw, 100vw"
+                        width={1600}
+                        height={1000}
+                        sizes="(min-width: 1280px) 60vw, (min-width: 1024px) 58vw, 100vw"
                         className="h-auto w-full"
                         priority
                       />
@@ -1380,28 +1680,16 @@ export default async function HomePage({ params }: PageProps) {
                   </div>
                 </div>
 
-                <div className="hidden lg:block">
-                  {heroPanels.map((panel) => {
-                    const Icon = panel.icon;
-
-                    return (
-                      <div
-                        key={panel.title}
-                        className={`absolute w-[11.5rem] rounded-[1.35rem] border border-white/80 bg-white/95 p-4 shadow-[0_24px_65px_-44px_rgba(15,23,42,0.45)] backdrop-blur xl:w-[13rem] ${panel.className}`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-50 text-primary">
-                            <Icon className="h-4 w-4" />
-                          </div>
-                          <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                            {panel.badge}
-                          </span>
-                        </div>
-                        <p className="mt-4 text-sm font-semibold leading-5 text-foreground">{panel.title}</p>
-                        <p className="mt-2 text-xs leading-5 text-muted-foreground">{panel.description}</p>
-                      </div>
-                    );
-                  })}
+                <div className="mt-4 hidden sm:grid sm:grid-cols-2 sm:gap-2.5 xl:flex xl:flex-nowrap xl:items-center xl:justify-center">
+                  {heroHighlights.map((item) => (
+                    <div
+                      key={item}
+                      className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-white/88 px-3.5 py-2 text-[13px] font-medium leading-5 text-slate-700 shadow-[0_12px_30px_-28px_rgba(15,23,42,0.18)] backdrop-blur xl:whitespace-nowrap"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary/75" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1443,94 +1731,50 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      {latestUpdate ? (
-        <section className="px-6 py-5 lg:py-6">
-          <div className="mx-auto max-w-6xl">
-            <div className="rounded-[1.5rem] border border-sky-100/90 bg-white/88 p-4 shadow-[0_18px_50px_-42px_rgba(14,165,233,0.28)] backdrop-blur sm:p-5">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
-                      {homeSectionCopy.updatesBadge}
-                    </span>
-                    {formatPublicDate(latestUpdate.publishedAt, locale) ? (
-                      <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                        <CalendarDays className="h-4 w-4 text-primary" />
-                        {formatPublicDate(latestUpdate.publishedAt, locale)}
-                      </p>
-                    ) : null}
-                  </div>
-                  <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">{latestUpdate.title}</h2>
-                  <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                    {latestUpdate.excerpt ?? t.updates.latestDescription}
-                  </p>
-                </div>
-
-                <div className="flex sm:flex-row lg:items-end lg:justify-end">
-                  <Button asChild size="sm" variant="outline">
-                    <Link href={`/${locale}/novetats/${latestUpdate.slug}`}>
-                      {t.updates.readMore}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
       <section className="px-6 py-16 lg:py-20">
-        <div className="mx-auto max-w-6xl rounded-[2.25rem] border border-border/60 bg-[linear-gradient(135deg,rgba(248,250,252,0.96),rgba(240,249,255,0.78))] p-6 shadow-[0_24px_70px_-46px_rgba(15,23,42,0.28)] sm:p-8 lg:p-10">
-          <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
-            <div className="space-y-6">
+        <div className="mx-auto max-w-6xl">
+          <div className="max-w-3xl space-y-4">
+            {copy.beforeAfter.eyebrow ? (
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                {landingCopy.trust.eyebrow}
+                {copy.beforeAfter.eyebrow}
               </p>
-              <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-foreground lg:text-[2.4rem]">
-                {landingCopy.trust.title}
-              </h2>
-              <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                {landingCopy.trust.description}
-              </p>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-[1.4rem] border border-border/60 bg-white/90 p-5">
-                  <p className="text-3xl font-semibold tracking-tight text-primary sm:text-4xl">
-                    {t.home.stats.entities}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{t.home.stats.entitiesLabel}</p>
-                </div>
-                <div className="rounded-[1.4rem] border border-border/60 bg-white/90 p-5">
-                  <p className="text-3xl font-semibold tracking-tight text-primary sm:text-4xl">
-                    {t.home.stats.movements}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{t.home.stats.movementsLabel}</p>
-                </div>
-                <div className="rounded-[1.4rem] border border-border/60 bg-white/90 p-5">
-                  <p className="text-3xl font-semibold tracking-tight text-primary sm:text-4xl">
-                    {t.home.stats.countries}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{t.home.stats.countriesLabel}</p>
-                </div>
-              </div>
-            </div>
+            ) : null}
+            <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-[2.35rem]">
+              {copy.beforeAfter.title}
+            </h2>
+            <p className="text-base leading-7 text-muted-foreground sm:text-lg">
+              {copy.beforeAfter.description}
+            </p>
+          </div>
 
-            <div className={`${surfaceClass} p-6 sm:p-7`}>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                {t.home.workflow.title}
+          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+            <article className={`${SURFACE_CLASS} p-6 sm:p-7`}>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
+                {copy.beforeAfter.beforeTitle}
               </p>
-              <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
-                {landingCopy.trust.panelLead}
-              </p>
-              <div className="mt-6 space-y-3">
-                {proofPoints.map((point) => (
-                  <div key={point} className="flex gap-3 rounded-[1.25rem] border border-border/50 bg-background/80 p-4">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                    <p className="text-sm leading-6 text-muted-foreground">{point}</p>
+              <div className="mt-5 space-y-3">
+                {copy.beforeAfter.beforeItems.map((item) => (
+                  <div key={item} className="flex gap-3 rounded-[1.15rem] bg-slate-50 px-4 py-3">
+                    <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-400" />
+                    <p className="text-sm leading-6 text-slate-700">{item}</p>
                   </div>
                 ))}
               </div>
-            </div>
+            </article>
+
+            <article className={`${SURFACE_CLASS} p-6 sm:p-7`}>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
+                {copy.beforeAfter.afterTitle}
+              </p>
+              <div className="mt-5 space-y-3">
+                {copy.beforeAfter.afterItems.map((item) => (
+                  <div key={item} className="flex gap-3 rounded-[1.15rem] bg-slate-50 px-4 py-3">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                    <p className="text-sm leading-6 text-slate-700">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
           </div>
         </div>
       </section>
@@ -1568,125 +1812,95 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* E) BLOCS "Per a qui és" */}
       <section className="px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-6xl">
-          <div className="mx-auto max-w-3xl text-center">
+          <div className="max-w-3xl space-y-4">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-              {landingCopy.profiles.eyebrow}
+              {copy.fit.eyebrow}
             </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
-              {landingCopy.profiles.title}
+            <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-[2.25rem]">
+              {copy.fit.title}
             </h2>
-            <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
-              {landingCopy.profiles.description}
-            </p>
           </div>
 
-          <div className="mt-12 space-y-6">
-            {profileSpotlights.map((profile) => (
-              <div
-                key={profile.title}
-                className={`grid items-center gap-8 rounded-[2rem] border border-border/60 ${profile.toneClass} p-5 shadow-[0_20px_60px_-48px_rgba(15,23,42,0.24)] sm:p-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-10 lg:p-8`}
-              >
-                <div className={profile.reverse ? 'lg:order-2' : ''}>
-                  <div className={`${frameClass} border-white/70`}>
-                    <Image
-                      src={profile.image}
-                      alt={profile.title}
-                      width={900}
-                      height={620}
-                      sizes="(min-width: 1024px) 45vw, 100vw"
-                      className="h-auto w-full"
-                    />
+          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+            <article className={`${SURFACE_CLASS} p-6 sm:p-7`}>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
+                {copy.fit.fitTitle}
+              </p>
+              <div className="mt-5 space-y-3">
+                {copy.fit.fitItems.map((item) => (
+                  <div key={item} className="flex gap-3 rounded-[1.15rem] bg-slate-50 px-4 py-3">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                    <p className="text-sm leading-6 text-slate-700">{item}</p>
                   </div>
-                </div>
-
-                <div className={`space-y-5 ${profile.reverse ? 'lg:order-1' : ''}`}>
-                  <span className="inline-flex items-center rounded-full border border-sky-200/80 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-primary/85">
-                    {profile.label}
-                  </span>
-                  <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
-                    {profile.title}
-                  </h2>
-                  <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                    {profile.description}
-                  </p>
-                  <Link
-                    href={profile.href}
-                    className="inline-flex items-center text-sm font-semibold text-primary"
-                  >
-                    {homeReadMoreLabel}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </div>
+                ))}
               </div>
-            ))}
+            </article>
+
+            <article className={`${SURFACE_CLASS} p-6 sm:p-7`}>
+              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
+                {copy.fit.notFitTitle}
+              </p>
+              <div className="mt-5 space-y-3">
+                {copy.fit.notFitItems.map((item) => (
+                  <div key={item} className="flex gap-3 rounded-[1.15rem] bg-slate-50 px-4 py-3">
+                    <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-400" />
+                    <p className="text-sm leading-6 text-slate-700">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <section id="how-we-work" className="bg-muted/30 px-6 py-16 lg:py-20">
+      <section id="how-we-work" className="bg-white px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-6xl">
-          <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
+          <div className={`${SURFACE_CLASS} grid gap-8 p-6 sm:p-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start`}>
             <div className="space-y-6">
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                {t.home.howWeWork.title}
+                {copy.work.eyebrow}
               </p>
-              <h2 className="max-w-3xl text-[1.12rem] font-medium leading-7 text-foreground sm:text-[1.2rem] lg:text-[1.35rem]">
-                {landingCopy.howWeWorkLead}
+              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-[2.2rem]">
+                {copy.work.title}
               </h2>
-              <p className="text-sm leading-7 text-muted-foreground sm:text-base">
-                {t.home.howWeWork.paragraph1}
-              </p>
-              <div className="rounded-[1.5rem] border border-border/60 bg-white/80 p-5 text-sm leading-6 text-muted-foreground shadow-[0_20px_50px_-44px_rgba(15,23,42,0.2)]">
-                {t.home.howWeWork.note}
-              </div>
             </div>
 
-            <div className={`${frameClass} border-white/70 p-3`}>
-              <Image
-                src={locale === 'es' ? '/visuals/web/web_como_trabajamos.webp' : '/visuals/web/web_com_treballem.webp'}
-                alt={t.home.howWeWork.imageAlt}
-                width={1200}
-                height={600}
-                sizes="(min-width: 1024px) 55vw, 100vw"
-                className="h-auto w-full rounded-[1.35rem]"
-              />
+            <div className="space-y-5">
+              <p className="text-base leading-7 text-slate-600 sm:text-lg">{copy.work.description}</p>
+              <p className="text-base leading-7 text-slate-600">{t.home.howWeWork.paragraph1}</p>
+              <div className="rounded-[1.35rem] border border-sky-100/80 bg-[linear-gradient(135deg,rgba(14,165,233,0.08),rgba(255,255,255,0.98))] px-5 py-4 text-sm leading-6 text-slate-600">
+                {copy.work.note}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="px-6 pb-20 pt-16 lg:pt-20">
+      <section data-preview-section="cta-final" className="px-6 pb-20 pt-10 lg:pt-14">
         <div className="mx-auto max-w-6xl rounded-[2.4rem] border border-sky-200/70 bg-[linear-gradient(135deg,rgba(14,165,233,0.16),rgba(255,255,255,0.96)_45%,rgba(240,249,255,0.92))] p-6 shadow-[0_30px_90px_-56px_rgba(14,165,233,0.45)] sm:p-8 lg:p-10">
-          <div className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:gap-10">
-            <div className="space-y-6">
+          <div className="grid gap-8 lg:grid-cols-[1fr_0.92fr] lg:items-center">
+            <div className="space-y-5">
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                {landingCopy.finalEyebrow}
+                {copy.final.eyebrow}
               </p>
-              <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-foreground lg:text-[2.45rem]">
-                {t.home.finalCta.title}
+              <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-foreground sm:text-[2.45rem]">
+                {copy.final.title}
               </h2>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                {t.home.finalCta.subtitle}
+                {copy.final.subtitle}
               </p>
-              <Button asChild size="lg" variant="outline">
-                <Link href={featuresHref}>{t.common.features}</Link>
+              <Button asChild size="lg" className="rounded-full px-8">
+                <Link href={contactHref}>
+                  {copy.hero.cta}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </Button>
             </div>
 
             <div className="rounded-[1.9rem] border border-white/80 bg-white/95 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.28)] sm:p-7">
-              <p className="text-sm font-medium text-primary">{t.contact.responseTime}</p>
-              <h3 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
-                {t.contact.title}
-              </h3>
-              <p className="mt-3 text-base leading-7 text-muted-foreground">{t.contact.description}</p>
-              <div className="mt-6">
-                <Button asChild size="lg" className="w-full sm:w-auto">
-                  <Link href={`/${locale}/contact`}>{t.cta.primary}</Link>
-                </Button>
-              </div>
+              <p className="text-sm leading-6 text-slate-600">{copy.final.supportNote}</p>
               <PublicDirectContact locale={locale} className="mt-6 border-t border-border/60 pt-6" />
             </div>
           </div>

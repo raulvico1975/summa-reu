@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { PublicFeaturesExplorer, type PublicFeaturesExplorerItem, type PublicFeaturesExplorerSection } from '@/components/public/PublicFeaturesExplorer';
+import { PublicFeatureDemo } from '@/components/public/PublicFeatureDemo';
+import type { PublicFeaturesExplorerItem, PublicFeaturesExplorerSection } from '@/components/public/PublicFeaturesExplorer';
+import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { PublicSiteFooter } from '@/components/public/PublicSiteFooter';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ type PageCopy = {
   footerEyebrow: string;
   footerTitle: string;
   footerDescription: string;
+  footerSupportNote: string;
   sections: Record<
     FeatureSectionKey,
     {
@@ -62,6 +64,31 @@ type PageCopy = {
 
 const pageShellClass =
   'min-h-screen bg-[linear-gradient(180deg,#f6f8fb_0%,#ffffff_24%,#ffffff_100%)]';
+
+const FEATURES_LAYOUT_COPY: Record<
+  PublicLocale,
+  {
+    title: string;
+    lead: string;
+  }
+> = {
+  ca: {
+    title: 'Funcionalitats de Summa',
+    lead: 'Sis blocs de treball per entendre ràpidament què cobreix Summa i anar directament a la part que us interessa.',
+  },
+  es: {
+    title: 'Funcionalidades de Summa',
+    lead: 'Seis bloques de trabajo para entender rápido qué cubre Summa e ir directamente a la parte que os interesa.',
+  },
+  fr: {
+    title: 'Fonctionnalités de Summa',
+    lead: 'Six blocs de travail pour comprendre rapidement ce que couvre Summa et aller directement à la partie qui vous intéresse.',
+  },
+  pt: {
+    title: 'Funcionalidades do Summa',
+    lead: 'Seis blocos de trabalho para perceber rapidamente o que cobre o Summa e ir diretamente à parte que vos interessa.',
+  },
+};
 
 const WEB_VISUALS = {
   default: {
@@ -107,26 +134,27 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
     demoBadge: 'Vídeo demo',
     landingBadge: 'Landing',
     screenBadge: 'Pantalla',
-    footerEyebrow: 'Següent pas',
-    footerTitle: 'Si un bloc ja et fa clic, baixem al detall',
-    footerDescription:
-      'Podem entrar directament a la landing d’aquella funcionalitat o ensenyar-te el flux en una demo curta.',
+    footerEyebrow: 'Parla amb nosaltres',
+    footerTitle: 'Parla amb nosaltres',
+    footerDescription: 'Valorem si Summa encaixa amb la vostra entitat.',
+    footerSupportNote:
+      'Ens agrada entendre primer la realitat de cada entitat abans de proposar res.',
     sections: {
       dashboard: {
-        label: 'Panell de control',
-        title: 'Visió general del sistema',
+        label: 'Visió general del sistema',
+        title: 'Panell de control',
         description:
-          'Una entrada clara per veure estat, pendents i informació preparada per compartir amb l’equip o la junta.',
+          "És la pantalla per seguir l'estat econòmic, el període actiu i les diferents àrees de control sense sortir del mateix panell.",
         items: {
           metrics: {
-            title: 'Quadre de comandament',
+            title: "Què hi veieu d'un cop d'ull",
             description:
-              'Indicadors, alertes i visió general per saber què està passant sense navegar per deu pantalles.',
+              "Ingressos, despeses, saldo, pendents i les diferents seccions del panell per entendre ràpidament la situació de l'entitat en el període escollit.",
           },
           reports: {
-            title: 'Informes i exports',
+            title: 'Informe econòmic per a junta o patronat',
             description:
-              'Informació llesta per baixar, revisar o compartir amb gestoria, junta o equip intern.',
+              "Comparteix el que veus en pantalla en un informe econòmic personalitzable i exporta'l a Excel o prepara'l per enviar-lo per email abans de reunions, patronats o assemblees.",
           },
         },
       },
@@ -215,26 +243,27 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
     demoBadge: 'Vídeo demo',
     landingBadge: 'Landing',
     screenBadge: 'Pantalla',
-    footerEyebrow: 'Siguiente paso',
-    footerTitle: 'Si un bloque ya encaja, bajamos al detalle',
-    footerDescription:
-      'Podemos entrar directamente en la landing de esa funcionalidad o enseñarte el flujo en una demo corta.',
+    footerEyebrow: 'Habla con nosotros',
+    footerTitle: 'Habla con nosotros',
+    footerDescription: 'Valoramos si Summa encaja con vuestra entidad.',
+    footerSupportNote:
+      'Nos gusta entender primero la realidad de cada entidad antes de proponer nada.',
     sections: {
       dashboard: {
-        label: 'Panel de control',
-        title: 'Visión general del sistema',
+        label: 'Visión general del sistema',
+        title: 'Panel de control',
         description:
-          'Una entrada clara para ver estado, pendientes e información lista para compartir con el equipo o la junta.',
+          'Es la pantalla para seguir el estado económico, el periodo activo y las distintas áreas de control sin salir del mismo panel.',
         items: {
           metrics: {
-            title: 'Cuadro de mando',
+            title: 'Lo que veis de un vistazo',
             description:
-              'Indicadores, alertas y visión general para saber qué está pasando sin navegar por diez pantallas.',
+              'Ingresos, gastos, saldo, pendientes y las distintas secciones del panel para entender rápidamente la situación de la entidad en el periodo escogido.',
           },
           reports: {
-            title: 'Informes y exportaciones',
+            title: 'Informe económico para junta o patronato',
             description:
-              'Información lista para descargar, revisar o compartir con gestoría, junta o equipo interno.',
+              'Comparte lo que ves en pantalla en un informe económico personalizable y expórtalo a Excel o prepáralo para enviarlo por email antes de reuniones, patronatos o asambleas.',
           },
         },
       },
@@ -323,26 +352,27 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
     demoBadge: 'Démo vidéo',
     landingBadge: 'Landing',
     screenBadge: 'Écran',
-    footerEyebrow: 'Étape suivante',
-    footerTitle: 'Si un bloc vous parle déjà, on descend dans le détail',
-    footerDescription:
-      'Nous pouvons ouvrir directement la landing concernée ou vous montrer le flux dans une démo courte.',
+    footerEyebrow: 'Parlez avec nous',
+    footerTitle: 'Parlez avec nous',
+    footerDescription: 'Nous évaluons si Summa convient à votre structure.',
+    footerSupportNote:
+      "Nous aimons comprendre d'abord la réalité de chaque structure avant de proposer quoi que ce soit.",
     sections: {
       dashboard: {
-        label: 'Tableau de bord',
-        title: 'Vue générale du système',
+        label: 'Vue générale du système',
+        title: 'Tableau de bord',
         description:
-          'Une entrée claire pour voir l’état, les points en attente et une information prête à être partagée.',
+          "C'est l'écran pour suivre l'état économique, la période active et les différentes zones de contrôle sans quitter le tableau de bord.",
         items: {
           metrics: {
-            title: 'Tableau de bord',
+            title: "Ce que l'on voit d'un coup d'oeil",
             description:
-              'Indicateurs, alertes et vue générale pour comprendre la situation sans parcourir de nombreuses pages.',
+              "Revenus, dépenses, solde, éléments en attente et différentes sections du tableau pour comprendre rapidement la situation de la structure sur la période choisie.",
           },
           reports: {
-            title: 'Rapports et exports',
+            title: 'Rapport économique pour conseil ou bureau',
             description:
-              'Information prête à télécharger, vérifier ou partager avec le cabinet, l’équipe ou le conseil.',
+              "Partagez ce que vous voyez à l'écran dans un rapport économique personnalisable et exportez-le en Excel ou préparez-le pour envoi par email avant une réunion ou un conseil.",
           },
         },
       },
@@ -431,26 +461,27 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
     demoBadge: 'Vídeo demo',
     landingBadge: 'Landing',
     screenBadge: 'Ecrã',
-    footerEyebrow: 'Próximo passo',
-    footerTitle: 'Se um bloco já fizer sentido, descemos ao detalhe',
-    footerDescription:
-      'Podemos abrir diretamente a landing dessa funcionalidade ou mostrar o fluxo numa demo curta.',
+    footerEyebrow: 'Fale connosco',
+    footerTitle: 'Fale connosco',
+    footerDescription: 'Avaliamos se o Summa encaixa com a vossa entidade.',
+    footerSupportNote:
+      'Gostamos de perceber primeiro a realidade de cada entidade antes de propor seja o que for.',
     sections: {
       dashboard: {
-        label: 'Painel de controlo',
-        title: 'Visão geral do sistema',
+        label: 'Visão geral do sistema',
+        title: 'Painel de controlo',
         description:
-          'Uma entrada clara para ver estado, pendentes e informação pronta a partilhar com equipa ou direção.',
+          'É o ecrã para seguir o estado económico, o período ativo e as diferentes áreas de controlo sem sair do mesmo painel.',
         items: {
           metrics: {
-            title: 'Painel de controlo',
+            title: 'O que se vê num relance',
             description:
-              'Indicadores, alertas e visão geral para perceber o estado sem navegar por demasiados ecrãs.',
+              'Receitas, despesas, saldo, pendentes e as diferentes secções do painel para perceber rapidamente a situação da entidade no período escolhido.',
           },
           reports: {
-            title: 'Relatórios e exportações',
+            title: 'Relatório económico para direção ou patronato',
             description:
-              'Informação pronta a descarregar, rever ou partilhar com contabilidade, equipa ou direção.',
+              'Partilha o que vês no ecrã num relatório económico personalizável e exporta-o para Excel ou prepara-o para enviar por email antes de reuniões, patronatos ou assembleias.',
           },
         },
       },
@@ -558,6 +589,21 @@ function createImageMedia(src: string, alt: string): PublicLandingHeroMedia {
   };
 }
 
+function getSectionShowcaseMedia(
+  locale: PublicLocale,
+  visuals: ReturnType<typeof getLocaleVisuals>,
+  copy: PageCopy
+): Record<FeatureSectionKey, PublicLandingHeroMedia> {
+  return {
+    dashboard: createImageMedia(visuals.dashboard, copy.sections.dashboard.title),
+    conciliation: createImageMedia(visuals.conciliation, copy.sections.conciliation.title),
+    expenses: createImageMedia(visuals.expenses, copy.sections.expenses.title),
+    members: createImageMedia(visuals.remittances, copy.sections.members.title),
+    fiscal: createImageMedia(visuals.fiscal, copy.sections.fiscal.title),
+    projects: createImageMedia(visuals.projects, copy.sections.projects.title),
+  };
+}
+
 function buildLandingItem({
   slug,
   previewLocale,
@@ -605,9 +651,9 @@ function buildStaticItem({
   title: string;
   description: string;
   image: string;
-  href: string;
-  ctaLabel: string;
-  badgeLabel: string;
+  href?: string;
+  ctaLabel?: string;
+  badgeLabel?: string;
 }): PublicFeaturesExplorerItem {
   return {
     id,
@@ -630,8 +676,10 @@ export default async function FeaturesPage({ params }: PageProps) {
   const locale = lang as PublicLocale;
   const t = getPublicTranslations(locale);
   const copy = FEATURES_PAGE_COPY[locale];
+  const layoutCopy = FEATURES_LAYOUT_COPY[locale];
   const detailLocale = getPublicDetailedGuidesLocale(locale);
   const visuals = getLocaleVisuals(locale);
+  const showcaseMedia = getSectionShowcaseMedia(locale, visuals, copy);
   const guideHref = getPublicEconomicGuideHref(locale);
   const showDetailedGuides = hasPublicDetailedGuides(locale);
   const contactHref = `/${locale}/contact`;
@@ -643,32 +691,23 @@ export default async function FeaturesPage({ params }: PageProps) {
       title: copy.sections.dashboard.title,
       description: copy.sections.dashboard.description,
       items: [
-        buildLandingItem({
-          slug: 'software-gestion-ong',
-          previewLocale: locale,
-          detailLocale,
-          fallbackImage: visuals.dashboard,
-          ctaLabel: copy.detailCta,
-          demoBadge: copy.demoBadge,
-          landingBadge: copy.landingBadge,
+        buildStaticItem({
+          id: 'dashboard-overview',
+          title: copy.sections.dashboard.title,
+          description: copy.sections.dashboard.description,
+          image: visuals.dashboard,
         }),
         buildStaticItem({
           id: 'dashboard-metrics',
           title: copy.sections.dashboard.items!.metrics.title,
           description: copy.sections.dashboard.items!.metrics.description,
           image: visuals.dashboard,
-          href: `/${detailLocale}/software-gestion-ong`,
-          ctaLabel: copy.detailCta,
-          badgeLabel: copy.screenBadge,
         }),
         buildStaticItem({
           id: 'dashboard-reports',
           title: copy.sections.dashboard.items!.reports.title,
           description: copy.sections.dashboard.items!.reports.description,
           image: visuals.reports,
-          href: `/${detailLocale}/programa-associacions`,
-          ctaLabel: copy.detailCta,
-          badgeLabel: copy.screenBadge,
         }),
       ],
     },
@@ -876,73 +915,101 @@ export default async function FeaturesPage({ params }: PageProps) {
             </Link>
           </Button>
 
-          <div className="mt-6 overflow-hidden rounded-[2.5rem] border border-slate-200/80 bg-white/96 p-6 shadow-[0_28px_90px_-60px_rgba(15,23,42,0.18)] sm:p-8 lg:p-10">
-            <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
-              <div className="space-y-5">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                  {copy.eyebrow}
-                </p>
-                <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-[3.8rem] lg:leading-[1.02]">
-                  {copy.title}
-                </h1>
-                <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                  {copy.lead}
-                </p>
-                <p className="max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-                  {copy.helper}
-                </p>
-              </div>
-
-              <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-[linear-gradient(135deg,rgba(248,250,252,0.96),rgba(240,249,255,0.82))] p-4 shadow-[0_22px_70px_-48px_rgba(15,23,42,0.18)]">
-                <Image
-                  src={visuals.summary}
-                  alt={copy.title}
-                  width={1600}
-                  height={1000}
-                  sizes="(min-width: 1024px) 44vw, 100vw"
-                  className="rounded-[1.45rem] border border-white/80 shadow-[0_22px_60px_-44px_rgba(15,23,42,0.22)]"
-                  priority
-                />
-              </div>
-            </div>
+          <div className="mt-6 max-w-4xl space-y-5">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
+              {copy.eyebrow}
+            </p>
+            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-[3.4rem] lg:leading-[1.02]">
+              {layoutCopy.title}
+            </h1>
+            <p className="max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
+              {layoutCopy.lead}
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="px-6 pb-14">
-        <div className="mx-auto max-w-6xl rounded-[2.5rem] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-6 shadow-[0_28px_90px_-60px_rgba(15,23,42,0.18)] sm:p-8 lg:p-10">
-          <PublicFeaturesExplorer locale={locale} sections={sections} />
+      <section className="px-6 pb-16">
+        <div className="mx-auto max-w-6xl space-y-6">
+          {sections.map((section, index) => {
+            const media = showcaseMedia[section.id as FeatureSectionKey];
+
+            return (
+              <article
+                key={section.id}
+                id={section.id}
+                className="scroll-mt-24 rounded-[2.2rem] border border-slate-200/80 bg-white/96 p-6 shadow-[0_24px_70px_-54px_rgba(15,23,42,0.16)] sm:p-8 lg:p-10"
+              >
+                <div className="grid gap-8 lg:grid-cols-[0.78fr_1.22fr] lg:items-start lg:gap-10">
+                  <div>
+                    <div className="space-y-4">
+                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
+                        {locale === 'ca'
+                          ? `Bloc ${index + 1}`
+                          : locale === 'es'
+                            ? `Bloque ${index + 1}`
+                            : locale === 'fr'
+                              ? `Bloc ${index + 1}`
+                              : `Bloco ${index + 1}`}
+                      </p>
+                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
+                        {section.label}
+                      </p>
+                      <h2 className="text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2.2rem]">
+                        {section.title}
+                      </h2>
+                      <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                        {section.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="rounded-[2rem] border border-sky-100/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,250,255,0.96))] p-4 shadow-[0_24px_72px_-56px_rgba(14,165,233,0.18)]">
+                      <PublicFeatureDemo
+                        locale={locale}
+                        media={media}
+                        showDemoBadge={false}
+                        showCaptionsBadge={false}
+                        expandOnPlay={false}
+                        dialogTitle={section.title}
+                        dialogDescription={section.description}
+                        className="border border-white/90 bg-white/96 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.18)]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
       <section className="px-6 pb-20">
-        <div className="mx-auto max-w-6xl rounded-[2.2rem] border border-slate-800 bg-slate-950 p-6 text-white shadow-[0_40px_120px_-64px_rgba(15,23,42,0.6)] sm:p-8 lg:p-10">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-300">
-            {copy.footerEyebrow}
-          </p>
-          <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-white lg:text-[2.45rem]">
-            {copy.footerTitle}
-          </h2>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-white/68 sm:text-lg">
-            {copy.footerDescription}
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="bg-white text-slate-950 hover:bg-white/90">
-              <Link href={contactHref}>
-                {t.cta.primary}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            {showDetailedGuides ? (
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-white/15 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-              >
-                <Link href={guideHref}>{copy.detailCta}</Link>
+        <div className="mx-auto max-w-6xl rounded-[2.4rem] border border-sky-200/70 bg-[linear-gradient(135deg,rgba(14,165,233,0.16),rgba(255,255,255,0.96)_45%,rgba(240,249,255,0.92))] p-6 shadow-[0_30px_90px_-56px_rgba(14,165,233,0.45)] sm:p-8 lg:p-10">
+          <div className="grid gap-8 lg:grid-cols-[1fr_0.92fr] lg:items-center">
+            <div className="space-y-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
+                {copy.footerEyebrow}
+              </p>
+              <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2.45rem]">
+                {copy.footerTitle}
+              </h2>
+              <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                {copy.footerDescription}
+              </p>
+              <Button asChild size="lg" className="rounded-full px-8">
+                <Link href={contactHref}>
+                  {t.cta.primary}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </Button>
-            ) : null}
+            </div>
+
+            <div className="rounded-[1.9rem] border border-white/80 bg-white/95 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.28)] sm:p-7">
+              <p className="text-sm leading-6 text-slate-600">{copy.footerSupportNote}</p>
+              <PublicDirectContact locale={locale} className="mt-6 border-t border-border/60 pt-6" />
+            </div>
           </div>
         </div>
       </section>

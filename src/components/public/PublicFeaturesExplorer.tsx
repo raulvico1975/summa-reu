@@ -206,6 +206,18 @@ export function PublicFeaturesExplorer({
                       <AccordionItem
                         key={item.id}
                         value={item.id}
+                        onMouseEnter={() => {
+                          setActiveItemBySection((current) => ({
+                            ...current,
+                            [section.id]: item.id,
+                          }));
+                        }}
+                        onFocusCapture={() => {
+                          setActiveItemBySection((current) => ({
+                            ...current,
+                            [section.id]: item.id,
+                          }));
+                        }}
                         className={cn(
                           compactCards
                             ? 'overflow-hidden rounded-[1.45rem] border border-slate-200/80 bg-white/92 px-4 shadow-[0_12px_30px_-32px_rgba(15,23,42,0.12)] transition-all'

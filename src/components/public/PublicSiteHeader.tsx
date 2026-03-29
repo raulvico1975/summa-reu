@@ -9,17 +9,18 @@ import { cn } from '@/lib/utils'
 
 interface PublicSiteHeaderProps {
   locale: PublicLocale
-  currentSection?: 'features' | 'updates' | 'blog'
+  currentSection?: 'about' | 'features' | 'updates' | 'blog'
 }
 
 export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderProps) {
   const t = getPublicTranslations(locale)
   const featuresHref = getPublicFeaturesHref(locale)
+  const aboutHref = `/${locale}/qui-som`
   const updatesHref = `/${locale}/novetats`
   const blogHref = `/${locale}/blog`
 
   return (
-    <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto max-w-6xl px-6 py-4">
         <div className="flex items-center justify-between gap-4">
           <Link
@@ -40,6 +41,15 @@ export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderPro
                 )}
               >
                 {t.common.features}
+              </Link>
+              <Link
+                href={aboutHref}
+                className={cn(
+                  'transition-colors hover:text-foreground',
+                  currentSection === 'about' && 'text-foreground'
+                )}
+              >
+                {t.common.about}
               </Link>
               <Link
                 href={updatesHref}
@@ -91,6 +101,17 @@ export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderPro
                 )}
               >
                 <span>{t.common.features}</span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover/item:translate-x-0.5" />
+              </Link>
+
+              <Link
+                href={aboutHref}
+                className={cn(
+                  'group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50',
+                  currentSection === 'about' && 'bg-sky-50'
+                )}
+              >
+                <span>{t.common.about}</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover/item:translate-x-0.5" />
               </Link>
 
