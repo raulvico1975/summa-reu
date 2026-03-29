@@ -553,6 +553,8 @@ export interface FundingExportParams {
   orderMode?: FundingOrderMode;
   projectFxRate?: number | null;
   columnLabels?: FundingColumnLabels;
+  sheetName?: string;
+  filenamePrefix?: string;
 }
 
 /**
@@ -589,7 +591,18 @@ function parseDateForExcel(dateStr: string | null): Date | null {
 export function buildProjectJustificationFundingXlsx(
   params: FundingExportParams
 ): ExportResult {
-  const { projectCode, budgetLines, expenseLinks, expenses, projectId, orderMode = 'budgetLineThenChronological', projectFxRate, columnLabels } = params;
+  const {
+    projectCode,
+    budgetLines,
+    expenseLinks,
+    expenses,
+    projectId,
+    orderMode = 'budgetLineThenChronological',
+    projectFxRate,
+    columnLabels,
+    sheetName = 'Justificació',
+    filenamePrefix = 'justificacio_financador',
+  } = params;
 
   // 1. Obtenir files base (ordre per partida, usat també per ZIP)
   const baseRows = buildJustificationRows({
@@ -806,7 +819,7 @@ export function buildProjectJustificationFundingXlsx(
 
   // 5. Crear workbook
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Justificació');
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
   // 6. Generar fitxer
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
@@ -815,7 +828,8 @@ export function buildProjectJustificationFundingXlsx(
   // 7. Generar nom de fitxer
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const safeProjectCode = (projectCode ?? 'projecte').replace(/[^a-zA-Z0-9]/g, '');
-  const filename = `justificacio_financador_${safeProjectCode}_${dateStr}.xlsx`;
+  const safeFilenamePrefix = (filenamePrefix ?? 'justificacio_financador').replace(/[^a-zA-Z0-9_-]/g, '');
+  const filename = `${safeFilenamePrefix}_${safeProjectCode}_${dateStr}.xlsx`;
 
   return { blob, filename };
 }

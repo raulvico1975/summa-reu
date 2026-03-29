@@ -150,7 +150,7 @@ export function SupplierImporter({
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Carregar TOTES les categories per matching (agnòstic de tipus)
   const categoriesQuery = useMemoFirebase(
@@ -275,7 +275,7 @@ export function SupplierImporter({
       const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(firstSheet, { defval: '' });
 
       if (jsonData.length === 0) {
-        toast({ variant: 'destructive', title: 'Error', description: t.importers.common.emptyFile });
+        toast({ variant: 'destructive', title: t.common.error, description: t.importers.common.emptyFile });
         return;
       }
 
@@ -303,11 +303,11 @@ export function SupplierImporter({
         processDataWithMapping(autoMapping, jsonData);
       } else {
         // NO és plantilla oficial: mostrar error
-        setTemplateError('Fes servir la plantilla oficial de Summa per importar proveïdors.');
+        setTemplateError(tr('suppliers.importer.officialTemplateRequired'));
       }
     } catch (error) {
       console.error('Error llegint fitxer:', error);
-      toast({ variant: 'destructive', title: 'Error', description: t.importers.common.cannotReadFile });
+      toast({ variant: 'destructive', title: t.common.error, description: t.importers.common.cannotReadFile });
     }
   };
 
@@ -445,7 +445,7 @@ export function SupplierImporter({
       console.error('Error important:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: t.common.error,
         description: t.importers.common.importError,
       });
       setStep('preview');
@@ -488,7 +488,7 @@ export function SupplierImporter({
                   <div className="space-y-2">
                     <p className="font-medium">{templateError}</p>
                     <p className="text-red-600">
-                      Descarrega la plantilla oficial i copia les teves dades en ella.
+                      {tr('suppliers.importer.templateErrorHint')}
                     </p>
                   </div>
                 </div>
@@ -519,13 +519,13 @@ export function SupplierImporter({
             </div>
 
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-3">
-              <p className="font-medium">Fes servir la plantilla oficial de Summa per importar proveïdors.</p>
+              <p className="font-medium">{tr('suppliers.importer.officialTemplateRequired')}</p>
               <div className="space-y-1 text-muted-foreground">
-                <p><strong>{t.importers.common.requiredColumns}</strong> Nom</p>
-                <p><strong>{t.importers.common.optionalColumns}</strong> NIF/CIF, Categoria, Adreça, CP, Ciutat, Telèfon, Email, IBAN</p>
+                <p><strong>{t.importers.common.requiredColumns}</strong> {t.importers.supplier.requiredColumnsText}</p>
+                <p><strong>{t.importers.common.optionalColumns}</strong> {t.importers.supplier.optionalColumnsText}</p>
               </div>
               <div className="pt-2 border-t border-muted space-y-1 text-muted-foreground">
-                <p>La columna "Categoria per defecte" s'assigna si coincideix amb una categoria de despesa existent.</p>
+                <p>{tr('suppliers.importer.defaultCategoryHint')}</p>
               </div>
             </div>
           </div>

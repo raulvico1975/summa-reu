@@ -89,7 +89,7 @@ export function SupplierManager() {
   const { firestore, auth, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const isMobile = useIsMobile();
 
   const contactsCollection = useMemoFirebase(
@@ -216,7 +216,7 @@ export function SupplierManager() {
         toast({
           variant: 'destructive',
           title: t.common.error,
-          description: result.error || 'Error desconegut',
+          description: result.error || t.common.unknownError,
         });
         setSupplierToDelete(null);
       }
@@ -275,7 +275,7 @@ export function SupplierManager() {
         toast({
           variant: 'destructive',
           title: t.common.error,
-          description: result.error || 'Error desconegut',
+          description: result.error || t.common.unknownError,
         });
       }
     } catch (err) {
@@ -350,7 +350,11 @@ export function SupplierManager() {
         });
         toast({ title: t.suppliers.supplierUpdated, description: t.suppliers.supplierUpdatedDescription(formData.name) });
       } catch (err) {
-        toast({ variant: 'destructive', title: t.common.error, description: err instanceof Error ? err.message : 'Error desconegut' });
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: err instanceof Error ? err.message : t.common.unknownError,
+        });
         return;
       }
     } else {
@@ -366,8 +370,10 @@ export function SupplierManager() {
         const existing = existingMatch.contact;
         toast({
           variant: 'destructive',
-          title: 'Possible duplicat detectat',
-          description: `Ja existeix "${existing.name}" amb el mateix ${existingMatch.matchedBy === 'taxId' ? 'NIF' : existingMatch.matchedBy === 'iban' ? 'IBAN' : 'email'}. Revisa la llista abans de crear un duplicat.`,
+          title: tr('contacts.duplicateDetectedTitle'),
+          description: tr('contacts.duplicateDetectedDescription')
+            .replace('{name}', existing.name)
+            .replace('{field}', existingMatch.matchedBy === 'taxId' ? 'NIF' : existingMatch.matchedBy === 'iban' ? 'IBAN' : 'email'),
           duration: 8000,
         });
         return;
@@ -417,7 +423,7 @@ export function SupplierManager() {
                   size="icon"
                   onClick={() => suppliers && suppliers.length > 0 && exportSuppliersToExcel(suppliers, expenseCategories, categoryTranslations)}
                   disabled={!suppliers || suppliers.length === 0}
-                  title="Exportar a Excel"
+                  title={tr('contacts.exportToExcel')}
                 >
                   <Download className="h-4 w-4" />
                 </Button>
