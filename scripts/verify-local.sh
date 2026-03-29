@@ -13,7 +13,7 @@ echo "[verify-local] Checking build env..."
 node scripts/check-build-env.mjs
 
 if [ "$VERIFY_PROFILE" = "FAST_PUBLIC" ]; then
-  echo "[verify-local] Profile: FAST_PUBLIC (web public/blog)"
+  echo "[verify-local] Profile: FAST_PUBLIC (scope EDGE)"
   echo "[verify-local] Typecheck..."
   npm run typecheck
   echo "[verify-local] Build..."

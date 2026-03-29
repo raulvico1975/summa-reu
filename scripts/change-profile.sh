@@ -1,59 +1,54 @@
 #!/usr/bin/env bash
 
-# Helper compartit per detectar canvis de web públic amb perfil ràpid.
-# Només activa FAST_PUBLIC quan TOTS els fitxers canviats són de web/landings/blog públic.
-
-FAST_PUBLIC_SCOPE_PATTERNS=(
-  '^src/app/public/'
-  '^src/components/public/'
-  '^src/app/blog/'
-  '^src/app/contacte/'
-  '^src/app/funcionalitats/'
-  '^src/app/privacitat/'
-  '^src/app/privacy/'
-  '^src/app/login/'
-  '^src/i18n/public\.ts$'
-  '^public/'
-  '^docs/'
-  '\.md$'
-  '\.txt$'
-)
-
-summa_all_files_match_patterns() {
+summa_scope_eval() {
   local files="$1"
-  shift
-  local file pattern matched
+  printf '%s\n' "$files" | node "$SCRIPT_DIR/runtime/scope-classifier.mjs" --format shell
+}
 
-  while IFS= read -r file; do
-    [ -z "$file" ] && continue
-    matched=false
-    for pattern in "$@"; do
-      if printf '%s\n' "$file" | grep -Eq "$pattern"; then
-        matched=true
-        break
-      fi
-    done
-    if [ "$matched" = false ]; then
-      return 1
-    fi
-  done <<EOF2
-$files
-EOF2
+summa_scope() {
+  local files="$1"
+  local scope_eval
+  scope_eval="$(summa_scope_eval "$files")"
+  eval "$scope_eval"
+  printf '%s' "$SCOPE"
+}
 
-  return 0
+summa_touches_core_indirectly() {
+  local files="$1"
+  local scope_eval
+  scope_eval="$(summa_scope_eval "$files")"
+  eval "$scope_eval"
+  printf '%s' "$TOUCHES_CORE_INDIRECTLY"
+}
+
+summa_risk_level() {
+  local files="$1"
+  local scope_eval
+  scope_eval="$(summa_scope_eval "$files")"
+  eval "$scope_eval"
+  printf '%s' "$RISK"
+}
+
+summa_deploy_mode() {
+  local files="$1"
+  local scope_eval
+  scope_eval="$(summa_scope_eval "$files")"
+  eval "$scope_eval"
+  printf '%s' "$DEPLOY_MODE"
 }
 
 summa_is_fast_public_scope() {
   local files="$1"
-  [ -n "$files" ] || return 1
-  summa_all_files_match_patterns "$files" "${FAST_PUBLIC_SCOPE_PATTERNS[@]}"
+  local scope_eval
+  scope_eval="$(summa_scope_eval "$files")"
+  eval "$scope_eval"
+  [ "$VERIFY_PROFILE" = "FAST_PUBLIC" ]
 }
 
 summa_change_profile() {
   local files="$1"
-  if summa_is_fast_public_scope "$files"; then
-    printf '%s' "FAST_PUBLIC"
-    return
-  fi
-  printf '%s' "STANDARD"
+  local scope_eval
+  scope_eval="$(summa_scope_eval "$files")"
+  eval "$scope_eval"
+  printf '%s' "$VERIFY_PROFILE"
 }
