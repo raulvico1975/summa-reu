@@ -562,7 +562,7 @@ export function OrganizationSettings() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => handleChange('returnEmailTemplate', SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE)}
+              onClick={() => handleChange('returnEmailTemplate', SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE[formData.language] ?? SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE.es)}
             >
               {tr('settings.returnEmailTemplate.restore')}
             </Button>

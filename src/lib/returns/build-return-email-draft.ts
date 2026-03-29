@@ -2,7 +2,7 @@ import { renderReturnEmailTemplate } from '@/lib/returns/render-return-email-tem
 
 export type ReturnEmailDraftLanguage = 'ca' | 'es' | 'fr' | 'pt';
 
-const SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE: Record<ReturnEmailDraftLanguage, string> = {
+export const SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE: Record<ReturnEmailDraftLanguage, string> = {
   ca: `Bon dia {{name}},
 
 Hem rebut la devolució de la quota corresponent a {{month}} per un import de {{amount}}.

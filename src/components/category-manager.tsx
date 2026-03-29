@@ -164,7 +164,7 @@ function CategoryTable({
 export function CategoryManager() {
   const { firestore, auth, user } = useFirebase();
   const { organizationId, userRole } = useCurrentOrganization();
-  const { t, tr } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
   const isMobile = useIsMobile();
 

@@ -981,13 +981,13 @@ export function DonationsReportGenerator() {
             DIALOG EXCLOSOS AEAT
             ═══════════════════════════════════════════════════════════════════════ */}
         <Dialog open={aeatExcludedDialogOpen} onOpenChange={setAeatExcludedDialogOpen}>
-          <DialogContent className="grid w-[min(calc(100vw-2rem),48rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-full">
-            <DialogHeader className="gap-2 border-b px-6 pb-4 pt-6">
-              <DialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
-                {aeatExcludedDialogTitle}
+          <DialogContent className="grid w-[min(calc(100vw-2rem),48rem)] max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-3rem),48rem)]">
+            <DialogHeader className="min-w-0 gap-2 border-b px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
+              <DialogTitle className="flex min-w-0 items-start gap-2 pr-2">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                <span className="min-w-0 break-words">{aeatExcludedDialogTitle}</span>
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="pr-2">
                 {aeatPendingExport && aeatExcludedDialogDesc(
                   aeatPendingExport.includedCount,
                   aeatPendingExport.excludedCount
@@ -995,7 +995,7 @@ export function DonationsReportGenerator() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="min-h-0 space-y-4 overflow-y-auto px-6 py-5">
+            <div className="min-h-0 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
               {/* Llista d'exclosos (màxim 5) */}
               {aeatPendingExport && aeatPendingExport.excludedCount > 0 && (
                 <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
@@ -1030,8 +1030,8 @@ export function DonationsReportGenerator() {
               </p>
             </div>
 
-            <DialogFooter className="gap-2 border-t bg-muted/10 px-6 py-4 sm:justify-between sm:space-x-0">
-              <Button asChild className="w-full sm:w-auto">
+            <DialogFooter className="gap-2 border-t bg-muted/10 px-5 py-4 sm:flex-col sm:space-x-0 sm:px-6 md:flex-row md:flex-wrap md:justify-between">
+              <Button asChild className="w-full md:w-auto">
                 <Link
                   href={buildUrl('/donants?filter=incomplete')}
                   onClick={() => {
@@ -1045,7 +1045,7 @@ export function DonationsReportGenerator() {
               <Button
                 variant="outline"
                 onClick={handleDownloadExcludedCsv}
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
               >
                 <Download className="mr-2 h-4 w-4" />
                 {downloadExcludedCsvLabel}
@@ -1053,7 +1053,7 @@ export function DonationsReportGenerator() {
               <Button
                 variant="outline"
                 onClick={handleConfirmAEATExport}
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
               >
                 {exportAnywayLabel}
               </Button>
@@ -1063,7 +1063,7 @@ export function DonationsReportGenerator() {
                   setAeatExcludedDialogOpen(false);
                   setAeatPendingExport(null);
                 }}
-                className="w-full sm:w-auto"
+                className="w-full md:w-auto"
               >
                 {cancelToFixLabel}
               </Button>
