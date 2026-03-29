@@ -63,7 +63,7 @@ const EMPTY_FORM: FormData = {
 
 export function BankAccountsManager() {
   const { userRole, organizationId } = useCurrentOrganization();
-  const { t, tr } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const { toast } = useToast();
   const { user } = useFirebase();
   const isMobile = useIsMobile();
@@ -294,7 +294,7 @@ export function BankAccountsManager() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => allBankAccounts.length > 0 && exportBankAccountsToExcel(allBankAccounts)}
+                  onClick={() => allBankAccounts.length > 0 && exportBankAccountsToExcel(allBankAccounts, undefined, language)}
                   disabled={allBankAccounts.length === 0}
                   title={tr('settings.bankAccounts.exportToExcel')}
                 >

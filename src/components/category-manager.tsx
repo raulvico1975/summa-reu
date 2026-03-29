@@ -67,7 +67,7 @@ function CategoryTable({
   canEdit: boolean;
   isMobile: boolean;
 }) {
-  const { t, tr } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
 
   if (isMobile) {
@@ -420,7 +420,7 @@ export function CategoryManager() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => categories && categories.length > 0 && exportCategoriesToExcel(categories, categoryTranslations)}
+                  onClick={() => categories && categories.length > 0 && exportCategoriesToExcel(categories, categoryTranslations, undefined, language)}
                   disabled={!categories || categories.length === 0}
                   title={tr('settings.categoriesExport')}
                 >

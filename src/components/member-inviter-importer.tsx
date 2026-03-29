@@ -57,7 +57,7 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
   const { organization, organizationId, userRole } = useCurrentOrganization();
-  const { t, tr } = useTranslations();
+  const { t, tr, language } = useTranslations();
 
   // Membres existents
   const membersCollection = useMemoFirebase(
@@ -303,7 +303,7 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={() => downloadMembersInviteTemplate()}
+                onClick={() => downloadMembersInviteTemplate(language)}
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />

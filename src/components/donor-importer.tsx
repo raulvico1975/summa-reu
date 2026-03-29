@@ -534,7 +534,7 @@ export function DonorImporter({
       const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(firstSheet, { defval: '' });
 
       if (jsonData.length === 0) {
-        toast({ variant: 'destructive', title: 'Error', description: t.importers.common.emptyFile });
+        toast({ variant: 'destructive', title: t.common.error, description: t.importers.common.emptyFile });
         return;
       }
 
@@ -563,11 +563,11 @@ export function DonorImporter({
         processDataWithMapping(autoMapping, jsonData);
       } else {
         // NO és plantilla oficial: mostrar error
-        setTemplateError('Fes servir la plantilla oficial de Summa per importar donants.');
+        setTemplateError(t.importers.donor.officialTemplateRequired);
       }
     } catch (error) {
       console.error('Error llegint fitxer:', error);
-      toast({ variant: 'destructive', title: 'Error', description: t.importers.common.cannotReadFile });
+      toast({ variant: 'destructive', title: t.common.error, description: t.importers.common.cannotReadFile });
     }
   };
 
@@ -979,7 +979,7 @@ export function DonorImporter({
     console.error('[DonorImporter] import failed:', error?.message);
     toast({
       variant: 'destructive',
-      title: 'Error',
+      title: t.common.error,
       description: error?.message || t.importers.common.importError,
     });
     setStep('preview');
@@ -1032,7 +1032,7 @@ export function DonorImporter({
                   <div className="space-y-2">
                     <p className="font-medium">{templateError}</p>
                     <p className="text-red-600">
-                      {t.importers.donor.templateErrorHint || 'Descarrega la plantilla oficial i copia les teves dades en ella.'}
+                      {t.importers.donor.templateErrorHint}
                     </p>
                   </div>
                 </div>
@@ -1063,7 +1063,7 @@ export function DonorImporter({
             </div>
 
             <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-3">
-              <p className="font-medium">{t.importers.donor.officialTemplateRequired || 'Fes servir la plantilla oficial de Summa per importar donants.'}</p>
+              <p className="font-medium">{t.importers.donor.officialTemplateRequired}</p>
               <div className="space-y-1 text-muted-foreground">
                 <p><strong>{t.importers.common.requiredColumns}</strong> {t.importers.donor.requiredColumnsText}</p>
                 <p><strong>{t.importers.common.optionalColumns}</strong> {t.importers.donor.optionalColumnsText}</p>

@@ -31,6 +31,32 @@ async function readResendError(response: Response) {
   }
 }
 
+function getContactEmailCopy(language?: 'ca' | 'es' | 'fr' | 'pt') {
+  if (language === 'es') {
+    return {
+      subjectPrefix: 'Nuevo contacto web',
+      title: 'Nuevo contacto web',
+      name: 'Nombre',
+      email: 'Email',
+      organization: 'Entidad',
+      language: 'Idioma',
+      timestamp: 'Fecha/hora servidor',
+      message: 'Mensaje',
+    };
+  }
+
+  return {
+    subjectPrefix: 'Nou contacte web',
+    title: 'Nou contacte web',
+    name: 'Nom',
+    email: 'Email',
+    organization: 'Entitat',
+    language: 'Idioma',
+    timestamp: 'Data/hora servidor',
+    message: 'Missatge',
+  };
+}
+
 export async function POST(request: NextRequest) {
   let body: unknown;
 
@@ -64,32 +90,33 @@ export async function POST(request: NextRequest) {
 
   const serverTimestamp = new Date().toISOString();
   const subjectTarget = organization || name;
-  const subject = `Nou contacte web - ${subjectTarget}`;
+  const copy = getContactEmailCopy(language);
+  const subject = `${copy.subjectPrefix} - ${subjectTarget}`;
   const organizationLine = organization || '-';
   const languageLine = language || '-';
 
   const text = [
-    'Nou contacte web',
+    copy.title,
     '',
-    `Nom: ${name}`,
-    `Email: ${email}`,
-    `Entitat: ${organizationLine}`,
-    `Idioma: ${languageLine}`,
-    `Data/hora servidor: ${serverTimestamp}`,
+    `${copy.name}: ${name}`,
+    `${copy.email}: ${email}`,
+    `${copy.organization}: ${organizationLine}`,
+    `${copy.language}: ${languageLine}`,
+    `${copy.timestamp}: ${serverTimestamp}`,
     '',
-    'Missatge:',
+    `${copy.message}:`,
     message,
   ].join('\n');
 
   const html = `
     <div>
-      <h1>Nou contacte web</h1>
-      <p><strong>Nom:</strong> ${escapeHtml(name)}</p>
-      <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-      <p><strong>Entitat:</strong> ${escapeHtml(organizationLine)}</p>
-      <p><strong>Idioma:</strong> ${escapeHtml(languageLine)}</p>
-      <p><strong>Data/hora servidor:</strong> ${escapeHtml(serverTimestamp)}</p>
-      <p><strong>Missatge:</strong></p>
+      <h1>${escapeHtml(copy.title)}</h1>
+      <p><strong>${escapeHtml(copy.name)}:</strong> ${escapeHtml(name)}</p>
+      <p><strong>${escapeHtml(copy.email)}:</strong> ${escapeHtml(email)}</p>
+      <p><strong>${escapeHtml(copy.organization)}:</strong> ${escapeHtml(organizationLine)}</p>
+      <p><strong>${escapeHtml(copy.language)}:</strong> ${escapeHtml(languageLine)}</p>
+      <p><strong>${escapeHtml(copy.timestamp)}:</strong> ${escapeHtml(serverTimestamp)}</p>
+      <p><strong>${escapeHtml(copy.message)}:</strong></p>
       <p>${escapeHtml(message).replaceAll('\n', '<br />')}</p>
     </div>
   `;

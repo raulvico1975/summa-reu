@@ -4,14 +4,14 @@ Generat: 2026-03-29 18:50
 Risc: ALT
 Backup curt: SKIPPED_NO_BUCKET
 SHA prod abans de publicar: fc8580b9
-SHA branca a publicar (main): 5e496738
+SHA branca a publicar (main): 48798495
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
 git checkout main
-git revert 5e496738 --no-edit
+git revert 48798495 --no-edit
 git push origin main
 bash scripts/deploy.sh main
 ```

@@ -86,7 +86,7 @@ export function EmployeeManager() {
   const { firestore, auth, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const isMobile = useIsMobile();
 
   const contactsCollection = useMemoFirebase(
@@ -404,16 +404,16 @@ export function EmployeeManager() {
                   variant="outline"
                   size="icon"
                   onClick={() => setIsImportOpen(true)}
-                  title="Importar des d'Excel"
+                  title={tr('employees.importFromExcel', "Importar des d'Excel")}
                 >
                   <Upload className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => employees && employees.length > 0 && exportEmployeesToExcel(employees)}
+                  onClick={() => employees && employees.length > 0 && exportEmployeesToExcel(employees, undefined, language)}
                   disabled={!employees || employees.length === 0}
-                  title="Exportar a Excel"
+                  title={tr('employees.exportToExcel', 'Exportar a Excel')}
                 >
                   <Download className="h-4 w-4" />
                 </Button>

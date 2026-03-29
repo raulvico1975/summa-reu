@@ -800,6 +800,8 @@ export default function ProjectBudgetPage() {
         orderMode: exportOrderMode,
         projectFxRate: getEffectiveProjectTC(fxTransfers, project),
         columnLabels,
+        sheetName: tr('projectModule.export.fundingSheetName'),
+        filenamePrefix: tr('projectModule.export.fundingFilenamePrefix'),
       });
 
       // Descarregar fitxer

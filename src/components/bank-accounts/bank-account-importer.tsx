@@ -54,7 +54,7 @@ interface BankAccountImporterProps {
 export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAccountImporterProps) {
   const { toast } = useToast();
   const { bankAccounts, allBankAccounts, create, update, setDefault } = useBankAccounts();
-  const { t, tr } = useTranslations();
+  const { t, tr, language } = useTranslations();
 
   // State
   const [step, setStep] = React.useState<ImportStep>('upload');
@@ -290,7 +290,7 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={() => downloadBankAccountsTemplate()}
+                onClick={() => downloadBankAccountsTemplate(language)}
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />

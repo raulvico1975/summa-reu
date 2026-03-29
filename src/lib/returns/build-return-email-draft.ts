@@ -1,6 +1,9 @@
 import { renderReturnEmailTemplate } from '@/lib/returns/render-return-email-template';
 
-export const SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE = `Bon dia {{name}},
+export type ReturnEmailDraftLanguage = 'ca' | 'es' | 'fr' | 'pt';
+
+const SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE: Record<ReturnEmailDraftLanguage, string> = {
+  ca: `Bon dia {{name}},
 
 Hem rebut la devolució de la quota corresponent a {{month}} per un import de {{amount}}.
 
@@ -9,9 +12,38 @@ Quan us sigui possible, us agrairem que reviseu si hi ha algun problema amb el c
 Moltes gràcies pel vostre suport.
 
 Una salutació,
-L’equip`;
+L’equip`,
+  es: `Buenos días {{name}},
 
-export type ReturnEmailDraftLanguage = 'ca' | 'es' | 'fr' | 'pt';
+Hemos recibido la devolución de la cuota correspondiente a {{month}} por un importe de {{amount}}.
+
+Cuando os vaya bien, os agradeceremos que reviséis si hay algún problema con la cuenta o el saldo. Si todo está correcto, podéis confirmárnoslo y volveremos a intentar el cobro en la próxima remesa.
+
+Muchas gracias por vuestro apoyo.
+
+Un saludo,
+El equipo`,
+  fr: `Bonjour {{name}},
+
+Nous avons reçu le retour de la cotisation correspondant à {{month}} pour un montant de {{amount}}.
+
+Quand vous le pourrez, merci de vérifier s’il y a un problème avec le compte ou le solde. Si tout est correct, vous pouvez nous le confirmer et nous réessaierons l’encaissement lors du prochain prélèvement.
+
+Merci beaucoup pour votre soutien.
+
+Cordialement,
+L’équipe`,
+  pt: `Bom dia {{name}},
+
+Recebemos a devolução da quota referente a {{month}} no valor de {{amount}}.
+
+Quando vos for possível, agradecemos que verifiquem se existe algum problema com a conta ou com o saldo. Se estiver tudo correto, podem confirmar-nos e voltaremos a tentar a cobrança na próxima remessa.
+
+Muito obrigado pelo vosso apoio.
+
+Cumprimentos,
+A equipa`,
+};
 
 const LOCALE_BY_LANGUAGE: Record<ReturnEmailDraftLanguage, string> = {
   ca: 'ca-ES',
@@ -49,7 +81,7 @@ export function buildReturnEmailDraft(input: {
   const normalizedName = input.contactName?.trim() ?? '';
   const template = input.organizationReturnTemplate?.trim()
     ? input.organizationReturnTemplate
-    : SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE;
+    : SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE[input.language] ?? SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE.ca;
 
   const rendered = renderReturnEmailTemplate(template, {
     name: normalizedName,
@@ -58,7 +90,7 @@ export function buildReturnEmailDraft(input: {
   });
 
   if (!normalizedName) {
-    return rendered.replaceAll('Bon dia ,', 'Bon dia,');
+    return rendered.replace(/^([^\n,]+?)\s+,/m, '$1,');
   }
 
   return rendered;

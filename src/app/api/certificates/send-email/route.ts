@@ -79,6 +79,24 @@ function normalizeOrganizationLanguage(value: unknown): OrganizationLanguage {
   return value === 'ca' ? 'ca' : 'es';
 }
 
+function getCertificateEmailStaticCopy(language: OrganizationLanguage) {
+  if (language === 'ca') {
+    return {
+      donorFallback: 'Donant',
+      orgFallback: 'Organització',
+      singleDonationFilenamePrefix: 'certificat_donacio',
+      annualFilenamePrefix: 'certificat',
+    };
+  }
+
+  return {
+    donorFallback: 'Donante',
+    orgFallback: 'Organización',
+    singleDonationFilenamePrefix: 'certificado_donacion',
+    annualFilenamePrefix: 'certificado',
+  };
+}
+
 function sanitizeFilename(name: string): string {
   const sanitized = (name || 'donant')
     .normalize('NFD')
@@ -103,22 +121,30 @@ async function readResponseError(response: Response): Promise<string> {
   }
 }
 
-function buildRecipientFilename(donorName: string, year: string, singleDonation?: SingleDonationInfo) {
+function buildRecipientFilename(
+  donorName: string,
+  year: string,
+  language: OrganizationLanguage,
+  singleDonation?: SingleDonationInfo
+) {
   const sanitizedName = sanitizeFilename(donorName);
+  const copy = getCertificateEmailStaticCopy(language);
   if (singleDonation) {
-    return `certificat_donacio_${sanitizedName}.pdf`;
+    return `${copy.singleDonationFilenamePrefix}_${sanitizedName}.pdf`;
   }
-  return `certificat_${year}_${sanitizedName}.pdf`;
+  return `${copy.annualFilenamePrefix}_${year}_${sanitizedName}.pdf`;
 }
 
 function validateRequestBody(body: unknown): {
   organizationId: string;
   year: string;
+  organizationLanguage: OrganizationLanguage;
   donors: ValidatedDonor[];
 } | null {
   const root = asRecord(body);
   const organizationId = parseString(root.organizationId);
   const year = parseString(root.year);
+  const organizationLanguage = normalizeOrganizationLanguage(root.organizationLanguage);
   const donorsRaw = root.donors;
 
   if (!organizationId || !year || !Array.isArray(donorsRaw)) {
@@ -135,7 +161,8 @@ function validateRequestBody(body: unknown): {
   for (const donorRaw of donorsRaw) {
     const donorObj = asRecord(donorRaw);
     const id = parseString(donorObj.id);
-    const name = parseString(donorObj.name) || 'Donant';
+    const copy = getCertificateEmailStaticCopy(organizationLanguage);
+    const name = parseString(donorObj.name) || copy.donorFallback;
     const email = parseString(donorObj.email).toLowerCase();
     const pdfBase64 = parseString(donorObj.pdfBase64);
 
@@ -177,7 +204,7 @@ function validateRequestBody(body: unknown): {
     return null;
   }
 
-  return { organizationId, year, donors };
+  return { organizationId, year, organizationLanguage, donors };
 }
 
 async function reserveDailyQuota(args: {
@@ -417,10 +444,12 @@ export async function POST(request: NextRequest) {
     }
 
     const orgData = asRecord(orgSnap.data());
-    const orgName = parseString(orgData.name) || 'Organització';
+    const requestedLanguage = parsed.organizationLanguage;
+    const copy = getCertificateEmailStaticCopy(requestedLanguage);
+    const orgName = parseString(orgData.name) || copy.orgFallback;
     const orgEmailRaw = parseString(orgData.email).toLowerCase();
     const orgEmail = orgEmailRaw && EMAIL_REGEX.test(orgEmailRaw) ? orgEmailRaw : '';
-    const orgLanguage = normalizeOrganizationLanguage(orgData.language);
+    const orgLanguage = requestedLanguage || normalizeOrganizationLanguage(orgData.language);
 
     const recipientsWithEmail = parsed.donors.filter((d) => Boolean(d.email));
     const skippedNoEmail = parsed.donors.length - recipientsWithEmail.length;
@@ -540,7 +569,7 @@ export async function POST(request: NextRequest) {
                 text,
                 attachments: [
                   {
-                    filename: buildRecipientFilename(donor.name, parsed.year, donor.singleDonation),
+                    filename: buildRecipientFilename(donor.name, parsed.year, orgLanguage, donor.singleDonation),
                     content: donor.pdfBase64,
                   },
                 ],

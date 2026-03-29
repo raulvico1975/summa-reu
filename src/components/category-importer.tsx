@@ -61,7 +61,7 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
-  const { t, tr } = useTranslations();
+  const { t, tr, language } = useTranslations();
 
   // Categories existents
   const categoriesCollection = useMemoFirebase(
@@ -305,7 +305,7 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
               <div className="flex gap-3">
                 <Button
                   variant="outline"
-                  onClick={() => downloadCategoriesTemplate()}
+                  onClick={() => downloadCategoriesTemplate(language)}
                   className="gap-2"
                 >
                   <Download className="h-4 w-4" />

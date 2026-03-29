@@ -58,7 +58,7 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t, tr } = useTranslations();
+  const { t, tr, language } = useTranslations();
 
   // State
   const [step, setStep] = React.useState<ImportStep>('upload');
@@ -255,7 +255,7 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={() => downloadEmployeesTemplate()}
+                onClick={() => downloadEmployeesTemplate(language)}
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />

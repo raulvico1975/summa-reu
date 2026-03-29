@@ -108,8 +108,9 @@ interface DonorDetailDrawerProps {
 export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDetailDrawerProps) {
   const { firestore, user } = useFirebase();
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
-  const { t, language } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const { toast } = useToast();
+  const certificateLanguage = language === 'ca' ? 'ca' : 'es';
 
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = React.useState<string>(String(currentYear));
@@ -624,7 +625,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: 'Import net 0 €: no es genera certificat',
+        description: tr('certificates.netZeroBlocked'),
       });
       return;
     }
@@ -1079,7 +1080,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
           organizationId,
           organizationName: organization.name || '',
           organizationEmail: organization.email,
-          organizationLanguage: (organization as any).language ?? 'es',
+          organizationLanguage: certificateLanguage,
           donors: [{
             id: donor.id,
             name: donor.name,
@@ -1103,7 +1104,11 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
           description: t.certificates.email.successOneDescription(donor.name),
         });
       } else if (response.status === 429) {
-        toast({ variant: 'destructive', title: t.common.error, description: "S'ha assolit el límit diari d'enviaments de certificats." });
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: tr('certificates.email.dailyQuotaExceeded'),
+        });
       } else {
         toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
       }
@@ -1141,7 +1146,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: 'Import net 0 €: no es genera certificat',
+        description: tr('certificates.netZeroBlocked'),
       });
       return;
     }
@@ -1321,7 +1326,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
           organizationId,
           organizationName: organization.name || '',
           organizationEmail: organization.email,
-          organizationLanguage: (organization as any).language ?? 'es',
+          organizationLanguage: certificateLanguage,
           donors: [{
             id: donor.id,
             name: donor.name,
@@ -1341,7 +1346,11 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
           description: t.certificates.email.successOneDescription(donor.name),
         });
       } else if (response.status === 429) {
-        toast({ variant: 'destructive', title: t.common.error, description: "S'ha assolit el límit diari d'enviaments de certificats." });
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: tr('certificates.email.dailyQuotaExceeded'),
+        });
       } else {
         toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
       }

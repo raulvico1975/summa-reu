@@ -7,15 +7,45 @@
 
 import * as XLSX from 'xlsx';
 import type { Category } from '@/lib/data';
+type ExportLanguage = 'ca' | 'es' | 'fr' | 'pt';
 
-// ═══════════════════════════════════════════════════════════════════════════
-// TIPUS
-// ═══════════════════════════════════════════════════════════════════════════
+const CATEGORY_EXPORT_LABELS = {
+  ca: {
+    sortLocale: 'ca',
+    headers: ['Nom', 'Tipus', 'Ordre'] as const,
+    sheetName: 'Categories',
+    filenamePrefix: 'categories',
+    templateFilename: 'plantilla_categories.xlsx',
+    typeLabels: { income: 'ingrés', expense: 'despesa' },
+    examples: [
+      ['Material oficina', 'despesa', 10],
+      ['Serveis professionals', 'despesa', 20],
+      ['Subministraments', 'despesa', 30],
+      ['Donacions', 'ingrés', 10],
+      ['Quotes de socis', 'ingrés', 20],
+      ['Subvencions', 'ingrés', 30],
+    ] as Array<[string, string, number]>,
+  },
+  es: {
+    sortLocale: 'es',
+    headers: ['Nombre', 'Tipo', 'Orden'] as const,
+    sheetName: 'Categorías',
+    filenamePrefix: 'categorias',
+    templateFilename: 'plantilla_categorias.xlsx',
+    typeLabels: { income: 'ingreso', expense: 'gasto' },
+    examples: [
+      ['Material de oficina', 'gasto', 10],
+      ['Servicios profesionales', 'gasto', 20],
+      ['Suministros', 'gasto', 30],
+      ['Donaciones', 'ingreso', 10],
+      ['Cuotas de socios', 'ingreso', 20],
+      ['Subvenciones', 'ingreso', 30],
+    ] as Array<[string, string, number]>,
+  },
+} as const;
 
-interface CategoryExportRow {
-  Nom: string;
-  Tipus: string;
-  Ordre: number | string;
+function normalizeExportLanguage(language?: ExportLanguage): keyof typeof CATEGORY_EXPORT_LABELS {
+  return language === 'es' ? 'es' : 'ca';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -25,10 +55,11 @@ interface CategoryExportRow {
 /**
  * Converteix el tipus intern a format visible per usuaris
  */
-function formatTypeDisplay(type: string): string {
+function formatTypeDisplay(type: string, language: ExportLanguage): string {
+  const labels = CATEGORY_EXPORT_LABELS[normalizeExportLanguage(language)].typeLabels;
   switch (type) {
-    case 'income': return 'income';
-    case 'expense': return 'expense';
+    case 'income': return labels.income;
+    case 'expense': return labels.expense;
     default: return type;
   }
 }
@@ -47,8 +78,10 @@ function formatTypeDisplay(type: string): string {
 export function exportCategoriesToExcel(
   categories: Category[],
   categoryTranslations?: Record<string, string>,
-  filename?: string
+  filename?: string,
+  language: ExportLanguage = 'ca'
 ): void {
+  const labels = CATEGORY_EXPORT_LABELS[normalizeExportLanguage(language)];
   // Ordenar per tipus (expense primer), després per ordre, després per nom
   const sortedCategories = [...categories].sort((a, b) => {
     if (a.type !== b.type) {
@@ -63,21 +96,21 @@ export function exportCategoriesToExcel(
     // Finalment per nom
     const nameA = categoryTranslations?.[a.name] || a.name;
     const nameB = categoryTranslations?.[b.name] || b.name;
-    return nameA.localeCompare(nameB, 'ca', { sensitivity: 'base' });
+    return nameA.localeCompare(nameB, labels.sortLocale, { sensitivity: 'base' });
   });
-
-  // Convertir a files d'exportació
-  const rows: CategoryExportRow[] = sortedCategories.map(cat => ({
-    Nom: categoryTranslations?.[cat.name] || cat.name,
-    Tipus: formatTypeDisplay(cat.type),
-    Ordre: cat.order ?? '',
-  }));
 
   // Crear workbook
   const wb = XLSX.utils.book_new();
 
   // Crear worksheet
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const ws = XLSX.utils.aoa_to_sheet([
+    [...labels.headers],
+    ...sortedCategories.map((cat) => [
+      categoryTranslations?.[cat.name] || cat.name,
+      formatTypeDisplay(cat.type, language),
+      cat.order ?? '',
+    ]),
+  ]);
 
   // Ajustar amplades de columna
   const colWidths = [
@@ -88,11 +121,11 @@ export function exportCategoriesToExcel(
   ws['!cols'] = colWidths;
 
   // Afegir worksheet al workbook
-  XLSX.utils.book_append_sheet(wb, ws, 'Categories');
+  XLSX.utils.book_append_sheet(wb, ws, labels.sheetName);
 
   // Generar nom de fitxer
   const date = new Date().toISOString().split('T')[0];
-  const finalFilename = filename || `categories_${date}.xlsx`;
+  const finalFilename = filename || `${labels.filenamePrefix}_${date}.xlsx`;
 
   // Descarregar
   XLSX.writeFile(wb, finalFilename);
@@ -106,24 +139,17 @@ export function exportCategoriesToExcel(
  * Genera i descarrega una plantilla Excel per importar categories
  * Inclou 6 files d'exemple (3 expense, 3 income)
  */
-export function downloadCategoriesTemplate(): void {
-  // Files d'exemple per mostrar el format esperat
-  const exampleRows: CategoryExportRow[] = [
-    // Expense categories
-    { Nom: 'Material oficina', Tipus: 'expense', Ordre: 10 },
-    { Nom: 'Serveis professionals', Tipus: 'expense', Ordre: 20 },
-    { Nom: 'Subministraments', Tipus: 'expense', Ordre: 30 },
-    // Income categories
-    { Nom: 'Donacions', Tipus: 'income', Ordre: 10 },
-    { Nom: 'Quotes de socis', Tipus: 'income', Ordre: 20 },
-    { Nom: 'Subvencions', Tipus: 'income', Ordre: 30 },
-  ];
+export function downloadCategoriesTemplate(language: ExportLanguage = 'ca'): void {
+  const labels = CATEGORY_EXPORT_LABELS[normalizeExportLanguage(language)];
 
   // Crear workbook
   const wb = XLSX.utils.book_new();
 
   // Crear worksheet
-  const ws = XLSX.utils.json_to_sheet(exampleRows);
+  const ws = XLSX.utils.aoa_to_sheet([
+    [...labels.headers],
+    ...labels.examples,
+  ]);
 
   // Ajustar amplades de columna
   const colWidths = [
@@ -134,8 +160,8 @@ export function downloadCategoriesTemplate(): void {
   ws['!cols'] = colWidths;
 
   // Afegir worksheet al workbook
-  XLSX.utils.book_append_sheet(wb, ws, 'Categories');
+  XLSX.utils.book_append_sheet(wb, ws, labels.sheetName);
 
   // Descarregar
-  XLSX.writeFile(wb, 'plantilla_categories.xlsx');
+  XLSX.writeFile(wb, labels.templateFilename);
 }

@@ -26,6 +26,18 @@ describe('build-return-email-draft', () => {
     assert.ok(draft.startsWith('Bon dia,'));
   });
 
+  it('usa la plantilla per defecte en castellà quan toca', () => {
+    const draft = buildReturnEmailDraft({
+      contactName: 'María',
+      txDate: '2026-03-01',
+      amount: -18,
+      language: 'es',
+    });
+
+    assert.match(draft, /Buenos días María,/);
+    assert.match(draft, /Hemos recibido la devolución/);
+  });
+
   it('formata mes i import segons idioma i només reemplaça variables suportades', () => {
     const draft = buildReturnEmailDraft({
       contactName: 'Jean',

@@ -58,7 +58,7 @@ export function MembersManager() {
   const { firestore, user } = useFirebase();
   const { organizationId, userRole } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t, tr } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const isMobile = useIsMobile();
 
   // Col·leccions
@@ -253,7 +253,7 @@ export function MembersManager() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => exportMembersToExcel(members || [])}
+                  onClick={() => exportMembersToExcel(members || [], undefined, language)}
                   disabled={!members || members.length === 0}
                   title={tr('members.exportMembers')}
                 >
