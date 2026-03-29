@@ -829,7 +829,7 @@ export function DonorManager() {
         toast({
           variant: 'destructive',
           title: t.common.error,
-          description: result.error || 'Error desconegut',
+          description: result.error || t.common.unknownError,
         });
         setDonorToDelete(null);
       }
@@ -888,7 +888,7 @@ export function DonorManager() {
         toast({
           variant: 'destructive',
           title: t.common.error,
-          description: result.error || 'Error desconegut',
+          description: result.error || t.common.unknownError,
         });
       }
     } catch (err) {
@@ -1000,7 +1000,11 @@ export function DonorManager() {
           description: t.donors.donorUpdatedDescription(normalized.name)
         });
       } catch (err: any) {
-        toast({ variant: 'destructive', title: 'Error', description: err?.message || 'No s\'ha pogut desar' });
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: err?.message || t.common.actionError,
+        });
         return;
       }
     } else {
@@ -1016,8 +1020,10 @@ export function DonorManager() {
         const existing = existingMatch.contact;
         toast({
           variant: 'destructive',
-          title: 'Possible duplicat detectat',
-          description: `Ja existeix "${existing.name}" amb el mateix ${existingMatch.matchedBy === 'taxId' ? 'NIF' : existingMatch.matchedBy === 'iban' ? 'IBAN' : 'email'}. Revisa la llista abans de crear un duplicat.`,
+          title: tr('contacts.duplicateDetectedTitle'),
+          description: tr('contacts.duplicateDetectedDescription')
+            .replace('{name}', existing.name)
+            .replace('{field}', existingMatch.matchedBy === 'taxId' ? 'NIF' : existingMatch.matchedBy === 'iban' ? 'IBAN' : 'email'),
           duration: 8000,
         });
         return;
@@ -1057,7 +1063,11 @@ export function DonorManager() {
         description: t.donors.donorReactivatedDescription(donor.name),
       });
     } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Error', description: err?.message || 'No s\'ha pogut reactivar' });
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: err?.message || t.common.actionError,
+      });
     }
   };
 

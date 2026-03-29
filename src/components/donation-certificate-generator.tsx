@@ -165,16 +165,17 @@ export function DonationCertificateGenerator() {
   const { organizationId, organization } = useCurrentOrganization();
   const { can } = usePermissions();
   const { toast } = useToast();
-  const { t, language } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const isMobile = useIsMobile();
   const canGenerateCertificates = can('fiscal.certificats.generar');
+  const certificateLanguage = language === 'ca' ? 'ca' : 'es';
 
   const ensureCanGenerateCertificates = React.useCallback(() => {
     if (canGenerateCertificates) return true;
     toast({
       variant: 'destructive',
       title: t.common.error,
-      description: 'No tens permisos per generar certificats fiscals.',
+      description: tr('certificates.permissionDenied'),
     });
     return false;
   }, [canGenerateCertificates, toast, t.common.error]);
@@ -711,7 +712,7 @@ export function DonationCertificateGenerator() {
           organizationId,
           organizationName: orgData?.name || organization?.name || '',
           organizationEmail: orgData?.email,
-          organizationLanguage: orgData?.language ?? 'es',
+          organizationLanguage: certificateLanguage,
           donors: [{
             id: summary.donor.id,
             name: cleanName(summary.donor.name),
@@ -731,7 +732,11 @@ export function DonationCertificateGenerator() {
           description: t.certificates.email.successOneDescription(cleanName(summary.donor.name)),
         });
       } else if (response.status === 429) {
-        toast({ variant: 'destructive', title: t.common.error, description: "S'ha assolit el límit diari d'enviaments de certificats." });
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: tr('certificates.email.dailyQuotaExceeded'),
+        });
       } else {
         toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
       }
@@ -787,7 +792,7 @@ export function DonationCertificateGenerator() {
             organizationId,
             organizationName: orgData?.name || organization?.name || '',
             organizationEmail: orgData?.email,
-            organizationLanguage: orgData?.language ?? 'es',
+            organizationLanguage: certificateLanguage,
             donors: donorsData,
             year: selectedYear,
           }),
@@ -817,7 +822,11 @@ export function DonationCertificateGenerator() {
       }
 
       if (quotaExceeded) {
-        toast({ variant: 'destructive', title: t.common.error, description: "S'ha assolit el límit diari d'enviaments de certificats." });
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: tr('certificates.email.dailyQuotaExceeded'),
+        });
       } else if (totalErrors > 0 && totalSent === 0) {
         toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorSending });
       }

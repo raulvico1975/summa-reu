@@ -2,7 +2,7 @@
 
 Generat: 2026-03-29
 
-Fitxers amb troballes: 50
+Fitxers amb troballes: 46
 
 ## src/app/[orgSlug]/dashboard/movimientos/pendents/page.tsx
 
@@ -29,8 +29,8 @@ Fitxers amb troballes: 50
 - L265 · Prop literal: `XOF`
 - L281 · Prop literal: `650000`
 - L443 · Prop literal: `0,00`
-- L1352 · Prop literal: `655.957`
-- L1362 · Prop literal: `XOF`
+- L1354 · Prop literal: `655.957`
+- L1364 · Prop literal: `XOF`
 
 ## src/app/admin/page.tsx
 
@@ -45,16 +45,6 @@ Fitxers amb troballes: 50
 - L75 · JSX literal: `BLOQUEJA`
 - L78 · JSX literal: `Ruta afectada:`
 - L82 · JSX literal: `Repeticions:`
-
-## src/app/api/contact/route.ts
-
-- L86 · JSX literal: `Nou contacte web`
-- L87 · JSX literal: `Nom:`
-- L88 · JSX literal: `Email:`
-- L89 · JSX literal: `Entitat:`
-- L90 · JSX literal: `Idioma:`
-- L91 · JSX literal: `Data/hora servidor:`
-- L92 · JSX literal: `Missatge:`
 
 ## src/app/public/[lang]/page.tsx
 
@@ -93,12 +83,6 @@ Fitxers amb troballes: 50
 - L481 · JSX literal: `Saldo (existent)`
 - L482 · JSX literal: `Descripció`
 
-## src/components/donation-certificate-generator.tsx
-
-- L174 · Toast literal: `No tens permisos per generar certificats fiscals.`
-- L734 · Toast literal: `S`
-- L820 · Toast literal: `S`
-
 ## src/components/donations-report-generator.tsx
 
 - L247 · Toast literal: `No tens permisos per generar el model 182.`
@@ -113,35 +97,22 @@ Fitxers amb troballes: 50
 
 ## src/components/donor-detail-drawer.tsx
 
-- L570 · Toast literal: `Any fiscal no vàlid`
-- L579 · Toast literal: `Selecciona l`
-- L598 · Toast literal: `Dades de fitxa i certificat no alineades. Recarrega i torna-ho a provar.`
-- L624 · Toast literal: `Import net 0 €: no es genera certificat`
-- L1106 · Toast literal: `S`
-- L1141 · Toast literal: `Import net 0 €: no es genera certificat`
-- L1344 · Toast literal: `S`
-
-## src/components/donor-importer.tsx
-
-- L537 · Toast literal: `Error`
-- L570 · Toast literal: `Error`
-- L980 · Toast literal: `Error`
+- L571 · Toast literal: `Any fiscal no vàlid`
+- L580 · Toast literal: `Selecciona l`
+- L599 · Toast literal: `Dades de fitxa i certificat no alineades. Recarrega i torna-ho a provar.`
 
 ## src/components/donor-manager.tsx
 
-- L998 · Toast literal: `Error`
-- L1017 · Toast literal: `Possible duplicat detectat`
-- L1055 · Toast literal: `Error`
-- L1883 · Prop literal: `12345678A o B12345678`
-- L1950 · Prop literal: `correu@exemple.com`
-- L1960 · Prop literal: `600 000 000`
-- L1992 · Prop literal: `08001`
-- L2005 · Prop literal: `Barcelona`
-- L2014 · Prop literal: `Barcelona`
-- L2025 · Prop literal: `Carrer Major, 15, 2n 1a`
-- L2091 · Prop literal: `10.00`
-- L2143 · Prop literal: `ES00 0000 0000 0000 0000 0000`
-- L1681 · JSX literal: `Aquest donant té devolucions assignades`
+- L1893 · Prop literal: `12345678A o B12345678`
+- L1960 · Prop literal: `correu@exemple.com`
+- L1970 · Prop literal: `600 000 000`
+- L2002 · Prop literal: `08001`
+- L2015 · Prop literal: `Barcelona`
+- L2024 · Prop literal: `Barcelona`
+- L2035 · Prop literal: `Carrer Major, 15, 2n 1a`
+- L2101 · Prop literal: `10.00`
+- L2153 · Prop literal: `ES00 0000 0000 0000 0000 0000`
+- L1691 · JSX literal: `Aquest donant té devolucions assignades`
 
 ## src/components/employee-importer.tsx
 
@@ -151,8 +122,6 @@ Fitxers amb troballes: 50
 ## src/components/employee-manager.tsx
 
 - L347 · Toast literal: `Possible duplicat detectat`
-- L407 · Prop literal: `Importar des d`
-- L416 · Prop literal: `Exportar a Excel`
 - L570 · Prop literal: `12345678A`
 - L594 · Prop literal: `maria@exemple.com`
 - L604 · Prop literal: `600 000 000`
@@ -333,23 +302,13 @@ Fitxers amb troballes: 50
 - L908 · JSX literal: `Ordre habitual`
 - L922 · JSX literal: `Referència:`
 
-## src/components/supplier-importer.tsx
-
-- L278 · Toast literal: `Error`
-- L310 · Toast literal: `Error`
-- L446 · Toast literal: `Error`
-- L522 · JSX literal: `Fes servir la plantilla oficial de Summa per importar proveïdors.`
-- L528 · JSX literal: `La columna "Categoria per defecte" s'assigna si coincideix amb una categoria de despesa existent.`
-
 ## src/components/supplier-manager.tsx
 
-- L367 · Toast literal: `Possible duplicat detectat`
-- L420 · Prop literal: `Exportar a Excel`
-- L642 · Prop literal: `B12345678`
-- L680 · Prop literal: `facturacio@empresa.com`
-- L690 · Prop literal: `934 000 000`
-- L700 · Prop literal: `08001`
-- L731 · Prop literal: `ES00 0000 0000 0000 0000 0000`
+- L648 · Prop literal: `B12345678`
+- L686 · Prop literal: `facturacio@empresa.com`
+- L696 · Prop literal: `934 000 000`
+- L706 · Prop literal: `08001`
+- L737 · Prop literal: `ES00 0000 0000 0000 0000 0000`
 
 ## src/components/suppliers-report-generator.tsx
 
