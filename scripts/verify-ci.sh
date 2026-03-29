@@ -10,7 +10,7 @@ echo "[verify-ci] Doc sync guardrail..."
 node scripts/ci/check-doc-sync.mjs
 
 if [ "$VERIFY_PROFILE" = "FAST_PUBLIC" ]; then
-  echo "[verify-ci] Profile: FAST_PUBLIC (web public/blog)"
+  echo "[verify-ci] Profile: FAST_PUBLIC (scope EDGE)"
   echo "[verify-ci] Typecheck..."
   npm run typecheck
 

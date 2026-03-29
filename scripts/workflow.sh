@@ -341,7 +341,7 @@ run_checks() {
 
   verify_profile="$(summa_change_profile "$files")"
   if [ "$verify_profile" = "FAST_PUBLIC" ]; then
-    say "Perfil de validació: FAST_PUBLIC (web públic/blog)."
+    say "Perfil de validacio: FAST_PUBLIC (scope EDGE)."
   fi
 
   VERIFY_PROFILE="$verify_profile" bash "$SCRIPT_DIR/verify-local.sh"
@@ -350,6 +350,27 @@ run_checks() {
 
 collect_staged_files() {
   git diff --cached --name-only --diff-filter=ACMRT | awk 'NF'
+}
+
+collect_publish_files() {
+  git diff --name-only "prod..main" --diff-filter=ACMRT | awk 'NF'
+}
+
+guard_publish_scope() {
+  local files="$1"
+  local scope_eval
+
+  [ -n "$files" ] || return 0
+
+  scope_eval="$(summa_scope_eval "$files")"
+  eval "$scope_eval"
+
+  if [ "$SCOPE" = "edge" ] && [ "$TOUCHES_CORE_INDIRECTLY" = "true" ]; then
+    say "$STATUS_NO"
+    say "EDGE intentant tocar CORE."
+    say "Aquest deploy queda bloquejat i ha de passar pel circuit estricte."
+    exit 1
+  fi
 }
 
 guard_no_prohibited_staged_paths() {
@@ -694,6 +715,8 @@ run_acabat() {
 }
 
 run_publica() {
+  local publish_files
+
   if ! is_control_repo; then
     say "$STATUS_NO"
     say "La publicació només es pot executar des del repositori de control: $CONTROL_REPO_DIR"
@@ -707,6 +730,8 @@ run_publica() {
   fi
 
   guard_no_prohibited_staged_paths
+  publish_files="$(collect_publish_files)"
+  guard_publish_scope "$publish_files"
   if ! bash "$SCRIPT_DIR/status.sh" gate publica; then
     say "$STATUS_NO"
     exit 1

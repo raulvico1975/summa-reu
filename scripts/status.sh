@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+. "$SCRIPT_DIR/change-profile.sh"
 
 cd "$PROJECT_DIR"
 
@@ -17,6 +18,40 @@ PUBLICA_TARGET_BRANCH="${DEPLOY_TARGET_BRANCH:-main}"
 
 say() {
   printf '%s\n' "$1"
+}
+
+collect_scope_files() {
+  local files=""
+  local branch=""
+  local merge_base=""
+
+  files=$(
+    (
+      git diff --name-only
+      git diff --cached --name-only
+      git ls-files --others --exclude-standard
+    ) | awk 'NF' | sort -u
+  )
+
+  if [ -n "$files" ]; then
+    printf '%s' "$files"
+    return
+  fi
+
+  branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || printf '%s' "")"
+  if [ "$branch" = "main" ] && git rev-parse prod >/dev/null 2>&1; then
+    git diff --name-only "prod..$branch" --diff-filter=ACMRT | awk 'NF' | sort -u
+    return
+  fi
+
+  if [ "$branch" != "HEAD" ] && [ "$branch" != "main" ] && [ "$branch" != "prod" ] \
+    && git rev-parse main >/dev/null 2>&1; then
+    merge_base="$(git merge-base HEAD main 2>/dev/null || true)"
+    if [ -n "$merge_base" ]; then
+      git diff --name-only "$merge_base..HEAD" --diff-filter=ACMRT | awk 'NF' | sort -u
+      return
+    fi
+  fi
 }
 
 load_worktree_report() {
@@ -124,9 +159,22 @@ print_status() {
   local branch work_clean main_aligned prod_aligned global_status
   local control_branch control_clean prod_ahead
   local -a reasons=()
+  local scope_files scope scope_risk deploy_mode scope_eval
 
   git -C "$CONTROL_REPO_DIR" fetch origin --prune --quiet >/dev/null 2>&1 || true
   load_worktree_report
+  scope_files="$(collect_scope_files)"
+  scope="EDGE"
+  scope_risk="BAIX"
+  deploy_mode="RAPID"
+
+  if [ -n "$scope_files" ]; then
+    scope_eval="$(summa_scope_eval "$scope_files")"
+    eval "$scope_eval"
+    scope="$(printf '%s' "$SCOPE" | tr '[:lower:]' '[:upper:]')"
+    scope_risk="$RISK"
+    deploy_mode="$DEPLOY_MODE"
+  fi
 
   control_branch="$(current_control_branch)"
   control_clean="$(control_repo_clean_label)"
@@ -167,6 +215,12 @@ print_status() {
     global_status="BLOQUEJAT"
   fi
 
+  say "------------------------"
+  say "SCOPE: $scope"
+  say "RISC: $scope_risk"
+  say "DEPLOY MODE: $deploy_mode"
+  say "------------------------"
+  say ""
   say "WORK:"
   say "- branch activa: $branch"
   say "- clean: $work_clean"

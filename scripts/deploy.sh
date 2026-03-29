@@ -50,7 +50,10 @@ RESOLVED_CHECK_REPORT_URL=""
 GUIDED_ALERT_EMITTED=false
 GUIDED_ALERT_RECOMMENDATION=""
 CHANGE_PROFILE="STANDARD"
+CHANGE_SCOPE="edge"
 FAST_PUBLIC_SCOPE=false
+TOUCHES_CORE_INDIRECTLY=false
+DEPLOY_SCOPE_MODE="ESTRICTE"
 DEPLOY_TARGET_BRANCH="${DEPLOY_TARGET_BRANCH:-${1:-main}}"
 DEPLOY_TARGET_BRANCH_SAFE="${DEPLOY_TARGET_BRANCH//\//-}"
 
@@ -402,6 +405,7 @@ detect_changed_files() {
 classify_risk() {
   CURRENT_PHASE="Classificar risc"
   echo "[3/9] Classificant nivell de risc..."
+  local scope_eval=""
 
   # Detectar area fiscal i guardar fitxers que la disparen
   local fiscal_matches=""
@@ -457,13 +461,35 @@ classify_risk() {
   fi
 
   CHANGE_PROFILE="$(summa_change_profile "$CHANGED_FILES")"
+  scope_eval="$(summa_scope_eval "$CHANGED_FILES")"
+  eval "$scope_eval"
+  CHANGE_SCOPE="$SCOPE"
+  TOUCHES_CORE_INDIRECTLY="$TOUCHES_CORE_INDIRECTLY"
+  DEPLOY_SCOPE_MODE="$DEPLOY_MODE"
   if [ "$CHANGE_PROFILE" = "FAST_PUBLIC" ] && [ "$IS_FISCAL" = false ]; then
     FAST_PUBLIC_SCOPE=true
   fi
 
   echo "  Risc detectat: $RISK_LEVEL"
   echo "  Area fiscal: $([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")"
+  echo "  Scope detectat: $(printf '%s' "$CHANGE_SCOPE" | tr '[:lower:]' '[:upper:]')"
+  echo "  Mode deploy: $DEPLOY_SCOPE_MODE"
   echo "  Perfil deploy: $CHANGE_PROFILE"
+  echo ""
+}
+
+enforce_scope_guardrail() {
+  CURRENT_PHASE="Guardrail scope"
+  echo "[3a/9] Validant separacio CORE/EDGE..."
+
+  if [ "$CHANGE_SCOPE" = "edge" ] && [ "$TOUCHES_CORE_INDIRECTLY" = "true" ]; then
+    DEPLOY_BLOCK_REASON="EDGE intentant tocar CORE"
+    echo "ERROR: EDGE intentant tocar CORE."
+    echo "  Guardrail minim activat: data.ts i qualsevol API forcen circuit estricte."
+    exit 1
+  fi
+
+  echo "  Guardrail scope OK."
   echo ""
 }
 
@@ -890,7 +916,7 @@ run_fiscal_oracle_predeploy() {
   echo ""
 
   if [ "$FAST_PUBLIC_SCOPE" = true ] && [ "$IS_FISCAL" = false ]; then
-    echo "  Oracle fiscal predeploy: NO CAL (perfil FAST_PUBLIC)."
+    echo "  Oracle fiscal predeploy: NO CAL (scope EDGE rapid)."
     echo ""
     return
   fi
@@ -1107,7 +1133,7 @@ post_production_3min_check() {
 
   if [ "$FAST_PUBLIC_SCOPE" = true ] && [ "$IS_FISCAL" = false ]; then
     POSTDEPLOY_3MIN_STATUS="NO CAL"
-    echo "  Check de 3 minuts: NO CAL (perfil FAST_PUBLIC)."
+    echo "  Check de 3 minuts: NO CAL (scope EDGE rapid)."
     echo ""
     return
   fi
@@ -1168,7 +1194,7 @@ run_fiscal_oracle_postdeploy_monitor() {
 
   if [ "$FAST_PUBLIC_SCOPE" = true ] && [ "$IS_FISCAL" = false ]; then
     POSTDEPLOY_ORACLE_STATUS="NO CAL"
-    echo "  Oracle fiscal postdeploy: NO CAL (perfil FAST_PUBLIC)."
+    echo "  Oracle fiscal postdeploy: NO CAL (scope EDGE rapid)."
     echo ""
     return
   fi
@@ -1433,6 +1459,7 @@ main() {
   preflight_git_checks      # Pas 1
   detect_changed_files       # Pas 2
   classify_risk              # Pas 3
+  enforce_scope_guardrail
   auto_predeploy_backup
   fiscal_impact_gate         # Pas 4
   run_verifications          # Pas 5
