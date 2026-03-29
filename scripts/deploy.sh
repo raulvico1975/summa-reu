@@ -246,11 +246,18 @@ wait_for_text_marker() {
   local delay_seconds="${5:-10}"
   local i
   local body
+  local normalized_body
 
   for i in $(seq 1 "$attempts"); do
-    if body=$(curl -fsSL --max-time 20 "$url" 2>/dev/null) && printf '%s' "$body" | grep -Fq "$marker"; then
-      echo "  OK: $label"
-      return 0
+    if body=$(curl -fsSL --max-time 20 "$url" 2>/dev/null); then
+      normalized_body="$(
+        printf '%s' "$body" \
+          | perl -0pe 's#<script\b[^>]*>.*?</script># #gs; s#<style\b[^>]*>.*?</style># #gs; s#<[^>]+># #g; s#\s+# #g'
+      )"
+      if printf '%s' "$normalized_body" | grep -Fq "$marker"; then
+        echo "  OK: $label"
+        return 0
+      fi
     fi
     sleep "$delay_seconds"
   done
