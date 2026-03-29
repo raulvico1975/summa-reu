@@ -9,6 +9,7 @@ Aquest directori conté normes de disseny curtes, no una documentació extensa d
 3. `03-data-interfaces.md` - patró de taules i llistats
 4. `06-no-horizontal-scroll.md` - guardrail normatiu de layout
 5. `04-ui-readiness.md` - checklist ràpid abans de tancar un canvi UI
+6. `07-admin-panel-non-technical-proposal.md` - proposta de simplificació del panell d'admin per a un únic usuari no tècnic
 
 ## Criteri d'ús
 

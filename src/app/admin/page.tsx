@@ -47,9 +47,7 @@ import {
   ArrowLeft,
   Mail,
   ExternalLink,
-  FileText,
   Lock,
-  History,
   Download,
   RefreshCw,
   Copy,
@@ -57,7 +55,6 @@ import {
   Wrench,
   Scale,
   Send,
-  BrainCircuit,
   Languages,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -66,13 +63,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { CreateOrganizationDialog } from '@/components/admin/create-organization-dialog';
-import { SystemHealth } from '@/components/admin/system-health';
-import { ProductUpdatesSection } from '@/components/admin/product-updates-section';
 import { I18nManager } from '@/components/super-admin/i18n-manager';
 import { broadcastLogoutSync } from '@/lib/session-sync';
-import { HelpAuditSection } from '@/components/admin/help-audit-section';
 import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
-import { EditorialCenter } from '@/components/admin/editorial-center';
 import { migrateExistingSlugs } from '@/lib/slugs';
 import { logAdminAction, getRecentAuditLogs, formatAuditAction, type AdminAuditLog } from '@/lib/admin-audit';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -104,10 +97,21 @@ function resolveAuthLanguage(language: string): string {
   return supported.has(language) ? language : 'en'
 }
 
-type AdminArea = 'system' | 'entities' | 'content' | 'settings'
-type ContentModule = 'help' | 'bot' | 'updates' | 'translations'
+type AdminArea = 'overview' | 'entities' | 'content' | 'technical'
+type ContentModule = 'updates' | 'translations'
 type AdminNavigationDetail = {
   area?: AdminArea
+  contentModule?: ContentModule
+  section?: string
+}
+
+type OverviewAction = {
+  id: string
+  title: string
+  description: string
+  cta: string
+  area: AdminArea
+  tone: ControlStatus
   contentModule?: ContentModule
   section?: string
 }
@@ -116,6 +120,12 @@ function combineStatuses(...statuses: Array<ControlStatus | null | undefined>): 
   if (statuses.includes('critical')) return 'critical'
   if (statuses.includes('warning')) return 'warning'
   return 'ok'
+}
+
+function humanStatusLabel(status: ControlStatus): string {
+  if (status === 'critical') return 'Requereix atencio ara'
+  if (status === 'warning') return 'Conve revisar-ho'
+  return 'Tot en ordre'
 }
 
 function AreaSectionHeader({
@@ -179,8 +189,8 @@ function AdminPageContent() {
 
   const [backupOrgId, setBackupOrgId] = React.useState<string | null>(null);
   const [notifyingOrgId, setNotifyingOrgId] = React.useState<string | null>(null);
-  const [activeArea, setActiveArea] = React.useState<AdminArea>('system');
-  const [activeContentModule, setActiveContentModule] = React.useState<ContentModule>('help');
+  const [activeArea, setActiveArea] = React.useState<AdminArea>('overview');
+  const [activeContentModule, setActiveContentModule] = React.useState<ContentModule>('updates');
   const [entitySearch, setEntitySearch] = React.useState('');
   const pendingSectionScrollRef = React.useRef<string | null>(null);
 
@@ -239,13 +249,19 @@ function AdminPageContent() {
     setSummaryRefreshToken((prev) => prev + 1)
   }, [])
 
-  const openArea = React.useCallback((area: AdminArea) => {
+  const openArea = React.useCallback((area: AdminArea, section?: string) => {
     setActiveArea(area)
+    if (section) {
+      pendingSectionScrollRef.current = section
+    }
   }, [])
 
-  const openContentModule = React.useCallback((module: ContentModule) => {
+  const openContentModule = React.useCallback((module: ContentModule, section?: string) => {
     setActiveArea('content')
     setActiveContentModule(module)
+    if (section) {
+      pendingSectionScrollRef.current = section
+    }
   }, [])
 
   React.useEffect(() => {
@@ -659,7 +675,6 @@ function AdminPageContent() {
   const entities = summary?.entities ?? []
   const kbSummary = summary?.kbBotSummary
   const communication = summary?.communicationSummary
-  const systemCard = cards.find((card) => card.id === 'system')
   const incidentsCard = cards.find((card) => card.id === 'incidents')
   const contentCard = cards.find((card) => card.id === 'content')
   const translationsCard = cards.find((card) => card.id === 'translations')
@@ -681,64 +696,93 @@ function AdminPageContent() {
       })
     : entities
 
-  const areaCards: Array<{
-    id: AdminArea
-    title: string
-    summary: string
-    status: ControlStatus
-    badgeLabel: string
-  }> = [
-    {
-      id: 'system',
-      title: 'Sistema',
-      summary: !summaryIsReady && isSummaryLoading
-        ? 'Carregant resum'
+  const overviewStatus: ControlStatus = combineStatuses(contentAreaStatus, entitiesAreaStatus)
+
+  const overviewHeadline = !summaryIsReady && isSummaryLoading
+    ? 'Carregant visio general'
+    : overviewStatus === 'warning'
+        ? 'Hi ha alguns punts que conve revisar'
         : openIncidentCount > 0
-          ? `${openIncidentCount} incidència${openIncidentCount === 1 ? '' : 's'} oberta${openIncidentCount === 1 ? '' : 's'}`
-          : 'Tot estable',
-      status: systemCard?.status ?? 'ok',
-      badgeLabel:
-        systemCard?.status === 'critical'
-          ? 'Revisar'
-          : systemCard?.status === 'warning'
-            ? 'Atenció'
-            : 'Estable',
-    },
-    {
-      id: 'entities',
-      title: 'Entitats',
-      summary: !summaryIsReady && isSummaryLoading
-        ? 'Carregant entitats'
-        : activeEntitiesCount > 0
-          ? `${activeEntitiesCount} actives`
-          : `${entities.length} registrades`,
-      status: entitiesAreaStatus,
-      badgeLabel: entitiesAreaStatus === 'warning' ? 'Seguiment' : 'Operatiu',
-    },
-    {
-      id: 'content',
-      title: 'Contingut',
-      summary: !summaryIsReady && isSummaryLoading
-        ? 'Carregant contingut'
-        : contentPendingCount > 0
-          ? `${contentPendingCount} pendents`
-          : 'Tot al dia',
-      status: contentAreaStatus,
-      badgeLabel:
-        contentAreaStatus === 'critical'
-          ? 'Urgent'
-          : contentAreaStatus === 'warning'
-            ? 'Pendent'
-            : 'Al dia',
-    },
-    {
-      id: 'settings',
-      title: 'Configuració',
-      summary: isDemoEnv() ? 'Accessos, entitats i entorn DEMO' : 'Accessos i canvis sensibles',
-      status: 'warning',
-      badgeLabel: 'Sensible',
-    },
-  ]
+          ? 'La part visible esta estable'
+        : 'Tot esta estable'
+
+  const overviewDescription = !summaryIsReady && isSummaryLoading
+    ? 'Estic preparant el resum del panell.'
+    : overviewStatus === 'ok' && openIncidentCount > 0
+      ? `No hi ha cap bloqueig visible important. A banda, hi ha ${openIncidentCount} avís${openIncidentCount === 1 ? '' : 'os'} tecnic${openIncidentCount === 1 ? '' : 's'} intern${openIncidentCount === 1 ? '' : 's'} per revisar, però no els estic tractant com una urgencia des d aquest resum.`
+      : overviewStatus === 'ok'
+        ? 'No hi ha cap bloqueig greu ni cap revisio urgent. Si vols, pots fer una repassada tranquila de contingut o entitats.'
+      : `${contentPendingCount} punt${contentPendingCount === 1 ? '' : 's'} de contingut pendent${contentPendingCount === 1 ? '' : 's'}, ${pendingEntitiesCount} entitat${pendingEntitiesCount === 1 ? '' : 's'} pendent${pendingEntitiesCount === 1 ? '' : 's'} i ${suspendedEntitiesCount} aturada${suspendedEntitiesCount === 1 ? '' : 's'} per revisar.`
+
+  const pendingReviewCount =
+    contentPendingCount +
+    pendingEntitiesCount +
+    suspendedEntitiesCount
+
+  const latestPublishedEntry = communication?.latestPublished?.[0] ?? null
+  const latestPublishedLabel = latestPublishedEntry?.title ?? 'Cap novetat recent'
+
+  const overviewActions: OverviewAction[] = []
+
+  if (contentPendingCount > 0) {
+    overviewActions.push({
+      id: 'content-pending',
+      title: 'Revisar contingut visible',
+      description: 'Hi ha novetats o peces de contingut pendents que encara no estan tancades.',
+      cta: 'Obrir contingut',
+      area: 'content',
+      tone: contentAreaStatus,
+      contentModule: 'updates',
+    })
+  }
+
+  if (translationsCard?.status && translationsCard.status !== 'ok') {
+    overviewActions.push({
+      id: 'translations',
+      title: 'Revisar traduccions visibles',
+      description: 'Alguns textos o idiomes poden necessitar una repassada abans de donar-los per bons.',
+      cta: 'Obrir traduccions',
+      area: 'content',
+      tone: translationsCard.status,
+      contentModule: 'translations',
+      section: 'i18n',
+    })
+  }
+
+  if (pendingEntitiesCount > 0 || suspendedEntitiesCount > 0) {
+    overviewActions.push({
+      id: 'entities-followup',
+      title: 'Revisar entitats',
+      description: 'Hi ha entitats pendents o aturades que poden requerir una decisio teva.',
+      cta: 'Obrir entitats',
+      area: 'entities',
+      tone: entitiesAreaStatus,
+    })
+  }
+
+  if (openIncidentCount > 0) {
+    overviewActions.push({
+      id: 'open-incidents',
+      title: 'Revisar avisos tecnics',
+      description: 'Hi ha avisos interns o de manteniment. Revisa ls quan et vagi be, sense barrejar-los amb la part visible.',
+      cta: 'Obrir incidencies i manteniment',
+      area: 'technical',
+      tone: 'warning',
+      section: 'incidents',
+    })
+  }
+
+  if (overviewActions.length === 0) {
+    overviewActions.push({
+      id: 'all-good',
+      title: 'No hi ha cap punt urgent',
+      description: 'Pots entrar a contingut o entitats si vols fer una revisio tranquila.',
+      cta: 'Veure contingut',
+      area: 'content',
+      tone: 'ok',
+      contentModule: 'updates',
+    })
+  }
 
   const contentEntryCards: Array<{
     id: ContentModule
@@ -747,23 +791,9 @@ function AdminPageContent() {
     icon: React.ReactNode
   }> = [
     {
-      id: 'help',
-      title: 'Ajuda del producte',
-      summary: 'Guies i ajudes que veu l’equip',
-      icon: <FileText className="h-4 w-4" />,
-    },
-    {
-      id: 'bot',
-      title: 'Estat del bot',
-      summary: kbSummary?.botTodayQuestions
-        ? `${kbSummary.botTodayQuestions} consultes avui`
-        : 'Activitat i base de coneixement',
-      icon: <BrainCircuit className="h-4 w-4" />,
-    },
-    {
       id: 'updates',
       title: 'Novetats',
-      summary: contentPendingCount > 0 ? `${contentPendingCount} pendents` : 'Publicació al dia',
+      summary: latestPublishedEntry ? latestPublishedEntry.title : 'Historial visible per als usuaris',
       icon: <Megaphone className="h-4 w-4" />,
     },
     {
@@ -771,6 +801,50 @@ function AdminPageContent() {
       title: 'Traduccions',
       summary: translationsCard?.headline ?? 'Textos per idioma',
       icon: <Languages className="h-4 w-4" />,
+    },
+  ]
+
+  const guidedEntries: Array<{
+    id: string
+    title: string
+    description: string
+    cta: string
+    area: AdminArea
+    contentModule?: ContentModule
+    section?: string
+  }> = [
+    {
+      id: 'guided-translations',
+      title: 'Vull revisar textos per idioma',
+      description: 'Si un idioma sona estrany o hi ha un text mal traduït, la via bona es aquesta.',
+      cta: 'Obrir traduccions',
+      area: 'content',
+      contentModule: 'translations',
+      section: 'i18n',
+    },
+    {
+      id: 'guided-bot',
+      title: 'El bot no respon be',
+      description: 'Aqui pots veure si hi ha consultes repetides o si el bot esta mostrant mancances d ajuda.',
+      cta: 'Obrir bot i manteniment',
+      area: 'technical',
+      section: 'bot-support',
+    },
+    {
+      id: 'guided-incidents',
+      title: 'Tinc un problema tecnic',
+      description: 'Entra nomes si hi ha una incidencia real o un bloqueig que cal seguir.',
+      cta: 'Obrir incidencies',
+      area: 'technical',
+      section: 'incidents',
+    },
+    {
+      id: 'guided-updates',
+      title: 'Vull revisar una novetat',
+      description: 'Primer mira quines novetats ja son visibles. La part manual queda separada per no confondre.',
+      cta: 'Veure novetats',
+      area: 'content',
+      contentModule: 'updates',
     },
   ]
 
@@ -938,34 +1012,24 @@ function AdminPageContent() {
 
       <header className="border-b bg-card/95">
         <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <div className="flex flex-col gap-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full border bg-muted/50">
                   <Shield className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-semibold tracking-tight">Centre de control</h1>
-                  <p className="text-sm text-muted-foreground">Vista global de Summa Social</p>
+                  <h1 className="text-3xl font-semibold tracking-tight">Panell d&apos;admin</h1>
+                  <p className="text-sm text-muted-foreground">Que esta passant, que cal fer i on entrar.</p>
                 </div>
               </div>
               <p className="max-w-2xl text-sm text-muted-foreground">
-                Entra per àrees clares i actua sense haver de recórrer tot el panell.
+                Aquest panell esta pensat per donar-te una visio clara del dia, sense haver d entendre la part tecnica del sistema.
               </p>
             </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Button onClick={() => setIsCreateDialogOpen(true)}>Nova entitat</Button>
-              <Button variant="outline" onClick={() => openArea('entities')}>
-                Entrar a una entitat
-              </Button>
-              <Button variant="outline" onClick={() => openArea('system')}>
-                Revisar sistema
-              </Button>
-              <Button variant="outline" onClick={() => openArea('settings')}>
-                Reset contrasenya
-              </Button>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Fes servir el menu de sota per moure t entre les 4 parts principals del panell.
+            </p>
           </div>
         </div>
       </header>
@@ -979,164 +1043,184 @@ function AdminPageContent() {
           </Card>
         )}
 
-        <div className="space-y-4">
-          <AreaSectionHeader
-            title="Portada"
-            description="Les quatre àrees principals del panell perquè sàpigues on entrar de seguida."
-          />
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {areaCards.map((card) => (
-              <Card
-                key={card.id}
-                className={`${statusClasses(card.status)} ${activeArea === card.id ? 'ring-1 ring-foreground/15' : ''}`}
-              >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-lg">{card.title}</CardTitle>
-                      <CardDescription className="mt-1 text-sm text-foreground/75">
-                        {card.summary}
-                      </CardDescription>
-                    </div>
-                    <Badge variant={statusBadgeVariant(card.status)}>{card.badgeLabel}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <Button variant="ghost" className="px-0 text-sm" onClick={() => openArea(card.id)}>
-                    Veure
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
         <Tabs
           value={activeArea}
           onValueChange={(value) => setActiveArea(value as AdminArea)}
           className="space-y-6"
         >
           <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-xl bg-muted/70 p-1 md:grid-cols-4">
-            <TabsTrigger value="system" className="rounded-lg px-4 py-3 text-sm font-semibold">
-              Sistema
+            <TabsTrigger value="overview" className="rounded-lg px-4 py-3 text-sm font-semibold">
+              Vista general
+            </TabsTrigger>
+            <TabsTrigger value="content" className="rounded-lg px-4 py-3 text-sm font-semibold">
+              Contingut visible
             </TabsTrigger>
             <TabsTrigger value="entities" className="rounded-lg px-4 py-3 text-sm font-semibold">
               Entitats
             </TabsTrigger>
-            <TabsTrigger value="content" className="rounded-lg px-4 py-3 text-sm font-semibold">
-              Contingut
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="rounded-lg px-4 py-3 text-sm font-semibold">
-              Configuració
+            <TabsTrigger value="technical" className="rounded-lg px-4 py-3 text-sm font-semibold">
+              Incidencies i manteniment
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="system" className="space-y-8">
-            <AreaSectionHeader
-              title="Sistema"
-              description="Estat general, incidències, semàfor de producció i eines tècniques."
-              action={
-                <Button variant="outline" onClick={refreshSummary} disabled={isSummaryLoading}>
-                  {isSummaryLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                  )}
-                  Actualitzar dades
-                </Button>
-              }
-            />
-
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <Card className={statusClasses(systemCard?.status ?? 'ok')}>
-                <CardHeader>
-                  <CardTitle className="text-base">Estat del sistema</CardTitle>
-                  <CardDescription>Vista curta abans d’entrar al detall tècnic.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-lg font-semibold">{systemCard?.headline ?? 'Sense resum disponible'}</p>
-                  <p className="text-sm text-muted-foreground">{systemCard?.detail ?? 'No hi ha avisos addicionals.'}</p>
-                </CardContent>
-              </Card>
-
-              <Card className={statusClasses(incidentsCard?.status ?? 'ok')}>
-                <CardHeader>
-                  <CardTitle className="text-base">Incidències</CardTitle>
-                  <CardDescription>Seguiment de problemes oberts i impacte operatiu.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-lg font-semibold">
-                    {openIncidentCount} oberta{openIncidentCount === 1 ? '' : 's'}
-                  </p>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Badge variant={statusBadgeVariant(incidentsCard?.status ?? 'ok')}>
-                      {incidentsCard?.status ?? 'ok'}
-                    </Badge>
-                    <span className="text-muted-foreground">
-                      {incidentsCard?.headline ?? 'Sense incidències destacades'}
-                    </span>
+          <TabsContent value="overview" className="space-y-8">
+            <Card className={statusClasses(overviewStatus)}>
+              <CardHeader className="space-y-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={statusBadgeVariant(overviewStatus)}>{humanStatusLabel(overviewStatus)}</Badge>
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Resum d avui</span>
+                    </div>
+                    <CardTitle className="text-2xl">{overviewHeadline}</CardTitle>
+                    <CardDescription className="max-w-3xl text-sm text-foreground/75">
+                      {overviewDescription}
+                    </CardDescription>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardHeader>
+            </Card>
 
-            <Separator />
-
-            <div className="space-y-4">
-              <AreaSectionHeader
-                title="Incidències i semàfor"
-                description="Detall del seguiment del sistema, amb sentinelles, incidències reals i comprovacions de producció."
-              />
-              <SystemHealth />
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <AreaSectionHeader
-                title="Eines tècniques"
-                description="Accés ràpid a la consola i als registres quan cal investigar una incidència."
-              />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Card>
-                <CardContent className="grid gap-3 pt-6 md:grid-cols-3">
-                  <a
-                    href="https://console.firebase.google.com/project/summa-social/overview"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm transition-colors hover:bg-muted/50"
-                  >
-                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    Firebase Console
-                  </a>
-                  <a
-                    href="https://console.cloud.google.com/logs/query?project=summa-social"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm transition-colors hover:bg-muted/50"
-                  >
-                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    Cloud Logging
-                  </a>
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 rounded-lg border px-4 py-3 text-left text-sm transition-colors hover:bg-muted/50"
-                    onClick={() => {
-                      navigator.clipboard.writeText('docs/DEV-SOLO-MANUAL.md');
-                      toast({ title: t.admin?.health?.copiedToClipboard ?? 'Copiat al porta-retalls' });
-                    }}
-                  >
-                    <Wrench className="h-4 w-4 text-muted-foreground" />
-                    Manual de suport
-                  </button>
+                <CardHeader className="pb-3">
+                  <CardDescription>Entitats actives</CardDescription>
+                  <CardTitle className="text-2xl">{activeEntitiesCount}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 text-sm text-muted-foreground">
+                  {entities.length} registrades en total.
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Pendents visibles</CardDescription>
+                  <CardTitle className="text-2xl">{pendingReviewCount}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 text-sm text-muted-foreground">
+                  Contingut i entitats que conve revisar.
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Ultima novetat publicada</CardDescription>
+                  <CardTitle className="text-xl leading-tight">{latestPublishedLabel}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 text-sm text-muted-foreground">
+                  {formatDateForAdmin(communication?.latestPublishedAt ?? null)}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardDescription>Avisos tecnics</CardDescription>
+                  <CardTitle className="text-2xl">{openIncidentCount}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 text-sm text-muted-foreground">
+                  Revisio interna. No sempre implica un problema real.
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-4">
+              <AreaSectionHeader
+                title="Que cal fer ara"
+                description="Accions prioritzades per evitar que hagis d'interpretar tot el panell."
+              />
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                {overviewActions.map((action) => (
+                  <Card key={action.id} className={statusClasses(action.tone)}>
+                    <CardHeader className="space-y-2">
+                      <CardTitle className="text-base">{action.title}</CardTitle>
+                      <CardDescription className="text-sm text-foreground/75">
+                        {action.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <Button
+                        variant="ghost"
+                        className="px-0 text-sm"
+                        onClick={() => {
+                          if (action.contentModule) {
+                            openContentModule(action.contentModule, action.section)
+                            return
+                          }
+                          openArea(action.area, action.section)
+                        }}
+                      >
+                        {action.cta}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+              <div className="space-y-4">
+                <AreaSectionHeader
+                  title="On haig d entrar?"
+                  description="Accessos directes per quan tens un dubte concret i no vols pensar on toca anar."
+                />
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {guidedEntries.map((entry) => (
+                    <Card key={entry.id}>
+                      <CardHeader className="space-y-2">
+                        <CardTitle className="text-base">{entry.title}</CardTitle>
+                        <CardDescription>{entry.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <Button
+                          variant="ghost"
+                          className="px-0 text-sm"
+                          onClick={() => {
+                            if (entry.contentModule) {
+                              openContentModule(entry.contentModule, entry.section)
+                              return
+                            }
+                            openArea(entry.area, entry.section)
+                          }}
+                        >
+                          {entry.cta}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <AreaSectionHeader
+                  title="Ultims canvis visibles"
+                  description="El que ja esta publicat o visible per als usuaris."
+                />
+                <Card>
+                  <CardContent className="space-y-3 pt-6">
+                    {(communication?.latestPublished ?? []).length > 0 ? (
+                      communication?.latestPublished.map((item) => (
+                        <div key={item.id} className="rounded-lg border px-4 py-3">
+                          <p className="font-medium">{item.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Publicada el {formatDateForAdmin(item.publishedAt)}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Encara no hi ha novetats publicades per mostrar aqui.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="entities" className="space-y-8">
             <AreaSectionHeader
               title="Entitats"
-              description="Resum d’organitzacions, cerca, llistat i accions operatives."
+              description="Aqui veus quines entitats requereixen una accio teva i pots entrar-hi sense voltar per opcions tecniques."
               action={<Button onClick={() => setIsCreateDialogOpen(true)}>Nova entitat</Button>}
             />
 
@@ -1275,7 +1359,66 @@ function AdminPageContent() {
               />
               <Card>
                 <CardContent className="pt-6">
-                  <div className="overflow-x-auto">
+                  {isMobile ? (
+                    <div className="space-y-3">
+                      {entities.length > 0 ? (
+                        entities.map((org) => {
+                          const s9 = org.s9;
+                          const amountLabel = currencyFormatter.format((s9?.pendingAmountCents ?? 0) / 100);
+                          const pendingSummary = tri('admin.s9.pendingSummary', {
+                            count: s9?.pendingCount ?? 0,
+                            amount: amountLabel,
+                            year: s9?.year ?? new Date().getFullYear(),
+                          });
+
+                          return (
+                            <Card key={`s9-mobile-${org.id}`}>
+                              <CardContent className="space-y-3 pt-4">
+                                <div className="flex items-center gap-2">
+                                  <Scale className="h-4 w-4 text-muted-foreground" />
+                                  <div>
+                                    <div className="font-medium">{org.name}</div>
+                                    <div className="text-xs text-muted-foreground">/{org.slug}</div>
+                                  </div>
+                                </div>
+                                <p className="text-sm font-medium">{pendingSummary}</p>
+                                <div className="space-y-1">
+                                  <p className="text-sm">{s9?.diagnosisTextCa ?? 'Sense diagnòstic'}</p>
+                                  <p className="text-xs text-muted-foreground">{s9?.actionTextCa ?? ''}</p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => handleViewFiscalPending(org)}
+                                  >
+                                    {tr('admin.s9.viewPendingCta', 'Veure ingressos que no compten fiscalment')}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    disabled={(s9?.pendingCount ?? 0) < 5 || notifyingOrgId === org.id}
+                                    onClick={() => handleNotifyOrganization(org)}
+                                  >
+                                    {notifyingOrgId === org.id ? (
+                                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Send className="mr-1.5 h-3.5 w-3.5" />
+                                    )}
+                                    {tr('admin.s9.notifyOrgCta', 'Enviar avís a l’entitat')}
+                                  </Button>
+                                </div>
+                                <div>{getAlertStatusBadge(s9?.alertStatus ?? null)}</div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })
+                      ) : (
+                        <p className="py-12 text-center text-muted-foreground">Sense entitats disponibles.</p>
+                      )}
+                    </div>
+                  ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -1351,19 +1494,19 @@ function AdminPageContent() {
                         )}
                       </TableBody>
                     </Table>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="content" className="space-y-8">
-            <AreaSectionHeader
-              title="Contingut"
-              description="Ajuda del producte, estat del bot, novetats i traduccions."
+                <AreaSectionHeader
+                  title="Contingut visible"
+              description="Aqui gestiones allo que els usuaris poden llegir o percebre directament."
             />
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {contentEntryCards.map((card) => (
                 <Card key={card.id} className={activeContentModule === card.id ? 'ring-1 ring-foreground/15' : ''}>
                   <CardHeader className="space-y-3">
@@ -1386,83 +1529,44 @@ function AdminPageContent() {
               ))}
             </div>
 
-            {activeContentModule === 'help' && (
-              <div className="space-y-6">
-                <AreaSectionHeader
-                  title="Ajuda del producte"
-                  description="Guies i ajudes textuals que acompanyen l’equip dins de l’aplicació."
-                />
-                <EditorialCenter />
-                <HelpAuditSection />
-              </div>
-            )}
-
-            {activeContentModule === 'bot' && (
-              <div className="space-y-6">
-                <AreaSectionHeader
-                  title="Estat del bot"
-                  description="Activitat recent i base activa que està fent servir ara mateix."
-                />
-                <Card>
-                  <CardContent className="grid grid-cols-1 gap-4 pt-6 md:grid-cols-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Base activa</p>
-                      <p className="mt-1 text-sm font-semibold">
-                        Darrera actualització: {formatDateForAdmin(kbSummary?.kbUpdatedAt ?? null)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Activitat</p>
-                      <p className="mt-1 text-sm font-semibold">{kbSummary?.botTotalQuestions ?? 0} preguntes totals</p>
-                      <p className="text-sm text-muted-foreground">{kbSummary?.botTodayQuestions ?? 0} avui</p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Temes freqüents</p>
-                      <ul className="mt-1 space-y-1 text-sm">
-                        {(kbSummary?.topTopics ?? []).length > 0 ? (
-                          (kbSummary?.topTopics ?? []).map((topic) => (
-                            <li key={topic.topic}>• {topic.topic}</li>
-                          ))
-                        ) : (
-                          <li className="text-muted-foreground">Sense dades</li>
-                        )}
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Base activa del bot</CardTitle>
-                    <CardDescription>Referència ràpida del que està en ús ara mateix.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="list-disc space-y-2 pl-5 text-sm">
-                      <li>
-                        Runtime del bot: <code>docs/kb/_fallbacks.json</code> + <code>docs/kb/cards/**/*.json</code>.
-                      </li>
-                      <li>
-                        No es consumeix <code>docs/generated/help-bot.json</code> al runtime del bot.
-                      </li>
-                      <li>
-                        No hi ha draft, publish ni Storage KB dins del producte actiu.
-                      </li>
-                      <li>
-                        Si cal canviar la KB, s&apos;ha de fer amb canvis versionats a Git.
-                      </li>
-                    </ul>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
             {activeContentModule === 'updates' && (
               <div className="space-y-6">
                 <AreaSectionHeader
                   title="Novetats"
-                  description="Missatges i publicacions visibles per als usuaris."
+                  description="Vista de les novetats visibles per als usuaris. La publicacio manual ha de ser excepcional si el flux real ja es automatic."
                 />
-                <ProductUpdatesSection isSuperAdmin={isSuperAdmin === true} />
+                <Card>
+                  <CardContent className="pt-6 text-sm text-muted-foreground">
+                    Utilitza aquest espai per entendre que esta publicat i revisar casos especials. Si el flux principal ja publica de manera automatica, evita convertir aquest bloc en un ritual manual.
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Novetats visibles ara mateix</CardTitle>
+                    <CardDescription>El que ja s esta mostrant als usuaris o s ha publicat fa poc.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {(communication?.latestPublished ?? []).length > 0 ? (
+                      communication?.latestPublished.map((item) => (
+                        <div key={item.id} className="rounded-lg border px-4 py-3">
+                          <p className="font-medium">{item.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Publicada el {formatDateForAdmin(item.publishedAt)}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Encara no hi ha novetats publicades.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6 text-sm text-muted-foreground">
+                    Aquest espai es queda nomes com a lectura del que ja es veu publicat. La part manual avancada no apareix en aquest panell simplificat per evitar duplicitats.
+                  </CardContent>
+                </Card>
               </div>
             )}
 
@@ -1479,25 +1583,125 @@ function AdminPageContent() {
             )}
           </TabsContent>
 
-          <TabsContent value="settings" className="space-y-8">
+          <TabsContent value="technical" className="space-y-8">
             <AreaSectionHeader
-              title="Configuració"
-              description="Operacions sensibles. Revisa bé l’impacte abans d’actuar."
+              title="Incidencies i manteniment"
+              description="Aquesta part es nomes per problemes tecnics, comprovacions i accions sensibles. No cal entrar hi si la vista general no t ho demana."
+              action={
+                <Button variant="outline" onClick={refreshSummary} disabled={isSummaryLoading}>
+                  {isSummaryLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  Actualitzar dades
+                </Button>
+              }
             />
 
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              Operacions sensibles: aquesta àrea concentra canvis d’accés, entitats i govern del sistema.
+              Entra aqui nomes quan hi ha un bloqueig real, un dubte amb el bot o una operacio sensible.
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <Card className={statusClasses(incidentsCard?.status ?? 'ok')} data-section="incidents">
+                <CardHeader>
+                  <CardTitle className="text-base">Avisos tecnics</CardTitle>
+                  <CardDescription>Aquests avisos poden ser interns o de manteniment, no sempre incidencies reals.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-lg font-semibold">
+                    {openIncidentCount} avís{openIncidentCount === 1 ? '' : 'os'}
+                  </p>
+                  <Badge variant={statusBadgeVariant(incidentsCard?.status ?? 'ok')}>
+                    {humanStatusLabel(incidentsCard?.status ?? 'ok')}
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card data-section="bot-support">
+                <CardHeader>
+                  <CardTitle className="text-base">Bot</CardTitle>
+                  <CardDescription>Activitat i temes que poden indicar mancances d ajuda.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-lg font-semibold">{kbSummary?.botTotalQuestions ?? 0} preguntes totals</p>
+                  <p className="text-sm text-muted-foreground">{kbSummary?.botTodayQuestions ?? 0} avui</p>
+                  <p className="text-xs text-muted-foreground">
+                    Darrera actualitzacio coneguda: {formatDateForAdmin(kbSummary?.kbUpdatedAt ?? null)}
+                  </p>
+                </CardContent>
+              </Card>
             </div>
 
             <div className="space-y-4">
               <AreaSectionHeader
-                title="Organitzacions"
-                description="Crear entitats i canvis estructurals."
+                title="Bot i consultes"
+                description="Quan sospites que el bot no ajuda prou, mira primer l activitat i els temes repetits abans d anar al detall intern."
               />
+              <Card>
+                <CardContent className="grid grid-cols-1 gap-4 pt-6 md:grid-cols-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Activitat recent</p>
+                    <p className="mt-1 text-sm font-semibold">{kbSummary?.botTodayQuestions ?? 0} consultes avui</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Temes frequents</p>
+                    <ul className="mt-1 space-y-1 text-sm">
+                      {(kbSummary?.topTopics ?? []).length > 0 ? (
+                        (kbSummary?.topTopics ?? []).map((topic) => (
+                          <li key={topic.topic}>• {topic.topic}</li>
+                        ))
+                      ) : (
+                        <li className="text-muted-foreground">Sense dades</li>
+                      )}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Contracte intern</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      El bot opera amb la KB versionada del repositori. Aquest detall es manté aqui per no contaminar la vista principal.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-4">
+              <AreaSectionHeader
+                title="Administracio interna"
+                description="Accessos i operacions internes que poden tenir impacte estructural."
+              />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Mail className="h-4 w-4" />
+                    Reset contrasenya
+                  </CardTitle>
+                  <CardDescription>
+                    Envia un correu per restablir la contrasenya d&apos;un usuari.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Input
+                      type="email"
+                      placeholder={t.admin?.resetPassword?.placeholder ?? 'email@exemple.com'}
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      disabled={isResetting}
+                    />
+                    <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail.trim()}>
+                      {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {t.admin?.resetPassword?.send ?? 'Enviar correu'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardContent className="space-y-4 pt-6">
                   <div className="flex flex-wrap gap-2">
-                    <Button onClick={() => setIsCreateDialogOpen(true)}>Crear entitat</Button>
                     <Button variant="outline" onClick={handleMigrateSlugs} disabled={isMigrating}>
                       {isMigrating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Migrar slug
@@ -1531,7 +1735,7 @@ function AdminPageContent() {
                           </Button>
                           <span className="text-xs text-amber-700">
                             {selectedDemoMode === 'short'
-                              ? (t.admin?.health?.demoShort ?? 'Dades netes per vídeos/pitch')
+                              ? (t.admin?.health?.demoShort ?? 'Dades netes per videos i pitch')
                               : (t.admin?.health?.demoWork ?? 'Dades amb anomalies per validar workflows')}
                           </span>
                         </div>
@@ -1562,67 +1766,65 @@ function AdminPageContent() {
                   )}
                 </CardContent>
               </Card>
-            </div>
-
-            <div className="space-y-4">
-              <AreaSectionHeader
-                title="Usuaris"
-                description="Reset de contrasenya i gestió de SuperAdmins."
-              />
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Mail className="h-4 w-4" />
-                    Reset contrasenya
-                  </CardTitle>
-                  <CardDescription>
-                    Envia un correu per restablir la contrasenya d&apos;un usuari.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Input
-                      type="email"
-                      placeholder={t.admin?.resetPassword?.placeholder ?? 'email@exemple.com'}
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      disabled={isResetting}
-                    />
-                    <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail.trim()}>
-                      {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {t.admin?.resetPassword?.send ?? 'Enviar correu'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
               <SuperAdminsManager />
             </div>
 
             <div className="space-y-4">
               <AreaSectionHeader
-                title="Activitat"
-                description="Registre recent de canvis fets des de SuperAdmin."
+                title="Eines tecniques"
+                description="Accessos rapids a consola, logs i documentacio de suport."
               />
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <History className="h-4 w-4" />
-                    Activitat recent
-                  </CardTitle>
-                  <CardDescription>
-                    {t.admin?.updates?.description ?? 'Últimes accions registrades'}
-                  </CardDescription>
-                </CardHeader>
+                <CardContent className="grid gap-3 pt-6 md:grid-cols-3">
+                  <a
+                    href="https://console.firebase.google.com/project/summa-social/overview"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm transition-colors hover:bg-muted/50"
+                  >
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                    Firebase Console
+                  </a>
+                  <a
+                    href="https://console.cloud.google.com/logs/query?project=summa-social"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm transition-colors hover:bg-muted/50"
+                  >
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                    Cloud Logging
+                  </a>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 rounded-lg border px-4 py-3 text-left text-sm transition-colors hover:bg-muted/50"
+                    onClick={() => {
+                      navigator.clipboard.writeText('docs/DEV-SOLO-MANUAL.md');
+                      toast({ title: t.admin?.health?.copiedToClipboard ?? 'Copiat al porta-retalls' });
+                    }}
+                  >
+                    <Wrench className="h-4 w-4 text-muted-foreground" />
+                    Manual de suport
+                  </button>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-4">
+              <AreaSectionHeader
+                title="Activitat recent"
+                description="Registre dels ultims canvis fets des del panell de SuperAdmin."
+              />
+              <Card>
                 <CardContent>
                   {isLoadingAudit ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 pt-6 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       {t.common?.loading ?? 'Carregant...'}
                     </div>
                   ) : auditLogs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t.admin?.updates?.noActions ?? 'Cap acció registrada encara.'}</p>
+                    <p className="pt-6 text-sm text-muted-foreground">{t.admin?.updates?.noActions ?? 'Cap accio registrada encara.'}</p>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2 pt-6">
                       {auditLogs.map((log) => (
                         <div key={log.id} className="flex items-center justify-between border-b pb-2 text-sm last:border-0">
                           <div className="flex items-center gap-2">
