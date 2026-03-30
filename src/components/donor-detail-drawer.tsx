@@ -466,7 +466,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       y += line1Wrapped.length * lineHeight;
 
       // Línia 2: con CIF [CIF], domicilio en [Adreça completa],
-      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || '[Adreça]'},`;
+      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || t.donorDetail.certificate.addressPlaceholder},`;
       const line2Wrapped = doc.splitTextToSize(line2, contentWidth);
       doc.text(line2Wrapped, margin, y);
       y += line2Wrapped.length * lineHeight + 8;
@@ -485,7 +485,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       if (donor.address) donorAddressParts.push(donor.address);
       const donorLocationPart = [donor.zipCode, donor.city, donor.province].filter(Boolean).join(' ');
       if (donorLocationPart) donorAddressParts.push(donorLocationPart);
-      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
+      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : t.donorDetail.certificate.donorAddressMissing;
       const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(tx.amount)} ${t.donorDetail.certificate.onDate} ${formatDate(tx.date)} ${t.donorDetail.certificate.toTheEntity}`;
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
       doc.text(paragraph1Wrapped, margin, y);
@@ -501,7 +501,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const today = new Date();
       const monthNames = Object.keys(t.months);
       const monthName = t.months[monthNames[today.getMonth()] as keyof typeof t.months];
-      const cityName = organization.city || '[Ciutat]';
+      const cityName = organization.city || t.donorDetail.certificate.cityPlaceholder;
       const paragraph3 = `${t.donorDetail.certificate.issuedIn} ${cityName} ${t.donorDetail.certificate.issuedOn} ${today.getDate()} de ${monthName} de ${today.getFullYear()}.`;
       const paragraph3Wrapped = doc.splitTextToSize(paragraph3, contentWidth);
       doc.text(paragraph3Wrapped, margin, y);
@@ -571,7 +571,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: "Any fiscal no vàlid",
+        description: t.donorDetail.invalidFiscalYear,
       });
       return null;
     }
@@ -580,7 +580,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: `Selecciona l'any ${year} al filtre abans de generar o enviar el certificat anual.`,
+        description: t.donorDetail.annualCertificateFilterMismatch(year),
       });
       return null;
     }
@@ -599,7 +599,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: 'Dades de fitxa i certificat no alineades. Recarrega i torna-ho a provar.',
+        description: t.donorDetail.annualCertificateOutOfSync,
       });
       return null;
     }
@@ -737,7 +737,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       y += line1Wrapped.length * lineHeight;
 
       // Línia 2: con CIF [CIF], domicilio en [Adreça completa],
-      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || '[Adreça]'},`;
+      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || t.donorDetail.certificate.addressPlaceholder},`;
       const line2Wrapped = doc.splitTextToSize(line2, contentWidth);
       doc.text(line2Wrapped, margin, y);
       y += line2Wrapped.length * lineHeight + 8;
@@ -775,7 +775,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const today = new Date();
       const monthNames = Object.keys(t.months);
       const monthName = t.months[monthNames[today.getMonth()] as keyof typeof t.months];
-      const cityName = organization.city || '[Ciutat]';
+      const cityName = organization.city || t.donorDetail.certificate.cityPlaceholder;
       const paragraph3 = `${t.donorDetail.certificate.issuedIn} ${cityName} ${t.donorDetail.certificate.issuedOn} ${today.getDate()} de ${monthName} de ${today.getFullYear()}.`;
       const paragraph3Wrapped = doc.splitTextToSize(paragraph3, contentWidth);
       doc.text(paragraph3Wrapped, margin, y);
@@ -798,23 +798,23 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
 
         y += 6;
         doc.setFont('helvetica', 'bold');
-        doc.text('Resum fiscal:', boxX + 5, y);
+        doc.text(t.donorDetail.certificate.fiscalSummary, boxX + 5, y);
         y += lineHeight;
 
         doc.setFont('helvetica', 'normal');
         const col1 = boxX + 5;
         const col2 = boxX + boxWidth - 5;
 
-        doc.text('Donacions rebudes:', col1, y);
+        doc.text(t.donorDetail.certificate.receivedDonations, col1, y);
         doc.text(formatCurrencyEU(grossAmount), col2, y, { align: 'right' });
         y += lineHeight;
 
-        doc.text('Devolucions efectuades:', col1, y);
+        doc.text(t.donorDetail.certificate.processedReturns, col1, y);
         doc.text(`-${formatCurrencyEU(returnedAmount)}`, col2, y, { align: 'right' });
         y += lineHeight;
 
         doc.setFont('helvetica', 'bold');
-        doc.text('Import net certificat:', col1, y);
+        doc.text(t.donorDetail.certificate.certifiedNetAmount, col1, y);
         doc.text(formatCurrencyEU(netAmount), col2, y, { align: 'right' });
 
         y += lineHeight * 2;
@@ -1003,7 +1003,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       doc.text(line1Wrapped, margin, y);
       y += line1Wrapped.length * lineHeight;
 
-      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || '[Adreça]'},`;
+      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || t.donorDetail.certificate.addressPlaceholder},`;
       const line2Wrapped = doc.splitTextToSize(line2, contentWidth);
       doc.text(line2Wrapped, margin, y);
       y += line2Wrapped.length * lineHeight + 8;
@@ -1019,7 +1019,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       if (donor.address) donorAddressParts.push(donor.address);
       const donorLocationPart = [donor.zipCode, donor.city, donor.province].filter(Boolean).join(' ');
       if (donorLocationPart) donorAddressParts.push(donorLocationPart);
-      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '[Domicili no informat]';
+      const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : t.donorDetail.certificate.donorAddressMissing;
       const paragraph1 = `${t.donorDetail.certificate.thatDonor} ${donor.name} ${t.donorDetail.certificate.withNifCif} ${donor.taxId} ${t.donorDetail.certificate.andDomicile} ${donorAddress}, ${t.donorDetail.certificate.donatedAmount} ${formatCurrencyEU(tx.amount)} ${t.donorDetail.certificate.onDate} ${formatDate(tx.date)} ${t.donorDetail.certificate.toTheEntity}`;
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
       doc.text(paragraph1Wrapped, margin, y);
@@ -1033,7 +1033,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const today = new Date();
       const monthNames = Object.keys(t.months);
       const monthName = t.months[monthNames[today.getMonth()] as keyof typeof t.months];
-      const cityName = organization.city || '[Ciutat]';
+      const cityName = organization.city || t.donorDetail.certificate.cityPlaceholder;
       const paragraph3 = `${t.donorDetail.certificate.issuedIn} ${cityName} ${t.donorDetail.certificate.issuedOn} ${today.getDate()} de ${monthName} de ${today.getFullYear()}.`;
       const paragraph3Wrapped = doc.splitTextToSize(paragraph3, contentWidth);
       doc.text(paragraph3Wrapped, margin, y);
@@ -1247,7 +1247,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       doc.text(line1Wrapped, margin, y);
       y += line1Wrapped.length * lineHeight;
 
-      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || '[Adreça]'},`;
+      const line2 = `${t.donorDetail.certificate.withCif} ${organization.taxId}, ${t.donorDetail.certificate.domiciledAt} ${orgFullAddress || t.donorDetail.certificate.addressPlaceholder},`;
       const line2Wrapped = doc.splitTextToSize(line2, contentWidth);
       doc.text(line2Wrapped, margin, y);
       y += line2Wrapped.length * lineHeight + 8;
@@ -1280,7 +1280,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const today = new Date();
       const monthNames = Object.keys(t.months);
       const monthName = t.months[monthNames[today.getMonth()] as keyof typeof t.months];
-      const cityName = organization.city || '[Ciutat]';
+      const cityName = organization.city || t.donorDetail.certificate.cityPlaceholder;
       const paragraph3 = `${t.donorDetail.certificate.issuedIn} ${cityName} ${t.donorDetail.certificate.issuedOn} ${today.getDate()} de ${monthName} de ${today.getFullYear()}.`;
       const paragraph3Wrapped = doc.splitTextToSize(paragraph3, contentWidth);
       doc.text(paragraph3Wrapped, margin, y);
@@ -1470,7 +1470,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                   {summary.currentYearCount} {summary.currentYearCount === 1 ? t.donorDetail.donation : t.donorDetail.donations}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Any anterior ({summary.scopeYear - 1}): {formatCurrencyEU(summary.previousYear)}
+                  {t.donorDetail.previousYear} ({summary.scopeYear - 1}): {formatCurrencyEU(summary.previousYear)}
                 </p>
               </CardContent>
             </Card>
@@ -1512,7 +1512,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Any anterior ({summary.scopeYear - 1}): {formatCurrencyEU(summary.previousYearNet)}
+                  {t.donorDetail.previousYear} ({summary.scopeYear - 1}): {formatCurrencyEU(summary.previousYearNet)}
                 </p>
               </CardContent>
             </Card>
