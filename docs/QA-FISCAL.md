@@ -18,6 +18,22 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-03-30
+
+**Context:**
+Correcció d'i18n al drawer/fitxa del donant perquè la modal en castellà no mostri literals en català a les targetes de resum ni als textos auxiliars del certificat.
+
+**Comprovacions aplicades:**
+1. Revisió de la modal de dades del donant en `es` a la targeta d'any actual.
+2. Revisió de la targeta d'import net certificable en `es`.
+3. Verificació de claus d'i18n noves per `ca`, `es` i `fr` al flux `donorDetail`.
+4. Verificació tècnica amb `npm run typecheck` i `npm run i18n:check-ts`.
+
+**Resultat:**
+- [x] En `es`, el resum mostra `Año anterior` i ja no mostra `Any anterior`.
+- [x] Els textos auxiliars del certificat anual queden resolts via claus d'i18n i no per literals incrustats.
+- [x] No s'han alterat imports ni càlculs del resum fiscal; el canvi és de copy/i18n del flux existent.
+
 ### Registre manual 2026-03-29
 
 **Context:**
