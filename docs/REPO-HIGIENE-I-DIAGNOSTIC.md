@@ -13,8 +13,9 @@ Document curt per tallar bloquejos de repo abans d'integrar o publicar.
 ## 2. Diagnòstic mínim obligatori
 
 1. Executar `npm run status`.
-2. Executar `npm run worktree:list`.
-3. Comprovar l'estat de `main` al repositori de control:
+2. Executar `npm run repos:audit`.
+3. Executar `npm run worktree:list`.
+4. Comprovar l'estat de `main` al repositori de control:
    ```bash
    git branch --show-current
    git status --short
@@ -22,8 +23,8 @@ Document curt per tallar bloquejos de repo abans d'integrar o publicar.
    git rev-parse main
    git rev-parse origin/main
    ```
-4. Confirmar si hi ha canvis locals al repo de control.
-5. Confirmar si hi ha branques `codex/*` integrades però no tancades:
+5. Confirmar si hi ha canvis locals al repo de control.
+6. Confirmar si hi ha branques `codex/*` integrades però no tancades:
    ```bash
    git branch --merged main | rg 'codex/'
    npm run worktree:list
@@ -46,6 +47,7 @@ Document curt per tallar bloquejos de repo abans d'integrar o publicar.
 ### Quan no fer deploy
 
 - Quan `npm run status` diu `BLOQUEJAT`.
+- Quan `npm run repos:audit` detecta clones duplicats amb canvis locals o repos canònics bruts.
 - Quan `main` té canvis locals o no està alineada amb `origin/main`.
 - Quan hi ha worktrees residuals o més d'una branca llesta.
 - Quan `prod` conté commits fora de `main`.

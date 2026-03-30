@@ -51,6 +51,7 @@
     "publica": "bash scripts/workflow.sh publica",
     "estat": "bash scripts/status.sh",
     "status": "bash scripts/status.sh",
+    "repos:audit": "node scripts/repo-ecosystem-audit.mjs",
     "worktree:list": "bash scripts/worktree.sh list",
     "worktree:close": "bash scripts/worktree.sh close",
     "worktree:gc": "bash scripts/worktree.sh gc --ttl-days 14",

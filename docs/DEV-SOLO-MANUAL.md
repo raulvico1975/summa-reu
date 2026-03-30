@@ -204,6 +204,7 @@ Aquest manual no reescriu el ritual de deploy. Per govern i autoritat:
 Checklist pràctica abans de publicar:
 
 ```bash
+npm run repos:audit
 npm run status
 npm run worktree:list
 npm run integra
@@ -213,6 +214,7 @@ npm run publica
 
 Regles pràctiques:
 
+- `npm run repos:audit` és el check curt per detectar duplicats, snapshots i clones bruts al nivell de `Documents`.
 - `npm run acabat` no integra.
 - `npm run integra` és l'única porta d'entrada a `main`.
 - `npm run publica` és l'única porta d'entrada a `prod`.
