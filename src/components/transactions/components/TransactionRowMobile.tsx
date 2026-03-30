@@ -81,7 +81,9 @@ interface TransactionRowMobileProps {
     balance: string;
     noContact: string;
     returnBadge: string;
+    returnBadgeShort: string;
     commissionBadge: string;
+    commissionBadgeShort: string;
     returnedDonation: string;
     viewDocument: string;
     attachProof: string;
@@ -206,13 +208,13 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
 
   // Background color based on transaction type
   const bgClass = isReturn
-    ? 'bg-red-50/50 border-red-200'
+    ? 'bg-red-50/35 border-red-200'
     : isReturnFee
-    ? 'bg-orange-50/50 border-orange-200'
+    ? 'bg-orange-50/35 border-orange-200'
     : isReturnedDonation
-    ? 'bg-gray-50/50 border-gray-200'
+    ? 'bg-gray-50/40 border-gray-200'
     : tx.isRemittance && tx.remittanceType !== 'returns'
-    ? 'bg-emerald-50/30 border-emerald-200'
+    ? 'bg-emerald-50/25 border-emerald-200'
     : 'border-border/50';
 
   const handleEdit = React.useCallback(() => {
@@ -331,7 +333,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   }, [onOpenStripeImputationDetail, tx]);
 
   return (
-    <div className={`border rounded-lg p-3 ${bgClass}`}>
+    <div className={`rounded-xl border p-4 ${bgClass}`}>
       {/* Line 1: Data · Import · Saldo */}
       <div className="flex flex-wrap items-center gap-1 text-xs">
         <span className="text-muted-foreground whitespace-nowrap">{formatDateShort(displayDate)}</span>
@@ -364,11 +366,11 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       </div>
 
       {/* Line 3: Contacte + Categoria (chips) */}
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        <Badge variant="secondary" className="max-w-[48%] text-xs py-0 px-1.5 font-normal">
+      <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
+        <Badge variant="secondary" className="max-w-[48%] rounded-full px-2 py-0.5 text-[11px] font-normal">
           <span className="truncate">{categoryDisplayName || '—'}</span>
         </Badge>
-        <Badge variant="outline" className="max-w-[48%] text-xs py-0 px-1.5 font-normal">
+        <Badge variant="outline" className="max-w-[48%] rounded-full px-2 py-0.5 text-[11px] font-normal">
           <span className="inline-flex items-center gap-1 min-w-0">
             <User className="h-3 w-3 shrink-0" />
             {hasSingleStripeDonor && stripeImputationSummary?.singleDonorDisplayName ? (
@@ -426,28 +428,28 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
 
       {/* Middle: Badges (type + remittance) */}
       {(isReturn || isReturnFee || isReturnedDonation || tx.isRemittance || canShowUndoSplitAction(tx) || hasStripeImputation) && (
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           {isReturn && (
-            <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1.5">
+            <Badge variant="outline" className="gap-1 rounded-full border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
               <Undo2 className="h-3 w-3" />
-              {t.returnBadge}
+              {t.returnBadgeShort}
             </Badge>
           )}
           {isReturnFee && (
-            <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1.5 text-orange-600 border-orange-300">
+            <Badge variant="outline" className="gap-1 rounded-full border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
               <Ban className="h-3 w-3" />
-              {t.commissionBadge}
+              {t.commissionBadgeShort}
             </Badge>
           )}
           {isReturnedDonation && (
-            <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1.5 text-gray-500 line-through">
+            <Badge variant="outline" className="gap-1 rounded-full px-1.5 py-0.5 text-[10px] text-gray-500 line-through">
               {t.returnedDonation}
             </Badge>
           )}
           {tx.isRemittance && onViewRemittanceDetail && (
             <Badge
               variant="outline"
-              className="gap-0.5 text-xs py-0 px-1.5 cursor-pointer hover:bg-accent"
+              className="gap-1 cursor-pointer rounded-full px-1.5 py-0.5 text-[10px] hover:bg-accent"
               onClick={() => onViewRemittanceDetail(tx.id)}
             >
               <Eye className="h-3 w-3" />
@@ -457,7 +459,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
           {hasStripeImputation && (
             <Badge
               variant="outline"
-              className="cursor-pointer text-xs py-0 px-1.5 hover:bg-accent"
+              className="cursor-pointer rounded-full px-1.5 py-0.5 text-[10px] hover:bg-accent"
               onClick={handleOpenStripeDetail}
             >
               {t.stripeImputed || 'Stripe imputat'}
@@ -466,7 +468,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
           {canShowUndoSplitAction(tx) && onOpenSplitDetail && (
             <Badge
               variant="secondary"
-              className="text-xs py-0 px-1.5 cursor-pointer hover:bg-accent"
+              className="cursor-pointer rounded-full px-1.5 py-0.5 text-[10px] hover:bg-accent"
               onClick={handleOpenSplitDetail}
             >
               {t.splitProcessedLabel || 'Desglossat'}

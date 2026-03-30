@@ -143,9 +143,11 @@ interface TransactionRowProps {
     amount: string;
     balance: string;
     returnBadge: string;
+    returnBadgeShort: string;
     returnAssignedTooltip: string;
     pendingDonorAssignment: string;
     commissionBadge: string;
+    commissionBadgeShort: string;
     bankCommissionReturn: string;
     returnedDonation: string;
     returnedDonationInfo: string;
@@ -263,6 +265,10 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isReturn = tx.transactionType === 'return';
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
+  const subtleReturnBadgeClassName =
+    'gap-1 rounded-full border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700 shadow-none hover:bg-red-50';
+  const subtleCommissionBadgeClassName =
+    'gap-1 rounded-full border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700 shadow-none hover:bg-orange-50';
   const canManageReturn =
     tx.amount < 0 &&
     !tx.isRemittance &&
@@ -484,9 +490,9 @@ export const TransactionRow = React.memo(function TransactionRow({
       return (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1.5">
+            <Badge variant="outline" className={subtleReturnBadgeClassName}>
               <Undo2 className="h-3 w-3" />
-              {t.returnBadge}
+              {t.returnBadgeShort}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -499,9 +505,9 @@ export const TransactionRow = React.memo(function TransactionRow({
       return (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1.5 text-orange-600 border-orange-300">
+            <Badge variant="outline" className={subtleCommissionBadgeClassName}>
               <Ban className="h-3 w-3" />
-              {t.commissionBadge}
+              {t.commissionBadgeShort}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -539,11 +545,11 @@ export const TransactionRow = React.memo(function TransactionRow({
   const displayDate = tx.operationDate || tx.date;
 
   // Classes de la fila
-  const rowClassName = `h-10 ${
-    isReturn ? 'bg-red-50/50' :
-    isReturnFee ? 'bg-orange-50/50' :
-    isReturnedDonation ? 'bg-gray-50/50' :
-    isProcessedDonationRemittance ? 'bg-emerald-50/30' : ''
+  const rowClassName = `h-auto ${
+    isReturn ? 'bg-red-50/30' :
+    isReturnFee ? 'bg-orange-50/30' :
+    isReturnedDonation ? 'bg-gray-50/35' :
+    isProcessedDonationRemittance ? 'bg-emerald-50/20' : ''
   } ${isSelected ? 'bg-primary/5' : ''}`;
 
   // Renderitzar amb o sense RowDropTarget segons si onDropFile està definit
@@ -551,7 +557,7 @@ export const TransactionRow = React.memo(function TransactionRow({
     <>
       {/* Checkbox - només si onToggleSelect està definit (canBulkEdit) */}
       {onToggleSelect && (
-        <TableCell className="py-1 px-2">
+        <TableCell className="px-2.5 py-3 align-top">
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => {
@@ -565,13 +571,13 @@ export const TransactionRow = React.memo(function TransactionRow({
         </TableCell>
       )}
       {/* Date */}
-      <TableCell className="text-muted-foreground py-1 text-xs whitespace-nowrap">
+      <TableCell className="whitespace-nowrap py-3.5 text-xs text-muted-foreground align-top">
         {formatDateShort(displayDate)}
       </TableCell>
 
       {/* Amount */}
       <TableCell
-        className={`text-right font-mono font-medium py-1 text-[13px] whitespace-nowrap tabular-nums ${
+        className={`whitespace-nowrap py-3.5 text-right font-mono text-[13px] font-medium tabular-nums align-top ${
           isReturnedDonation ? 'text-gray-400 line-through' :
           tx.amount > 0 ? 'text-green-600' : 'text-foreground'
         }`}
@@ -580,25 +586,52 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Balance */}
-      <TableCell className="text-right font-mono py-1 text-[13px] whitespace-nowrap tabular-nums text-foreground w-[120px]">
+      <TableCell className="w-[120px] whitespace-nowrap py-3.5 text-right font-mono text-[13px] tabular-nums text-foreground align-top">
         {balanceText}
       </TableCell>
 
       {/* Concept + Note + Badge + Mobile summary */}
-      <TableCell className="min-w-0 py-1">
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-1 flex-wrap">
+      <TableCell className="min-w-0 py-3.5">
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-2">
+            <p
+              className={`min-w-0 max-w-[320px] truncate text-[13px] leading-5 ${isReturnedDonation ? 'text-gray-400' : ''}`}
+              title={tx.description}
+            >
+              {tx.description}
+            </p>
+            {(hasStripeImputation || (showStripeBadge && !hasStripeImputation)) && (
+              <div className="flex shrink-0 items-center gap-1">
+                {hasStripeImputation && onOpenStripeImputationDetail && (
+                  <Badge
+                    variant="outline"
+                    className="cursor-pointer rounded-full border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700 hover:bg-blue-100"
+                    onClick={handleOpenStripeDetail}
+                  >
+                    {t.stripeImputed || 'Stripe imputat'}
+                  </Badge>
+                )}
+                {showStripeBadge && !hasStripeImputation && (
+                  <Badge variant="outline" className="h-5 rounded-full border-blue-200 bg-blue-50 px-1.5 py-0 text-[10px] text-blue-700">
+                    Stripe
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
             {renderTransactionTypeBadge()}
             {tx.isRemittance && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge
                     variant="outline"
-                    className={`gap-0.5 text-xs py-0 px-1.5 cursor-pointer hover:bg-accent ${
+                    className={`gap-1 rounded-full px-1.5 py-0.5 text-[10px] cursor-pointer hover:bg-accent ${
                       tx.remittanceStatus === 'partial'
-                        ? 'border-orange-400 text-orange-700 bg-orange-50'
+                        ? 'border-orange-200 text-orange-700 bg-orange-50'
                         : isProcessedDonationRemittance
-                        ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
+                        ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
                         : ''
                     }`}
                     onClick={handleViewRemittanceDetail}
@@ -634,7 +667,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             {canShowUndoSplitAction(tx) && onOpenSplitDetail && (
               <Badge
                 variant="secondary"
-                className="text-xs py-0 px-1.5 cursor-pointer"
+                className="cursor-pointer rounded-full px-1.5 py-0.5 text-[10px]"
                 onClick={handleOpenSplitDetail}
               >
                 {t.splitProcessedLabel || 'Desglossat'}
@@ -646,7 +679,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 <TooltipTrigger asChild>
                   <Badge
                     variant="outline"
-                    className="gap-0.5 text-xs py-0 px-1.5 cursor-pointer hover:bg-purple-100 border-purple-300 text-purple-700 bg-purple-50"
+                    className="gap-1 cursor-pointer rounded-full border-purple-200 bg-purple-50 px-1.5 py-0.5 text-[10px] text-purple-700 hover:bg-purple-100"
                     onClick={handleReconcileSepa}
                   >
                     <CreditCard className="h-3 w-3 text-purple-600" />
@@ -659,33 +692,15 @@ export const TransactionRow = React.memo(function TransactionRow({
               </Tooltip>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <p className={`text-[13px] truncate max-w-[320px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
-              {tx.description}
-            </p>
-            {hasStripeImputation && onOpenStripeImputationDetail && (
-              <Badge
-                variant="outline"
-                className="cursor-pointer text-xs py-0 px-1.5 hover:bg-accent"
-                onClick={handleOpenStripeDetail}
-              >
-                {t.stripeImputed || 'Stripe imputat'}
-              </Badge>
-            )}
-            {showStripeBadge && !hasStripeImputation && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
-                Stripe
-              </Badge>
-            )}
-          </div>
+
           {/* Nota: només text, edició via menú ⋮ */}
           {tx.note && (
-            <p className="text-xs text-muted-foreground truncate max-w-[320px] mt-0.5" title={tx.note}>
+            <p className="mt-0.5 max-w-[320px] truncate text-xs leading-5 text-muted-foreground" title={tx.note}>
               {tx.note}
             </p>
           )}
           {/* Mobile/tablet summary: categoria i contacte sota el concepte */}
-          <div className="lg:hidden mt-1 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground lg:hidden">
             <span className="truncate max-w-[120px]">{getCategoryDisplayName(tx.category) || 'Sense categoria'}{isLegacyCategory && <span className="text-amber-600 ml-0.5" title={t.legacyCategory ?? 'Cal recategoritzar'}>⚠</span>}</span>
             <span className="text-muted-foreground/50">·</span>
             {hasStripeImputation ? (
@@ -710,7 +725,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Contact - hidden on mobile, visible from lg */}
-      <TableCell className="min-w-0 py-1 hidden lg:table-cell">
+      <TableCell className="hidden min-w-0 py-3.5 align-top lg:table-cell">
         {/* Cas 1: Pare de remesa de devolucions - mostrar estat, NO "Assignar donant" */}
         {tx.isRemittance && tx.remittanceType === 'returns' ? (
           <div className="flex items-center gap-1">
@@ -858,7 +873,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Category - hidden on mobile, visible from lg */}
-      <TableCell className="min-w-0 py-1 hidden lg:table-cell">
+      <TableCell className="hidden min-w-0 py-3.5 align-top lg:table-cell">
         <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -915,7 +930,7 @@ export const TransactionRow = React.memo(function TransactionRow({
 
       {/* Project - hidden on mobile, visible from lg */}
       {showProjectColumn && (
-        <TableCell className="py-1 hidden lg:table-cell">
+        <TableCell className="hidden py-3.5 align-top lg:table-cell">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               {projectName ? (
@@ -946,7 +961,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       )}
 
       {/* Document column - always visible */}
-      <TableCell className="w-7 shrink-0 text-center py-1">
+      <TableCell className="w-7 shrink-0 py-3.5 text-center align-top">
         <div className="flex items-center justify-center">
           {isDocumentLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -985,7 +1000,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Actions menu column */}
-      <TableCell className="w-9 shrink-0 text-right py-1 pr-2">
+      <TableCell className="w-9 shrink-0 py-3 text-right align-top pr-2">
         <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button

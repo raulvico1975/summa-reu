@@ -2265,9 +2265,11 @@ export function TransactionsTable({
     amount: t.movements.table.amount,
     balance: tr('movements.table.balance'),
     returnBadge: t.movements.table.returnBadge,
+    returnBadgeShort: t.movements.table.returnBadgeShort || 'dev.',
     returnAssignedTooltip: t.movements.table.returnAssignedTooltip,
     pendingDonorAssignment: t.movements.table.pendingDonorAssignment,
     commissionBadge: t.movements.table.commissionBadge,
+    commissionBadgeShort: t.movements.table.commissionBadgeShort || 'com.',
     bankCommissionReturn: t.movements.table.bankCommissionReturn,
     returnedDonation: t.movements.table.returnedDonation,
     returnedDonationInfo: t.movements.table.returnedDonationInfo,
@@ -2643,7 +2645,7 @@ export function TransactionsTable({
           LLISTA MÒBIL (stacked rows) - < 768px
           ═══════════════════════════════════════════════════════════════════════ */}
       {isMobile && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {/* Loading skeleton mòbil */}
           {isLoadingTransactions && !pagedTransactions && (
             Array.from({ length: 5 }).map((_, i) => (
@@ -2716,13 +2718,13 @@ export function TransactionsTable({
           TAULA DE TRANSACCIONS (desktop/tablet) - >= 768px
           ═══════════════════════════════════════════════════════════════════════ */}
       {!isMobile && (
-        <div className="w-full rounded-md border table-scroll-stable overflow-hidden [&>div]:overflow-visible [&>div]:overflow-x-hidden">
+        <div className="table-scroll-stable w-full overflow-hidden rounded-xl border border-border/60 bg-background/95 shadow-sm [&>div]:overflow-visible [&>div]:overflow-x-hidden">
           <Table className="w-full table-fixed">
             <TableHeader>
-              <TableRow className="h-9">
+              <TableRow className="h-11 bg-muted/20">
                 {/* Checkbox columna - només visible per admin/user */}
                 {canBulkEdit && (
-                  <TableHead className="w-[40px] py-2 px-2">
+                  <TableHead className="w-[40px] px-2.5 py-3">
                     <Checkbox
                       checked={checkboxState === 'checked'}
                       ref={(el) => {
@@ -2737,7 +2739,7 @@ export function TransactionsTable({
                     />
                   </TableHead>
                 )}
-                <TableHead className="w-[90px] py-2">
+                <TableHead className="w-[90px] py-3">
                   <button
                     onClick={() => setSortDateAsc(!sortDateAsc)}
                     className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
@@ -2750,18 +2752,18 @@ export function TransactionsTable({
                     )}
                   </button>
                 </TableHead>
-                <TableHead className="w-[110px] text-right py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
-                <TableHead className="w-[120px] text-right py-2 whitespace-nowrap">{tr('movements.table.balance')}</TableHead>
-                <TableHead className="py-2 min-w-0">{t.movements.table.concept}</TableHead>
-                <TableHead className="w-[180px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
-                <TableHead className="w-[160px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
+                <TableHead className="w-[110px] whitespace-nowrap py-3 text-right">{t.movements.table.amount}</TableHead>
+                <TableHead className="w-[120px] whitespace-nowrap py-3 text-right">{tr('movements.table.balance')}</TableHead>
+                <TableHead className="min-w-0 py-3">{t.movements.table.concept}</TableHead>
+                <TableHead className="hidden w-[180px] py-3 lg:table-cell">{t.movements.table.contact}</TableHead>
+                <TableHead className="hidden w-[160px] py-3 lg:table-cell">{t.movements.table.category}</TableHead>
                 {showProjectColumn && (
-                  <TableHead className="w-[100px] py-2 hidden lg:table-cell">
+                  <TableHead className="hidden w-[100px] py-3 lg:table-cell">
                     {t.movements.table.project}
                   </TableHead>
                 )}
-                <TableHead className="w-7 shrink-0 text-center py-2"><span className="sr-only">Document</span></TableHead>
-                <TableHead className="w-9 shrink-0 text-right py-2 pr-2"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+                <TableHead className="w-7 shrink-0 py-3 text-center"><span className="sr-only">Document</span></TableHead>
+                <TableHead className="w-9 shrink-0 py-3 pr-2 text-right"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
