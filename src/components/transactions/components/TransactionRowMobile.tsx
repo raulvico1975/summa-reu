@@ -81,7 +81,9 @@ interface TransactionRowMobileProps {
     balance: string;
     noContact: string;
     returnBadge: string;
+    returnBadgeShort: string;
     commissionBadge: string;
+    commissionBadgeShort: string;
     returnedDonation: string;
     viewDocument: string;
     attachProof: string;
@@ -138,8 +140,6 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   const isReturn = tx.transactionType === 'return';
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
-  const returnBadgeLabel = 'dev.';
-  const commissionBadgeLabel = 'com.';
   const canGenerateReturnEmail = isReturn && !!tx.contactId && tx.isRemittance !== true;
   const hasDocument = !!tx.document;
   const hasBalanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter);
@@ -432,13 +432,13 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
           {isReturn && (
             <Badge variant="outline" className="gap-1 rounded-full border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
               <Undo2 className="h-3 w-3" />
-              {returnBadgeLabel}
+              {t.returnBadgeShort}
             </Badge>
           )}
           {isReturnFee && (
             <Badge variant="outline" className="gap-1 rounded-full border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
               <Ban className="h-3 w-3" />
-              {commissionBadgeLabel}
+              {t.commissionBadgeShort}
             </Badge>
           )}
           {isReturnedDonation && (

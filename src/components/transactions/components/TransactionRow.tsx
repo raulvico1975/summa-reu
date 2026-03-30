@@ -143,9 +143,11 @@ interface TransactionRowProps {
     amount: string;
     balance: string;
     returnBadge: string;
+    returnBadgeShort: string;
     returnAssignedTooltip: string;
     pendingDonorAssignment: string;
     commissionBadge: string;
+    commissionBadgeShort: string;
     bankCommissionReturn: string;
     returnedDonation: string;
     returnedDonationInfo: string;
@@ -263,8 +265,6 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isReturn = tx.transactionType === 'return';
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
-  const returnBadgeLabel = 'dev.';
-  const commissionBadgeLabel = 'com.';
   const subtleReturnBadgeClassName =
     'gap-1 rounded-full border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700 shadow-none hover:bg-red-50';
   const subtleCommissionBadgeClassName =
@@ -492,7 +492,7 @@ export const TransactionRow = React.memo(function TransactionRow({
           <TooltipTrigger asChild>
             <Badge variant="outline" className={subtleReturnBadgeClassName}>
               <Undo2 className="h-3 w-3" />
-              {returnBadgeLabel}
+              {t.returnBadgeShort}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -507,7 +507,7 @@ export const TransactionRow = React.memo(function TransactionRow({
           <TooltipTrigger asChild>
             <Badge variant="outline" className={subtleCommissionBadgeClassName}>
               <Ban className="h-3 w-3" />
-              {commissionBadgeLabel}
+              {t.commissionBadgeShort}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
