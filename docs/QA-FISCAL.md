@@ -18,6 +18,22 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-03-30 — Moviments badges suaus
+
+**Context:**
+Retoc visual del llistat de Moviments per reduir soroll a desktop i mòbil, amb badges curts `dev.` i `com.` i reforç d'i18n perquè aquestes etiquetes surtin de claus traduïbles en lloc de literals incrustats.
+
+**Comprovacions aplicades:**
+1. Revisió visual de la taula de Moviments a desktop: capçalera més lleugera, més espai vertical per fila i badges suaus per devolucions/comissions.
+2. Revisió visual de la llista apilada de Moviments a mòbil: targetes amb més aire i badges curts coherents.
+3. Verificació d'i18n: claus noves `movements.table.returnBadgeShort` i `movements.table.commissionBadgeShort` presents a `ca`, `es`, `fr` i `pt`.
+4. Verificació tècnica amb `npm run lint`, `npm run check`, `npm run i18n:check` i `npm run i18n:check-tr-keys`.
+
+**Resultat:**
+- [x] Els badges de devolució i comissió es mostren amb estil discret i amb etiquetes curtes consistents.
+- [x] Desktop i mòbil mantenen el color semàntic existent sense incrementar el pes visual.
+- [x] El canvi és només de presentació/i18n; no altera imports, saldos ni càlculs fiscals.
+
 ### Registre manual 2026-03-30
 
 **Context:**
