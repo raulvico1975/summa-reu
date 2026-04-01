@@ -5,6 +5,15 @@ import type { OrgDoc, OrgPlan, OrgSubscriptionStatus } from "@/src/lib/db/types"
 import { getDemoSessionUid } from "@/src/lib/firebase/demo-session";
 
 export const SESSION_COOKIE_NAME = "__session";
+export const DEMO_SESSION_COOKIE_NAME = "summareu_demo_session";
+
+function getSessionCookieValue(
+  cookieStore: {
+    get(name: string): { value: string } | undefined;
+  }
+): string | undefined {
+  return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? cookieStore.get(DEMO_SESSION_COOKIE_NAME)?.value;
+}
 
 export type OwnerContext = {
   uid: string;
@@ -56,7 +65,7 @@ async function resolveOwnerContext(uid: string): Promise<OwnerContext | null> {
 }
 
 export async function getSessionUidFromRequest(request: NextRequest): Promise<string | null> {
-  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value ?? request.cookies.get(DEMO_SESSION_COOKIE_NAME)?.value;
   if (!sessionCookie) {
     return null;
   }
@@ -85,7 +94,7 @@ export async function getOwnerFromRequest(request: NextRequest): Promise<OwnerCo
 
 export async function getOwnerFromServerCookies(): Promise<OwnerContext | null> {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const sessionCookie = getSessionCookieValue(cookieStore);
   if (!sessionCookie) {
     return null;
   }

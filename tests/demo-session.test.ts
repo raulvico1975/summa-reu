@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getDemoSessionUid } from "@/src/lib/firebase/demo-session";
+import { DEFAULT_DEMO_OWNER_UID, getDemoSessionUid } from "@/src/lib/firebase/demo-session";
 
 test("demo session cookie resolves outside production", () => {
   const uid = getDemoSessionUid("demo:owner-123", {
@@ -27,4 +27,12 @@ test("demo session cookie ignores mismatched values", () => {
   });
 
   assert.equal(uid, null);
+});
+
+test("demo session cookie uses the default demo owner uid when env is missing", () => {
+  const uid = getDemoSessionUid(`demo:${DEFAULT_DEMO_OWNER_UID}`, {
+    nodeEnv: "development",
+  });
+
+  assert.equal(uid, DEFAULT_DEMO_OWNER_UID);
 });

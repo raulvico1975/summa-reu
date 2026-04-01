@@ -35,20 +35,25 @@ async function run(command, args, options = {}) {
 
 async function findVideoFile(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
+  let newest = null;
   for (const entry of entries) {
     const entryPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       const nested = await findVideoFile(entryPath);
-      if (nested) return nested;
+      if (!newest || (nested && (await fs.stat(nested)).mtimeMs > (await fs.stat(newest)).mtimeMs)) {
+        newest = nested;
+      }
       continue;
     }
 
     if (entry.name.endsWith(".webm")) {
-      return entryPath;
+      if (!newest || (await fs.stat(entryPath)).mtimeMs > (await fs.stat(newest)).mtimeMs) {
+        newest = entryPath;
+      }
     }
   }
 
-  return null;
+  return newest;
 }
 
 async function ffprobeDuration(filePath) {
@@ -77,6 +82,7 @@ async function ffprobeDuration(filePath) {
 }
 
 async function main() {
+  await fs.rm(outDir, { recursive: true, force: true });
   await fs.mkdir(rawDir, { recursive: true });
 
   const seedRaw = await fs.readFile(seedPath, "utf8");
@@ -104,7 +110,7 @@ async function main() {
   page.setDefaultTimeout(30000);
 
   try {
-    await page.goto(`${baseUrl}/dashboard?demo=1`, { waitUntil: "commit", timeout: 30000 });
+    await page.goto(`${baseUrl}/demo`, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForURL(/\/dashboard$/, { timeout: 30000 });
     await page.waitForLoadState("domcontentloaded", { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(1200);

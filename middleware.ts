@@ -3,10 +3,11 @@ import type { NextRequest } from "next/server";
 import { localeCookieName } from "@/src/i18n/config";
 import { areSectionsComplete, getNoFallbackSectionsForPath } from "@/src/i18n/coverage";
 import { resolvePreferredLocale, stripLocalePrefix, withLocalePath } from "@/src/i18n/routing";
+import { DEFAULT_DEMO_OWNER_UID } from "@/src/lib/firebase/demo-session";
 
 const CANONICAL_HOST = process.env.CANONICAL_HOST ?? "summareu.app";
 const FORCE_CANONICAL_REDIRECT = process.env.FORCE_CANONICAL_REDIRECT !== "false";
-const SESSION_COOKIE_NAME = "__session";
+const DEMO_SESSION_COOKIE_NAME = "summareu_demo_session";
 const STATIC_FILE_REGEX = /\.[a-zA-Z0-9]+$/;
 
 function isLocalHost(host: string): boolean {
@@ -56,27 +57,6 @@ export function middleware(request: NextRequest) {
     "";
   const localRequest = isLocalHost(request.nextUrl.hostname.toLowerCase()) || (host ? isLocalHost(host) : false);
   const useSecureCookies = process.env.NODE_ENV === "production" && !localRequest;
-  const demoOwnerUid = process.env.DEMO_OWNER_UID ?? null;
-  const isDemoBootstrapRequest =
-    localRequest && demoOwnerUid && request.nextUrl.searchParams.get("demo") === "1";
-
-  if (isDemoBootstrapRequest) {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.searchParams.delete("demo");
-    const bootstrapLocale = resolvePreferredLocale({
-      pathname: request.nextUrl.pathname,
-      cookieLocale: request.cookies.get(localeCookieName)?.value ?? null,
-      acceptLanguage: request.headers.get("accept-language"),
-    });
-    const response = NextResponse.redirect(redirectUrl, 307);
-    response.cookies.set(SESSION_COOKIE_NAME, `demo:${demoOwnerUid}`, {
-      path: "/",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 365,
-      secure: useSecureCookies,
-    });
-    return withLocaleCookie(response, bootstrapLocale, useSecureCookies);
-  }
 
   if (FORCE_CANONICAL_REDIRECT) {
     if (host && !isLocalHost(host) && host !== CANONICAL_HOST) {
@@ -102,6 +82,19 @@ export function middleware(request: NextRequest) {
   const strippedPathname = stripLocalePrefix(pathname);
   const localeFromPath = resolvePreferredLocale({ pathname });
   const hasLocalePrefix = pathname !== strippedPathname;
+
+  if (localRequest && strippedPathname === "/demo") {
+    const redirectUrl = new URL(withLocalePath(localeFromPath, "/dashboard"), request.url);
+
+    const response = withLocaleCookie(NextResponse.redirect(redirectUrl, 307), localeFromPath, useSecureCookies);
+    response.cookies.set(DEMO_SESSION_COOKIE_NAME, `demo:${DEFAULT_DEMO_OWNER_UID}`, {
+      path: "/",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7,
+      secure: useSecureCookies,
+    });
+    return response;
+  }
 
   if (hasLocalePrefix) {
     const finalLocale = enforceNoFallbackLocale(localeFromPath, strippedPathname);
