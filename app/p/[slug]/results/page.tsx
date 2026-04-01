@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
 import { StatusBadge } from "@/src/components/ui/status-badge";
+import { ResultsTable } from "@/src/components/polls/results-table";
 import { getPollBySlug, getPollVoteRows } from "@/src/lib/db/repo";
 import { formatDateTime } from "@/src/lib/dates";
 import { getOwnerFromServerCookies } from "@/src/lib/firebase/auth";
@@ -125,6 +126,17 @@ export default async function PublicPollResultsPage({ params }: { params: Promis
           ) : null}
         </CardContent>
       </Card>
+
+      {hasVotes ? (
+        <Card>
+          <CardHeader>
+            <h2 className="text-base font-semibold">{i18n.poll.results}</h2>
+          </CardHeader>
+          <CardContent>
+            <ResultsTable options={options} rows={rows} i18n={i18n} />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
