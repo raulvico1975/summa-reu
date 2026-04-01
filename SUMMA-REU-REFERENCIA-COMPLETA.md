@@ -1,8 +1,8 @@
 # SUMMA REU - REFERÈNCIA COMPLETA
 
 > Document viu de referència de producte i tecnologia de Summa Reu.
-> Data de base: **9 de març de 2026** (`Europe/Madrid`).
-> Abast: estat real implementat al repositori `summa-board` i roadmap immediat explícit.
+> Data de base: **1 d'abril de 2026** (`Europe/Madrid`).
+> Abast: estat real implementat al repositori `summa-reu` i roadmap immediat explícit.
 
 ## 1) Propòsit del document
 
@@ -19,7 +19,7 @@ Aquest document és la **font de veritat** de Summa Reu per:
 
 - Nom de producte: **Summa Reu**
 - Domini canònic: `summareu.app`
-- Repositori de treball: `summa-board`
+- Repositori de treball: `summa-reu` (anteriorment `summa-board`)
 
 ### 2.2 Posicionament
 
@@ -107,48 +107,57 @@ Punts clau de valor actual:
 - Videoconferència pròpia.
 - Edició col·laborativa tipus Google Docs.
 
-## 6) Estat del producte (09/03/2026)
+## 6) Estat del producte (01/04/2026)
 
 ### 6.1 Fase global
 
-- **MVP funcional, desplegat i obertura pública tècnicament tancada**.
+- **Producte desplegat a producció, obert al públic, amb CI/CD automàtic funcionant**.
 - Onboarding públic amb subscripció Stripe operativa.
-- Amb extensió immediata oberta en àrees de reunió en directe i operació asíncrona.
+- Pipeline complet: votació → reunió Daily → gravació → transcripció → acta.
 
 ### 6.2 Implementat actualment
 
-- Home pública de producte amb CTA d’accés i alta.
+- Home pública de producte amb CTA d'accés i alta.
 - Localització català/castellà amb routing localitzat i fallback controlat.
-- Login owner amb sessió server via cookie `__session`.
+- Login owner amb sessió server via cookie `__session` (24h, httpOnly, secure, sameSite strict).
 - Logout amb revocació de tokens.
-- Alta d’entitat pública amb creació d’org.
+- Alta d'entitat pública amb creació d'org (anti-enumeració de comptes).
 - Pantalla `/billing` i checkout Stripe de subscripció.
 - Webhook Stripe amb activació de subscripció i auditoria a `stripe_events`.
 - Guard global de subscripció a UI i `api/owner/*`.
-- Dashboard owner amb llistat de votacions.
+- Dashboard owner amb llistat de votacions ("Resultats" com a acció principal).
 - Creació de votacions amb selector assistit de franges.
 - Votació pública sense registre.
-- Resultats públics i vista owner.
-- Còpia d’enllaç públic de votació.
-- Tancament de votació i creació automàtica de reunió.
-- Control d’inici/aturada de gravació a reunions Daily.
-- Pujada manual d’àudio/vídeo o text base.
+- Resultats públics amb matriu de vots (qui ha votat què) i rànquing.
+- Còpia d'enllaç públic de votació.
+- Tancament de votació i creació automàtica de reunió (amb retry manual si falla).
+- Control d'inici/aturada de gravació a reunions Daily.
+- Pujada manual d'àudio/vídeo o text base.
 - Processament asíncron de gravació amb transcripció i acta.
-- Edició i export d’acta en Markdown.
+- Edició i export d'acta en Markdown.
 - Eliminació de reunions amb esborrat en cascada de subcol·leccions, jobs i fitxers associats.
-- Export d’ICS de reunió.
-- Monitorització d’errors server/client amb alertes Telegram.
-- CI amb lint + smoke sobre emuladors.
+- Export d'ICS de reunió.
+- Notificació per email a l'owner quan es rep un vot (via Resend).
+- Pàgina 404 bilingüe amb marca.
+- Monitorització d'errors server/client amb alertes Telegram.
+- CI amb lint + smoke sobre emuladors Firebase.
+- Deploy automàtic via Firebase App Hosting (push a main → build → deploy).
 
-### 6.3 Implementat parcialment
+### 6.3 Seguretat aplicada (abril 2026)
 
-- Verificació visual manual final de confort amb l’owner actiu a `/dashboard`.
+- CSP amb `script-src 'self'` (sense `unsafe-inline`).
+- Cookie de sessió reduït de 5 dies a 24 hores.
+- Anti-enumeració: `/api/auth/entity-signup` retorna 200 OK per emails duplicats.
+- Rate limiting a votació (40/10min per IP per enquesta) i signup (10/10min per IP).
+- Secrets a Google Cloud Secret Manager amb accés IAM concedit al backend.
 
 ### 6.4 En desenvolupament / roadmap immediat
 
-- Enduriment del processament asíncron amb cua dedicada.
-- Reunió en directe dins la plataforma o integrada amb proveïdor extern.
-- Gravació automàtica i pipeline plenament automàtic.
+- Grace period de billing (7-14 dies quan un pagament falla).
+- Metadades Open Graph per compartir a xarxes.
+- Actes multilingüe (ara només en català).
+- Gestió de compte (canvi email/contrasenya, eliminació).
+- Notificacions email addicionals (creació enquesta, tancament).
 
 ## 7) Usuaris principals
 
@@ -366,9 +375,13 @@ El backend funcional principal resideix dins de Next API routes:
 - Dades: Firestore.
 - Fitxers: Firebase Storage.
 - Identitat: Firebase Auth.
-- Deploy: Firebase Hosting amb frameworks backend.
-- IA: Gemini opcional; el flux premium falla explícitament si la ingestió real no és possible.
+- Deploy: Firebase App Hosting (Cloud Run, europe-west4, deploy automàtic des de `main`).
+- Videoconferència: Daily.co (rooms, gravació, webhooks).
+- IA: Gemini (transcripció + actes); falla explícitament si no hi ha API key.
+- Email: Resend (`your-meeting@summareu.app`).
+- Pagaments: Stripe (subscripció per entitat).
 - Observabilitat: Telegram Bot API.
+- CI: GitHub Actions (lint + smoke amb emuladors Firebase).
 
 ### 12.2 Arquitectura real de reunions avui
 
@@ -432,7 +445,11 @@ La capa pròpia de videoconferència continua sent **roadmap**, però la integra
 
 ### 13.3 Estats
 
-- Poll: `open | closed`
+- Poll: `open | closing | closed | close_failed`
+- Meeting provisioning: `provisioning | usable | provisioning_failed`
+- Meeting recording: `none | recording | stopping | processing | ready | error`
+- Meeting recovery: `retry_pending | retry_running | retry_failed`
+- Meeting ingest job: `queued | processing | completed | error`
 - Recording: `uploaded | processing | done | error`
 - Transcript: `pending | processing | done | error`
 - Tasques dins `minutesJson`: `todo | doing | done`
@@ -467,9 +484,14 @@ La capa pròpia de videoconferència continua sent **roadmap**, però la integra
 
 ### 14.3 Públic
 
-- `POST /api/public/vote`
+- `POST /api/public/vote` (dispara email notificació a l'owner via Resend)
 - `GET /api/public/ics?meetingId=...` requereix sessió owner
 - `POST /api/public/error-report`
+
+### 14.4 Webhooks
+
+- `POST /api/webhooks/daily/recording-complete` (validat amb Bearer token)
+- `POST /api/webhooks/stripe` (validat amb signature Stripe)
 
 ## 15) IA i qualitat de contingut
 
@@ -508,19 +530,23 @@ La validació és estricta amb `zod` i després es renderitza a Markdown homogen
 
 ### 16.2 Proteccions aplicades
 
-- Validació d’entrada amb `zod`.
+- Validació d'entrada amb `zod`.
 - Same-origin check per mutacions.
 - Rate limit server-side amb fallback a memòria.
-- CSP i headers de seguretat globals.
+- CSP: `script-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`.
+- Headers: HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, COOP same-origin, CORP same-site.
+- Anti-enumeració de comptes (signup retorna 200 genèric per emails existents).
+- Sessió cookie 24h, httpOnly, secure, sameSite strict.
+- Idle timeout 30 minuts amb logout automàtic.
 - Redirecció host canònic cap a `summareu.app`.
-- `skipTrailingSlashRedirect` activat per evitar bucles de locale per slash final.
+- Secrets a Google Cloud Secret Manager (mai en codi ni env files a producció).
 
 ### 16.3 Riscos coneguts
 
-- Processament asíncron encara dins el context d’una crida HTTP.
+- Processament asíncron encara dins el context d'una crida HTTP.
 - Deduplicació Telegram mantinguda en memòria de procés, no global.
 - Col·lecció `_rate_limits` sense neteja automàtica explícita.
-- Signup autoservei públic encara no activat a la UI.
+- Webhooks Stripe sense idempotència per `event.id` (pot processar duplicats).
 
 ## 17) Operació, monitorització i alertes
 
@@ -546,9 +572,23 @@ La validació és estricta amb `zod` i després es renderitza a Markdown homogen
 - Firebase server: `FIREBASE_*`
 - Daily: `DAILY_API_KEY`, `DAILY_API_BASE_URL`, `DAILY_DOMAIN`, `DAILY_WEBHOOK_BEARER_TOKEN`
 - Mocks controlats: `DAILY_MOCK_MODE`, `MEETING_INGEST_MOCK_MODE`
-- IA: `GEMINI_*`
+- IA: `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_BASE_URL`
+- Pagaments: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`
+- Email: `RESEND_API_KEY`
 - Canònic: `CANONICAL_HOST`, `FORCE_CANONICAL_REDIRECT`
-- Alertes: `TELEGRAM_*`
+- Alertes: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_ALERTS_ENABLED`
+
+### 18.2 Secrets a producció (apphosting.yaml)
+
+Tots via Google Cloud Secret Manager amb IAM concedit al backend:
+
+- `DAILY_API_KEY`
+- `DAILY_WEBHOOK_BEARER_TOKEN`
+- `GEMINI_API_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `TELEGRAM_BOT_TOKEN`
+- `RESEND_API_KEY`
 
 ### 18.2 Entorn local recomanat
 
@@ -559,15 +599,25 @@ La validació és estricta amb `zod` i després es renderitza a Markdown homogen
 
 ## 19) CI/CD i desplegament
 
-- `CI` (`.github/workflows/ci.yml`): `lint` + smoke sobre emuladors.
-- `Deploy Manual Emergency` (`.github/workflows/deploy.yml`): revalida i desplega hosting manualment.
-- `Prod Mirror Sync` (`.github/workflows/prod-mirror-sync.yml`): mirror unidireccional segur cap a branca mirror.
+### 19.1 Pipeline
 
-Política recomanada:
+- **CI** (`.github/workflows/ci.yml`): `lint` + smoke sobre emuladors Firebase (auth, firestore, storage).
+- **Deploy automàtic**: Firebase App Hosting detecta push a `main`, fa build (Cloud Build, europe-west4) i desplega a Cloud Run.
+- **Deploy manual d'emergència** (`.github/workflows/deploy.yml`): revalida i desplega hosting manualment.
+- **Prod Mirror Sync** (`.github/workflows/prod-mirror-sync.yml`): mirror unidireccional segur cap a branca mirror.
 
-- PR obligatori a `main`.
+### 19.2 Infraestructura de deploy
+
+- Backend: Firebase App Hosting → Cloud Run (europe-west4).
+- URL pública: `https://summareu.app` (domini custom) / `https://summa-board--summa-board.europe-west4.hosted.app` (Firebase).
+- Repo vinculat: `raulvico1975/summa-reu` via Developer Connect.
+- Builds: Google Cloud Build, ~2-3 min per deploy.
+
+### 19.3 Política
+
+- Push a `main` → CI + deploy automàtic.
 - Checks requerits: `lint` i smoke.
-- Deploy d’emergència només amb aprovació via environment `production`.
+- Deploy d'emergència amb `firebase apphosting:rollouts:create` si el trigger automàtic falla.
 
 ## 20) Model de producte
 
@@ -593,38 +643,46 @@ Summa Reu s’orienta a subscripció per entitat.
 
 ### 21.1 Curt termini
 
-- Verificació visual final de confort amb l’owner actiu a `/dashboard`.
-- Validar flux real de Daily de punta a punta fora del mock controlat.
-- Resoldre ingestió de gravacions grans sense degradar experiència premium.
-- Consolidar govern de dades efímeres a `_rate_limits`.
-- Endurir observabilitat i runbook de `meeting_ingest_job`.
+- Grace period de billing (7-14 dies amb avís a l'owner).
+- Idempotència de webhooks Stripe (guardar `event.id` per evitar duplicats).
+- Metadades Open Graph (`og:image`, `og:url`) per compartir a WhatsApp/Telegram.
+- Actes multilingüe (ara el prompt Gemini genera sempre en català).
+- Notificacions email addicionals (creació enquesta, tancament, nova reunió).
 
 ### 21.2 Mig termini
 
-- Millora de qualitat d’actes.
+- Gestió de compte (canvi email/contrasenya, eliminació — GDPR).
+- Exportació de resultats de votació (CSV/PDF).
+- Paginació de votacions i resultats (>100 votants).
+- Política de retenció de dades (cleanup automàtic de reunions antigues).
+- Millora de qualitat d'actes.
 - Analytics de producte.
 - Rols interns addicionals per entitat.
-- Millor cobertura d’i18n sense fallback en més pantalles.
 
 ## 22) Estat de qualitat actual
 
-Execucions verificades avui, **9 de març de 2026**:
+Execucions verificades avui, **1 d'abril de 2026**:
 
 - `npm run lint` -> **OK**
 - `npm run i18n:check-es` -> **OK**
 - `npm run build` -> **OK**
 - `npm run ci:smoke` -> **OK**
+- CI GitHub Actions -> **5 runs consecutius OK**
+- Firebase App Hosting deploy -> **3 builds consecutius SUCCESS**
 
 El smoke cobreix com a mínim:
 
 - home pública,
 - login owner,
-- vot públic,
-- re-vot amb manteniment de `voterId`,
-- protecció d’ICS sense sessió,
-- sessió owner vàlida,
-- alta d’entitat via API,
-- aïllament multi-entitat,
+- vot públic (primer vot + segon usuari + re-vot amb manteniment de `voterId`),
+- protecció d'ICS sense sessió,
+- sessió owner vàlida amb accés a dashboard,
+- tancament de votació i creació de reunió amb room Daily (mock),
+- inici i aturada de gravació,
+- webhook Daily de gravació completada (amb detecció de duplicats),
+- processament de transcripció i acta (mock),
+- alta d'entitat via API,
+- aïllament multi-entitat (owner B no veu dades d'owner A),
 - logout i revocació de sessió.
 
 ## 23) Decisions tècniques vigents
@@ -657,6 +715,21 @@ Norma d’actualització:
 3. Si canvia negoci o operació, revisar també objectius, riscos, runbooks i roadmap.
 
 ## 26) Registre de canvis del document
+
+### 2026-04-01
+
+- Actualitzada la data base del document a 1 d'abril de 2026.
+- Repositori renombrat de `summa-board` a `summa-reu`.
+- Documentat Firebase App Hosting amb deploy automàtic (Cloud Run, europe-west4).
+- Documentada la integració Resend per notificacions email de vots.
+- Documentada la integració Stripe (billing, webhooks) a la secció d'API.
+- Actualitzats els estats de dades: polls (closing, close_failed), meetings (provisioning, recovery).
+- Documentada la seguretat aplicada: CSP sense unsafe-inline, sessió 24h, anti-enumeració, pàgina 404.
+- Documentats tots els secrets de producció a `apphosting.yaml` via Secret Manager.
+- Actualitzat el smoke test: ara cobreix tancament votació, gravació, webhook, transcripció, acta, aïllament multi-entitat.
+- Actualitzat el roadmap amb prioritats reals post-llançament.
+- Afegida la matriu de vots (qui ha votat què) a la pàgina pública de resultats.
+- Dashboard: "Resultats" com a botó principal per a votacions actives.
 
 ### 2026-03-09
 
@@ -701,8 +774,10 @@ Norma d’actualització:
 - Firebase/Auth: `src/lib/firebase/*`
 - Seguretat: `src/lib/security.ts`, `src/lib/security/request.ts`, `firestore.rules`, `storage.rules`, `middleware.ts`, `next.config.ts`
 - IA i actes: `src/lib/gemini/*`, `src/lib/minutes/*`, `src/lib/meetings/process-recording-task.ts`
+- Integracions: `src/lib/integrations/daily/`, `src/lib/notifications/vote-email.ts`
 - Monitorització: `instrumentation.ts`, `src/lib/monitoring/*`, `app/api/public/error-report/route.ts`
-- DevOps: `scripts/*`, `.github/workflows/*`, `firebase.json`
+- Billing: `src/lib/env.ts` (Stripe config), `app/api/webhooks/stripe/route.ts`
+- DevOps: `scripts/*`, `.github/workflows/*`, `firebase.json`, `apphosting.yaml`
 
 ## Annex B - Principi de manteniment
 
