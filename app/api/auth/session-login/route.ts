@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = bodySchema.parse(await request.json());
-    const expiresIn = 5 * 24 * 60 * 60 * 1000;
+    const expiresIn = 24 * 60 * 60 * 1000;
     const decoded = await adminAuth.verifyIdToken(body.idToken);
     const ownerOrg = await getOwnerOrgByUid(decoded.uid);
 

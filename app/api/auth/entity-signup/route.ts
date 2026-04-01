@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         : undefined;
 
     if (code === "auth/email-already-exists") {
-      return NextResponse.json({ error: i18n.errors.emailAlreadyExists }, { status: 409 });
+      return NextResponse.json({ ok: true, uid: null });
     }
 
     if (code === "auth/weak-password" || code === "auth/invalid-password") {

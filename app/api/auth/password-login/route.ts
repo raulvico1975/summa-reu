@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       return redirect303(buildLocalizedLocation(loginPath, { error: "unauthorized" }));
     }
 
-    const expiresIn = 5 * 24 * 60 * 60 * 1000;
+    const expiresIn = 24 * 60 * 60 * 1000;
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
 
     const response = redirect303(buildLocalizedLocation(dashboardPath));
