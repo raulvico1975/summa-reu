@@ -7,7 +7,9 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "script-src 'self'",
+  // Next.js App Router injects inline bootstrap scripts for server rendering.
+  // We keep the rest of the policy strict and only allow those inline scripts.
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",

@@ -171,6 +171,12 @@ test("owner vote delete route exists and validates the poll ownership", async ()
   assert.equal(source.includes("requireActiveSubscription"), true);
 });
 
+test("production CSP allows Next inline bootstrap scripts", async () => {
+  const source = await fs.readFile("next.config.ts", "utf8");
+
+  assert.equal(source.includes("script-src 'self' 'unsafe-inline'"), true);
+});
+
 test("owner meeting page rejects meetings that are not usable", async () => {
   const source = await fs.readFile("app/owner/meetings/[meetingId]/page.tsx", "utf8");
 
