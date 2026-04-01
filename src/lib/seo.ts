@@ -23,10 +23,12 @@ export function localizedPublicMetadata(input: {
   const canonicalUrl = `${base}${canonicalPath}`;
   const caPath = withLocalePath("ca", input.path);
   const esPath = withLocalePath("es", input.path);
+  const title = input.title ?? "Summa Reu";
+  const description = input.description ?? "";
 
   return {
-    title: input.title,
-    description: input.description,
+    title,
+    description,
     alternates: {
       canonical: canonicalUrl,
       languages: {
@@ -34,6 +36,19 @@ export function localizedPublicMetadata(input: {
         es: `${base}${esPath}`,
         "x-default": `${base}${caPath}`,
       },
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: "Summa Reu",
+      locale: input.locale === "es" ? "es_ES" : "ca_ES",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
     },
   };
 }

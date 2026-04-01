@@ -14,6 +14,7 @@ import { SessionIdleManager } from "@/src/components/session/session-idle-manage
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://summareu.app"),
   title: "Summa Reu",
   description: "Votacions, convocatòries i actes per a entitats socials",
   icons: {
@@ -65,6 +66,12 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                       href={withLocalePath(locale, "/polls/new")}
                     >
                       {i18n.nav.newPoll}
+                    </Link>
+                    <Link
+                      className={`${navLinkClasses} flex-1 sm:flex-none`}
+                      href={withLocalePath(locale, "/settings")}
+                    >
+                      {i18n.nav.settings}
                     </Link>
                     <LogoutButton className="w-full sm:w-auto" label={i18n.nav.logout} />
                   </>

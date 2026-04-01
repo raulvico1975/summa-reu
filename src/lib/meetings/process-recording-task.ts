@@ -21,6 +21,7 @@ export type RecordingProcessResult = {
 export async function processRecordingTask(input: {
   meetingId: string;
   recordingId: string;
+  language?: "ca" | "es";
 }): Promise<RecordingProcessResult> {
   const recording = await getRecording({
     meetingId: input.meetingId,
@@ -84,6 +85,7 @@ export async function processRecordingTask(input: {
       const generated = await generateMinutesWithGemini({
         model: selectedModel,
         transcript: transcriptText,
+        language: input.language,
       });
 
       await saveMinutes({
@@ -96,7 +98,7 @@ export async function processRecordingTask(input: {
 
       mode = "real";
     } catch {
-      const minutesJson = buildStubMinutes(transcriptText);
+      const minutesJson = buildStubMinutes(transcriptText, input.language);
       await saveMinutes({
         meetingId: input.meetingId,
         recordingId: input.recordingId,
@@ -106,7 +108,7 @@ export async function processRecordingTask(input: {
       });
     }
   } else {
-    const minutesJson = buildStubMinutes(transcriptText);
+    const minutesJson = buildStubMinutes(transcriptText, input.language);
     await saveMinutes({
       meetingId: input.meetingId,
       recordingId: input.recordingId,

@@ -9,6 +9,7 @@ import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import {
   claimRecordingForProcessing,
   getMeetingById,
+  getOrgById,
   updateRecordingStatus,
 } from "@/src/lib/db/repo";
 import { hasGeminiApiKey } from "@/src/lib/gemini/client";
@@ -71,10 +72,12 @@ export async function POST(request: NextRequest) {
     }
 
     const mode: "stub" | "real" = hasKey ? "real" : "stub";
+    const org = await getOrgById(owner.orgId);
 
     void processRecordingTask({
       meetingId: body.meetingId,
       recordingId: body.recordingId,
+      language: org?.language,
     })
       .then(async () => {
         await updateRecordingStatus({

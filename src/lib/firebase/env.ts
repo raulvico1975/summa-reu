@@ -11,6 +11,7 @@ export const firebasePublicEnv = {
   appId:
     process.env.NEXT_PUBLIC_FIREBASE_APP_ID ??
     "1:311176921285:web:3905c8fcd66d1ac75cf0ac",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? undefined,
 };
 
 export const serverEnv = {

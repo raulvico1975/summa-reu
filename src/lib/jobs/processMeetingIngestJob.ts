@@ -1,6 +1,7 @@
 import { buildStubMinutes, buildStubTranscript } from "@/src/lib/minutes/stub";
 import {
   getMeetingById,
+  getOrgById,
   saveMinutes,
   saveTranscript,
   updateMeetingArtifacts,
@@ -116,6 +117,9 @@ export async function processMeetingIngestJob(input: {
   let selectedModel = getGeminiFallbackModel();
   selectedModel = await getGeminiModel();
 
+  const org = await getOrgById(meeting.orgId);
+  const orgLanguage = org?.language;
+
   const recording = await fetchRecording(recordingUrl);
   if (recording.bytes.length > MAX_INLINE_BYTES) {
     throw new Error("MEETING_INGEST_RECORDING_TOO_LARGE");
@@ -130,6 +134,7 @@ export async function processMeetingIngestJob(input: {
   const generated = await generateMinutesWithGemini({
     model: selectedModel,
     transcript: transcriptText,
+    language: orgLanguage,
   });
 
   await saveTranscript({

@@ -45,6 +45,7 @@ async function seedFirestore() {
   await db.collection("orgs").doc(orgId).set({
     name: "Fundació Demo",
     ownerUid,
+    language: "ca",
     createdAt: FieldValue.serverTimestamp(),
     subscriptionStatus: "active",
     plan: "basic",

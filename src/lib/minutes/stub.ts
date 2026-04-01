@@ -38,7 +38,7 @@ export function buildStubTranscript(input: {
   ].join("\n");
 }
 
-export function buildStubMinutes(transcript: string): MinutesJsonStrict {
+export function buildStubMinutes(transcript: string, language?: "ca" | "es"): MinutesJsonStrict {
   const lines = transcript
     .split("\n")
     .map((line) => line.trim())
@@ -53,7 +53,7 @@ export function buildStubMinutes(transcript: string): MinutesJsonStrict {
   );
 
   return {
-    language: "ca",
+    language: language ?? "ca",
     summary: "Revisió de punts operatius, acord de prioritats i assignació de seguiment.",
     attendees,
     agenda: [

@@ -10,6 +10,7 @@ export const esCore: I18nEsCore = {
     newPoll: "Nueva votación",
     login: "Acceso entidad",
     signup: "Dar de alta entidad",
+    settings: "Configuración",
     logout: "Cerrar sesión",
   },
   session: {
@@ -71,6 +72,9 @@ export const esCore: I18nEsCore = {
     paymentNote: "Pasarela de pago en preparación. Mañana conectamos la funcionalidad final.",
     orgName: "Nombre de la entidad",
     contactName: "Persona responsable",
+    language: "Idioma de las actas",
+    languageCa: "Catalán",
+    languageEs: "Castellano",
     email: "Correo de acceso",
     password: "Contraseña",
     submit: "Crear entidad",

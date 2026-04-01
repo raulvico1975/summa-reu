@@ -1019,11 +1019,12 @@ export async function startMeetingIngestRetry(input: {
   });
 }
 
-export async function createOrgForOwner(input: { ownerUid: string; name: string }): Promise<string> {
+export async function createOrgForOwner(input: { ownerUid: string; name: string; language?: "ca" | "es" }): Promise<string> {
   const ref = orgsCol.doc(input.ownerUid);
   await ref.create({
     name: input.name,
     ownerUid: input.ownerUid,
+    language: input.language ?? "ca",
     createdAt: FieldValue.serverTimestamp() as Timestamp,
     subscriptionStatus: "none",
     plan: "basic",

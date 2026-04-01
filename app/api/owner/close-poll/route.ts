@@ -9,6 +9,7 @@ import {
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
+import { notifyOwnerPollClosed } from "@/src/lib/notifications/poll-email";
 import { isTrustedSameOrigin } from "@/src/lib/security/request";
 
 export const runtime = "nodejs";
@@ -43,6 +44,14 @@ export async function POST(request: NextRequest) {
       winningOptionId: body.winningOptionId,
       createdBy: owner.uid,
     });
+
+    if (meeting.provisioningStatus === "usable" && meeting.meetingId) {
+      notifyOwnerPollClosed({
+        orgId: owner.orgId,
+        pollTitle: poll.title,
+        meetingId: meeting.meetingId,
+      }).catch(() => {});
+    }
 
     if (meeting.provisioningStatus !== "usable" || !meeting.meetingId) {
       const message =

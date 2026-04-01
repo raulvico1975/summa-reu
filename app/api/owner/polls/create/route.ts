@@ -9,6 +9,7 @@ import {
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
+import { notifyOwnerPollCreated } from "@/src/lib/notifications/poll-email";
 import { isTrustedSameOrigin } from "@/src/lib/security/request";
 
 export const runtime = "nodejs";
@@ -47,6 +48,12 @@ export async function POST(request: NextRequest) {
       timezone: body.timezone,
       optionsIso: validDates,
     });
+
+    notifyOwnerPollCreated({
+      orgId: owner.orgId,
+      pollTitle: body.title,
+      pollSlug: created.slug,
+    }).catch(() => {});
 
     return NextResponse.json(created);
   } catch (error) {

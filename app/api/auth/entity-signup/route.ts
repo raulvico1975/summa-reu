@@ -14,6 +14,7 @@ const bodySchema = z.object({
   contactName: z.string().trim().min(2).max(120),
   email: z.string().trim().email().max(200),
   password: z.string().min(8).max(120),
+  language: z.enum(["ca", "es"]).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
     await createOrgForOwner({
       ownerUid: created.uid,
       name: body.orgName,
+      language: body.language,
     });
 
     return NextResponse.json({ ok: true, uid: created.uid });

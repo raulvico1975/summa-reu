@@ -18,9 +18,12 @@ export type OperationErrorDoc = {
   at: number;
 };
 
+export type OrgLanguage = "ca" | "es";
+
 export type OrgDoc = {
   name: string;
   ownerUid: string;
+  language?: OrgLanguage;
   createdAt: Timestamp;
   subscriptionStatus?: OrgSubscriptionStatus;
   stripeCustomerId?: string | null;

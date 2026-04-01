@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/field";
+import { trackEvent } from "@/src/lib/analytics";
 import { useI18n } from "@/src/i18n/client";
 import { withLocalePath } from "@/src/i18n/routing";
 
@@ -78,6 +79,7 @@ export function VoteForm({ slug, options, disabled }: { slug: string; options: O
         window.localStorage.removeItem(legacyTokenKey);
       }
 
+      trackEvent("vote_submitted", { slug });
       setState({ loading: false, message: i18n.poll.savedVote });
     } catch (error) {
       setState({

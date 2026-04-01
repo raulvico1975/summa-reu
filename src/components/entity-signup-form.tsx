@@ -7,6 +7,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { clientAuth } from "@/src/lib/firebase/client";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/field";
+import { trackEvent } from "@/src/lib/analytics";
 import { useI18n } from "@/src/i18n/client";
 import { withLocalePath } from "@/src/i18n/routing";
 
@@ -20,6 +21,7 @@ export function EntitySignupForm() {
   const router = useRouter();
   const [orgName, setOrgName] = useState("");
   const [contactName, setContactName] = useState("");
+  const [language, setLanguage] = useState<"ca" | "es">(locale === "es" ? "es" : "ca");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [state, setState] = useState<State>({ loading: false });
@@ -35,6 +37,7 @@ export function EntitySignupForm() {
         body: JSON.stringify({
           orgName,
           contactName,
+          language,
           email,
           password,
         }),
@@ -58,6 +61,7 @@ export function EntitySignupForm() {
         throw new Error(i18n.errors.unauthorized);
       }
 
+      trackEvent("signup_completed");
       router.push(withLocalePath(locale, "/dashboard"));
       router.refresh();
     } catch (error) {
@@ -78,6 +82,18 @@ export function EntitySignupForm() {
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.signup.contactName}</label>
         <Input required value={contactName} onChange={(event) => setContactName(event.target.value)} />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700">{i18n.signup.language}</label>
+        <select
+          value={language}
+          onChange={(event) => setLanguage(event.target.value as "ca" | "es")}
+          className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        >
+          <option value="ca">{i18n.signup.languageCa}</option>
+          <option value="es">{i18n.signup.languageEs}</option>
+        </select>
       </div>
 
       <div>
