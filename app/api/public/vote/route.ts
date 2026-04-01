@@ -9,6 +9,7 @@ import {
 } from "@/src/lib/security";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
+import { notifyOwnerNewVote } from "@/src/lib/notifications/vote-email";
 import { getClientIp, isTrustedSameOrigin } from "@/src/lib/security/request";
 
 export const runtime = "nodejs";
@@ -64,6 +65,13 @@ export async function POST(request: NextRequest) {
       tokenHash,
       availabilityByOptionId: body.availabilityByOptionId,
     });
+
+    notifyOwnerNewVote({
+      orgId: poll.orgId,
+      pollTitle: poll.title,
+      pollSlug: poll.slug,
+      voterName: body.voterName,
+    }).catch(() => {});
 
     return NextResponse.json({ voterToken, voterId });
   } catch (error) {

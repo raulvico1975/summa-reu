@@ -38,3 +38,8 @@ env:
     secret: TELEGRAM_BOT_TOKEN
     availability:
       - RUNTIME
+
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+    availability:
+      - RUNTIME
