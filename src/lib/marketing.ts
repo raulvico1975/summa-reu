@@ -62,7 +62,7 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
     ],
     trustBand: [
       "Convocatòria, disponibilitat, reunió, gravació i acta en un sol flux",
-      "Actes amb IA preparades per revisar i exportar",
+      "La gravació es converteix en transcripció i acta revisable",
       "Arxiu consultable i ordenat",
       "Pensat per a juntes, patronats i equips de coordinació",
     ],
@@ -80,10 +80,10 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
     sectorsBody:
       "Associacions, fundacions, cooperatives i equips que volen gestionar convocatòries, disponibilitat, reunions, gravació i actes sense repartir-ho en eines diferents.",
     sectorsIntro: "Casos d'ús prioritaris",
-    landingSectionEyebrow: "Per on començar",
-    landingSectionTitle: "Explora Summa Reu per la part del procés que vols millorar primer.",
+    landingSectionEyebrow: "Mateix producte, tres entrades",
+    landingSectionTitle: "Pots entrar per la convocatòria, per la reunió o per l'acta, però el producte és un de sol.",
     landingSectionBody:
-      "Pots entrar per les convocatòries, per la gestió de juntes o pel tancament d'actes, però sempre és el mateix producte treballant de punta a punta.",
+      "Aquestes pàgines t'ajuden a veure Summa Reu des de la necessitat que tens avui, però totes desemboquen en el mateix recorregut: convocar, reunir-se, gravar i tancar l'acta.",
     finalEyebrow: "Summa Reu",
     finalTitle: "Menys eines separades. Més reunions ben tancades.",
     finalBody:
@@ -128,12 +128,12 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
           {
             title: "IA aplicada on aporta valor",
             body:
-              "No és IA ornamental. És IA orientada a reduir postreunió manual i accelerar el tancament documental.",
+              "No és IA ornamental. És IA orientada a reduir feina manual després de la reunió i accelerar el moment de tancar l'acta.",
           },
           {
             title: "Arxiu i exportació",
             body:
-              "Quan cal compartir l'acta o recuperar acords anteriors, tot queda dins del mateix espai i es pot exportar sense reconstruccions.",
+              "Quan cal compartir l'acta o recuperar acords anteriors, tot queda dins de Summa Reu i es pot exportar sense reconstruccions.",
           },
         ],
         proofTitle: "Què resol",
@@ -232,7 +232,7 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
           {
             title: "De la data a la reunió",
             body:
-              "La convocatòria no es perd. El flux continua fins a la sessió, la gravació i el tancament documental.",
+              "La convocatòria no es perd. El flux continua fins a la sessió, la gravació i el tancament de l'acta.",
           },
         ],
         proofTitle: "Què evita",
@@ -274,7 +274,7 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
             body: "Quan secretaria, presidència i coordinació comparteixen càrrega, un flux unit redueix desgast immediat.",
           },
           {
-            title: "Per a la memòria institucional",
+            title: "Per recuperar actes i acords",
             body:
               "Les actes, acords i exports queden accessibles quan toca justificar, recordar o recuperar decisions.",
           },
@@ -312,11 +312,11 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
           {
             title: "Més ordre en cada pas",
             body:
-              "Cada pas queda ordenat per reduir improvisació i donar més consistència al document final.",
+              "Cada pas queda ordenat per reduir improvisació i donar més consistència a l'acta final.",
           },
           {
             title: "Acta i arxiu",
-            body: "El valor és poder passar de reunió a document final sense afegir eines ni reconstruccions manuals.",
+            body: "El valor és poder passar de reunió a acta final sense afegir eines ni reconstruccions manuals.",
           },
           {
             title: "Per a presidència i secretaria",
@@ -347,7 +347,7 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
           "Plataforma per a cooperatives: convocatòries, disponibilitat, reunió, gravació i actes amb IA dins d'un únic flux.",
         introTitle: "Del consell rector a l'acta final sense perdre el fil.",
         introBody:
-          "Les cooperatives necessiten processos clars, acords ben recollits i menys fricció entre la convocatòria i el document final. Aquesta és exactament la funció de Summa Reu.",
+          "Les cooperatives necessiten processos clars, acords ben recollits i menys fricció entre la convocatòria i l'acta final. Aquesta és exactament la funció de Summa Reu.",
         bullets: [
           "Consell rector amb millor seguiment d'acords.",
           "Menys salt entre disponibilitat, reunió i arxiu.",
@@ -361,12 +361,12 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
           },
           {
             title: "Seguiment més clar",
-            body: "Acords, responsables i tancament documental queden més accessibles per a la sessió següent.",
+            body: "Acords, responsables i acta final queden més accessibles per a la sessió següent.",
           },
           {
             title: "Menys càrrega invisible",
             body:
-              "El temps que avui es perd en coordinació i reconstrucció del document final es redueix de manera tangible.",
+              "El temps que avui es perd en coordinació i reconstrucció de l'acta final es redueix de manera tangible.",
           },
         ],
         proofTitle: "Resultat pràctic",
@@ -389,7 +389,7 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
     ],
     trustBand: [
       "Convocatoria, disponibilidad, reunión, grabación y acta en un solo flujo",
-      "Actas con IA preparadas para revisar y exportar",
+      "La grabación se convierte en transcripción y acta revisable",
       "Archivo consultable y ordenado",
       "Pensado para juntas, patronatos y equipos de coordinación",
     ],
@@ -407,10 +407,10 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
     sectorsBody:
       "Asociaciones, fundaciones, cooperativas y equipos que quieren gestionar convocatorias, disponibilidad, reuniones, grabación y actas sin repartirlo en herramientas diferentes.",
     sectorsIntro: "Casos de uso prioritarios",
-    landingSectionEyebrow: "Por dónde empezar",
-    landingSectionTitle: "Explora Summa Reu por la parte del proceso que quieres mejorar primero.",
+    landingSectionEyebrow: "Mismo producto, tres entradas",
+    landingSectionTitle: "Puedes entrar por la convocatoria, por la reunión o por el acta, pero el producto es uno solo.",
     landingSectionBody:
-      "Puedes entrar por las convocatorias, por la gestión de juntas o por el cierre de actas, pero siempre es el mismo producto trabajando de punta a punta.",
+      "Estas páginas te ayudan a ver Summa Reu desde la necesidad que tienes hoy, pero todas desembocan en el mismo recorrido: convocar, reunirse, grabar y cerrar el acta.",
     finalEyebrow: "Summa Reu",
     finalTitle: "Menos herramientas separadas. Más reuniones bien cerradas.",
     finalBody:
@@ -455,12 +455,12 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
           {
             title: "IA aplicada donde aporta valor",
             body:
-              "No es IA ornamental. Es IA orientada a reducir postreunión manual y acelerar el cierre documental.",
+              "No es IA ornamental. Es IA orientada a reducir trabajo manual después de la reunión y acelerar el momento de cerrar el acta.",
           },
           {
             title: "Archivo y exportación",
             body:
-              "Cuando hace falta compartir el acta o recuperar acuerdos anteriores, todo queda en el mismo espacio y se puede exportar sin reconstrucciones.",
+              "Cuando hace falta compartir el acta o recuperar acuerdos anteriores, todo queda dentro de Summa Reu y se puede exportar sin reconstrucciones.",
           },
         ],
         proofTitle: "Qué resuelve",
@@ -559,7 +559,7 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
           {
             title: "De la fecha a la reunión",
             body:
-              "La convocatoria no se pierde. El flujo continúa hasta la sesión, la grabación y el cierre documental.",
+              "La convocatoria no se pierde. El flujo continúa hasta la sesión, la grabación y el cierre del acta.",
           },
         ],
         proofTitle: "Qué evita",
@@ -601,7 +601,7 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
             body: "Cuando secretaría, presidencia y coordinación comparten carga, un flujo unido reduce desgaste inmediato.",
           },
           {
-            title: "Para la memoria institucional",
+            title: "Para recuperar actas y acuerdos",
             body:
               "Las actas, acuerdos y exportaciones quedan accesibles cuando toca justificar, recordar o recuperar decisiones.",
           },
@@ -639,11 +639,11 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
           {
             title: "Más orden en cada paso",
             body:
-              "Cada paso queda ordenado para reducir improvisación y dar más consistencia al documento final.",
+              "Cada paso queda ordenado para reducir improvisación y dar más consistencia al acta final.",
           },
           {
             title: "Acta y archivo",
-            body: "El valor es poder pasar de reunión a documento final sin añadir herramientas ni reconstrucciones manuales.",
+            body: "El valor es poder pasar de reunión a acta final sin añadir herramientas ni reconstrucciones manuales.",
           },
           {
             title: "Para presidencia y secretaría",
@@ -674,7 +674,7 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
           "Plataforma para cooperativas: convocatorias, disponibilidad, reunión, grabación y actas con IA dentro de un único flujo.",
         introTitle: "Del consejo rector al acta final sin perder el hilo.",
         introBody:
-          "Las cooperativas necesitan procesos claros, acuerdos bien recogidos y menos fricción entre la convocatoria y el documento final. Esa es exactamente la función de Summa Reu.",
+          "Las cooperativas necesitan procesos claros, acuerdos bien recogidos y menos fricción entre la convocatoria y el acta final. Esa es exactamente la función de Summa Reu.",
         bullets: [
           "Consejo rector con mejor seguimiento de acuerdos.",
           "Menos salto entre disponibilidad, reunión y archivo.",
@@ -688,12 +688,12 @@ const marketingContent: Record<I18nLocale, MarketingLocaleContent> = {
           },
           {
             title: "Seguimiento más claro",
-            body: "Acuerdos, responsables y cierre documental quedan más accesibles para la sesión siguiente.",
+            body: "Acuerdos, responsables y acta final quedan más accesibles para la sesión siguiente.",
           },
           {
             title: "Menos carga invisible",
             body:
-              "El tiempo que hoy se pierde en coordinación y reconstrucción del documento final se reduce de forma tangible.",
+              "El tiempo que hoy se pierde en coordinación y reconstrucción del acta final se reduce de forma tangible.",
           },
         ],
         proofTitle: "Resultado práctico",

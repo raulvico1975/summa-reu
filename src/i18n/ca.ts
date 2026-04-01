@@ -37,19 +37,19 @@ export const ca = {
     badge: "Tot el procés de la reunió en una sola eina",
     title: "Convoca, celebra i tanca l'acta sense sortir de Summa Reu",
     subtitle:
-      "Crea la convocatòria, recull disponibilitat, grava la reunió i deixa l'acta preparada dins del mateix espai.",
+      "Crea la convocatòria, recull disponibilitat, obre la reunió, grava-la i deixa l'acta preparada dins de Summa Reu.",
     description:
       "Plataforma per convocar reunions, recollir disponibilitat, gravar la sessió i tancar l'acta en un únic flux.",
     heroNote: "Producte real, gravat en 4K i pensat per al web.",
     featurePollsTitle: "Convocatòries i votacions",
     featurePollsBody: "Proposa dates, comparteix l'enllaç i recull disponibilitat sense correus dispersos.",
     featureMeetingTitle: "Reunió i gravació",
-    featureMeetingBody: "Obre la sessió des de Summa Reu i deixa la gravació preparada sense canviar d'eina.",
+    featureMeetingBody: "Obre la reunió des de Summa Reu i deixa la gravació preparada sense canviar d'eina.",
     featureMinutesTitle: "Transcripció i acta",
     featureMinutesBody:
-      "La reunió es converteix en transcripció i esborrany d'acta perquè no hagis de començar de zero.",
+      "La gravació es converteix en transcripció i esborrany d'acta perquè no hagis de començar de zero.",
     featureArchiveTitle: "Arxiu i seguiment",
-    featureArchiveBody: "L'acta queda revisable, guardada i exportable al mateix espai.",
+    featureArchiveBody: "L'acta queda revisable, guardada i exportable dins de Summa Reu.",
     featurePrivacyTitle: "Tot queda al mateix espai",
     featurePrivacyBody: "Convocatòria, reunió, gravació i acta queden dins del mateix flux.",
     sectionTitle: "Tot el que necessites per portar una reunió de principi a final",
@@ -135,7 +135,7 @@ export const ca = {
     workflowStepTwoTitle: "Tria la millor data",
     workflowStepTwoBody: "Consulta els resultats, tanca la convocatòria i deixa la reunió preparada.",
     workflowStepThreeTitle: "Celebra i grava la reunió",
-    workflowStepThreeBody: "Obre la sessió des del mateix espai i deixa la gravació llesta per generar el resultat.",
+    workflowStepThreeBody: "Obre la sessió dins de Summa Reu i deixa la gravació llesta per generar la transcripció i l'acta.",
     workflowStepFourTitle: "Revisa i tanca l'acta",
     workflowStepFourBody: "Rep l'esborrany, valida'l, exporta'l i guarda'l per a la següent reunió.",
     useCasesEyebrow: "Per a qui està fet",
@@ -153,7 +153,7 @@ export const ca = {
     finalEyebrow: "Summa Reu",
     finalTitle: "Menys eines separades. Més reunions ben tancades.",
     finalBody:
-      "Si avui convoqueu en un lloc, us reuniu en un altre i tanqueu l'acta en un tercer, Summa Reu us ho uneix en un sol flux.",
+      "Si avui convoqueu en un lloc, us reuniu en un altre i tanqueu l'acta en un tercer, Summa Reu us ho uneix en una sola eina.",
     finalCta: "Activa l'espai de la teva entitat",
   },
   login: {

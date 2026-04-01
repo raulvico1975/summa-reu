@@ -228,8 +228,55 @@ export default async function HomePage() {
               </article>
             ))}
           </div>
+        </div>
+      </section>
 
-          <div className="mt-16 max-w-4xl space-y-4 border-t border-slate-200 pt-12">
+      <section className="relative bg-[#07111d] text-white">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(circle at 18% 18%, rgba(56,189,248,0.12), transparent 24%), radial-gradient(circle at 86% 12%, rgba(255,255,255,0.05), transparent 16%)",
+          }}
+        />
+        <div className="relative mx-auto max-w-[1280px] px-4 py-14 sm:px-6 lg:px-8 lg:py-18">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,0.84fr)_minmax(0,1.16fr)] lg:items-start lg:gap-12">
+            <div className="marketing-panel rounded-[32px] p-7 shadow-[0_30px_110px_rgba(2,8,23,0.22)] lg:sticky lg:top-24 lg:p-10">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200">
+                {i18n.home.workflowEyebrow}
+              </p>
+              <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-[-0.04em] text-white sm:text-[2.9rem] sm:leading-[1.02]">
+                {i18n.home.workflowTitle}
+              </h2>
+              <p className="mt-5 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
+                {i18n.home.workflowSubtitle}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {workflow.map((step) => (
+                <article
+                  key={step.step}
+                  className="grid gap-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_70px_rgba(2,8,23,0.22)] lg:grid-cols-[104px_minmax(0,1fr)] lg:items-start"
+                >
+                  <div className="border-b border-white/10 pb-4 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-5">
+                    <p className="text-sm font-semibold tracking-[0.28em] text-sky-200">{step.step}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-semibold tracking-[-0.03em] text-white">{step.title}</h3>
+                    <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">{step.body}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="relative bg-[#f4f6f8]">
+        <div className="mx-auto max-w-[1280px] px-4 py-14 sm:px-6 lg:px-8 lg:py-18">
+          <div className="max-w-4xl space-y-4">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700">
               {marketing.landingSectionEyebrow}
             </p>
@@ -289,49 +336,6 @@ export default async function HomePage() {
                 </div>
               </Link>
             ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="relative bg-[#07111d] text-white">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(circle at 18% 18%, rgba(56,189,248,0.12), transparent 24%), radial-gradient(circle at 86% 12%, rgba(255,255,255,0.05), transparent 16%)",
-          }}
-        />
-        <div className="relative mx-auto max-w-[1280px] px-4 py-14 sm:px-6 lg:px-8 lg:py-18">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,0.84fr)_minmax(0,1.16fr)] lg:items-start lg:gap-12">
-            <div className="marketing-panel rounded-[32px] p-7 shadow-[0_30px_110px_rgba(2,8,23,0.22)] lg:sticky lg:top-24 lg:p-10">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200">
-                {i18n.home.workflowEyebrow}
-              </p>
-              <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-[-0.04em] text-white sm:text-[2.9rem] sm:leading-[1.02]">
-                {i18n.home.workflowTitle}
-              </h2>
-              <p className="mt-5 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
-                {i18n.home.workflowSubtitle}
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              {workflow.map((step) => (
-                <article
-                  key={step.step}
-                  className="grid gap-5 rounded-[28px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_70px_rgba(2,8,23,0.22)] lg:grid-cols-[104px_minmax(0,1fr)] lg:items-start"
-                >
-                  <div className="border-b border-white/10 pb-4 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-5">
-                    <p className="text-sm font-semibold tracking-[0.28em] text-sky-200">{step.step}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-semibold tracking-[-0.03em] text-white">{step.title}</h3>
-                    <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">{step.body}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
           </div>
         </div>
       </section>

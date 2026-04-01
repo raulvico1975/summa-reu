@@ -37,19 +37,19 @@ export const esCore: I18nEsCore = {
     badge: "Todo el proceso de la reunión en una sola herramienta",
     title: "Convoca, celebra y cierra el acta sin salir de Summa Reu",
     subtitle:
-      "Crea la convocatoria, recoge disponibilidad, graba la reunión y deja el acta preparada dentro del mismo espacio.",
+      "Crea la convocatoria, recoge disponibilidad, abre la reunión, grábala y deja el acta preparada dentro de Summa Reu.",
     description:
       "Plataforma para convocar reuniones, recoger disponibilidad, grabar la sesión y cerrar el acta en un único flujo.",
     heroNote: "Producto real, grabado en 4K y pensado para la web.",
     featurePollsTitle: "Convocatorias y votaciones",
     featurePollsBody: "Propón fechas, comparte el enlace y recoge disponibilidad sin correos dispersos.",
     featureMeetingTitle: "Reunión y grabación",
-    featureMeetingBody: "Abre la sesión desde Summa Reu y deja la grabación preparada sin cambiar de herramienta.",
+    featureMeetingBody: "Abre la reunión desde Summa Reu y deja la grabación preparada sin cambiar de herramienta.",
     featureMinutesTitle: "Transcripción y acta",
     featureMinutesBody:
-      "La reunión se convierte en transcripción y borrador de acta para que no tengas que empezar desde cero.",
+      "La grabación se convierte en transcripción y borrador de acta para que no tengas que empezar desde cero.",
     featureArchiveTitle: "Archivo y seguimiento",
-    featureArchiveBody: "El acta queda revisable, guardada y exportable en el mismo espacio.",
+    featureArchiveBody: "El acta queda revisable, guardada y exportable dentro de Summa Reu.",
     featurePrivacyTitle: "Todo queda en el mismo espacio",
     featurePrivacyBody: "Convocatoria, reunión, grabación y acta quedan dentro del mismo flujo.",
     sectionTitle: "Todo lo que necesitas para llevar una reunión de principio a fin",
@@ -135,7 +135,7 @@ export const esCore: I18nEsCore = {
     workflowStepTwoTitle: "Elige la mejor fecha",
     workflowStepTwoBody: "Consulta los resultados, cierra la convocatoria y deja la reunión preparada.",
     workflowStepThreeTitle: "Celebra y graba la reunión",
-    workflowStepThreeBody: "Abre la sesión desde el mismo espacio y deja la grabación lista para generar el resultado.",
+    workflowStepThreeBody: "Abre la sesión dentro de Summa Reu y deja la grabación lista para generar la transcripción y el acta.",
     workflowStepFourTitle: "Revisa y cierra el acta",
     workflowStepFourBody: "Recibe el borrador, valídalo, expórtalo y guárdalo para la siguiente reunión.",
     useCasesEyebrow: "Para quién está hecho",
@@ -153,7 +153,7 @@ export const esCore: I18nEsCore = {
     finalEyebrow: "Summa Reu",
     finalTitle: "Menos herramientas separadas. Más reuniones bien cerradas.",
     finalBody:
-      "Si hoy convocáis en un sitio, os reunís en otro y cerráis el acta en un tercero, Summa Reu os lo une en un solo flujo.",
+      "Si hoy convocáis en un sitio, os reunís en otro y cerráis el acta en un tercero, Summa Reu os lo une en una sola herramienta.",
     finalCta: "Activa el espacio de tu entidad",
   },
   login: {
