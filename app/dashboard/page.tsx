@@ -59,16 +59,16 @@ export default async function DashboardPage() {
               </p>
               <div className="grid w-full grid-cols-2 gap-2 text-sm sm:flex sm:w-auto">
                 <Link
-                  href={withLocalePath(locale, `/polls/${poll.id}`)}
+                  href={withLocalePath(locale, `/p/${poll.slug}/results`)}
                   className="rounded-md bg-sky-500 px-3 py-2 text-center font-medium text-white transition-colors hover:bg-sky-600"
                 >
-                  {i18n.dashboard.manage}
+                  {i18n.dashboard.results}
                 </Link>
                 <Link
-                  href={withLocalePath(locale, `/p/${poll.slug}/results`)}
+                  href={withLocalePath(locale, `/polls/${poll.id}`)}
                   className="rounded-md border border-slate-300 px-3 py-2 text-center font-medium transition-colors hover:bg-slate-50"
                 >
-                  {i18n.dashboard.results}
+                  {i18n.dashboard.manage}
                 </Link>
               </div>
             </CardContent>
