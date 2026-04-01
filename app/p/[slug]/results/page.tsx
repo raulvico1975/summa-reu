@@ -38,6 +38,10 @@ export async function generateMetadata({
     path: `/p/${slug}/results`,
     title: poll ? `${i18n.poll.resultsTitlePrefix}: ${poll.title}` : i18n.poll.resultsTitlePrefix,
     description: i18n.poll.rankedOptions,
+    robots: {
+      index: false,
+      follow: false,
+    },
   });
 }
 

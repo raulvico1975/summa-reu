@@ -10,6 +10,7 @@ import { LogoutButton } from "@/src/components/logout-button";
 import { ErrorMonitor } from "@/src/components/error-monitor";
 import { BrandLogo } from "@/src/components/brand-logo";
 import { SessionIdleManager } from "@/src/components/session/session-idle-manager";
+import { getMarketingContent } from "@/src/lib/marketing";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -27,8 +28,19 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { locale, i18n } = await getRequestI18n();
   const owner = await getOwnerFromServerCookies();
-  const navLinkClasses =
-    "rounded-md px-3 py-2 text-center text-sm leading-tight transition-colors hover:bg-slate-100";
+  const marketing = getMarketingContent(locale);
+  const navLinkClasses = owner
+    ? "rounded-md px-3 py-2 text-center text-sm leading-tight transition-colors hover:bg-slate-100"
+    : "rounded-full px-4 py-2 text-center text-sm leading-tight text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950";
+  const headerClasses = owner
+    ? "border-b border-slate-200 bg-white"
+    : "border-b border-slate-200/80 bg-white/88 backdrop-blur supports-[backdrop-filter]:bg-white/76";
+  const mainClasses = owner
+    ? "mx-auto w-full max-w-4xl px-4 py-6 sm:py-8"
+    : "w-full";
+  const headerContainerClasses = owner
+    ? "mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-4"
+    : "mx-auto flex w-full max-w-[1280px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8";
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -38,8 +50,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       >
         <I18nProvider locale={locale} i18n={i18n}>
           <SessionIdleManager enabled={Boolean(owner)} />
-          <header className="border-b border-slate-200 bg-white">
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-4">
+          <header className={headerClasses}>
+            <div className={headerContainerClasses}>
               <Link
                 href={withLocalePath(locale, "/")}
                 className="w-fit shrink-0 text-lg font-semibold text-sky-600"
@@ -83,14 +95,23 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                   </>
                 ) : (
                   <>
+                    {marketing.headerLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        className={`${navLinkClasses} hidden md:inline-flex`}
+                        href={withLocalePath(locale, link.href)}
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
                     <Link
-                      className="flex-1 rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-medium leading-tight text-white transition-colors hover:bg-sky-700 sm:flex-none"
+                      className="flex-1 rounded-full px-4 py-2 text-center text-sm font-medium leading-tight text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 sm:flex-none"
                       href={withLocalePath(locale, "/login")}
                     >
                       {i18n.nav.login}
                     </Link>
                     <Link
-                      className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-center text-sm leading-tight transition-colors hover:bg-slate-100 sm:flex-none"
+                      className="flex-1 rounded-full bg-slate-950 px-4 py-2 text-center text-sm font-medium leading-tight text-white transition-colors hover:bg-slate-800 sm:flex-none"
                       href={withLocalePath(locale, "/signup")}
                     >
                       {i18n.nav.signup}
@@ -100,7 +121,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
               </nav>
             </div>
           </header>
-          <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:py-8">{children}</main>
+          <main className={mainClasses}>{children}</main>
           <ErrorMonitor />
         </I18nProvider>
       </body>

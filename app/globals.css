@@ -1,17 +1,111 @@
 @import "tailwindcss";
 
 :root {
-  --background: 0 0% 98%;
-  --foreground: 240 10% 10%;
+  --background: 216 33% 98%;
+  --foreground: 221 47% 11%;
   --primary: 199 89% 48%;
   --primary-soft: 199 89% 96%;
-  --border: 220 13% 91%;
+  --border: 214 32% 88%;
 }
 
 * {
   border-color: hsl(var(--border));
 }
 
+html {
+  scroll-behavior: smooth;
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.08), transparent 30%),
+    radial-gradient(circle at top right, rgba(15, 23, 42, 0.05), transparent 24%),
+    hsl(var(--background));
+}
+
 body {
-  font-family: var(--font-sans), Inter, system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  color: hsl(var(--foreground));
+  font-family: "Avenir Next", "Avenir", var(--font-sans), Inter, system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.06), transparent 34%),
+    radial-gradient(circle at 20% 20%, rgba(15, 23, 42, 0.04), transparent 16%),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(241, 245, 249, 1));
+  color-scheme: light;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(56, 189, 248, 0.24);
+  color: rgb(15, 23, 42);
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 16s ease-in-out infinite;
+}
+
+.animate-fade-rise {
+  animation: fade-rise 0.8s ease both;
+}
+
+.marketing-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.marketing-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent 86%);
+}
+
+.marketing-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  backdrop-filter: blur(18px);
+}
+
+.marketing-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.marketing-sheen::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.16) 50%, transparent 65%);
+  opacity: 0.35;
+  transform: translateX(-55%);
+  animation: float-slow 18s ease-in-out infinite;
 }

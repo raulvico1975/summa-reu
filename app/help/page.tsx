@@ -1,7 +1,25 @@
+import type { Metadata } from "next";
 import { getRequestI18n } from "@/src/i18n/server";
 import { Card, CardContent, CardHeader } from "@/src/components/ui/card";
+import { localizedPublicMetadata } from "@/src/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { locale } = await getRequestI18n();
+  const title = locale === "es" ? "Ayuda | Summa Reu" : "Ajuda | Summa Reu";
+  const description =
+    locale === "es"
+      ? "Manual y preguntas frecuentes de Summa Reu para convocatorias, reuniones y actas."
+      : "Manual i preguntes freqüents de Summa Reu per a convocatòries, reunions i actes.";
+
+  return localizedPublicMetadata({
+    locale,
+    path: "/help",
+    title,
+    description,
+  });
+}
 
 export default async function HelpPage() {
   const { i18n } = await getRequestI18n();

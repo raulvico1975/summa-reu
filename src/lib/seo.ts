@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { I18nLocale } from "@/src/i18n/config";
 import { withLocalePath } from "@/src/i18n/routing";
 
-function absoluteBaseUrl(): string {
+export function absoluteBaseUrl(): string {
   const configured =
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_CANONICAL_URL ??
@@ -12,11 +12,16 @@ function absoluteBaseUrl(): string {
   return configured.replace(/\/+$/, "");
 }
 
+export function buildAbsolutePublicUrl(locale: I18nLocale, path: string): string {
+  return `${absoluteBaseUrl()}${withLocalePath(locale, path)}`;
+}
+
 export function localizedPublicMetadata(input: {
   locale: I18nLocale;
   path: string;
   title?: string;
   description?: string;
+  robots?: Metadata["robots"];
 }): Metadata {
   const base = absoluteBaseUrl();
   const canonicalPath = withLocalePath(input.locale, input.path);
@@ -50,5 +55,6 @@ export function localizedPublicMetadata(input: {
       title,
       description,
     },
+    robots: input.robots,
   };
 }
