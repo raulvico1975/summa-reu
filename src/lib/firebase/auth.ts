@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { adminAuth, adminDb } from "@/src/lib/firebase/admin";
 import type { OrgDoc, OrgPlan, OrgSubscriptionStatus } from "@/src/lib/db/types";
@@ -13,6 +13,10 @@ function getSessionCookieValue(
   }
 ): string | undefined {
   return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? cookieStore.get(DEMO_SESSION_COOKIE_NAME)?.value;
+}
+
+function isLocalHost(host: string): boolean {
+  return host.startsWith("127.0.0.1") || host.startsWith("localhost");
 }
 
 export type OwnerContext = {
@@ -70,7 +74,13 @@ export async function getSessionUidFromRequest(request: NextRequest): Promise<st
     return null;
   }
 
-  const demoUid = getDemoSessionUid(sessionCookie);
+  const host =
+    request.headers.get("x-forwarded-host")?.toLowerCase() ??
+    request.headers.get("host")?.toLowerCase() ??
+    "";
+  const demoUid = getDemoSessionUid(sessionCookie, {
+    allowProductionDemo: isLocalHost(host) || process.env.DEMO_SESSION_ALLOW_PRODUCTION === "true",
+  });
   if (demoUid) {
     return demoUid;
   }
@@ -99,7 +109,14 @@ export async function getOwnerFromServerCookies(): Promise<OwnerContext | null> 
     return null;
   }
 
-  const demoUid = getDemoSessionUid(sessionCookie);
+  const requestHeaders = await headers();
+  const host =
+    requestHeaders.get("x-forwarded-host")?.toLowerCase() ??
+    requestHeaders.get("host")?.toLowerCase() ??
+    "";
+  const demoUid = getDemoSessionUid(sessionCookie, {
+    allowProductionDemo: isLocalHost(host) || process.env.DEMO_SESSION_ALLOW_PRODUCTION === "true",
+  });
   if (demoUid) {
     return resolveOwnerContext(demoUid);
   }
