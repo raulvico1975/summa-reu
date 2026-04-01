@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 import { adminAuth, adminDb } from "@/src/lib/firebase/admin";
 import type { OrgDoc, OrgPlan, OrgSubscriptionStatus } from "@/src/lib/db/types";
+import { getDemoSessionUid } from "@/src/lib/firebase/demo-session";
 
 export const SESSION_COOKIE_NAME = "__session";
 
@@ -60,6 +61,11 @@ export async function getSessionUidFromRequest(request: NextRequest): Promise<st
     return null;
   }
 
+  const demoUid = getDemoSessionUid(sessionCookie);
+  if (demoUid) {
+    return demoUid;
+  }
+
   try {
     const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
     return decoded.uid;
@@ -82,6 +88,11 @@ export async function getOwnerFromServerCookies(): Promise<OwnerContext | null> 
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionCookie) {
     return null;
+  }
+
+  const demoUid = getDemoSessionUid(sessionCookie);
+  if (demoUid) {
+    return resolveOwnerContext(demoUid);
   }
 
   try {
