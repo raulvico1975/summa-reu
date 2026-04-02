@@ -4,6 +4,7 @@
   { "q": "¿qué tengo que hacer cada mes?", "expectedCardId": "guide-monthly-flow" },
   { "q": "¿cómo importo el extracto del banco?", "expectedCardId": "guide-import-movements" },
   { "q": "¿cómo cargo el extracto del banco en Summa?", "expectedCardId": "guide-import-movements" },
+  { "q": "como importar movimientos bancarios?", "expectedCardId": "guide-import-movements" },
   { "q": "¿cómo importo donantes desde un Excel?", "expectedCardId": "guide-import-donors" },
   { "q": "¿cómo actualizo los datos de un socio?", "expectedCardId": "howto-donor-update-details" },
   { "q": "¿cómo doy de baja a un socio?", "expectedCardId": "guide-donor-inactive" },

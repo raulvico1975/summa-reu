@@ -70,13 +70,18 @@ function buildRawAnswer(card: KBCard, kbLang: KbLang): string {
     return loadGuideContent(card.guideId, kbLang)
   }
 
+  const inlineAnswer = card.answer?.[kbLang] ?? card.answer?.ca ?? card.answer?.es ?? ''
+  if (inlineAnswer.trim()) {
+    return inlineAnswer
+  }
+
   if (card.id.startsWith('guide-')) {
     return kbLang === 'es'
       ? 'No he encontrado un contenido operativo válido para esta consulta. Revisa la ayuda contextual o el manual.'
       : 'No he trobat un contingut operatiu vàlid per a aquesta consulta. Revisa l’ajuda contextual o el manual.'
   }
 
-  return card.answer?.[kbLang] ?? card.answer?.ca ?? card.answer?.es ?? ''
+  return ''
 }
 
 export function toEngineCard(card: KBCard, rawAnswer: string): EngineCard {

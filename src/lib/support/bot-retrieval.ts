@@ -1037,8 +1037,8 @@ function findGenericFallback(cards: KBCard[]): KBCard | null {
 
 function isRetrievableCard(card: KBCard): boolean {
   if (card.type === 'fallback') return false
-  // Safety: ignore corrupted guide cards (import mistakes).
-  if (card.id.startsWith('guide-') && !card.guideId) return false
+  // Safety: ignore only guide cards that truly have no renderable content.
+  if (card.id.startsWith('guide-') && !card.guideId && !card.answer?.ca && !card.answer?.es) return false
   return true
 }
 

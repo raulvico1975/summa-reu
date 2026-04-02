@@ -125,13 +125,10 @@ export function validateKbCards(cards: KBCard[]): ValidationResult {
       }
     }
 
-    // Reliability rule: guide cards must stay linked to real guides.
+    // Reliability rule: guide cards must stay renderable, either through guideId or inline answer.
     if (card.id.startsWith('guide-')) {
-      if (!hasGuide) {
-        errors.push(`${cardLabel}: guide-* cards must define guideId`)
-      }
-      if (hasAnswer) {
-        errors.push(`${cardLabel}: guide-* cards must not define answer text (use guideId content)`)
+      if (!hasGuide && !hasAnswer) {
+        errors.push(`${cardLabel}: guide-* cards must define guideId or inline answer text`)
       }
     }
 

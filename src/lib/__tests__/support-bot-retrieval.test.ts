@@ -136,6 +136,12 @@ test('retrieveCard resolves natural-language bank statement import phrasing', ()
   assert.equal(es.confidence, 'high')
 })
 
+test('retrieveCard keeps inline guide import cards eligible for broader banking phrasing', () => {
+  const result = retrieveCard('como importar movimientos bancarios?', 'es', cards)
+  assert.equal(result.card.id, 'guide-import-movements')
+  assert.equal(result.mode, 'card')
+})
+
 test('retrieveCard resolves natural-language duplicate import phrasing', () => {
   const ca = retrieveCard('no vull tornar a importar els mateixos moviments del banc', 'ca', cards)
   assert.equal(ca.card.id, 'howto-import-safe-duplicates')

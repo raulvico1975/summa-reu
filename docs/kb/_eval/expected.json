@@ -4,6 +4,7 @@
   { "q": "què he de fer cada mes?", "expectedCardId": "guide-monthly-flow" },
   { "q": "com importo l'extracte del banc?", "expectedCardId": "guide-import-movements" },
   { "q": "com carrego l'extracte del banc a summa?", "expectedCardId": "guide-import-movements" },
+  { "q": "com importo moviments bancaris?", "expectedCardId": "guide-import-movements" },
   { "q": "com importo donants des d'un Excel?", "expectedCardId": "guide-import-donors" },
   { "q": "com actualitzo les dades d'un soci?", "expectedCardId": "howto-donor-update-details" },
   { "q": "com dono de baixa un soci?", "expectedCardId": "guide-donor-inactive" },

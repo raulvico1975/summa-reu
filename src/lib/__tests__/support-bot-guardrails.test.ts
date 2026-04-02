@@ -112,6 +112,25 @@ test('renderer keeps all operational steps for trusted project-open card in ES',
   assert.match(rendered.answer, /\n3\.\s+Haz clic en el proyecto/)
 })
 
+test('renderer serves inline guide answers for guide cards without guideId', async () => {
+  const card = cards.find(item => item.id === 'guide-split-remittance')
+  assert.ok(card, 'guide-split-remittance card must exist in KB')
+
+  const rendered = await renderAnswer({
+    message: 'com dividir una remesa?',
+    kbLang: 'ca',
+    card,
+    mode: 'card',
+    intentType: 'operational',
+    assistantTone: 'neutral',
+    allowAiReformat: false,
+  })
+
+  assert.equal(rendered.trustedOperationalCard, true)
+  assert.match(rendered.answer, /\n1\.\s+Ves a Moviments i obre el detall de la remesa\./)
+  assert.doesNotMatch(rendered.answer, /contingut operatiu v[aà]lid/i)
+})
+
 test('orchestrator falls back on specific-case operational queries', async () => {
   const result = await orchestrator({
     message: 'aquesta remesa no em quadra',
