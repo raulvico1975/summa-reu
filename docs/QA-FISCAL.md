@@ -18,6 +18,23 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-04-02 — Summa IA assignant categories
+
+**Context:**
+Millora visual del flux massiu de categorització a `Moviments`: nova modal de progrés centrada, amb protagonisme per `Summa IA`, estat de procés més clar i pista visual discreta de categories en curs. No canvia el motor de classificació, ni els criteris fiscals, ni el persistit de categories.
+
+**Comprovacions aplicades:**
+1. Revisió manual al demo `movimientos` amb moviments pendents reals per validar que el botó `Suggerir categories` activa la nova modal i que el procés es pot iniciar sense errors.
+2. Verificació visual del contingut de la modal: titular de `Summa IA`, barra de progrés, estat actual i pista inferior de categories sense overflow en desktop.
+3. Revisió del hook `useTransactionCategorization` per confirmar que només exposa estat de progrés addicional i no altera la lògica de selecció, guardat o fallback a `Revisar`.
+4. Verificació tècnica amb `npm run typecheck`, `npm run build`, `npm run acabat` i `npm run integra`.
+
+**Resultat:**
+- [x] El canvi és d'UX/visibilitat del procés i no altera càlculs fiscals ni assignacions comptables.
+- [x] La categorització continua aplicant les mateixes regles i persistint les mateixes categories que abans.
+- [x] La modal nova apareix només quan hi ha moviments pendents i no interfereix amb el flux de moviments ja classificats.
+- [x] La guardrail fiscal queda coberta amb evidència manual i validació tècnica del flux afectat.
+
 ### Registre manual 2026-04-02 — Mapping d'importacio bancaria i compactacio visual de moviments
 
 **Context:**
