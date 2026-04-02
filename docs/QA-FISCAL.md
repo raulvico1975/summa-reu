@@ -18,6 +18,24 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-04-02 — Modal de donants desktop + i18n local
+
+**Context:**
+Millora visual de la modal de creacio/edicio de donants per desktop, amb amplada responsive mes generosa, reagrupacio en seccions amples i neteja local d'i18n per evitar barreja de textos en catala dins la modal quan l'idioma actiu es `es` o `fr`.
+
+**Comprovacions aplicades:**
+1. Revisio visual de la modal de nou donant en desktop, comprovant amplada, camps visibles i absencia d'overflow horitzontal.
+2. Revisio visual de la mateixa modal en mobil, mantenint una sola columna i sense regressio de scroll.
+3. Revisio manual de la modal en `ca`, `es`, `fr` i `pt` per validar títols, ajudes i placeholders nous.
+4. Verificacio tecnica amb `npm run typecheck`, `npm run i18n:check` i `npm run i18n:check-tr-keys`.
+5. Verificacio predeploy amb `scripts/verify-local.sh` i `scripts/verify-ci.sh` executats amb les variables publiques de build carregades des d'`apphosting.yaml`.
+
+**Resultat:**
+- [x] En desktop, la modal aprofita millor l'espai i els camps principals ja no queden tallats ni massa estrets.
+- [x] En mobil, el layout continua en una sola columna i sense overflow horitzontal.
+- [x] Els textos nous de la modal no mostren claus crues ni fallback inline en catala quan l'idioma actiu es `es` o `fr`.
+- [x] El canvi es limita a layout/i18n local de la modal i no altera guardat, model de dades ni calculs fiscals.
+
 ### Registre manual 2026-03-30 — Moviments badges suaus
 
 **Context:**
