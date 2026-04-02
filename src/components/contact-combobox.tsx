@@ -123,7 +123,7 @@ export const ContactCombobox = React.memo(function ContactCombobox({
         {selectedContact ? (
           <Button
             variant="ghost"
-            className="h-auto p-0 text-left font-normal flex items-center gap-1"
+            className="flex h-auto w-full min-w-0 items-center gap-1 overflow-hidden p-0 text-left font-normal"
             disabled={disabled}
           >
             {selectedContact.type === 'donor' ? (
@@ -134,16 +134,21 @@ export const ContactCombobox = React.memo(function ContactCombobox({
               <Building2 className="h-3 w-3 text-blue-500 shrink-0" />
             )}
             <SummaTooltip content={selectedContact.name}>
-              <span className="text-[13px] max-w-[220px]">
+              <span className="min-w-0 flex-1 truncate text-[13px]">
                 {middleEllipsis(selectedContact.name)}
               </span>
             </SummaTooltip>
-            <ChevronsUpDown className="h-3 w-3 text-muted-foreground ml-1" />
+            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 text-muted-foreground" />
           </Button>
         ) : (
-          <Button variant="ghost" size="sm" className="text-muted-foreground text-[13px]" disabled={disabled}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            {placeholderText}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex w-full min-w-0 items-center justify-start overflow-hidden px-0 text-[13px] text-muted-foreground"
+            disabled={disabled}
+          >
+            <UserPlus className="mr-2 h-4 w-4 shrink-0" />
+            <span className="truncate">{placeholderText}</span>
           </Button>
         )}
       </PopoverTrigger>

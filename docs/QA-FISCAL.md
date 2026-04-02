@@ -18,6 +18,24 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-04-02 — Mapping d'importacio bancaria i compactacio visual de moviments
+
+**Context:**
+Ajust visual del llistat de Moviments i de la modal `Configuración del mapeo` de l'importador d'extractes bancaris. El canvi compacta badges i files, eixampla la modal de mapping en desktop, redistribueix `Mapeo de campos` vs `Previsualización`, i fa la previsualitzacio mes llegible sense alterar el processament ni els calculs.
+
+**Comprovacions aplicades:**
+1. Revisio visual a `demo/dashboard/movimientos` per validar que `DEF`, `COM`, `Stripe` i remeses processades no incrementen l'alçada de les files de manera inconsistent.
+2. Revisio visual del contacte i de la icona de document a la taula de moviments per comprovar que no hi ha solapaments ni regressions de lectura.
+3. Revisio manual del flux `Importar extracte bancari -> seleccionar compte -> Configuración del mapeo` en desktop, verificant amplada real de la modal, panell esquerre mes contingut i previsualitzacio amb mes espai util.
+4. Verificacio de la previsualitzacio del mapping: dates i imports compactes, concepte truncat amb el text complet al `hover`, i scroll horitzontal disponible des de la part superior.
+5. Verificacio tecnica amb `npm run typecheck -- --pretty false` i checks automatics del pre-commit (`npm test`, `docs:check`, validacions d'i18n).
+
+**Resultat:**
+- [x] El canvi és UI-only i no altera importacions, remeses, devolucions, saldos ni càlculs fiscals.
+- [x] La modal de mapping en desktop guanya espai real de previsualitzacio i redueix la necessitat de scroll horitzontal.
+- [x] La taula de moviments manté una alçada de fila mes homogènia i una lectura mes neta.
+- [x] La guardrail fiscal queda coberta amb evidència manual del flux afectat.
+
 ### Registre manual 2026-04-02 — Modal de donants desktop + i18n local
 
 **Context:**

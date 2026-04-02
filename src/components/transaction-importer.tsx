@@ -961,7 +961,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         setIsAccountDialogOpen(open);
         if (!open) setPendingFile(null);
       }}>
-        <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:w-[min(96vw,56rem)] sm:max-w-4xl">
           <DialogHeader className="border-b px-4 py-5 pr-10 sm:px-6">
             <DialogTitle>{t.settings.bankAccounts.selectAccount}</DialogTitle>
             <DialogDescription>
@@ -1097,7 +1097,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           if (!open) handleMappingCancel();
         }}
       >
-        <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[min(96vw,72rem)] max-w-5xl flex-col overflow-hidden p-0">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] !w-[min(99vw,104rem)] !max-w-[104rem] flex-col overflow-hidden p-0 sm:!w-[min(98vw,104rem)]">
           {mappingState && (
             <RemittanceStyleMappingStep
               fields={[
