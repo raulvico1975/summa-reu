@@ -2762,7 +2762,7 @@ export function TransactionsTable({
                     {t.movements.table.project}
                   </TableHead>
                 )}
-                <TableHead className="w-7 shrink-0 py-3 text-center"><span className="sr-only">Document</span></TableHead>
+                <TableHead className="w-10 shrink-0 py-3 text-center"><span className="sr-only">Document</span></TableHead>
                 <TableHead className="w-9 shrink-0 py-3 pr-2 text-right"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
               </TableRow>
             </TableHeader>

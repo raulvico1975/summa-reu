@@ -48,10 +48,8 @@ import {
   Link,
   AlertTriangle,
   Undo2,
-  Ban,
   Eye,
   AlertCircle,
-  CheckCircle2,
   CreditCard,
   MessageSquare,
   Mail,
@@ -69,6 +67,7 @@ import {
 import {
   type StripeImputationSummary,
 } from '@/lib/stripe/activeStripeImputation';
+import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
 // =============================================================================
 // HELPERS
@@ -266,9 +265,9 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
   const subtleReturnBadgeClassName =
-    'gap-1 rounded-full border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700 shadow-none hover:bg-red-50';
+    'h-5 shrink-0 rounded-full border-red-200 bg-red-50 px-1.5 py-0 text-[10px] font-medium leading-none text-red-700 shadow-none hover:bg-red-50';
   const subtleCommissionBadgeClassName =
-    'gap-1 rounded-full border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700 shadow-none hover:bg-orange-50';
+    'h-5 shrink-0 rounded-full border-orange-200 bg-orange-50 px-1.5 py-0 text-[10px] font-medium leading-none text-orange-700 shadow-none hover:bg-orange-50';
   const canManageReturn =
     tx.amount < 0 &&
     !tx.isRemittance &&
@@ -491,7 +490,6 @@ export const TransactionRow = React.memo(function TransactionRow({
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge variant="outline" className={subtleReturnBadgeClassName}>
-              <Undo2 className="h-3 w-3" />
               {t.returnBadgeShort}
             </Badge>
           </TooltipTrigger>
@@ -506,7 +504,6 @@ export const TransactionRow = React.memo(function TransactionRow({
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge variant="outline" className={subtleCommissionBadgeClassName}>
-              <Ban className="h-3 w-3" />
               {t.commissionBadgeShort}
             </Badge>
           </TooltipTrigger>
@@ -592,75 +589,77 @@ export const TransactionRow = React.memo(function TransactionRow({
 
       {/* Concept + Note + Badge + Mobile summary */}
       <TableCell className="min-w-0 py-3.5">
-        <div className="space-y-1.5">
-          <div className="flex items-start gap-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
             <p
               className={`min-w-0 max-w-[320px] truncate text-[13px] leading-5 ${isReturnedDonation ? 'text-gray-400' : ''}`}
               title={tx.description}
             >
               {tx.description}
             </p>
-            {(hasStripeImputation || (showStripeBadge && !hasStripeImputation)) && (
-              <div className="flex shrink-0 items-center gap-1">
-                {hasStripeImputation && onOpenStripeImputationDetail && (
-                  <Badge
-                    variant="outline"
-                    className="cursor-pointer rounded-full border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700 hover:bg-blue-100"
-                    onClick={handleOpenStripeDetail}
-                  >
-                    {t.stripeImputed || 'Stripe imputat'}
-                  </Badge>
-                )}
-                {showStripeBadge && !hasStripeImputation && (
-                  <Badge variant="outline" className="h-5 rounded-full border-blue-200 bg-blue-50 px-1.5 py-0 text-[10px] text-blue-700">
-                    Stripe
-                  </Badge>
-                )}
-              </div>
-            )}
+            <div className="flex shrink-0 items-center gap-1">
+              {tx.isRemittance && tx.remittanceStatus !== 'partial' && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className={`h-5 rounded-full px-1.5 py-0 text-[10px] leading-none cursor-pointer ${
+                        isProcessedDonationRemittance
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                          : 'hover:bg-accent'
+                      }`}
+                      onClick={handleViewRemittanceDetail}
+                    >
+                      {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount} {t.remittanceQuotes}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t.viewRemittanceDetail}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {(hasStripeImputation || (showStripeBadge && !hasStripeImputation)) && (
+                <>
+                  {hasStripeImputation && onOpenStripeImputationDetail && (
+                    <Badge
+                      variant="outline"
+                      className="cursor-pointer rounded-full border-blue-200 bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700 hover:bg-blue-100"
+                      onClick={handleOpenStripeDetail}
+                    >
+                      {t.stripeImputed || 'Stripe imputat'}
+                    </Badge>
+                  )}
+                  {showStripeBadge && !hasStripeImputation && (
+                    <Badge variant="outline" className="h-5 rounded-full border-blue-200 bg-blue-50 px-1.5 py-0 text-[10px] text-blue-700">
+                      Stripe
+                    </Badge>
+                  )}
+                </>
+              )}
+              {renderTransactionTypeBadge()}
+            </div>
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap">
-            {renderTransactionTypeBadge()}
-            {tx.isRemittance && (
+            {tx.isRemittance && tx.remittanceStatus === 'partial' && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge
                     variant="outline"
-                    className={`gap-1 rounded-full px-1.5 py-0.5 text-[10px] cursor-pointer hover:bg-accent ${
-                      tx.remittanceStatus === 'partial'
-                        ? 'border-orange-200 text-orange-700 bg-orange-50'
-                        : isProcessedDonationRemittance
-                        ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
-                        : ''
-                    }`}
+                    className="h-5 gap-0.5 rounded-full border-orange-200 bg-orange-50 px-1.5 py-0 text-[10px] leading-none text-orange-700 cursor-pointer hover:bg-orange-100"
                     onClick={handleViewRemittanceDetail}
                   >
-                    {tx.remittanceStatus === 'partial' ? (
-                      <AlertCircle className="h-3 w-3 text-orange-600" />
-                    ) : isProcessedDonationRemittance ? (
-                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                    ) : (
-                      <Eye className="h-3 w-3" />
-                    )}
-                    {isProcessedDonationRemittance && tx.remittanceStatus !== 'partial' && (
-                      <span className="font-medium">{t.remittanceProcessedLabel}</span>
-                    )}
-                    <span className={isProcessedDonationRemittance && tx.remittanceStatus !== 'partial' ? 'text-emerald-600/70' : ''}>
+                    <AlertCircle className="h-3 w-3 text-orange-600" />
+                    <span>
                       {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount}
-                      {tx.remittanceStatus === 'partial' && tx.remittancePendingCount ? (
-                        <span className="text-orange-600 ml-1">({tx.remittancePendingCount} pend.)</span>
-                      ) : (
-                        <span> {t.remittanceQuotes}</span>
-                      )}
                     </span>
+                    {tx.remittancePendingCount ? (
+                      <span className="text-orange-600">({tx.remittancePendingCount} pend.)</span>
+                    ) : null}
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {tx.remittanceStatus === 'partial'
-                    ? `Remesa parcial: ${tx.remittancePendingCount} pendents (${formatCurrencyEU(tx.remittancePendingTotalAmount || 0)})`
-                    : t.viewRemittanceDetail
-                  }
+                  {`Remesa parcial: ${tx.remittancePendingCount} pendents (${formatCurrencyEU(tx.remittancePendingTotalAmount || 0)})`}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -694,7 +693,7 @@ export const TransactionRow = React.memo(function TransactionRow({
           </div>
 
           {/* Nota: només text, edició via menú ⋮ */}
-          {tx.note && (
+          {tx.note && !isDemoEnv() && (
             <p className="mt-0.5 max-w-[320px] truncate text-xs leading-5 text-muted-foreground" title={tx.note}>
               {tx.note}
             </p>
@@ -880,7 +879,7 @@ export const TransactionRow = React.memo(function TransactionRow({
               variant="ghost"
               role="combobox"
               disabled={isCategoryLoading || isContactLoading}
-              className={`justify-start rounded-full border border-border bg-muted/30 px-2 py-0.5 text-xs font-medium h-6 min-w-0 w-auto gap-0.5 text-foreground/90 hover:bg-muted/50 ${isReturnedDonation ? 'opacity-50' : ''}`}
+              className={`h-6 w-full min-w-0 justify-start rounded-full border border-border bg-muted/30 px-2 py-0.5 text-xs font-medium gap-0.5 text-foreground/90 hover:bg-muted/50 ${isReturnedDonation ? 'opacity-50' : ''}`}
             >
               {isCategoryLoading ? (
                 <span className="flex items-center gap-1">
@@ -888,7 +887,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                   <span>{t.categorize}...</span>
                 </span>
               ) : (
-                <span className="truncate max-w-[140px] flex items-center gap-1">
+                <span className="flex min-w-0 flex-1 items-center gap-1 truncate">
                   {tx.category ? getCategoryDisplayName(tx.category) : t.uncategorized}
                   {isLegacyCategory && <span className="text-[10px] text-amber-600" title={t.legacyCategory ?? 'Cal recategoritzar'}>⚠</span>}
                 </span>
@@ -961,10 +960,10 @@ export const TransactionRow = React.memo(function TransactionRow({
       )}
 
       {/* Document column - always visible */}
-      <TableCell className="w-7 shrink-0 py-3.5 text-center align-top">
+      <TableCell className="w-10 shrink-0 py-3.5 text-center align-top">
         <div className="flex items-center justify-center">
           {isDocumentLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           ) : hasDocument ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -972,10 +971,10 @@ export const TransactionRow = React.memo(function TransactionRow({
                   href={tx.document!}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-muted/40"
                   aria-label={t.viewDocument}
                 >
-                  <FileText className="h-4 w-4 fill-current text-muted-foreground" />
+                  <FileText className="h-[18px] w-[18px] fill-current text-foreground/80" />
                 </a>
               </TooltipTrigger>
               <TooltipContent>{t.viewDocument}</TooltipContent>
@@ -985,10 +984,10 @@ export const TransactionRow = React.memo(function TransactionRow({
               <TooltipTrigger asChild>
                 <button
                   onClick={handleAttachDocument}
-                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-muted/35"
                   aria-label={isExpense ? t.attachProof : t.attachDocument}
                 >
-                  <FileText className="h-4 w-4 text-muted-foreground/40" />
+                  <FileText className="h-[18px] w-[18px] text-foreground/65" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>

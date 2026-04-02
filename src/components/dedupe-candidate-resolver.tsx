@@ -165,7 +165,7 @@ export function DedupeCandidateResolver({
         onCancel();
       }
     }}>
-      <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[min(96vw,72rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0">
+      <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[min(96vw,84rem)] max-w-7xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b px-4 pb-4 pt-5 pr-10 sm:px-6 sm:pt-6">
           <DialogTitle>
             {tr('importers.transaction.preImportSummaryTitle', 'Resum pre-importació')}
