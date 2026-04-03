@@ -930,7 +930,7 @@ export default function ProjectBudgetPage() {
   const allowedDeviation = project.allowedDeviationPct ?? 10;
 
   return (
-    <div className="space-y-6 pb-24 md:pb-0">
+    <div className="w-full space-y-6 pb-24 md:pb-0">
       {/* Header */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -1278,7 +1278,7 @@ export default function ProjectBudgetPage() {
         </div>
         {fxTransfers.length > 0 && (
           <div className="rounded-lg border">
-            <Table>
+            <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs">{tr('projectModule.budget.fxTransfersDate')}</TableHead>
@@ -1597,7 +1597,7 @@ export default function ProjectBudgetPage() {
               })}
             </div>
           ) : (
-            <Table>
+            <Table className="w-full table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[60px]">{tr('projectModule.lineCode')}</TableHead>

@@ -523,7 +523,7 @@ export function SupplierManager() {
             ) : (
               /* Vista desktop (taula) */
               <div className="rounded-md border">
-                <Table>
+                <Table className="w-full table-fixed">
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t.suppliers.name}</TableHead>

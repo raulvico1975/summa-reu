@@ -253,7 +253,7 @@ export default function ExpenseDetailPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       {/* Header amb navegació */}
       <div className="flex items-center gap-4">
         <Link href={buildUrl('/dashboard/project-module/expenses')}>
@@ -266,7 +266,7 @@ export default function ExpenseDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
         {/* Informació de la despesa */}
         <Card>
           <CardHeader>
