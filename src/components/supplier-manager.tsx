@@ -611,7 +611,7 @@ export function SupplierManager() {
           </CardContent>
         </Card>
 
-        <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[min(95vw,56rem)] flex-col overflow-hidden p-0 sm:max-w-3xl">
+        <DialogContent className="flex max-h-[min(92vh,960px)] !w-[min(calc(100vw-1.5rem),78rem)] !max-w-[78rem] flex-col overflow-hidden p-0 sm:!w-[min(calc(100vw-3rem),78rem)]">
           {/* Header fix */}
           <DialogHeader className="flex-shrink-0 border-b px-4 py-5 pr-10 sm:px-6">
             <DialogTitle>{dialogTitle}</DialogTitle>
@@ -623,7 +623,8 @@ export function SupplierManager() {
             {/* ═══════════════════════════════════════════════════════════════════
                 BLOC 1: Dades bàsiques i identificació (2 columnes)
                 ═══════════════════════════════════════════════════════════════════ */}
-            <div className="space-y-4">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+              <div className="space-y-4 rounded-xl border bg-background p-4 shadow-sm">
               <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.basicData}</h4>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -719,49 +720,46 @@ export function SupplierManager() {
                   placeholder={t.suppliers.addressPlaceholder}
                 />
               </div>
-            </div>
+              </div>
 
-            {/* ═══════════════════════════════════════════════════════════════════
-                BLOC 2: Dades de pagament (2 columnes)
-                ═══════════════════════════════════════════════════════════════════ */}
-            <div className="space-y-4 pt-4 mt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.paymentData}</h4>
+              <div className="space-y-5">
+                <div className="space-y-4 rounded-xl border bg-muted/10 p-4 shadow-sm">
+                  <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.paymentData}</h4>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="iban">{t.suppliers.iban}</Label>
-                  <Input
-                    id="iban"
-                    value={formData.iban || ''}
-                    onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
-                    placeholder="ES00 0000 0000 0000 0000 0000"
-                  />
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="iban">{t.suppliers.iban}</Label>
+                      <Input
+                        id="iban"
+                        value={formData.iban || ''}
+                        onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
+                        placeholder="ES00 0000 0000 0000 0000 0000"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="paymentTerms">{t.suppliers.paymentTerms}</Label>
+                      <Input
+                        id="paymentTerms"
+                        value={formData.paymentTerms || ''}
+                        onChange={(e) => handleFormChange('paymentTerms', e.target.value)}
+                        placeholder={t.suppliers.paymentTermsPlaceholder}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="paymentTerms">{t.suppliers.paymentTerms}</Label>
-                  <Input
-                    id="paymentTerms"
-                    value={formData.paymentTerms || ''}
-                    onChange={(e) => handleFormChange('paymentTerms', e.target.value)}
-                    placeholder={t.suppliers.paymentTermsPlaceholder}
+                <div className="space-y-3 rounded-xl border bg-muted/10 p-4 shadow-sm">
+                  <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.notes}</h4>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes || ''}
+                    onChange={(e) => handleFormChange('notes', e.target.value)}
+                    placeholder={t.suppliers.notesPlaceholder}
+                    rows={5}
                   />
                 </div>
               </div>
-            </div>
-
-            {/* ═══════════════════════════════════════════════════════════════════
-                BLOC 3: Notes (tota amplada)
-                ═══════════════════════════════════════════════════════════════════ */}
-            <div className="space-y-3 pt-4 mt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.suppliers.notes}</h4>
-              <Textarea
-                id="notes"
-                value={formData.notes || ''}
-                onChange={(e) => handleFormChange('notes', e.target.value)}
-                placeholder={t.suppliers.notesPlaceholder}
-                rows={2}
-              />
             </div>
           </div>
 

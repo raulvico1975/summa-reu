@@ -249,7 +249,7 @@ export function MembersUserPermissionsDialog({
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
-        className="flex max-h-[calc(100dvh-2rem)] w-[min(96vw,48rem)] flex-col overflow-hidden p-0 sm:max-w-3xl"
+        className="flex max-h-[min(92vh,980px)] !w-[min(calc(100vw-1.5rem),82rem)] !max-w-[82rem] flex-col overflow-hidden p-0 sm:!w-[min(calc(100vw-3rem),82rem)]"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           const previous = lastFocusedElementRef.current;
@@ -268,9 +268,29 @@ export function MembersUserPermissionsDialog({
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 sm:px-6">
           <div className="space-y-5">
-            <div className="space-y-2">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-xl border bg-muted/10 p-4 shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</p>
+                <p className="mt-1 text-2xl font-semibold">{SECTION_TOGGLES.filter((section) => effectivePermissions[section]).length}</p>
+              </div>
+              <div className="rounded-xl border bg-muted/10 p-4 shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr('permissionsDialog.actionsTitle', 'Accions critiques')}</p>
+                <p className="mt-1 text-2xl font-semibold">{CRITICAL_ACTION_TOGGLES.filter((action) => effectivePermissions[action]).length}</p>
+              </div>
+              <div className="rounded-xl border bg-muted/10 p-4 shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr('permissionsDialog.projectsTitle', 'Projectes')}</p>
+                <p className="mt-1 text-sm font-semibold">{projectCapabilityValue === 'manage'
+                  ? tr('permissionsDialog.projects.manage', 'Gestio de projectes')
+                  : projectCapabilityValue === 'expenseInput'
+                    ? tr('permissionsDialog.projects.expenseInput', 'Entrada de despeses')
+                    : tr('permissionsDialog.projects.none', 'Sense accés a projectes')}</p>
+              </div>
+            </div>
+
+            <div className="grid gap-5 xl:grid-cols-2">
+            <div className="space-y-2 rounded-xl border bg-background p-4 shadow-sm">
               <h3 className="text-sm font-semibold">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3">
                 {SECTION_TOGGLES.map((section) => (
                   <div key={section} className="flex min-h-12 items-start justify-between gap-3 rounded-lg border bg-background px-3 py-2 sm:items-center">
                     <Label htmlFor={`section-${section}`} className="min-w-0 cursor-pointer text-sm leading-tight break-words">{permissionLabel(section, 'section')}</Label>
@@ -285,11 +305,10 @@ export function MembersUserPermissionsDialog({
               </div>
             </div>
 
-            <Separator />
-
-            <div className="space-y-2">
+            <div className="space-y-5">
+            <div className="space-y-2 rounded-xl border bg-background p-4 shadow-sm">
               <h3 className="text-sm font-semibold">{tr('permissionsDialog.actionsTitle', 'Accions critiques')}</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3">
                 {CRITICAL_ACTION_TOGGLES.map((action) => (
                   <div key={action} className="flex min-h-12 items-start justify-between gap-3 rounded-lg border bg-background px-3 py-2 sm:items-center">
                     <Label htmlFor={`action-${action}`} className="min-w-0 cursor-pointer text-sm leading-tight break-words">{permissionLabel(action, 'action')}</Label>
@@ -303,14 +322,12 @@ export function MembersUserPermissionsDialog({
               </div>
             </div>
 
-            <Separator />
-
-            <div className="space-y-2">
+            <div className="space-y-2 rounded-xl border bg-background p-4 shadow-sm">
               <h3 className="text-sm font-semibold">{tr('permissionsDialog.projectsTitle', 'Projectes')}</h3>
               <RadioGroup
                 value={projectCapabilityValue}
                 onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput' | 'none')}
-                className="grid gap-2 sm:grid-cols-2"
+                className="grid gap-2"
               >
                 <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
                   <RadioGroupItem value="manage" id="projects-manage" />
@@ -325,6 +342,8 @@ export function MembersUserPermissionsDialog({
                   <Label htmlFor="projects-none" className="cursor-pointer text-sm leading-tight break-words">{tr('permissionsDialog.projects.none', 'Sense accés a projectes')}</Label>
                 </div>
               </RadioGroup>
+            </div>
+            </div>
             </div>
           </div>
         </div>

@@ -2056,16 +2056,35 @@ ${tr("dashboard.generatedWith")}`;
 
       {canViewFinancial && (
         <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-          <DialogContent className="max-w-5xl w-full max-h-[85vh] overflow-hidden">
-            <div className="flex h-full flex-col">
-              <DialogHeader>
+          <DialogContent className="!w-[min(calc(100vw-1.5rem),94rem)] !max-w-[94rem] p-0 sm:!w-[min(calc(100vw-3rem),94rem)]">
+            <div className="flex h-[min(92vh,980px)] min-h-0 flex-col">
+              <DialogHeader className="px-5 pt-5 md:px-8 md:pt-7">
                 <DialogTitle>{tr("dashboard.shareSummary")}</DialogTitle>
                 <DialogDescription>{tr("dashboard.shareSummaryDescription")}</DialogDescription>
               </DialogHeader>
 
-              <div className="flex flex-1 flex-col gap-6 overflow-y-auto md:flex-row">
-                <div className="space-y-4 md:w-3/5">
-                  <div className="space-y-3 rounded-lg border bg-background/80 p-4 shadow-sm">
+              <div className="grid min-h-0 flex-1 gap-5 overflow-hidden px-4 pb-4 pt-4 md:grid-cols-[minmax(0,1.4fr)_minmax(340px,0.95fr)] md:px-6 md:pb-6 md:pt-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.9fr)]">
+                <div className="flex min-h-0 flex-col gap-4">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-xl border bg-muted/20 p-3 shadow-sm">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr("dashboard.totalIncome")}</p>
+                      <p className="mt-1 text-lg font-semibold">{formatCurrencyEU(totalIncome)}</p>
+                    </div>
+                    <div className="rounded-xl border bg-muted/20 p-3 shadow-sm">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr("dashboard.operatingExpenses")}</p>
+                      <p className="mt-1 text-lg font-semibold">{formatCurrencyEU(Math.abs(totalExpenses))}</p>
+                    </div>
+                    <div className="rounded-xl border bg-muted/20 p-3 shadow-sm">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr("dashboard.operatingBalance")}</p>
+                      <p className="mt-1 text-lg font-semibold">{formatCurrencyEU(netBalance)}</p>
+                    </div>
+                    <div className="rounded-xl border bg-muted/20 p-3 shadow-sm">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr("dashboard.activeDonors")}</p>
+                      <p className="mt-1 text-lg font-semibold">{uniqueDonors}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex min-h-0 flex-1 flex-col gap-3 rounded-xl border bg-background/80 p-4 shadow-sm md:p-5">
                     <div>
                       <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.summaryBlockTitle}</p>
                       <p className="text-sm font-semibold">{summaryOrgPeriodText}</p>
@@ -2073,10 +2092,11 @@ ${tr("dashboard.generatedWith")}`;
                     <Textarea
                       value={summaryText}
                       onChange={(e) => setSummaryText(e.target.value)}
-                      className="font-mono text-sm min-h-[280px]"
+                      className="min-h-[300px] flex-1 resize-none font-mono text-sm leading-6 md:min-h-[420px]"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
                     <Button variant="outline" onClick={handleCopy}>
                       <Copy className="h-4 w-4 mr-2" />
                       {copySuccess ? tr("dashboard.copied") : tr("dashboard.copy")}
@@ -2093,20 +2113,20 @@ ${tr("dashboard.generatedWith")}`;
                       <FileText className="h-4 w-4 mr-2" />
                       {shareModalTexts.actions.exportCsv}
                     </Button>
-                </div>
+                  </div>
                 </div>
 
                 {narratives && (
-                  <div className="md:w-2/5 space-y-3">
+                  <div className="flex min-h-0 flex-col rounded-xl border bg-muted/10 p-4 shadow-sm md:p-5">
                     <div>
                       <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.narrativesHeading}</p>
                       <p className="text-sm text-muted-foreground">
                         {shareModalTexts.narrativesDescription}
                       </p>
                     </div>
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto pr-1 xl:grid-cols-2">
                       {NARRATIVE_ORDER.map((field) => (
-                        <div key={field} className="flex h-full flex-col rounded-lg border border-dashed bg-muted/30 p-3 shadow-sm">
+                        <div key={field} className="flex h-full flex-col rounded-lg border border-dashed bg-background/90 p-3 shadow-sm">
                           <div className="flex items-center justify-between gap-2">
                             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                               {shareModalTexts.cards[field].title}
@@ -2128,7 +2148,7 @@ ${tr("dashboard.generatedWith")}`;
                               </button>
                             </div>
                           </div>
-                          <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                          <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-4">
                             {narratives[field]}
                           </p>
                         </div>
@@ -2138,7 +2158,7 @@ ${tr("dashboard.generatedWith")}`;
                 )}
               </div>
 
-              <DialogFooter className="mt-4">
+              <DialogFooter className="border-t px-4 py-4 md:px-6">
                 <Button variant="default" onClick={handleEmailShare}>
                   <Mail className="h-4 w-4 mr-2" />
                   {tr("dashboard.sendByEmail")}

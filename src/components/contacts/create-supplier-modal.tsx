@@ -132,18 +132,18 @@ export function CreateSupplierModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
+      <DialogContent className="!w-[min(calc(100vw-1.5rem),42rem)] !max-w-[42rem] p-0 sm:!w-[min(calc(100vw-3rem),42rem)]">
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
+          <DialogHeader className="border-b px-4 py-5 pr-10 sm:px-6">
             <DialogTitle>{t.suppliers.addTitle}</DialogTitle>
             <DialogDescription>
               {t.suppliers.addDescription}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 px-4 py-4 sm:grid-cols-2 sm:px-6">
             {/* Nom (obligatori) */}
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="supplier-name">
                 {t.suppliers.name} <span className="text-destructive">*</span>
               </Label>
@@ -179,7 +179,7 @@ export function CreateSupplierModal({
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="border-t px-4 py-4 sm:px-6">
             <Button
               type="button"
               variant="outline"

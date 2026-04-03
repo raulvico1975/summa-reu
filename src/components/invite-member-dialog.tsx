@@ -351,7 +351,7 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[min(96vw,48rem)] flex-col overflow-hidden p-0 sm:max-w-3xl">
+      <DialogContent className="flex max-h-[min(92vh,980px)] !w-[min(calc(100vw-1.5rem),82rem)] !max-w-[82rem] flex-col overflow-hidden p-0 sm:!w-[min(calc(100vw-3rem),82rem)]">
         <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12 sm:px-6">
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -398,46 +398,48 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
             </div>
           ) : (
             // Formulari
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email">{t.members.email}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="nom@exemple.com"
-                  disabled={isCreating}
-                />
-              </div>
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.18fr)]">
+              <div className="space-y-5 rounded-xl border bg-background p-4 shadow-sm sm:p-5">
+                <div className="space-y-2">
+                  <Label htmlFor="email">{t.members.email}</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="nom@exemple.com"
+                    disabled={isCreating}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="role">{t.members.role}</Label>
-                <Select value={role} onValueChange={(v) => setRole(v as OrganizationRole)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{t.members.roleAdmin}</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="user">
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{t.members.roleUser}</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="viewer">
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{t.members.roleViewer}</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground break-words leading-relaxed">
-                  {getRoleDescription(role)}
-                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="role">{t.members.role}</Label>
+                  <Select value={role} onValueChange={(v) => setRole(v as OrganizationRole)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">{t.members.roleAdmin}</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="user">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">{t.members.roleUser}</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="viewer">
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">{t.members.roleViewer}</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground break-words leading-relaxed">
+                    {getRoleDescription(role)}
+                  </p>
+                </div>
               </div>
 
               {role === 'user' && (
@@ -461,73 +463,75 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {SECTION_TOGGLES.map((section) => (
-                        <div key={section} className="flex min-h-12 items-start justify-between gap-3 rounded-lg border bg-background px-3 py-2 sm:items-center">
-                          <Label htmlFor={`invite-section-${section}`} className="min-w-0 cursor-pointer text-sm leading-tight break-words">
-                            {permissionLabel(section, 'section')}
-                          </Label>
-                          <Switch
-                            id={`invite-section-${section}`}
-                            checked={effectivePermissions[section]}
-                            disabled={isProjectsSectionLocked && section === 'sections.projectes'}
-                            onCheckedChange={(checked) => togglePermission(section, checked === true)}
-                          />
-                        </div>
-                      ))}
+                  <div className="grid gap-5 xl:grid-cols-2">
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</p>
+                      <div className="grid gap-2">
+                        {SECTION_TOGGLES.map((section) => (
+                          <div key={section} className="flex min-h-12 items-start justify-between gap-3 rounded-lg border bg-background px-3 py-2 sm:items-center">
+                            <Label htmlFor={`invite-section-${section}`} className="min-w-0 cursor-pointer text-sm leading-tight break-words">
+                              {permissionLabel(section, 'section')}
+                            </Label>
+                            <Switch
+                              id={`invite-section-${section}`}
+                              checked={effectivePermissions[section]}
+                              disabled={isProjectsSectionLocked && section === 'sections.projectes'}
+                              onCheckedChange={(checked) => togglePermission(section, checked === true)}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold">{tr('permissionsDialog.actionsTitle', 'Accions crítiques')}</p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {CRITICAL_ACTION_TOGGLES.map((action) => (
-                        <div key={action} className="flex min-h-12 items-start justify-between gap-3 rounded-lg border bg-background px-3 py-2 sm:items-center">
-                          <Label htmlFor={`invite-action-${action}`} className="min-w-0 cursor-pointer text-sm leading-tight break-words">
-                            {permissionLabel(action, 'action')}
-                          </Label>
-                          <Switch
-                            id={`invite-action-${action}`}
-                            checked={effectivePermissions[action]}
-                            onCheckedChange={(checked) => togglePermission(action, checked === true)}
-                          />
+                    <div className="space-y-5">
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">{tr('permissionsDialog.actionsTitle', 'Accions crítiques')}</p>
+                        <div className="grid gap-2">
+                          {CRITICAL_ACTION_TOGGLES.map((action) => (
+                            <div key={action} className="flex min-h-12 items-start justify-between gap-3 rounded-lg border bg-background px-3 py-2 sm:items-center">
+                              <Label htmlFor={`invite-action-${action}`} className="min-w-0 cursor-pointer text-sm leading-tight break-words">
+                                {permissionLabel(action, 'action')}
+                              </Label>
+                              <Switch
+                                id={`invite-action-${action}`}
+                                checked={effectivePermissions[action]}
+                                onCheckedChange={(checked) => togglePermission(action, checked === true)}
+                              />
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">{tr('permissionsDialog.projectsTitle', 'Projectes')}</p>
+                        <RadioGroup
+                          value={projectCapabilityValue}
+                          onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput' | 'none')}
+                          className="grid gap-2"
+                        >
+                          <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
+                            <RadioGroupItem value="manage" id="invite-projects-manage" />
+                            <Label htmlFor="invite-projects-manage" className="cursor-pointer text-sm leading-tight break-words">
+                              {tr('permissionsDialog.projects.manage', 'Gestió de projectes')}
+                            </Label>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
+                            <RadioGroupItem value="expenseInput" id="invite-projects-expense-input" />
+                            <Label htmlFor="invite-projects-expense-input" className="cursor-pointer text-sm leading-tight break-words">
+                              {tr('permissionsDialog.projects.expenseInput', 'Entrada de despeses')}
+                            </Label>
+                          </div>
+                          <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
+                            <RadioGroupItem value="none" id="invite-projects-none" />
+                            <Label htmlFor="invite-projects-none" className="cursor-pointer text-sm leading-tight break-words">
+                              {tr('permissionsDialog.projects.none', 'Sense accés a projectes')}
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
                     </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold">{tr('permissionsDialog.projectsTitle', 'Projectes')}</p>
-                    <RadioGroup
-                      value={projectCapabilityValue}
-                      onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput' | 'none')}
-                      className="grid gap-2 sm:grid-cols-2"
-                    >
-                      <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
-                        <RadioGroupItem value="manage" id="invite-projects-manage" />
-                        <Label htmlFor="invite-projects-manage" className="cursor-pointer text-sm leading-tight break-words">
-                          {tr('permissionsDialog.projects.manage', 'Gestió de projectes')}
-                        </Label>
-                      </div>
-                      <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
-                        <RadioGroupItem value="expenseInput" id="invite-projects-expense-input" />
-                        <Label htmlFor="invite-projects-expense-input" className="cursor-pointer text-sm leading-tight break-words">
-                          {tr('permissionsDialog.projects.expenseInput', 'Entrada de despeses')}
-                        </Label>
-                      </div>
-                      <div className="flex items-center gap-2 rounded-lg border bg-background p-3 sm:col-span-2">
-                        <RadioGroupItem value="none" id="invite-projects-none" />
-                        <Label htmlFor="invite-projects-none" className="cursor-pointer text-sm leading-tight break-words">
-                          {tr('permissionsDialog.projects.none', 'Sense accés a projectes')}
-                        </Label>
-                      </div>
-                    </RadioGroup>
                   </div>
 
                   <Button

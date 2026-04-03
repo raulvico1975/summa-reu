@@ -115,8 +115,7 @@ export function OffBankExpenseModal({
   // EUR manual (cas especial, col·lapsat per defecte)
   const [eurManualEnabled, setEurManualEnabled] = useState(false);
 
-  // Camps justificació (collapsible)
-  const [justificationOpen, setJustificationOpen] = useState(false);
+  // Camps justificació integrats a la capçalera del formulari
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [issuerTaxId, setIssuerTaxId] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
@@ -178,10 +177,6 @@ export function OffBankExpenseModal({
       // invoiceDate per defecte = date de la despesa
       setInvoiceDate(initialValues.invoiceDate ?? initialValues.date);
       setPaymentDate(initialValues.paymentDate ?? '');
-      // Obrir secció justificació si hi ha dades
-      if (initialValues.invoiceNumber || initialValues.issuerTaxId || initialValues.invoiceDate) {
-        setJustificationOpen(true);
-      }
       // Attachments
       setAttachments(initialValues.attachments ?? []);
       // Revisió
@@ -196,6 +191,14 @@ export function OffBankExpenseModal({
       setCurrency(projectFxCurrency);
     }
   }, [open, isEditMode, projectFxCurrency]);
+
+  useEffect(() => {
+    if (!open) return;
+    const derivedDate = paymentDate || invoiceDate || '';
+    if (derivedDate && derivedDate !== date) {
+      setDate(derivedDate);
+    }
+  }, [open, paymentDate, invoiceDate, date]);
 
   // Categoria: no s'usa en despeses off-bank (la classificació real és la partida del projecte)
 
@@ -213,10 +216,9 @@ export function OffBankExpenseModal({
     // EUR manual
     setEurManualEnabled(false);
     // Justificació
-    setJustificationOpen(false);
     setInvoiceNumber('');
     setIssuerTaxId('');
-    setInvoiceDate('');
+    setInvoiceDate(today.toISOString().split('T')[0]);
     setPaymentDate('');
     // Attachments
     setAttachments([]);
@@ -227,11 +229,12 @@ export function OffBankExpenseModal({
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const effectiveDate = paymentDate || invoiceDate || date;
 
     // Data
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) {
-      newErrors.date = tr('projectModule.offBank.invalidDate');
+    if (!dateRegex.test(effectiveDate)) {
+      newErrors.invoiceDate = tr('projectModule.offBank.invalidDate');
     }
 
     // Validació FX si s'usa moneda estrangera
@@ -271,6 +274,7 @@ export function OffBankExpenseModal({
     e.preventDefault();
 
     if (!validate()) return;
+    const effectiveDate = paymentDate || invoiceDate || date;
 
     const shouldNeedReview = needsReview;
 
@@ -290,7 +294,7 @@ export function OffBankExpenseModal({
 
     // Preparar dades
     const formData = {
-      date,
+      date: effectiveDate,
       amountEUR: finalAmountEUR,
       concept,
       counterpartyName,
@@ -503,22 +507,19 @@ export function OffBankExpenseModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[min(92vh,940px)] !w-[min(calc(100vw-1.5rem),64rem)] !max-w-[64rem] flex-col overflow-hidden p-0 sm:!w-[min(calc(100vw-3rem),64rem)]">
+        <DialogHeader className="border-b px-4 py-5 pr-10 sm:px-6">
           <DialogTitle>
             {isEditMode ? tr('projectModule.offBank.editTitle') : tr('projectModule.offBank.addTitle')}
           </DialogTitle>
-          <DialogDescription>
-            {isEditMode
-              ? tr('projectModule.offBank.editDescription')
-              : tr('projectModule.offBank.addDescription')}
-          </DialogDescription>
           <p className="text-xs text-muted-foreground mt-1">
             {tr('projectModule.offBank.justificationHint')}
           </p>
         </DialogHeader>
 
-        <form id="offbank-form" onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto space-y-4 px-1">
+        <form id="offbank-form" onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6">
+          <div className="grid gap-5">
+            <div className="space-y-4">
           {/* Avís si hi ha múltiples imputacions */}
           {isEditMode && existingAssignments && existingAssignments.length > 1 && (
             <Alert variant="default" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
@@ -529,271 +530,294 @@ export function OffBankExpenseModal({
             </Alert>
           )}
 
-          {/* Data + Import EUR (quan no és FX) — 2 columnes en desktop */}
-          <div className={`grid gap-3 ${!useForeignCurrency ? 'grid-cols-1 sm:grid-cols-2' : ''}`}>
-            <div className="space-y-2">
-              <Label htmlFor="date">{tr('projectModule.offBank.dateLabel')}</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={errors.date ? 'border-destructive' : ''}
-              />
-              {errors.date && (
-                <p className="text-sm text-destructive">{errors.date}</p>
-              )}
-            </div>
-
-            {/* Import EUR directe (inline quan no FX) */}
-            {!useForeignCurrency && (
-              <div className="space-y-2">
-                <Label htmlFor="amountEUR">{tr('projectModule.eurAmount')}</Label>
-                <Input
-                  id="amountEUR"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  value={amountEUR}
-                  onChange={(e) => setAmountEUR(e.target.value)}
-                  className={errors.amountEUR ? 'border-destructive' : ''}
-                />
-                {errors.amountEUR && (
-                  <p className="text-sm text-destructive">{errors.amountEUR}</p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Toggle moneda local */}
-          <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="useForeignCurrency" className="text-sm font-normal cursor-pointer">
-                {tr('projectModule.localCurrencyExpense')}
-              </Label>
-              {useForeignCurrency && currency && (
-                <span className="text-xs text-muted-foreground">
-                  ({currency})
-                </span>
-              )}
-            </div>
-            <Switch
-              id="useForeignCurrency"
-              checked={useForeignCurrency}
-              onCheckedChange={(checked) => {
-                setUseForeignCurrency(checked);
-                if (!checked) {
-                  setCurrency('');
-                  setAmountOriginal('');
-                  setFxRateOverride('');
-                  setEurManualEnabled(false);
-                }
-              }}
-            />
-          </div>
-
-          {/* Bloc moneda local (visible quan toggle ON) */}
-          {useForeignCurrency && (
-            <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
-              <div className="grid grid-cols-2 gap-3">
-                {/* Moneda */}
-                <div className="space-y-1">
-                  <Label htmlFor="currency" className="text-xs">{tr('projectModule.offBank.currencyLabel')}</Label>
-                  <select
-                    id="currency"
-                    value={currency}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCurrency(val);
-                      if (val === 'EUR') {
-                        setUseForeignCurrency(false);
-                        setAmountOriginal('');
-                        setFxRateOverride('');
-                      }
-                    }}
-                    className={`flex h-9 w-full rounded-md border bg-background px-3 py-1 text-sm font-mono ${errors.currency ? 'border-destructive' : 'border-input'}`}
-                  >
-                    <option value="">{tr('projectModule.offBank.selectPlaceholder')}</option>
-                    <option value="XOF">{tr('projectModule.offBank.currencyXOF')}</option>
-                    <option value="USD">{tr('projectModule.offBank.currencyUSD')}</option>
-                    <option value="GBP">{tr('projectModule.offBank.currencyGBP')}</option>
-                  </select>
-                  {errors.currency && (
-                    <p className="text-sm text-destructive">{errors.currency}</p>
-                  )}
-                </div>
-                {/* Import */}
-                <div className="space-y-1">
-                  <Label htmlFor="amountOriginal" className="text-xs">{tr('projectModule.offBank.amountLabel')}</Label>
-                  <Input
-                    id="amountOriginal"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={amountOriginal}
-                    onChange={(e) => setAmountOriginal(e.target.value)}
-                    className={errors.amountOriginal ? 'border-destructive h-9' : 'h-9'}
-                  />
-                  {errors.amountOriginal && (
-                    <p className="text-sm text-destructive">{errors.amountOriginal}</p>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Info className="h-3 w-3 shrink-0" />
-                {tr('projectModule.offBank.fxAutoHint')}
-              </p>
-            </div>
-          )}
-
-          {/* EUR manual col·lapsat (només visible quan moneda local ON) */}
-          {useForeignCurrency && (
-            <Collapsible open={eurManualEnabled} onOpenChange={setEurManualEnabled}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" type="button" className="w-full justify-between px-3 py-2 h-auto">
-                  <span className="text-sm text-muted-foreground">{tr('projectModule.offBank.eurManualToggle')}</span>
-                  {eurManualEnabled ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-2 pt-1">
-                <div className="space-y-1 px-3">
-                  <Label htmlFor="amountEUR" className="text-xs">{tr('projectModule.offBank.eurAmountLabel')}</Label>
-                  <Input
-                    id="amountEUR"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={amountEUR}
-                    onChange={(e) => setAmountEUR(e.target.value)}
-                    className={errors.amountEUR ? 'border-destructive h-9' : 'h-9'}
-                  />
-                  {errors.amountEUR && (
-                    <p className="text-sm text-destructive">{errors.amountEUR}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    {tr('projectModule.offBank.eurAutoHint')}
-                  </p>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-          {/* Concepte - full width */}
-          <div className="space-y-2">
-            <Label htmlFor="concept">{tr('projectModule.offBank.conceptLabel')}</Label>
-            <Input
-              id="concept"
-              type="text"
-              placeholder={tr('projectModule.offBank.conceptPlaceholder')}
-              value={concept}
-              onChange={(e) => setConcept(e.target.value)}
-              className={errors.concept ? 'border-destructive' : ''}
-            />
-            {errors.concept && (
-              <p className="text-sm text-destructive">{errors.concept}</p>
-            )}
-          </div>
-
-          {/* Origen/Destinatari */}
-          <div className="space-y-2">
-            <Label htmlFor="counterpartyName">{tr('projectModule.offBank.counterpartyLabel')}</Label>
-            <Input
-              id="counterpartyName"
-              type="text"
-              placeholder={tr('projectModule.offBank.counterpartyPlaceholder')}
-              value={counterpartyName}
-              onChange={(e) => setCounterpartyName(e.target.value)}
-            />
-          </div>
-
-          {/* Comprovants (Attachments) */}
-          <div className="space-y-2">
-            <Label>{tr('projectModule.offBank.attachmentsLabel')}</Label>
-            <ExpenseAttachmentsDropzone
-              organizationId={organizationId}
-              expenseId={isEditMode ? expenseId ?? null : null}
-              attachments={attachments}
-              onAttachmentsChange={setAttachments}
-              disabled={isProcessing}
-              buildFileName={handleBuildFileName}
-            />
-          </div>
-
-          {/* Secció Justificació (collapsible) */}
-          <Collapsible open={justificationOpen} onOpenChange={(open) => {
-            setJustificationOpen(open);
-            // Pre-omplir data factura amb data despesa si no té valor
-            if (open && !invoiceDate && date) {
-              setInvoiceDate(date);
-            }
-          }}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" type="button" className="w-full justify-between px-3 py-2 h-auto">
-                <span className="text-sm font-medium">{tr('projectModule.justificationData')}</span>
-                {justificationOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pt-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="invoiceNumber" className="text-xs">{tr('projectModule.invoiceNumber')}</Label>
-                  <Input
-                    id="invoiceNumber"
-                    type="text"
-                    placeholder="F-2024-001"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    className="h-9"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="issuerTaxId" className="text-xs">{tr('projectModule.issuerTaxId')}</Label>
-                  <Input
-                    id="issuerTaxId"
-                    type="text"
-                    placeholder="B12345678"
-                    value={issuerTaxId}
-                    onChange={(e) => setIssuerTaxId(e.target.value)}
-                    className="h-9"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="invoiceDate" className="text-xs">{tr('projectModule.invoiceDate')}</Label>
+          <div className="rounded-xl border bg-background p-4 shadow-sm">
+            <div className="grid gap-4">
+              <div className="grid gap-4 lg:grid-cols-[160px_160px_minmax(0,1.5fr)]">
+                <div className="space-y-2">
+                  <Label htmlFor="invoiceDate">{tr('projectModule.invoiceDate')}</Label>
                   <Input
                     id="invoiceDate"
                     type="date"
                     value={invoiceDate}
                     onChange={(e) => setInvoiceDate(e.target.value)}
-                    className="h-9"
+                    className={errors.invoiceDate ? 'border-destructive' : ''}
                   />
+                  {errors.invoiceDate && (
+                    <p className="text-sm text-destructive">{errors.invoiceDate}</p>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="paymentDate" className="text-xs">{tr('projectModule.paymentDate')}</Label>
+
+                <div className="space-y-2">
+                  <Label htmlFor="paymentDate">{tr('projectModule.paymentDate')}</Label>
                   <Input
                     id="paymentDate"
                     type="date"
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
-                    className="h-9"
+                    className="h-10"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="concept">{tr('projectModule.offBank.conceptLabel')}</Label>
+                  <Input
+                    id="concept"
+                    type="text"
+                    placeholder={tr('projectModule.offBank.conceptPlaceholder')}
+                    value={concept}
+                    onChange={(e) => setConcept(e.target.value)}
+                    className={errors.concept ? 'border-destructive' : ''}
+                  />
+                  {errors.concept && (
+                    <p className="text-sm text-destructive">{errors.concept}</p>
+                  )}
+                </div>
+              </div>
+
+              {useForeignCurrency ? (
+                <div className="grid gap-4 lg:grid-cols-[140px_150px_minmax(220px,1fr)_170px_170px]">
+                  <div className="space-y-2">
+                    <Label htmlFor="amountOriginal">{tr('projectModule.offBank.amountLabel')}</Label>
+                    <Input
+                      id="amountOriginal"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={amountOriginal}
+                      onChange={(e) => setAmountOriginal(e.target.value)}
+                      className={errors.amountOriginal ? 'border-destructive' : ''}
+                    />
+                    {errors.amountOriginal && (
+                      <p className="text-sm text-destructive">{errors.amountOriginal}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">{tr('projectModule.offBank.currencyLabel')}</Label>
+                    <select
+                      id="currency"
+                      value={currency}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCurrency(val);
+                        if (val === 'EUR') {
+                          setUseForeignCurrency(false);
+                          setAmountOriginal('');
+                          setFxRateOverride('');
+                        }
+                      }}
+                      className={`flex h-10 w-full rounded-md border bg-background px-3 py-1 text-sm font-mono ${errors.currency ? 'border-destructive' : 'border-input'}`}
+                    >
+                      <option value="">{tr('projectModule.offBank.selectPlaceholder')}</option>
+                      <option value="XOF">{tr('projectModule.offBank.currencyXOF')}</option>
+                      <option value="USD">{tr('projectModule.offBank.currencyUSD')}</option>
+                      <option value="GBP">{tr('projectModule.offBank.currencyGBP')}</option>
+                    </select>
+                    {errors.currency && (
+                      <p className="text-sm text-destructive">{errors.currency}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="counterpartyName">{tr('projectModule.offBank.counterpartyLabel')}</Label>
+                    <Input
+                      id="counterpartyName"
+                      type="text"
+                      placeholder={tr('projectModule.offBank.counterpartyPlaceholder')}
+                      value={counterpartyName}
+                      onChange={(e) => setCounterpartyName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="issuerTaxId">{tr('projectModule.issuerTaxId')}</Label>
+                    <Input
+                      id="issuerTaxId"
+                      type="text"
+                      placeholder="B12345678"
+                      value={issuerTaxId}
+                      onChange={(e) => setIssuerTaxId(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="invoiceNumber">{tr('projectModule.invoiceNumber')}</Label>
+                    <Input
+                      id="invoiceNumber"
+                      type="text"
+                      placeholder="F-2024-001"
+                      value={invoiceNumber}
+                      onChange={(e) => setInvoiceNumber(e.target.value)}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-[140px_150px_minmax(220px,1fr)_170px_170px]">
+                  <div className="space-y-2">
+                    <Label htmlFor="amountEUR">{tr('projectModule.eurAmount')}</Label>
+                    <Input
+                      id="amountEUR"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={amountEUR}
+                      onChange={(e) => setAmountEUR(e.target.value)}
+                      className={errors.amountEUR ? 'border-destructive' : ''}
+                    />
+                    {errors.amountEUR && (
+                      <p className="text-sm text-destructive">{errors.amountEUR}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="currency-eur">{tr('projectModule.offBank.currencyLabel')}</Label>
+                    <Input id="currency-eur" value="EUR" readOnly className="bg-muted/30" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="counterpartyName">{tr('projectModule.offBank.counterpartyLabel')}</Label>
+                    <Input
+                      id="counterpartyName"
+                      type="text"
+                      placeholder={tr('projectModule.offBank.counterpartyPlaceholder')}
+                      value={counterpartyName}
+                      onChange={(e) => setCounterpartyName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="issuerTaxId">{tr('projectModule.issuerTaxId')}</Label>
+                    <Input
+                      id="issuerTaxId"
+                      type="text"
+                      placeholder="B12345678"
+                      value={issuerTaxId}
+                      onChange={(e) => setIssuerTaxId(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="invoiceNumber">{tr('projectModule.invoiceNumber')}</Label>
+                    <Input
+                      id="invoiceNumber"
+                      type="text"
+                      placeholder="F-2024-001"
+                      value={invoiceNumber}
+                      onChange={(e) => setInvoiceNumber(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {useForeignCurrency ? (
+                <Collapsible open={eurManualEnabled} onOpenChange={setEurManualEnabled}>
+                  <div className="rounded-lg border bg-muted/20 px-3 py-3">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="flex items-center justify-between gap-3 rounded-md border bg-background/70 px-3 py-2">
+                        <Label htmlFor="useForeignCurrency" className="cursor-pointer text-sm font-normal text-muted-foreground">
+                          {tr('projectModule.localCurrencyExpense')}
+                        </Label>
+                        <Switch
+                          id="useForeignCurrency"
+                          checked={useForeignCurrency}
+                          onCheckedChange={(checked) => {
+                            setUseForeignCurrency(checked);
+                            if (!checked) {
+                              setCurrency('');
+                              setAmountOriginal('');
+                              setFxRateOverride('');
+                              setEurManualEnabled(false);
+                            }
+                          }}
+                        />
+                      </div>
+
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" type="button" className="h-auto justify-between rounded-md border bg-background/70 px-3 py-2">
+                          <span className="text-sm text-muted-foreground">{tr('projectModule.offBank.eurManualToggle')}</span>
+                          {eurManualEnabled ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+
+                    <div className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+                      <Info className="mt-0.5 h-3 w-3 shrink-0" />
+                      <span>{tr('projectModule.offBank.fxAutoHint')}</span>
+                    </div>
+
+                    <CollapsibleContent className="space-y-2 pt-3">
+                      <div className="rounded-lg border bg-background px-3 py-3 md:max-w-sm">
+                        <div className="space-y-1">
+                          <Label htmlFor="amountEUR" className="text-xs">{tr('projectModule.offBank.eurAmountLabel')}</Label>
+                          <Input
+                            id="amountEUR"
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0,00"
+                            value={amountEUR}
+                            onChange={(e) => setAmountEUR(e.target.value)}
+                            className={errors.amountEUR ? 'border-destructive h-9' : 'h-9'}
+                          />
+                          {errors.amountEUR && (
+                            <p className="text-sm text-destructive">{errors.amountEUR}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {tr('projectModule.offBank.eurAutoHint')}
+                          </p>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              ) : (
+                <div className="rounded-lg border bg-muted/20 px-3 py-3">
+                  <div className="flex items-center justify-between gap-3 rounded-md border bg-background/70 px-3 py-2 md:max-w-md">
+                    <Label htmlFor="useForeignCurrency" className="cursor-pointer text-sm font-normal text-muted-foreground">
+                      {tr('projectModule.localCurrencyExpense')}
+                    </Label>
+                    <Switch
+                      id="useForeignCurrency"
+                      checked={useForeignCurrency}
+                      onCheckedChange={(checked) => {
+                        setUseForeignCurrency(checked);
+                        if (!checked) {
+                          setCurrency('');
+                          setAmountOriginal('');
+                          setFxRateOverride('');
+                          setEurManualEnabled(false);
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-xl border bg-muted/10 p-4 shadow-sm">
+                <div>
+                  <ExpenseAttachmentsDropzone
+                    organizationId={organizationId}
+                    expenseId={isEditMode ? expenseId ?? null : null}
+                    attachments={attachments}
+                    onAttachmentsChange={setAttachments}
+                    disabled={isProcessing}
+                    buildFileName={handleBuildFileName}
                   />
                 </div>
               </div>
-            </CollapsibleContent>
-          </Collapsible>
-
+            </div>
+          </div>
         </form>
 
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="border-t bg-background px-4 py-4 sm:px-6">
           <Button
             type="button"
             variant="outline"
