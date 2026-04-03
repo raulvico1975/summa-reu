@@ -532,139 +532,137 @@ export function EmployeeManager() {
           </CardContent>
         </Card>
 
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="flex max-h-[min(92vh,960px)] !w-[min(calc(100vw-1.5rem),74rem)] !max-w-[74rem] flex-col overflow-hidden p-0 sm:!w-[min(calc(100vw-3rem),74rem)]">
           {/* Header fix */}
-          <DialogHeader className="flex-shrink-0">
+          <DialogHeader className="flex-shrink-0 border-b px-4 py-5 pr-10 sm:px-6">
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
 
           {/* Cos amb scroll si cal */}
-          <div className="flex-1 min-h-0 overflow-y-auto py-4">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6">
             {/* ═══════════════════════════════════════════════════════════════════
                 BLOC 1: Dades bàsiques i contacte (2 columnes)
                 ═══════════════════════════════════════════════════════════════════ */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.employees.basicData}</h4>
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)]">
+              <div className="space-y-4 rounded-xl border bg-background p-4 shadow-sm">
+                <h4 className="text-sm font-medium text-muted-foreground">{t.employees.basicData}</h4>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Columna esquerra: Identificació */}
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="name">{t.employees.name} *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => handleFormChange('name', e.target.value)}
-                      placeholder={t.employees.namePlaceholder}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Columna esquerra: Identificació */}
+                  <div className="space-y-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="taxId">{t.employees.taxId}</Label>
+                      <Label htmlFor="name">{t.employees.name} *</Label>
                       <Input
-                        id="taxId"
-                        value={formData.taxId}
-                        onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
-                        placeholder="12345678A"
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => handleFormChange('name', e.target.value)}
+                        placeholder={t.employees.namePlaceholder}
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="startDate">{t.employees.startDate}</Label>
-                      <Input
-                        id="startDate"
-                        type="date"
-                        value={formData.startDate || ''}
-                        onChange={(e) => handleFormChange('startDate', e.target.value)}
-                      />
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="taxId">{t.employees.taxId}</Label>
+                        <Input
+                          id="taxId"
+                          value={formData.taxId}
+                          onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
+                          placeholder="12345678A"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="startDate">{t.employees.startDate}</Label>
+                        <Input
+                          id="startDate"
+                          type="date"
+                          value={formData.startDate || ''}
+                          onChange={(e) => handleFormChange('startDate', e.target.value)}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Columna dreta: Contacte */}
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="email">{t.employees.email}</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email || ''}
-                      onChange={(e) => handleFormChange('email', e.target.value)}
-                      placeholder="maria@exemple.com"
-                    />
-                  </div>
+                  {/* Columna dreta: Contacte */}
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email">{t.employees.email}</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email || ''}
+                        onChange={(e) => handleFormChange('email', e.target.value)}
+                        placeholder="maria@exemple.com"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="phone">{t.employees.phone}</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone || ''}
-                      onChange={(e) => handleFormChange('phone', e.target.value)}
-                      placeholder="600 000 000"
-                    />
+                    <div className="space-y-1.5">
+                      <Label htmlFor="phone">{t.employees.phone}</Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone || ''}
+                        onChange={(e) => handleFormChange('phone', e.target.value)}
+                        placeholder="600 000 000"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* ═══════════════════════════════════════════════════════════════════
-                BLOC 2: Dades de pagament (2 columnes)
-                ═══════════════════════════════════════════════════════════════════ */}
-            <div className="space-y-4 pt-4 mt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.employees.paymentData}</h4>
+              <div className="space-y-5">
+                <div className="space-y-4 rounded-xl border bg-muted/10 p-4 shadow-sm">
+                  <h4 className="text-sm font-medium text-muted-foreground">{t.employees.paymentData}</h4>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="iban">{t.employees.iban}</Label>
-                  <Input
-                    id="iban"
-                    value={formData.iban || ''}
-                    onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
-                    placeholder="ES00 0000 0000 0000 0000 0000"
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="iban">{t.employees.iban}</Label>
+                      <Input
+                        id="iban"
+                        value={formData.iban || ''}
+                        onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
+                        placeholder="ES00 0000 0000 0000 0000 0000"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="defaultCategoryId">
+                        {t.contacts.defaultCategory}
+                        <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
+                      </Label>
+                      <Select
+                        value={formData.defaultCategoryId || '__none__'}
+                        onValueChange={(v) => handleFormChange('defaultCategoryId', v === '__none__' ? undefined : v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t.contacts.selectDefaultCategory} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">{t.contacts.noDefaultCategory}</SelectItem>
+                          {expenseCategories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.id}>{categoryTranslations[cat.name] || cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-xl border bg-muted/10 p-4 shadow-sm">
+                  <h4 className="text-sm font-medium text-muted-foreground">{t.employees.notes}</h4>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes || ''}
+                    onChange={(e) => handleFormChange('notes', e.target.value)}
+                    placeholder="Observacions sobre el treballador..."
+                    rows={5}
                   />
                 </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="defaultCategoryId">
-                    {t.contacts.defaultCategory}
-                    <span className="block text-xs font-normal text-muted-foreground">{t.contacts.defaultCategoryHint}</span>
-                  </Label>
-                  <Select
-                    value={formData.defaultCategoryId || '__none__'}
-                    onValueChange={(v) => handleFormChange('defaultCategoryId', v === '__none__' ? undefined : v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t.contacts.selectDefaultCategory} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">{t.contacts.noDefaultCategory}</SelectItem>
-                      {expenseCategories.map(cat => (
-                        <SelectItem key={cat.id} value={cat.id}>{categoryTranslations[cat.name] || cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
-            </div>
-
-            {/* ═══════════════════════════════════════════════════════════════════
-                BLOC 3: Notes (tota amplada)
-                ═══════════════════════════════════════════════════════════════════ */}
-            <div className="space-y-3 pt-4 mt-4 border-t">
-              <h4 className="text-sm font-medium text-muted-foreground">{t.employees.notes}</h4>
-              <Textarea
-                id="notes"
-                value={formData.notes || ''}
-                onChange={(e) => handleFormChange('notes', e.target.value)}
-                placeholder="Observacions sobre el treballador..."
-                rows={2}
-              />
             </div>
           </div>
 
           {/* Footer fix */}
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
+          <DialogFooter className="flex-shrink-0 border-t bg-background px-4 py-4 sm:px-6">
             <DialogClose asChild>
               <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>
