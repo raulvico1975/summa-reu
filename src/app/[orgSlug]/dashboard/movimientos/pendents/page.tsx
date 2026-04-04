@@ -214,6 +214,25 @@ export default function PendingDocsPage() {
   );
   const { data: transactions } = useCollection<Transaction>(transactionsQuery);
 
+  const sortedPendingDocs = React.useMemo(() => {
+    if (!pendingDocs) return [];
+
+    const toMillis = (value: unknown) => {
+      if (!value) return 0;
+      if (typeof value === 'object' && value !== null) {
+        if ('toMillis' in value && typeof (value as { toMillis?: unknown }).toMillis === 'function') {
+          return (value as { toMillis: () => number }).toMillis();
+        }
+        if ('seconds' in value && typeof (value as { seconds?: unknown }).seconds === 'number') {
+          return Number((value as { seconds: number }).seconds) * 1000;
+        }
+      }
+      return 0;
+    };
+
+    return [...pendingDocs].sort((left, right) => toMillis(right.createdAt) - toMillis(left.createdAt));
+  }, [pendingDocs]);
+
   React.useEffect(() => {
     if (organization && !isPendingDocsEnabled) {
       router.replace('../movimientos');
@@ -569,9 +588,8 @@ export default function PendingDocsPage() {
 
   // Aplicar filtres client-side
   const filteredDocs = React.useMemo(() => {
-    if (!pendingDocs) return [];
-    return filterPendingDocuments(pendingDocs, filters, contacts || []);
-  }, [pendingDocs, filters, contacts]);
+    return filterPendingDocuments(sortedPendingDocs, filters, contacts || []);
+  }, [sortedPendingDocs, filters, contacts]);
 
   // Drafts per bulk confirm (derivats d'allDocs per disponibilitat cross-tab)
   const readyDrafts = React.useMemo(
@@ -977,7 +995,7 @@ export default function PendingDocsPage() {
               <>
                 {/* Taula desktop (lg+) */}
                 <div className="hidden lg:block">
-                  <Table>
+                  <Table className="w-full table-fixed">
                     <TableHeader>
                       <TableRow>
                         {/* Checkbox per selecció múltiple */}

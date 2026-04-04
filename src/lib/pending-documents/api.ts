@@ -55,11 +55,9 @@ export function buildPendingDocumentsQuery(
 
   // Si hi ha filtre per status, aplicar-lo
   if (options.statusIn && options.statusIn.length > 0) {
-    return query(
-      collectionRef,
-      where('status', 'in', options.statusIn),
-      orderBy('createdAt', 'desc')
-    );
+    // Evitem dependre d'un índex compost per la combinació status + createdAt.
+    // La UI ja pot ordenar després en memòria per createdAt desc.
+    return query(collectionRef, where('status', 'in', options.statusIn));
   }
 
   // Sense filtre, retornar tots ordenats per data

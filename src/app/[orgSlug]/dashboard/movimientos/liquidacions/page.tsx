@@ -445,7 +445,7 @@ export default function LiquidacionsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-24 md:pb-0">
+    <div className="w-full space-y-6 pb-24 md:pb-0">
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
@@ -486,7 +486,7 @@ export default function LiquidacionsPage() {
       </div>
 
       {/* Tabs principals: Liquidacions / Tickets */}
-      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
+      <Tabs className="w-full" value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
         {/* Mobile: Select | Desktop: TabsList */}
         {isMobile ? (
           <Select value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
@@ -532,7 +532,7 @@ export default function LiquidacionsPage() {
         )}
 
         {/* Tab Liquidacions */}
-        <TabsContent value="liquidacions" className="mt-4 space-y-4">
+        <TabsContent value="liquidacions" className="mt-4 w-full space-y-4">
           {/* Banner pre-banc */}
           <Alert>
             <Info className="h-4 w-4" />
@@ -543,7 +543,7 @@ export default function LiquidacionsPage() {
           </Alert>
 
           {/* Subtabs de liquidacions */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+          <Tabs className="w-full" value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
             {/* Mobile: Select | Desktop: TabsList */}
             {isMobile ? (
               <Select value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
@@ -598,7 +598,7 @@ export default function LiquidacionsPage() {
               </TabsList>
             )}
 
-            <TabsContent value={activeTab} className="mt-4">
+            <TabsContent value={activeTab} className="mt-4 w-full">
               {isLoading ? (
                 <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, i) => (
@@ -790,7 +790,7 @@ export default function LiquidacionsPage() {
         </TabsContent>
 
         {/* Tab Tickets */}
-        <TabsContent value="tickets" className="mt-4">
+        <TabsContent value="tickets" className="mt-4 w-full">
           {organizationId && firestore && storage && (
             <TicketsInbox
               firestore={firestore}
@@ -802,7 +802,7 @@ export default function LiquidacionsPage() {
         </TabsContent>
 
         {/* Tab Quilometratge */}
-        <TabsContent value="quilometratge" className="mt-4 space-y-4">
+        <TabsContent value="quilometratge" className="mt-4 w-full space-y-4">
           <Alert>
             <Car className="h-4 w-4" />
             <AlertTitle>{t.expenseReports.tabs.mileage}</AlertTitle>

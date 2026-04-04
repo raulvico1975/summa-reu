@@ -9,6 +9,7 @@ import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { chromium } from 'playwright';
+import { getBlockVideoPreset } from './video-block-standards.mjs';
 
 const DEMO_ORG_ID = 'demo-org';
 const DEFAULT_BASE_URL = 'http://localhost:9002/demo';
@@ -18,11 +19,8 @@ const DEFAULT_PASSWORD = 'DemoRecorder!2026';
 const SCENARIO_SLUG = 'bank-reconciliation-demo';
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), 'output', 'playwright', SCENARIO_SLUG);
 const DEMO_BANK_ACCOUNT_ID = 'demo_bank_account_main_001';
-const COMMERCIAL_VIEWPORT = {
-  width: 1920,
-  height: 1080,
-};
-const DEMO_PRESENTATION_SCALE = 0.92;
+const BLOCK_VIDEO_PRESET = getBlockVideoPreset();
+const COMMERCIAL_VIEWPORT = BLOCK_VIDEO_PRESET.captureViewport;
 
 const SCENARIO_ROWS = {
   candidate: {
@@ -385,15 +383,31 @@ async function setCollapsedSidebarCookie(context, baseUrl) {
   ]);
 }
 
-async function applyStablePresentation(page) {
-  await page.evaluate((scale) => {
-    document.documentElement.style.zoom = String(scale);
-    if (document.body) {
-      document.body.style.zoom = String(scale);
-    }
+async function hideNoise(page) {
+  await page.addStyleTag({
+    content: `
+      [data-next-badge-root],
+      nextjs-portal,
+      #__next-build-watcher,
+      button[aria-label="Open Next.js Dev Tools"],
+      button[aria-label="Assistent"],
+      button[aria-label="Assistant"],
+      [data-radix-toast-viewport],
+      [data-sonner-toaster],
+      [role="status"],
+      div[class*="fixed bottom-6 right-6 z-50"],
+      div[class*="fixed bottom-6 left-4 z-50"],
+      div[class*="fixed bottom-4 left-4 z-50"],
+      div[class*="fixed bottom-4 right-4 z-50"] {
+        display: none !important;
+      }
+    `,
+  }).catch(() => {});
+
+  await page.evaluate(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, DEMO_PRESENTATION_SCALE);
-  await sleep(250);
+  }).catch(() => {});
+  await sleep(200);
 }
 
 async function clickButton(page, pattern, scope = page) {
@@ -414,7 +428,11 @@ async function openMovementsPage(page, credentials, artifactDir) {
   await page.goto(`${BASE_URL}/dashboard/movimientos`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('heading', { name: /Moviments/i }).waitFor({ state: 'visible', timeout: 30000 });
   await waitForAppIdle(page);
-  await applyStablePresentation(page);
+  await hideNoise(page);
+  await page.waitForFunction(() => {
+    const rows = document.querySelectorAll('tbody tr');
+    return rows.length >= 5;
+  }, null, { timeout: 30000 }).catch(() => {});
   await sleep(1400);
 
   const markerPath = path.join(artifactDir, 'movements-start.png');
@@ -653,13 +671,40 @@ async function waitForCategoryLabels(page) {
   }
 }
 
+async function waitForContactLabels(page) {
+  const expectations = [
+    { description: SCENARIO_ROWS.donor.description, label: 'Clara Soler Ribas' },
+    { description: SCENARIO_ROWS.supplier.description, label: 'Cooperativa Social Sense CIF' },
+    { description: SCENARIO_ROWS.employee.description, label: 'Pau Vidal Ros' },
+  ];
+
+  for (const expectation of expectations) {
+    await page.waitForFunction(
+      ({ description, label }) => {
+        const rows = Array.from(document.querySelectorAll('tbody tr'));
+        return rows.some((row) => {
+          const element = row;
+          const isVisible = element instanceof HTMLElement && element.offsetParent !== null;
+          if (!isVisible) return false;
+          const text = element.innerText || '';
+          return text.includes(description) && text.includes(label);
+        });
+      },
+      expectation,
+      {
+        timeout: 30000,
+      }
+    );
+  }
+}
+
 async function runFlow(page, db, scenarioData, artifactDir) {
   await page.setViewportSize(
     QUALITY_MODE === 'commercial'
       ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
       : { width: 1440, height: 960 }
   );
-  await applyStablePresentation(page);
+  await hideNoise(page);
   await sleep(1200);
 
   await startImport(page, scenarioData.csvPath);
@@ -686,6 +731,15 @@ async function runFlow(page, db, scenarioData, artifactDir) {
   const employeeRow = await getRowByDescription(page, SCENARIO_ROWS.employee.description);
   await assignContactToRow(page, employeeRow, scenarioData.contacts.employee.name);
 
+  await refreshAndFocusScenario(page, scenarioData.searchTerm);
+  const donorAssignedRow = await getRowByDescription(page, SCENARIO_ROWS.donor.description);
+  const donorAssignedText = await donorAssignedRow.innerText().catch(() => '');
+  if (!donorAssignedText.includes(scenarioData.contacts.donor.name)) {
+    await assignContactToRow(page, donorAssignedRow, scenarioData.contacts.donor.name);
+  }
+
+  await refreshAndFocusScenario(page, scenarioData.searchTerm);
+  await waitForContactLabels(page);
   await waitForCategoryLabels(page);
   await sleep(1500);
 
@@ -703,12 +757,24 @@ function convertVideo(ffmpegPath, inputPath, outputPath, trimStartSeconds, durat
     '-t',
     formatSeconds(durationSeconds),
     '-an',
+    '-vf',
+    'scale=3840:2160:flags=lanczos',
+    '-r',
+    '30',
     '-c:v',
     'libx264',
     '-preset',
     'slow',
-    '-crf',
-    '18',
+    '-b:v',
+    '18M',
+    '-minrate',
+    '18M',
+    '-maxrate',
+    '18M',
+    '-bufsize',
+    '36M',
+    '-x264-params',
+    'nal-hrd=cbr:force-cfr=1',
     '-pix_fmt',
     'yuv420p',
     '-movflags',

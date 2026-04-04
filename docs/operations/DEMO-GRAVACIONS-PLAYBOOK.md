@@ -39,11 +39,18 @@ la interpretació per defecte és:
   - obrir navegador
   - executar el relat
   - convertir la sortida final a MP4
-- Per peces públiques o comercials, prioritzar:
-  - `1920x1080`
-  - `25 fps` en el pipeline estable actual
-  - codificació H.264 amb compressió conservadora
-  - flux dins de la UI real del producte
+- Nou estàndard executable per a `blocs de funcionalitats`:
+  - capturar la UI amb `mida realista d'app`, no amb viewport 4K que enmini la interfície
+  - preset canònic a [video-block-standards.mjs](/Users/raulvico/Documents/summa-social/scripts/demo/video-block-standards.mjs)
+  - `captureViewport`: `2048x1152`
+  - `export final`: `3840x2160`
+  - `30 fps`
+  - H.264 premium
+  - enquadrament obert per defecte
+  - `CSS zoom` prohibit
+- Regla pràctica:
+  - `master llegible + export 4K`
+  - mai `pseudo-4K` amb la UI massa petita
 - El cursor queda fora del pipeline estable actual. Si algun dia el recuperem, haurà de ser sense comprometre fiabilitat.
 
 ### 3. Sortida
@@ -106,6 +113,9 @@ la interpretació per defecte és:
 - Els assets amb sufix d idioma tenen prioritat sobre els generics.
 - Si no existeixen, el sistema fa servir intro/outro textuals de fallback.
 - El renderer comercial actual aplica `crossfade` curt entre peces per evitar talls bruscos.
+- A partir d'ara, per a peces de blocs:
+  - el renderer ha de respectar `30 fps`
+  - i no pot rebaixar la sensació premium del master
 - Comanda base:
 
 ```bash

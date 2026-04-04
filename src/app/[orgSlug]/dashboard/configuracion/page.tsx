@@ -81,7 +81,7 @@ export default function SettingsPage() {
       {/* Configuració d'usuari: Idioma i Contrasenya */}
       <div>
         <h2 className="text-lg font-semibold mb-4">{t.settings.userSettingsTitle}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           <LanguageSelector />
         </div>
       </div>

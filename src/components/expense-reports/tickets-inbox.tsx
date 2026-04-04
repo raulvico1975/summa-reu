@@ -773,7 +773,7 @@ export function TicketsInbox({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       {/* Header: Layout responsive en 2 franges que fan wrap */}
       <div className="flex flex-col gap-3">
         {/* Franja 1: Filtres + Accions (wrap en mòbil) */}

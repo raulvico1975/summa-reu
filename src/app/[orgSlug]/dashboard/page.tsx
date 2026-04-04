@@ -2064,7 +2064,7 @@ ${tr("dashboard.generatedWith")}`;
               </DialogHeader>
 
               <div className="grid min-h-0 flex-1 gap-5 overflow-hidden px-4 pb-4 pt-4 md:grid-cols-[minmax(0,1.4fr)_minmax(340px,0.95fr)] md:px-6 md:pb-6 md:pt-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.9fr)]">
-                <div className="flex min-h-0 flex-col gap-4">
+                <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-xl border bg-muted/20 p-3 shadow-sm">
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr("dashboard.totalIncome")}</p>
@@ -2084,7 +2084,7 @@ ${tr("dashboard.generatedWith")}`;
                     </div>
                   </div>
 
-                  <div className="flex min-h-0 flex-1 flex-col gap-3 rounded-xl border bg-background/80 p-4 shadow-sm md:p-5">
+                  <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border bg-background/80 p-4 shadow-sm md:p-5">
                     <div>
                       <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.summaryBlockTitle}</p>
                       <p className="text-sm font-semibold">{summaryOrgPeriodText}</p>
@@ -2092,11 +2092,11 @@ ${tr("dashboard.generatedWith")}`;
                     <Textarea
                       value={summaryText}
                       onChange={(e) => setSummaryText(e.target.value)}
-                      className="min-h-[300px] flex-1 resize-none font-mono text-sm leading-6 md:min-h-[420px]"
+                      className="min-h-0 flex-1 resize-none font-mono text-sm leading-6 md:min-h-[420px]"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
                     <Button variant="outline" onClick={handleCopy}>
                       <Copy className="h-4 w-4 mr-2" />
                       {copySuccess ? tr("dashboard.copied") : tr("dashboard.copy")}
