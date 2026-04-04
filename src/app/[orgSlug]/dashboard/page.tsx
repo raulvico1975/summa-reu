@@ -27,10 +27,10 @@ import {
   aggregateOperationalExpensesByProject,
   buildNarrativesFromAggregates,
   type AggregateResult,
-  type AggregateRow,
   type NarrativeDraft,
 } from '@/lib/exports/economic-report';
-import * as XLSX from 'xlsx';
+import { buildDashboardShareWorkbook } from '@/lib/exports/dashboard-share-workbook';
+import { writeFile as writeWorkbookFile } from 'xlsx';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toPeriodQuery } from '@/lib/period-query';
@@ -415,7 +415,11 @@ export default function DashboardPage() {
   // (amounts, totals, balances or derived financial metrics).
   const canViewFinancial = canViewFinancialDashboard(permissions);
   const { t, tr, language } = useTranslations();
-  const locale = language === 'es' ? 'es-ES' : 'ca-ES';
+  const locale =
+    language === 'es' ? 'es-ES' :
+    language === 'fr' ? 'fr-FR' :
+    language === 'pt' ? 'pt-PT' :
+    'ca-ES';
   // Helper local per interpolació de placeholders {key} en claus JSON
   const tri = React.useCallback(
     (key: string, params: Record<string, string | number>) =>
@@ -485,43 +489,175 @@ export default function DashboardPage() {
       },
     },
   }), [tr, tri]);
-  const shareModalExports = React.useMemo(() => ({
-    summarySheet: {
-      name: tr("dashboard.shareModal.exports.summarySheet.name"),
-      columns: {
-        indicator: tr("dashboard.shareModal.exports.summarySheet.columns.indicator"),
-        value: tr("dashboard.shareModal.exports.summarySheet.columns.value"),
-      },
-      rows: {
-        period: tr("dashboard.shareModal.exports.summarySheet.rows.period"),
-        income: tr("dashboard.shareModal.exports.summarySheet.rows.income"),
-        expenses: tr("dashboard.shareModal.exports.summarySheet.rows.expenses"),
-        transfers: tr("dashboard.shareModal.exports.summarySheet.rows.transfers"),
-        balance: tr("dashboard.shareModal.exports.summarySheet.rows.balance"),
-      },
-    },
-    sheets: {
-      incomeTop: tr("dashboard.shareModal.exports.sheets.incomeTop"),
-      expensesTop: tr("dashboard.shareModal.exports.sheets.expensesTop"),
-      transfersTop: tr("dashboard.shareModal.exports.sheets.transfersTop"),
-      incomeComplete: tr("dashboard.shareModal.exports.sheets.incomeComplete"),
-      expensesComplete: tr("dashboard.shareModal.exports.sheets.expensesComplete"),
-      transfersComplete: tr("dashboard.shareModal.exports.sheets.transfersComplete"),
-    },
-    columns: {
-      id: tr("dashboard.shareModal.exports.columns.id"),
-      name: tr("dashboard.shareModal.exports.columns.name"),
-      amount: tr("dashboard.shareModal.exports.columns.amount"),
-      percentage: tr("dashboard.shareModal.exports.columns.percentage"),
-      operations: tr("dashboard.shareModal.exports.columns.operations"),
-    },
-    excelFileName: (p: { organizationSlug: string; date: string }) => tri("dashboard.shareModal.exports.excelFileName", p),
-    csvFileNames: {
-      income: (p: { organizationSlug: string; date: string }) => tri("dashboard.shareModal.exports.csvFileNames.income", p),
-      expenses: (p: { organizationSlug: string; date: string }) => tri("dashboard.shareModal.exports.csvFileNames.expenses", p),
-      transfers: (p: { organizationSlug: string; date: string }) => tri("dashboard.shareModal.exports.csvFileNames.transfers", p),
-    },
-  }), [tr, tri]);
+  const shareWorkbookTexts = React.useMemo(() => {
+    switch (language) {
+      case 'es':
+        return {
+          summarySheetName: 'Resumen ejecutivo',
+          summaryColumns: {
+            indicator: 'Concepto',
+            value: 'Valor',
+          },
+          summaryMeta: {
+            organization: 'Entidad',
+            period: 'Período',
+            generatedAt: 'Fecha de exportación',
+          },
+          summaryMetrics: {
+            income: 'Ingresos totales',
+            expenses: 'Gastos operativos',
+            transfers: 'Transferencias a contrapartes',
+            balance: 'Balance operativo',
+          },
+          detailSheets: {
+            incomeTop: 'Ingresos destacados',
+            expensesTop: 'Proyectos destacados',
+            transfersTop: 'Contrapartes destacadas',
+            incomeComplete: 'Ingresos detalle',
+            expensesComplete: 'Proyectos detalle',
+            transfersComplete: 'Contrapartes detalle',
+          },
+          detailColumns: {
+            incomeLabel: 'Categoría de ingreso',
+            expenseLabel: 'Proyecto',
+            transferLabel: 'Contraparte',
+            amount: 'Importe',
+            percentage: '% sobre el total',
+            operations: 'Movimientos',
+          },
+          fallbacks: {
+            uncategorized: shareModalTexts.labels.uncategorized,
+            generalProject: shareModalTexts.labels.generalProject,
+            noCounterpart: shareModalTexts.labels.noCounterpart,
+          },
+        };
+      case 'fr':
+        return {
+          summarySheetName: 'Resume executif',
+          summaryColumns: {
+            indicator: 'Concept',
+            value: 'Valeur',
+          },
+          summaryMeta: {
+            organization: 'Organisation',
+            period: 'Periode',
+            generatedAt: 'Date d export',
+          },
+          summaryMetrics: {
+            income: 'Revenus totaux',
+            expenses: 'Depenses operationnelles',
+            transfers: 'Transferts aux partenaires',
+            balance: 'Solde operationnel',
+          },
+          detailSheets: {
+            incomeTop: 'Revenus cles',
+            expensesTop: 'Projets cles',
+            transfersTop: 'Partenaires cles',
+            incomeComplete: 'Revenus detail',
+            expensesComplete: 'Projets detail',
+            transfersComplete: 'Partenaires detail',
+          },
+          detailColumns: {
+            incomeLabel: 'Categorie de revenu',
+            expenseLabel: 'Projet',
+            transferLabel: 'Partenaire',
+            amount: 'Montant',
+            percentage: '% du total',
+            operations: 'Mouvements',
+          },
+          fallbacks: {
+            uncategorized: shareModalTexts.labels.uncategorized,
+            generalProject: shareModalTexts.labels.generalProject,
+            noCounterpart: shareModalTexts.labels.noCounterpart,
+          },
+        };
+      case 'pt':
+        return {
+          summarySheetName: 'Resumo executivo',
+          summaryColumns: {
+            indicator: 'Conceito',
+            value: 'Valor',
+          },
+          summaryMeta: {
+            organization: 'Entidade',
+            period: 'Periodo',
+            generatedAt: 'Data de exportacao',
+          },
+          summaryMetrics: {
+            income: 'Receitas totais',
+            expenses: 'Despesas operacionais',
+            transfers: 'Transferencias para contrapartes',
+            balance: 'Saldo operacional',
+          },
+          detailSheets: {
+            incomeTop: 'Receitas em destaque',
+            expensesTop: 'Projetos em destaque',
+            transfersTop: 'Contrapartes em destaque',
+            incomeComplete: 'Receitas detalhe',
+            expensesComplete: 'Projetos detalhe',
+            transfersComplete: 'Contrapartes detalhe',
+          },
+          detailColumns: {
+            incomeLabel: 'Categoria de receita',
+            expenseLabel: 'Projeto',
+            transferLabel: 'Contraparte',
+            amount: 'Montante',
+            percentage: '% do total',
+            operations: 'Movimentos',
+          },
+          fallbacks: {
+            uncategorized: shareModalTexts.labels.uncategorized,
+            generalProject: shareModalTexts.labels.generalProject,
+            noCounterpart: shareModalTexts.labels.noCounterpart,
+          },
+        };
+      case 'ca':
+      default:
+        return {
+          summarySheetName: 'Resum executiu',
+          summaryColumns: {
+            indicator: 'Concepte',
+            value: 'Valor',
+          },
+          summaryMeta: {
+            organization: 'Entitat',
+            period: 'Periode',
+            generatedAt: 'Data d exportacio',
+          },
+          summaryMetrics: {
+            income: 'Ingressos totals',
+            expenses: 'Despeses operatives',
+            transfers: 'Transferencies a contraparts',
+            balance: 'Balanc operatiu',
+          },
+          detailSheets: {
+            incomeTop: 'Ingressos destacats',
+            expensesTop: 'Projectes destacats',
+            transfersTop: 'Contraparts destacades',
+            incomeComplete: 'Ingressos detall',
+            expensesComplete: 'Projectes detall',
+            transfersComplete: 'Contraparts detall',
+          },
+          detailColumns: {
+            incomeLabel: 'Categoria d ingres',
+            expenseLabel: 'Projecte',
+            transferLabel: 'Contrapart',
+            amount: 'Import',
+            percentage: '% sobre el total',
+            operations: 'Moviments',
+          },
+          fallbacks: {
+            uncategorized: shareModalTexts.labels.uncategorized,
+            generalProject: shareModalTexts.labels.generalProject,
+            noCounterpart: shareModalTexts.labels.noCounterpart,
+          },
+        };
+    }
+  }, [language, shareModalTexts.labels.generalProject, shareModalTexts.labels.noCounterpart, shareModalTexts.labels.uncategorized]);
+  const shareWorkbookFileName = React.useCallback(
+    (p: { organizationSlug: string; date: string }) => tri("dashboard.shareModal.exports.excelFileName", p),
+    [tri]
+  );
   const { buildUrl } = useOrgUrl();
 
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -1194,63 +1330,27 @@ ${shareSummarySections.bullet} ${tr("dashboard.memberFees")}: ${formatCurrencyEU
     }
   };
 
-  const formatAggregateSheetRows = (rows: AggregateRow[]) => {
-    const columns = shareModalExports.columns;
-    return rows.map((row) => ({
-      [columns.id]: row.id,
-      [columns.name]: row.name,
-      [columns.amount]: Number(row.amount.toFixed(2)),
-      [columns.percentage]: Number(row.percentage.toFixed(2)),
-      [columns.operations]: row.count,
-    }));
-  };
-
   const handleExportEconomicExcel = () => {
     if (!canViewFinancial) return;
-    const workbook = XLSX.utils.book_new();
     const periodLabel = formatPeriodLabel(dateFilter);
-    const summarySheetTexts = shareModalExports.summarySheet;
-    const summarySheet = XLSX.utils.json_to_sheet([
-      {
-        [summarySheetTexts.columns.indicator]: summarySheetTexts.rows.period,
-        [summarySheetTexts.columns.value]: periodLabel,
-      },
-      {
-        [summarySheetTexts.columns.indicator]: summarySheetTexts.rows.income,
-        [summarySheetTexts.columns.value]: Number(incomeAggregates.total.toFixed(2)),
-      },
-      {
-        [summarySheetTexts.columns.indicator]: summarySheetTexts.rows.expenses,
-        [summarySheetTexts.columns.value]: Number(expenseAggregates.total.toFixed(2)),
-      },
-      {
-        [summarySheetTexts.columns.indicator]: summarySheetTexts.rows.transfers,
-        [summarySheetTexts.columns.value]: Number(transferAggregates.total.toFixed(2)),
-      },
-      {
-        [summarySheetTexts.columns.indicator]: summarySheetTexts.rows.balance,
-        [summarySheetTexts.columns.value]: Number(netBalance.toFixed(2)),
-      },
-    ]);
-
-    const appendSheet = (title: string, rows: AggregateRow[]) => {
-      const sheet = XLSX.utils.json_to_sheet(formatAggregateSheetRows(rows));
-      XLSX.utils.book_append_sheet(workbook, sheet, title);
-    };
-
-    XLSX.utils.book_append_sheet(workbook, summarySheet, summarySheetTexts.name);
-    const sheetNames = shareModalExports.sheets;
-    appendSheet(sheetNames.incomeTop, incomeAggregates.aggregated);
-    appendSheet(sheetNames.expensesTop, expenseAggregates.aggregated);
-    appendSheet(sheetNames.transfersTop, transferAggregates.aggregated);
-    appendSheet(sheetNames.incomeComplete, incomeAggregates.complete);
-    appendSheet(sheetNames.expensesComplete, expenseAggregates.complete);
-    appendSheet(sheetNames.transfersComplete, transferAggregates.complete);
+    const workbook = buildDashboardShareWorkbook({
+      organizationName,
+      periodLabel,
+      generatedAt: new Date(),
+      locale,
+      incomeAggregates,
+      expenseAggregates,
+      transferAggregates,
+      netBalance,
+      categories,
+      categoryTranslations: t.categories as Record<string, string>,
+      texts: shareWorkbookTexts,
+    });
 
     const dateStamp = new Date().toISOString().split('T')[0];
     const organizationSlug = organization?.slug || 'org';
-    const excelFileName = shareModalExports.excelFileName({ organizationSlug, date: dateStamp });
-    XLSX.writeFile(workbook, excelFileName);
+    const excelFileName = shareWorkbookFileName({ organizationSlug, date: dateStamp });
+    writeWorkbookFile(workbook, excelFileName);
   };
 
   // Map de contactes per ID amb el seu membershipType
