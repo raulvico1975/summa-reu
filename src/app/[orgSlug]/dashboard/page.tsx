@@ -31,6 +31,7 @@ import {
   type AggregateResult,
   type NarrativeDraft,
 } from '@/lib/exports/economic-report';
+import { buildDashboardSharePdf } from '@/lib/exports/dashboard-share-pdf';
 import { buildDashboardShareWorkbook } from '@/lib/exports/dashboard-share-workbook';
 import type { ExpenseLink, OffBankExpense, Project as ProjectModuleProject } from '@/lib/project-module-types';
 import { writeFile as writeWorkbookFile } from 'xlsx';
@@ -131,6 +132,32 @@ function matchesDateFilter(dateValue: string | null | undefined, filter: DateFil
   }
 
   return true;
+}
+
+function loadImageAsBase64(url: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch (error) {
+        console.error('Error converting dashboard logo to base64:', error);
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
 }
 
 function toWorkbookLabel(value: string | null | undefined, fallbackLabel: string): string {
@@ -697,6 +724,114 @@ export default function DashboardPage() {
     (p: { organizationSlug: string; date: string }) => tri("dashboard.shareModal.exports.excelFileName", p),
     [tri]
   );
+  const sharePdfTexts = React.useMemo(() => {
+    const footer =
+      language === 'es' ? 'Generado con Summa Social' :
+      language === 'fr' ? 'Genere avec Summa Social' :
+      language === 'pt' ? 'Gerado com Summa Social' :
+      'Generat amb Summa Social';
+    const subtitle =
+      language === 'es' ? 'Documento ejecutivo para junta, patronato o asamblea' :
+      language === 'fr' ? 'Document executif pour conseil ou assemblee' :
+      language === 'pt' ? 'Documento executivo para reuniao ou assembleia' :
+      "Document executiu per a junta, patronat o assemblea";
+    const executiveTakeawayTitle =
+      language === 'es' ? 'Idea clave del periodo' :
+      language === 'fr' ? 'Idee cle de la periode' :
+      language === 'pt' ? 'Ideia-chave do periodo' :
+      'Idea clau del periode';
+    const narrativesPageTitle =
+      language === 'es' ? 'Lectura del periodo' :
+      language === 'fr' ? 'Lecture de la periode' :
+      language === 'pt' ? 'Leitura do periodo' :
+      'Lectura del periode';
+    const detailSectionKicker =
+      language === 'es' ? 'Anexo analitico' :
+      language === 'fr' ? 'Annexe analytique' :
+      language === 'pt' ? 'Anexo analitico' :
+      'Annex analitic';
+    const emptyText =
+      language === 'es' ? 'Sin texto disponible' :
+      language === 'fr' ? 'Aucun texte disponible' :
+      language === 'pt' ? 'Sem texto disponivel' :
+      'Sense text disponible';
+    const emptyIncome =
+      language === 'es' ? 'No hay ingresos registrados en este periodo.' :
+      language === 'fr' ? 'Aucun revenu enregistre sur cette periode.' :
+      language === 'pt' ? 'Nao ha receitas registadas neste periodo.' :
+      'No hi ha ingressos registrats en aquest periode.';
+    const emptyExpenses =
+      language === 'es' ? 'No hay gastos registrados en este periodo.' :
+      language === 'fr' ? 'Aucune depense enregistree sur cette periode.' :
+      language === 'pt' ? 'Nao ha despesas registadas neste periodo.' :
+      'No hi ha despeses registrades en aquest periode.';
+
+    return {
+      title: shareWorkbookTexts.summarySheetName,
+      subtitle,
+      executiveTakeawayTitle,
+      footer,
+      detailSectionKicker,
+      summaryMeta: shareWorkbookTexts.summaryMeta,
+      summaryMetrics: shareWorkbookTexts.summaryMetrics,
+      summaryBoxTitle: shareModalTexts.summaryBlockTitle,
+      narrativesPageTitle,
+      narrativeSectionTitles: {
+        summary: shareModalTexts.cards.summary.title,
+        income: shareModalTexts.cards.income.title,
+        expenses: shareModalTexts.cards.expenses.title,
+        transfers: shareModalTexts.cards.transfers.title,
+      },
+      detailPages: shareWorkbookTexts.detailSheets,
+      detailColumns: shareWorkbookTexts.detailColumns,
+      executiveTakeaway: {
+        noActivity:
+          language === 'es' ? 'No se ha registrado actividad economica en el periodo analizado.' :
+          language === 'fr' ? "Aucune activite economique n'a ete enregistree sur la periode analysee." :
+          language === 'pt' ? 'Nao foi registada atividade economica no periodo analisado.' :
+          "No s'ha registrat activitat economica en el periode analitzat.",
+        balanced:
+          language === 'es' ? 'El periodo se cierra en equilibrio operativo.' :
+          language === 'fr' ? "La periode se clot dans un equilibre operationnel." :
+          language === 'pt' ? 'O periodo fecha em equilibrio operacional.' :
+          "El periode es tanca en equilibri operatiu.",
+        surplus: ({ balance }: { balance: string }) =>
+          language === 'es' ? `El periodo se cierra con superavit operativo de ${balance}.` :
+          language === 'fr' ? `La periode se clot avec un excedent operationnel de ${balance}.` :
+          language === 'pt' ? `O periodo fecha com superavit operacional de ${balance}.` :
+          `El periode es tanca amb superavit operatiu de ${balance}.`,
+        deficit: ({ balance }: { balance: string }) =>
+          language === 'es' ? `El periodo se cierra con deficit operativo de ${balance}.` :
+          language === 'fr' ? `La periode se clot avec un deficit operationnel de ${balance}.` :
+          language === 'pt' ? `O periodo fecha com deficit operacional de ${balance}.` :
+          `El periode es tanca amb deficit operatiu de ${balance}.`,
+      },
+      emptyStates: {
+        income: emptyIncome,
+        expenses: emptyExpenses,
+      },
+      fallbacks: {
+        uncategorized: shareWorkbookTexts.fallbacks.uncategorized,
+        emptyText,
+      },
+    };
+  }, [language, shareModalTexts.cards, shareModalTexts.summaryBlockTitle, shareWorkbookTexts]);
+  const sharePdfActionLabel = React.useMemo(() => {
+    switch (language) {
+      case 'es':
+        return 'Exportar PDF';
+      case 'fr':
+        return 'Exporter PDF';
+      case 'pt':
+        return 'Exportar PDF';
+      case 'ca':
+      default:
+        return 'Exportar PDF';
+    }
+  }, [language]);
+  const sharePdfFileName = React.useCallback((organizationSlug: string, date: string) => {
+    return `resum_executiu_${organizationSlug}_${date}.pdf`;
+  }, []);
   const { buildUrl } = useOrgUrl();
 
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -1136,6 +1271,7 @@ export default function DashboardPage() {
   const [editingField, setEditingField] = React.useState<keyof NarrativeDraft | null>(null);
   const [editingValue, setEditingValue] = React.useState('');
   const [isNarrativeEditorOpen, setNarrativeEditorOpen] = React.useState(false);
+  const [isExportingPdf, setIsExportingPdf] = React.useState(false);
   const isMobile = useIsMobile();
   const createMovementsLink = React.useCallback(
     (filter: string) => {
@@ -1509,6 +1645,44 @@ ${shareSummarySections.bullet} ${tr("dashboard.memberFees")}: ${formatCurrencyEU
     const organizationSlug = organization?.slug || 'org';
     const excelFileName = shareWorkbookFileName({ organizationSlug, date: dateStamp });
     writeWorkbookFile(workbook, excelFileName);
+  };
+
+  const handleExportEconomicPdf = async () => {
+    if (!canViewFinancial || isExportingPdf) return;
+
+    setIsExportingPdf(true);
+    try {
+      const periodLabel = formatPeriodLabel(dateFilter);
+      const organizationSlug = organization?.slug || 'org';
+      const dateStamp = new Date().toISOString().split('T')[0];
+      const logoBase64 = organization?.logoUrl ? await loadImageAsBase64(organization.logoUrl) : null;
+
+      const pdf = buildDashboardSharePdf({
+        organizationName,
+        organizationTaxId: organization?.taxId,
+        organizationLogoDataUrl: logoBase64,
+        periodLabel,
+        generatedAt: new Date(),
+        locale,
+        summaryText,
+        narratives,
+        incomeAggregates,
+        expenseCategoryAggregates,
+        transferAggregates,
+        expenseAxisAggregates,
+        projectRows: projectWorkbookRows,
+        netBalance,
+        categories,
+        categoryTranslations: t.categories as Record<string, string>,
+        texts: sharePdfTexts,
+      });
+
+      pdf.save(sharePdfFileName(organizationSlug, dateStamp));
+    } catch (error) {
+      console.error('Error exporting dashboard PDF:', error);
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   // Map de contactes per ID amb el seu membershipType
@@ -2510,6 +2684,20 @@ ${shareSummarySections.bullet} ${tr("dashboard.memberFees")}: ${formatCurrencyEU
               </div>
 
               <DialogFooter className="border-t px-4 py-4 md:px-6">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 min-w-[170px] text-xs"
+                  onClick={handleExportEconomicPdf}
+                  disabled={isExportingPdf}
+                >
+                  {isExportingPdf ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileText className="h-4 w-4 mr-2" />
+                  )}
+                  {sharePdfActionLabel}
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
