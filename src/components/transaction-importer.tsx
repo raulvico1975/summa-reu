@@ -961,7 +961,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         setIsAccountDialogOpen(open);
         if (!open) setPendingFile(null);
       }}>
-        <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:w-[min(96vw,56rem)] sm:max-w-4xl">
+        <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-3rem),68rem)]">
           <DialogHeader className="border-b px-4 py-5 pr-10 sm:px-6">
             <DialogTitle>{t.settings.bankAccounts.selectAccount}</DialogTitle>
             <DialogDescription>

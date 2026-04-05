@@ -1326,7 +1326,7 @@ export function DonationCertificateGenerator() {
 
       {/* Diàleg de previsualització */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,72rem)] overflow-auto sm:w-[min(calc(100vw-3rem),72rem)]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />

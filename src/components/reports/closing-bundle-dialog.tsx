@@ -183,7 +183,7 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,48rem)] overflow-y-auto sm:w-[min(calc(100vw-3rem),48rem)]">
         <DialogHeader>
           <DialogTitle>{t.reports.closingBundle.dialogTitle}</DialogTitle>
           <DialogDescription>

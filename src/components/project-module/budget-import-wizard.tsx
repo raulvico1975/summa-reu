@@ -866,7 +866,7 @@ export function BudgetImportWizard({
 
   return (
     <Dialog open={open} onOpenChange={isImporting ? undefined : onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,78rem)] overflow-y-auto sm:w-[min(calc(100vw-3rem),78rem)]">
         <DialogHeader>
           <DialogTitle>
             <FileSpreadsheet className="inline-block w-5 h-5 mr-2" />

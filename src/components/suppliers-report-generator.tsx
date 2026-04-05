@@ -643,7 +643,7 @@ export function SuppliersReportGenerator() {
           DIALOG DETALL TRANSACCIONS
           ═══════════════════════════════════════════════════════════════════════ */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="grid w-[min(calc(100vw-2rem),48rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:w-full">
+        <DialogContent className="grid w-[min(calc(100vw-2rem),60rem)] max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-3rem),60rem)]">
           <DialogHeader className="border-b px-6 pb-4 pt-6">
             <DialogTitle>
               {detailAggregate && model347DetailTitle(detailAggregate.name)}
@@ -702,7 +702,7 @@ export function SuppliersReportGenerator() {
           DIALOG EMAIL CONFIRMACIÓ 347
           ═══════════════════════════════════════════════════════════════════════ */}
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-        <DialogContent className="grid w-[min(calc(100vw-2rem),48rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-full">
+        <DialogContent className="grid w-[min(calc(100vw-2rem),60rem)] max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-3rem),60rem)]">
           <DialogHeader className="border-b px-6 pb-4 pt-6">
             <DialogTitle>{model347EmailDialogTitle}</DialogTitle>
             <DialogDescription>
@@ -756,7 +756,7 @@ export function SuppliersReportGenerator() {
           }
         }}
       >
-        <DialogContent className="grid w-[min(calc(100vw-2rem),48rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-full">
+        <DialogContent className="grid w-[min(calc(100vw-2rem),60rem)] max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-3rem),60rem)]">
           <DialogHeader className="gap-2 border-b px-6 pb-4 pt-6">
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />

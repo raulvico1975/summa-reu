@@ -981,7 +981,7 @@ export function DonationsReportGenerator() {
             DIALOG EXCLOSOS AEAT
             ═══════════════════════════════════════════════════════════════════════ */}
         <Dialog open={aeatExcludedDialogOpen} onOpenChange={setAeatExcludedDialogOpen}>
-          <DialogContent className="grid w-[min(calc(100vw-2rem),48rem)] max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-3rem),48rem)]">
+          <DialogContent className="grid w-[min(calc(100vw-2rem),60rem)] max-w-[calc(100vw-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-[min(calc(100vw-3rem),60rem)]">
             <DialogHeader className="min-w-0 gap-2 border-b px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
               <DialogTitle className="flex min-w-0 items-start gap-2 pr-2">
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />

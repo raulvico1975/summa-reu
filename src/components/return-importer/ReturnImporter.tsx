@@ -302,8 +302,8 @@ export function ReturnImporter({
 
   const dialogContentClassName =
     step === 'mapping' || step === 'preview'
-      ? 'max-h-[calc(100dvh-2rem)] w-[min(96vw,64rem)] flex flex-col overflow-hidden p-0'
-      : 'max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto';
+      ? 'max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,76rem)] flex flex-col overflow-hidden p-0 sm:w-[min(calc(100vw-3rem),76rem)]'
+      : 'max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,72rem)] overflow-y-auto sm:w-[min(calc(100vw-3rem),72rem)]';
 
   const mappingMissingMessage =
     mapping.ibanColumn === null
