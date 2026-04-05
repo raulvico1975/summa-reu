@@ -517,7 +517,7 @@ export function RemittanceSplitter({
   const remittanceDialogContentClassName =
     step === 'mapping' || step === 'preview'
       ? 'max-h-[calc(100dvh-1rem)] w-[calc(100vw-0.75rem)] max-w-[1460px] flex flex-col overflow-hidden p-0 sm:w-[min(calc(100vw-2rem),1460px)]'
-      : 'w-[calc(100vw-0.75rem)] max-w-[40rem] sm:w-[min(calc(100vw-2rem),40rem)]';
+      : 'max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,60rem)] overflow-y-auto sm:w-[min(calc(100vw-3rem),60rem)]';
 
   const mappingHasIdentifier = nameColumn !== null || taxIdColumn !== null || ibanColumn !== null;
 

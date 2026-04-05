@@ -18,6 +18,21 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-04-05 — Amplada de modals SEPA i remeses
+
+**Context:**
+Ajust de layout en modals i diàlegs auxiliars de `Remeses SEPA`, conciliació SEPA, desglossament de remeses i devolucions. El canvi amplia l'espai útil en desktop per revisar imports, comptes, llistats i textos llargs sense tocar càlculs, seqüències SEPA, persistència ni regles fiscals.
+
+**Comprovacions aplicades:**
+1. Revisió manual del diff per confirmar que els fitxers afectats només ajusten classes d'amplada/overflow de `DialogContent`.
+2. Revisió específica dels casos `sepa-generation-modal`, `sepa-reconcile-modal`, `remittance-splitter`, `split-detail-dialog` i esborrany de correu de devolució, validant que el canvi és només visual.
+3. Evidència tècnica prevista per deploy: `npm run typecheck`, `git diff --check` i ritual `npm run publica` sobre el commit candidat.
+
+**Resultat:**
+- [x] El canvi és UI-only i no altera generació SEPA, imports, remeses, devolucions ni càlculs fiscals.
+- [x] Els diàlegs de remeses guanyen amplada útil i redueixen dependència de truncaments o scrolls incòmodes.
+- [x] La guardrail fiscal queda coberta amb evidència manual específica del flux SEPA afectat.
+
 ### Registre manual 2026-04-05 — Amplada de modals d'importació/exportació sensibles
 
 **Context:**

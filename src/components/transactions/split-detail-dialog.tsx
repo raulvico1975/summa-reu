@@ -56,7 +56,7 @@ export function SplitDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-3xl">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,64rem)] overflow-hidden sm:w-[min(calc(100vw-3rem),64rem)]">
         <DialogHeader>
           <DialogTitle>{tr('dialogs.splitDetail.title', 'Detall del desglossament')}</DialogTitle>
           <DialogDescription>

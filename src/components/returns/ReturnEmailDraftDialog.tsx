@@ -40,7 +40,7 @@ export function ReturnEmailDraftDialog({ open, onOpenChange, initialBody }: Retu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,60rem)] overflow-y-auto sm:w-[min(calc(100vw-3rem),60rem)]">
         <DialogHeader>
           <DialogTitle>{tr('returns.emailDraft.title')}</DialogTitle>
           <DialogDescription>{tr('returns.emailDraft.description')}</DialogDescription>
