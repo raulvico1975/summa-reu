@@ -1643,35 +1643,35 @@ export function DonorManager() {
             ) : (
               /* Vista desktop (taula) */
               <>
-              <div className="rounded-md border">
-                <Table>
+              <div className="rounded-xl border border-border/60 bg-background/95 shadow-sm">
+                <Table className="w-full table-fixed">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t.donors.name}</TableHead>
-                      <TableHead>{t.donors.taxId}</TableHead>
-                      <TableHead>{t.donors.donorType}</TableHead>
-                      <TableHead>{t.donors.membershipType}</TableHead>
-                      <TableHead>{t.donors.amount}</TableHead>
+                      <TableHead className="w-[34%]">{t.donors.name}</TableHead>
+                      <TableHead className="w-[140px]">{t.donors.taxId}</TableHead>
+                      <TableHead className="w-[140px]">{t.donors.donorType}</TableHead>
+                      <TableHead className="w-[150px]">{t.donors.membershipType}</TableHead>
+                      <TableHead className="w-[130px]">{t.donors.amount}</TableHead>
                       {showIncompleteOnly && (
-                        <TableHead className="text-amber-600">{t.donors.missingColumn || 'Falta'}</TableHead>
+                        <TableHead className="w-[180px] text-amber-600">{t.donors.missingColumn || 'Falta'}</TableHead>
                       )}
-                      <TableHead className="text-right">{t.donors.actions}</TableHead>
+                      <TableHead className="w-[120px] text-right">{t.donors.actions}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredDonors && filteredDonors.map((donor) => (
                       <TableRow key={donor.id} className="h-10">
-                        <TableCell className="font-medium py-1">
-                          <div className="flex items-center gap-2">
+                        <TableCell className="min-w-0 py-1 font-medium">
+                          <div className="flex min-w-0 items-center gap-2">
                             {donor.donorType === 'individual' ? (
-                              <User className="h-4 w-4 text-muted-foreground" />
+                              <User className="h-4 w-4 shrink-0 text-muted-foreground" />
                             ) : (
-                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                              <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
                             )}
                             <button
                               type="button"
                               onClick={() => handleViewDetail(donor)}
-                              className="text-blue-600 hover:text-blue-800 hover:underline text-left font-medium cursor-pointer"
+                              className="truncate text-left font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                             >
                               {donor.name}
                             </button>
@@ -1720,7 +1720,7 @@ export function DonorManager() {
                             <Badge variant="secondary" className="text-xs py-0 px-1.5">{t.donors.membership.oneTime}</Badge>
                           )}
                         </TableCell>
-                        <TableCell className="py-1 text-xs">
+                        <TableCell className="py-1 text-xs whitespace-nowrap">
                           {donor.membershipType === 'recurring' && donor.monthlyAmount
                             ? formatCurrencyEU(donor.monthlyAmount) + `/${getPeriodicitySuffix(donor.periodicityQuota, t)}`
                             : '-'

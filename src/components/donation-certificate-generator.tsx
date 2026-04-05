@@ -1227,8 +1227,8 @@ export function DonationCertificateGenerator() {
             /* ═══════════════════════════════════════════════════════════════════
                VISTA DESKTOP - Taula
                ═══════════════════════════════════════════════════════════════════ */
-            <div className="rounded-md border">
-              <Table>
+            <div className="rounded-xl border border-border/60 bg-background/95 shadow-sm">
+              <Table className="w-full table-fixed">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12">
@@ -1237,15 +1237,15 @@ export function DonationCertificateGenerator() {
                         onCheckedChange={toggleAll}
                       />
                     </TableHead>
-                    <TableHead>{t.donors.name}</TableHead>
-                    <TableHead>{t.donors.taxId}</TableHead>
-                    <TableHead className="text-center">{t.certificates.donations}</TableHead>
-                    <TableHead className="text-right">{t.certificates.total}</TableHead>
+                    <TableHead className="w-[34%]">{t.donors.name}</TableHead>
+                    <TableHead className="w-[150px]">{t.donors.taxId}</TableHead>
+                    <TableHead className="w-[100px] text-center">{t.certificates.donations}</TableHead>
+                    <TableHead className="w-[140px] text-right">{t.certificates.total}</TableHead>
                     {totalReturns > 0 && (
-                      <TableHead className="text-right text-orange-600">{t.reports.columnDiscounted}</TableHead>
+                      <TableHead className="w-[140px] text-right text-orange-600">{t.reports.columnDiscounted}</TableHead>
                     )}
-                    <TableHead className="text-center">{t.certificates.emailColumn}</TableHead>
-                    <TableHead className="text-right">{t.certificates.actions}</TableHead>
+                    <TableHead className="w-[110px] text-center">{t.certificates.emailColumn}</TableHead>
+                    <TableHead className="w-[120px] text-right">{t.certificates.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1257,16 +1257,18 @@ export function DonationCertificateGenerator() {
                           onCheckedChange={() => toggleDonor(summary.donor.id)}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{cleanName(summary.donor.name)}</TableCell>
-                      <TableCell className="font-mono text-sm">{summary.donor.taxId}</TableCell>
+                      <TableCell className="min-w-0 font-medium">
+                        <span className="block truncate">{cleanName(summary.donor.name)}</span>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm whitespace-nowrap">{summary.donor.taxId}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant="secondary">{summary.donationCount}</Badge>
                       </TableCell>
-                      <TableCell className="text-right font-mono font-medium text-green-600">
+                      <TableCell className="whitespace-nowrap text-right font-mono font-medium text-green-600">
                         {formatCurrencyEU(summary.totalAmount)}
                       </TableCell>
                       {totalReturns > 0 && (
-                        <TableCell className="text-right font-mono text-orange-500">
+                        <TableCell className="whitespace-nowrap text-right font-mono text-orange-500">
                           {summary.returnedAmount > 0 ? (
                             <span className="flex items-center justify-end gap-1">
                               <Undo2 className="h-3 w-3" />

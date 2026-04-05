@@ -342,7 +342,7 @@ export function StepSelection({
       {/* Barra de filtres */}
       <div className="flex flex-wrap items-center gap-4">
         {/* Cerca */}
-        <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+        <div className="relative min-w-[220px] flex-1 lg:max-w-[360px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
@@ -409,17 +409,17 @@ export function StepSelection({
 
       {/* Table */}
       {!showExcludedOnly ? (
-        <div className="rounded-lg border">
-          <Table>
+        <div className="rounded-xl border border-border/60 bg-background/95 shadow-sm">
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12"></TableHead>
-                <TableHead>{t.sepaCollection.review.itemsTable.name}</TableHead>
-                <TableHead>{t.sepaCollection.review.itemsTable.amount}</TableHead>
-                <TableHead>{tr('sepaPain008.selection.lastRun', 'Darrer cobrament')}</TableHead>
-                <TableHead>{tr('sepaPain008.selection.statusColumn', 'Periodicitat')}</TableHead>
-                <TableHead>{t.sepaCollection.review.itemsTable.iban}</TableHead>
-                <TableHead>{t.sepaCollection.review.itemsTable.sequence}</TableHead>
+                <TableHead className="w-[28%]">{t.sepaCollection.review.itemsTable.name}</TableHead>
+                <TableHead className="w-[120px]">{t.sepaCollection.review.itemsTable.amount}</TableHead>
+                <TableHead className="w-[120px]">{tr('sepaPain008.selection.lastRun', 'Darrer cobrament')}</TableHead>
+                <TableHead className="w-[140px]">{tr('sepaPain008.selection.statusColumn', 'Periodicitat')}</TableHead>
+                <TableHead className="w-[150px]">{t.sepaCollection.review.itemsTable.iban}</TableHead>
+                <TableHead className="w-[120px]">{t.sepaCollection.review.itemsTable.sequence}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -457,7 +457,9 @@ export function StepSelection({
                           onClick={(e) => e.stopPropagation()}
                         />
                       </TableCell>
-                      <TableCell className="font-medium">{donor.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <span className="block truncate">{donor.name}</span>
+                      </TableCell>
                       <TableCell>
                         {donor.monthlyAmount ? (
                           formatCurrency(Math.round(donor.monthlyAmount * 100))
@@ -525,12 +527,12 @@ export function StepSelection({
         </div>
       ) : (
         // Excluded table
-        <div className="rounded-lg border">
-          <Table>
+        <div className="rounded-xl border border-border/60 bg-background/95 shadow-sm">
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8"></TableHead>
-                <TableHead>{t.sepaCollection.review.itemsTable.name}</TableHead>
+                <TableHead className="w-[32%]">{t.sepaCollection.review.itemsTable.name}</TableHead>
                 <TableHead>{tr('sepaPain008.selection.reasonColumn', 'Motiu')}</TableHead>
               </TableRow>
             </TableHeader>
@@ -547,7 +549,9 @@ export function StepSelection({
                     <TableCell>
                       <AlertTriangle className="h-4 w-4 text-orange-500" />
                     </TableCell>
-                    <TableCell className="font-medium">{donor.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="block truncate">{donor.name}</span>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-orange-600 border-orange-300">
                         {getReasonLabel(reason)}

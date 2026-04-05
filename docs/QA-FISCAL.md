@@ -18,6 +18,23 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-04-05 — Amplada de llistats de donants, remeses i fiscalitat
+
+**Context:**
+Ajust de layout per aprofitar millor l'amplada disponible en llistats sensibles de `Donants`, pas de configuració/selecció de `Remeses SEPA`, `Model 182` i `Certificats`. El canvi fixa millor les columnes desktop, amplia l'espai útil en pantalles grans i elimina contenidors massa estrets sense tocar càlculs, persistència ni criteris fiscals.
+
+**Comprovacions aplicades:**
+1. Revisió visual del llistat desktop de `/{org}/dashboard/donants`, comprovant que les columnes `Nom`, `NIF`, tipus, modalitat i import aprofiten l'amplada i que els noms llargs es trunquen sense desquadrar la fila.
+2. Revisió visual del pas `Configuració` i del pas `Selecció` de `/{org}/dashboard/donants/remeses-cobrament`, comprovant doble columna en desktop, cercador més ample i taules principals/exclosos sense aparença encaixonada.
+3. Revisió visual dels llistats desktop de `/{org}/dashboard/informes` per `Model 182` i `Certificats`, validant repartiment de columnes, imports alineats i absència d'overflow horitzontal crític.
+4. Verificació tècnica amb `scripts/verify-local.sh` en verd, incloent `npm run build` correcte sobre el commit candidat.
+
+**Resultat:**
+- [x] El canvi és només de layout/taula i no altera imports, totals, remeses, certificats ni regles fiscals.
+- [x] Els llistats sensibles aprofiten més bé l'amplada desktop i mantenen truncat controlat en camps llargs.
+- [x] Remeses SEPA mostra configuració i selecció amb més espai útil, coherent amb la resta de llistats del dashboard.
+- [x] La guardrail fiscal queda coberta amb evidència manual del flux afectat i build de producció correcte.
+
 ### Registre manual 2026-04-03 — Modals de remeses, Stripe i resum pre-importació
 
 **Context:**

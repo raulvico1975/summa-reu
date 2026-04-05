@@ -68,91 +68,97 @@ export function StepConfig({ bankAccounts, configData, onChange, isLoading }: St
   }
 
   return (
-    <div className="space-y-6 max-w-xl mx-auto">
+    <div className="space-y-6">
       <h3 className="text-lg font-semibold">{t.sepaCollection.config.title}</h3>
 
-      {/* Bank Account Select */}
-      <div className="space-y-2">
-        <Label htmlFor="bankAccount">{t.sepaCollection.config.bankAccount}</Label>
-        <Select
-          value={configData.bankAccountId}
-          onValueChange={(value) => onChange({ ...configData, bankAccountId: value })}
-        >
-          <SelectTrigger id="bankAccount">
-            <SelectValue placeholder={t.sepaCollection.config.bankAccountHint} />
-          </SelectTrigger>
-          <SelectContent>
-            {activeAccounts.map((account) => (
-              <SelectItem key={account.id} value={account.id}>
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span>{account.name}</span>
-                  {account.isDefault && (
-                    <span className="text-xs text-muted-foreground">{tr('sepaPain008.config.defaultAccount', '(defecte)')}</span>
-                  )}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          {t.sepaCollection.config.bankAccountHint}
-        </p>
-      </div>
-
-      {/* Creditor ID warning */}
-      {selectedAccount && !hasCreditorId && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            {t.sepaCollection.config.noCreditorId}
-            <br />
-            <span className="text-xs">{t.sepaCollection.config.configureCreditorId}</span>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Show creditor info if available */}
-      {selectedAccount && hasCreditorId && (
-        <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-          <div className="flex items-center gap-2 text-sm">
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">{t.sepaCollection.config.creditorIdLabel}</span>
-            <span className="font-mono font-medium">{selectedAccount.creditorId}</span>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
+        <div className="space-y-6">
+          {/* Bank Account Select */}
+          <div className="space-y-2">
+            <Label htmlFor="bankAccount">{t.sepaCollection.config.bankAccount}</Label>
+            <Select
+              value={configData.bankAccountId}
+              onValueChange={(value) => onChange({ ...configData, bankAccountId: value })}
+            >
+              <SelectTrigger id="bankAccount">
+                <SelectValue placeholder={t.sepaCollection.config.bankAccountHint} />
+              </SelectTrigger>
+              <SelectContent>
+                {activeAccounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span>{account.name}</span>
+                      {account.isDefault && (
+                        <span className="text-xs text-muted-foreground">{tr('sepaPain008.config.defaultAccount', '(defecte)')}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {t.sepaCollection.config.bankAccountHint}
+            </p>
           </div>
-          {selectedAccount.iban && (
-            <div className="flex items-center gap-2 text-sm">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">{t.sepaCollection.config.ibanLabel}</span>
-              <span className="font-mono font-medium">{selectedAccount.iban}</span>
+
+          {/* Creditor ID warning */}
+          {selectedAccount && !hasCreditorId && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                {t.sepaCollection.config.noCreditorId}
+                <br />
+                <span className="text-xs">{t.sepaCollection.config.configureCreditorId}</span>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Show creditor info if available */}
+          {selectedAccount && hasCreditorId && (
+            <div className="space-y-2 rounded-lg border bg-muted/50 p-4">
+              <div className="flex items-center gap-2 text-sm">
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{t.sepaCollection.config.creditorIdLabel}</span>
+                <span className="font-mono font-medium">{selectedAccount.creditorId}</span>
+              </div>
+              {selectedAccount.iban && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">{t.sepaCollection.config.ibanLabel}</span>
+                  <span className="font-mono font-medium">{selectedAccount.iban}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
 
-      {/* Collection Date */}
-      <div className="space-y-2">
-        <Label htmlFor="collectionDate">{t.sepaCollection.config.collectionDate}</Label>
-        <Input
-          id="collectionDate"
-          type="date"
-          value={configData.collectionDate}
-          onChange={(e) => onChange({ ...configData, collectionDate: e.target.value })}
-          min={new Date().toISOString().split('T')[0]}
-        />
-        <p className="text-xs text-muted-foreground">
-          {t.sepaCollection.config.collectionDateHint}
-        </p>
-      </div>
+        <div className="space-y-6">
+          {/* Collection Date */}
+          <div className="space-y-2">
+            <Label htmlFor="collectionDate">{t.sepaCollection.config.collectionDate}</Label>
+            <Input
+              id="collectionDate"
+              type="date"
+              value={configData.collectionDate}
+              onChange={(e) => onChange({ ...configData, collectionDate: e.target.value })}
+              min={new Date().toISOString().split('T')[0]}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t.sepaCollection.config.collectionDateHint}
+            </p>
+          </div>
 
-      {/* Scheme info (fixed CORE) */}
-      <div className="space-y-2">
-        <Label>{t.sepaCollection.config.scheme}</Label>
-        <div className="rounded-lg border bg-muted/50 p-3">
-          <span className="font-medium">CORE</span>
-          <span className="text-sm text-muted-foreground ml-2">
-            {t.sepaCollection.config.schemeCore}
-          </span>
+          {/* Scheme info (fixed CORE) */}
+          <div className="space-y-2">
+            <Label>{t.sepaCollection.config.scheme}</Label>
+            <div className="rounded-lg border bg-muted/50 p-3">
+              <span className="font-medium">CORE</span>
+              <span className="ml-2 text-sm text-muted-foreground">
+                {t.sepaCollection.config.schemeCore}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

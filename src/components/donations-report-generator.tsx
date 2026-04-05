@@ -900,26 +900,26 @@ export function DonationsReportGenerator() {
                 )}
               </div>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-xl border border-border/60 bg-background/95 shadow-sm">
               <TooltipProvider>
-              <Table>
+              <Table className="w-full table-fixed">
                   <TableHeader>
                   <TableRow>
-                      <TableHead>{t.reports.donorName}</TableHead>
-                      <TableHead>{t.reports.donorTaxId}</TableHead>
-                      <TableHead>{t.reports.donorZipCode}</TableHead>
-                      <TableHead className="text-right">{t.reports.totalAmount}</TableHead>
+                      <TableHead className="w-[40%]">{t.reports.donorName}</TableHead>
+                      <TableHead className="w-[150px]">{t.reports.donorTaxId}</TableHead>
+                      <TableHead className="w-[100px]">{t.reports.donorZipCode}</TableHead>
+                      <TableHead className="w-[140px] text-right">{t.reports.totalAmount}</TableHead>
                       {reportStats?.excludedReturns ? (
-                        <TableHead className="text-right text-orange-600">{t.reports.columnDiscounted}</TableHead>
+                        <TableHead className="w-[140px] text-right text-orange-600">{t.reports.columnDiscounted}</TableHead>
                       ) : null}
                   </TableRow>
                   </TableHeader>
                   <TableBody>
                   {reportData.map((row) => (
                       <TableRow key={row.donorTaxId}>
-                        <TableCell className="font-medium">
-                          <span className="flex items-center gap-2">
-                            {row.donorName}
+                        <TableCell className="min-w-0 font-medium">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className="truncate">{row.donorName}</span>
                             {row.returnedAmount > 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -935,13 +935,13 @@ export function DonationsReportGenerator() {
                             )}
                           </span>
                         </TableCell>
-                        <TableCell>{row.donorTaxId}</TableCell>
-                        <TableCell>{row.donorZipCode}</TableCell>
-                        <TableCell className="text-right font-mono text-green-600 font-medium">
+                        <TableCell className="whitespace-nowrap">{row.donorTaxId}</TableCell>
+                        <TableCell className="whitespace-nowrap">{row.donorZipCode}</TableCell>
+                        <TableCell className="whitespace-nowrap text-right font-mono text-green-600 font-medium">
                           {formatCurrencyEU(row.totalAmount)}
                         </TableCell>
                         {reportStats?.excludedReturns ? (
-                          <TableCell className="text-right font-mono text-orange-500">
+                          <TableCell className="whitespace-nowrap text-right font-mono text-orange-500">
                             {row.returnedAmount > 0 ? (
                               <span className="flex items-center justify-end gap-1">
                                 <Undo2 className="h-3 w-3" />
