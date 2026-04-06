@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { PublicEditorialMark } from '@/components/public/PublicEditorialMark';
 import { PublicFeatureDemo } from '@/components/public/PublicFeatureDemo';
 import type { PublicFeaturesExplorerItem, PublicFeaturesExplorerSection } from '@/components/public/PublicFeaturesExplorer';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
@@ -923,6 +924,7 @@ export default async function FeaturesPage({ params }: PageProps) {
             <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-[3.4rem] lg:leading-[1.02]">
               {layoutCopy.title}
             </h1>
+            <PublicEditorialMark size="sm" className="-mt-2 opacity-70" />
             <p className="max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
               {layoutCopy.lead}
             </p>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
+import { PublicEditorialMark } from '@/components/public/PublicEditorialMark';
 import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
@@ -66,6 +67,7 @@ export default async function AboutPage({ params }: PageProps) {
               <h1 className="max-w-2xl text-3xl font-bold tracking-tight lg:text-5xl">
                 {t.home.whoWeAre.title}
               </h1>
+              <PublicEditorialMark size="xs" className="-mt-2 opacity-65" />
               <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
                 {t.home.whoWeAre.lead}
               </p>
