@@ -2422,9 +2422,9 @@ export const es = {
       statusAssigned: "Imputado",
       statusCategoryPending: "Categoría pendiente",
       // Breakdown badge
-      breakdownNProjects: (n: number) => `${n} proyectos`,
-      breakdownNProjectsPcts: (n: number, pcts: string) => `${n} proy. (${pcts})`,
-      breakdownInThisProject: (pct: number) => `En este: ${pct}%`,
+      breakdownNProjects: (n: number) => `${n} proy.`,
+      breakdownNProjectsPcts: (n: number, pcts: string) => `${n} proy. ${pcts}%`,
+      breakdownInThisProject: (pct: number) => `Este proy. ${pct}%`,
       // Popover header
       popoverAssigned: "Imputado",
       popoverFree: "Libre",

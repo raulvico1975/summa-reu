@@ -305,7 +305,7 @@ function AssignmentStatusPopover({
 
   if (isCategoryPending) {
     return (
-      <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+      <Badge variant="outline" className="h-5 whitespace-nowrap px-1.5 py-0 text-xs bg-amber-50 text-amber-700 border-amber-200">
         {categoryPendingLabel}
       </Badge>
     );
@@ -316,7 +316,7 @@ function AssignmentStatusPopover({
 
   // Si no té assignacions o dada corrupta sense percentatges
   if (status === 'unassigned' || !assignments || assignments.length === 0 || (bd.corruptData && bd.perProject.length === 0)) {
-    return <Badge variant="outline" className="text-xs">{ep.statusUnassigned}</Badge>;
+    return <Badge variant="outline" className="h-5 whitespace-nowrap px-1.5 py-0 text-xs">{ep.statusUnassigned}</Badge>;
   }
 
   // Badge 1: Estat
@@ -329,11 +329,11 @@ function AssignmentStatusPopover({
   const breakdownLabel = computeBreakdownLabel(bd, projectIdFilter ?? null, ep);
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex min-w-0 flex-nowrap items-center gap-1">
       {/* Badge 1: Estat — obre el popover */}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Badge variant={status === 'assigned' ? 'default' : 'outline'} className={`${badgeClass} text-xs`}>
+          <Badge variant={status === 'assigned' ? 'default' : 'outline'} className={`${badgeClass} h-5 whitespace-nowrap px-1.5 py-0 text-xs`}>
             {statusLabel}
           </Badge>
         </PopoverTrigger>
@@ -363,7 +363,7 @@ function AssignmentStatusPopover({
               );
             })()}
           </div>
-          <div className="p-2 space-y-1 max-h-48 overflow-y-auto">
+          <div className={`p-2 space-y-1 ${assignments.length > 3 ? 'max-h-48 overflow-y-auto' : ''}`}>
             {assignments.map((assignment, index) => {
               const isFx = expense.expense.originalAmount != null && expense.expense.originalCurrency;
               const localCurrency = expense.expense.originalCurrency ?? '';
@@ -455,7 +455,7 @@ function AssignmentStatusPopover({
       {breakdownLabel && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-xs max-w-[140px] truncate cursor-default">
+            <Badge variant="outline" className="shrink-0 cursor-default whitespace-nowrap px-1.5 py-0 text-[11px] font-medium">
               {breakdownLabel.label}
             </Badge>
           </TooltipTrigger>
@@ -546,17 +546,22 @@ function QuickAssignPopover({
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-          disabled={isAssigning}
-          aria-label={assignTooltip}
-        >
-          <FolderPlus className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              disabled={isAssigning}
+              aria-label={assignTooltip}
+            >
+              <FolderPlus className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{assignTooltip}</TooltipContent>
+      </Tooltip>
       <PopoverContent className="w-64 p-0" align="end">
         {!selectedProject ? (
           // Pas 1: Seleccionar projecte
@@ -751,7 +756,6 @@ export default function ExpensesInboxPage() {
   const { t, tr } = useTranslations();
   const ep = t.projectModule.expensesPage;
   const statusCategoryPendingLabel = tr('projectModule.expensesPage.statusCategoryPending', 'Categoria pendent');
-  const filterCategoryPendingLabel = tr('projectModule.expensesPage.filterCategoryPending', 'Categoria pendent');
   const searchParams = useSearchParams();
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
@@ -872,7 +876,6 @@ export default function ExpensesInboxPage() {
     | 'offBank'
     | 'assigned'
     | 'unassigned'
-    | 'categoryPending'
     | 'needsReview';
   const [tableFilter, setTableFilter] = React.useState<ExpenseTableFilter>('all');
 
@@ -894,8 +897,6 @@ export default function ExpensesInboxPage() {
         switch (tableFilter) {
           case 'needsReview':
             return exp.needsReview === true;
-          case 'categoryPending':
-            return categoryPending;
           case 'withDocument':
             return !!exp.documentUrl;
           case 'withoutDocument':
@@ -1546,7 +1547,6 @@ export default function ExpensesInboxPage() {
               <SelectItem value="all">{ep.filterAll} ({expenses.length})</SelectItem>
               <SelectItem value="withoutDocument">{ep.filterWithoutDocument}</SelectItem>
               <SelectItem value="unassigned">{ep.filterUnassigned}</SelectItem>
-              <SelectItem value="categoryPending">{filterCategoryPendingLabel}</SelectItem>
               <SelectItem value="offBank">{ep.filterOffBank}</SelectItem>
               {canReadBankInProjectes && <SelectItem value="bank">{ep.filterBank}</SelectItem>}
             </SelectContent>
@@ -1573,14 +1573,6 @@ export default function ExpensesInboxPage() {
               onClick={() => setTableFilter('unassigned')}
             >
               {ep.filterUnassigned}
-            </Button>
-            <Button
-              variant={tableFilter === 'categoryPending' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTableFilter('categoryPending')}
-            >
-              <AlertCircle className="h-4 w-4 mr-1" />
-              {filterCategoryPendingLabel}
             </Button>
             <Button
               variant={tableFilter === 'offBank' ? 'default' : 'outline'}
@@ -1678,12 +1670,12 @@ export default function ExpensesInboxPage() {
                       variant={!categoryPending && status === 'assigned' ? 'default' : 'outline'}
                       className={
                         categoryPending
-                          ? 'bg-amber-50 text-amber-700 border-amber-200 text-xs'
+                          ? 'h-5 whitespace-nowrap px-1.5 py-0 text-xs bg-amber-50 text-amber-700 border-amber-200'
                           : status === 'assigned'
-                          ? 'bg-emerald-600 text-xs'
+                          ? 'h-5 whitespace-nowrap px-1.5 py-0 text-xs bg-emerald-600'
                           : status === 'partial'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-xs'
-                          : 'text-xs'
+                          ? 'h-5 whitespace-nowrap px-1.5 py-0 text-xs bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'h-5 whitespace-nowrap px-1.5 py-0 text-xs'
                       }
                     >
                       {categoryPending
@@ -1695,14 +1687,8 @@ export default function ExpensesInboxPage() {
                         : ep.statusUnassigned}
                     </Badge>,
                     mobileBreakdown && (
-                      <Badge key="breakdown" variant="outline" className="text-xs max-w-[120px] truncate">
+                      <Badge key="breakdown" variant="outline" className="shrink-0 whitespace-nowrap px-1.5 py-0 text-[11px] font-medium">
                         {mobileBreakdown.label}
-                      </Badge>
-                    ),
-                    expense.documentUrl && (
-                      <Badge key="doc" variant="outline" className="text-xs">
-                        <FileText className="h-3 w-3 mr-1" />
-                        Doc
                       </Badge>
                     ),
                   ].filter(Boolean)}
@@ -1719,6 +1705,25 @@ export default function ExpensesInboxPage() {
                   ].filter(Boolean) as { label?: string; value: React.ReactNode }[]}
                   actions={
                     <div className="flex items-center gap-1">
+                      {expense.documentUrl && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer');
+                              }}
+                              aria-label={ep.tooltipOpenDocument}
+                            >
+                              <FileText className="h-4 w-4 fill-current text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
+                        </Tooltip>
+                      )}
                       {/* Assignar (per-projecte TC check al popover) */}
                       {!projectsLoading && projects.length > 0 && status === 'unassigned' && !categoryPending && (
                         expense.amountEUR !== null || isFxExpenseNeedingProjectTC(expense)
@@ -1741,34 +1746,51 @@ export default function ExpensesInboxPage() {
                       )}
                       {/* Editar despesa off-bank */}
                       {expense.source === 'offBank' && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEditOffBank(item)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEditOffBank(item)}
+                              aria-label={t.projectModule?.editExpense ?? 'Editar despesa'}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t.projectModule?.editExpense ?? 'Editar despesa'}</TooltipContent>
+                        </Tooltip>
                       )}
                       {/* Eliminar despesa off-bank */}
                       {expense.source === 'offBank' && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => setDeleteConfirmExpense(item)}
-                          disabled={isDeletingOffBank}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => setDeleteConfirmExpense(item)}
+                              disabled={isDeletingOffBank}
+                              aria-label="Eliminar despesa"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Eliminar despesa</TooltipContent>
+                        </Tooltip>
                       )}
                       {/* Detall despesa bank */}
                       {expense.source === 'bank' && (
-                        <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t.projectModule?.viewDetail ?? 'Veure detall'}>
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent>{t.projectModule?.viewDetail ?? 'Veure detall'}</TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
                   }
@@ -1795,12 +1817,12 @@ export default function ExpensesInboxPage() {
                     disabled={selectableExpenses.length === 0}
                   />
                 </TableHead>
-                <TableHead className="w-[28px] px-1 text-center hidden xl:table-cell">{ep.tableDoc}</TableHead>
+                <TableHead className="w-[40px] px-1 text-center">{ep.tableDoc}</TableHead>
                 <TableHead className="w-[80px] px-2">{ep.tableDate}</TableHead>
                 <TableHead className="px-2">{ep.tableDescription}</TableHead>
-                <TableHead className="hidden xl:table-cell px-2">{tr('projectModule.expensesPage.tableCounterparty', 'Proveïdor')}</TableHead>
+                <TableHead className="hidden xl:table-cell w-[160px] px-2 2xl:w-[190px]">{tr('projectModule.expensesPage.tableCounterparty', 'Proveïdor')}</TableHead>
                 <TableHead className="text-right px-2 w-[100px]">{ep.tableAmount}</TableHead>
-                <TableHead className="w-[70px] px-2">{ep.tableStatus}</TableHead>
+                <TableHead className="w-[200px] px-2 2xl:w-[220px]">{ep.tableStatus}</TableHead>
                 <TableHead className="w-[90px] px-1"></TableHead>
               </TableRow>
             </TableHeader>
@@ -1809,7 +1831,7 @@ export default function ExpensesInboxPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     <TableCell className="px-2"><Skeleton className="h-4 w-4" /></TableCell>
-                    <TableCell className="hidden xl:table-cell px-1"><Skeleton className="h-3 w-3 rounded-full" /></TableCell>
+                    <TableCell className="px-1"><Skeleton className="h-3 w-3 rounded-full mx-auto" /></TableCell>
                     <TableCell className="px-2"><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="px-2"><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell className="hidden xl:table-cell px-2"><Skeleton className="h-4 w-24" /></TableCell>
@@ -1851,43 +1873,34 @@ export default function ExpensesInboxPage() {
                         />
                       </TableCell>
 
-                      {/* Document - visible només en xl+ */}
-                      <TableCell className="hidden xl:table-cell px-1 text-center">
+                      {/* Document - sempre visible com a Moviments */}
+                      <TableCell className="px-1 text-center">
                         {isUploading ? (
                           <RefreshCw className="h-3 w-3 animate-spin text-primary inline-block" />
                         ) : deletingDocTxId === expense.txId ? (
                           <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground inline-block" />
                         ) : expense.documentUrl ? (
-                          <div className="inline-flex items-center gap-0.5">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
-                                  className="inline-flex items-center justify-center h-5 w-5 rounded hover:bg-accent transition-colors"
-                                >
-                                  <FileText className="h-3.5 w-3.5 text-emerald-600" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
-                            </Tooltip>
-                            {expense.source !== 'bank' && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteDocument(item)}
-                                    className="inline-flex items-center justify-center h-4 w-4 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                                  >
-                                    <Trash2 className="h-2.5 w-2.5" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
-                              </Tooltip>
-                            )}
-                          </div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted/40"
+                              >
+                                <FileText className="h-[18px] w-[18px] fill-current text-foreground/80" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>{ep.tooltipOpenDocument}</TooltipContent>
+                          </Tooltip>
                         ) : (
-                          <FileText className="h-3.5 w-3.5 text-muted-foreground/30 inline-block" />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-md text-foreground/30">
+                                <FileText className="h-[18px] w-[18px]" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>{ep.tooltipNoDocument}</TooltipContent>
+                          </Tooltip>
                         )}
                       </TableCell>
 
@@ -1909,20 +1922,10 @@ export default function ExpensesInboxPage() {
                             <div className="text-[13px] truncate max-w-[min(42vw,36rem)]" title={expense.description || undefined}>
                               {expense.description || '-'}
                             </div>
-                            {/* Categoria i contrapart - visible només en < xl */}
+                            {/* Contrapart en línia secundària */}
                             <div className="xl:hidden flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                               {expense.counterpartyName && (
                                 <span className="truncate max-w-[180px]">{expense.counterpartyName}</span>
-                              )}
-                              {/* Icona document inline en < xl */}
-                              {expense.documentUrl && (
-                                <button
-                                  type="button"
-                                  onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
-                                  className="shrink-0"
-                                >
-                                  <FileText className="h-3 w-3 text-emerald-600" />
-                                </button>
                               )}
                             </div>
                           </div>
@@ -1930,7 +1933,7 @@ export default function ExpensesInboxPage() {
                       </TableCell>
 
                       {/* Proveïdor - visible només en xl+ */}
-                      <TableCell className="hidden xl:table-cell px-2 text-muted-foreground text-[13px] max-w-[260px] truncate">
+                      <TableCell className="hidden xl:table-cell px-2 text-[13px] text-muted-foreground max-w-[160px] truncate 2xl:max-w-[190px]">
                         {expense.counterpartyName || '-'}
                       </TableCell>
 
@@ -1950,7 +1953,7 @@ export default function ExpensesInboxPage() {
                       </TableCell>
 
                       {/* Estat */}
-                      <TableCell className="px-2">
+                      <TableCell className="px-2 align-middle">
                         <AssignmentStatusPopover
                           expense={item}
                           status={status}
@@ -1989,39 +1992,73 @@ export default function ExpensesInboxPage() {
                             </span>
                           )}
                           {expense.source === 'offBank' && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                              onClick={() => handleEditOffBank(item)}
-                              aria-label={t.projectModule?.editExpense ?? 'Editar despesa'}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  onClick={() => handleEditOffBank(item)}
+                                  aria-label={t.projectModule?.editExpense ?? 'Editar despesa'}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t.projectModule?.editExpense ?? 'Editar despesa'}</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {expense.source === 'offBank' && expense.documentUrl && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => handleDeleteDocument(item)}
+                                  aria-label={t.movements?.table?.deleteDocument ?? 'Eliminar document'}
+                                >
+                                  <span className="relative inline-flex h-3.5 w-3.5 items-center justify-center">
+                                    <FileText className="h-3.5 w-3.5" />
+                                    <span className="pointer-events-none absolute h-[1.5px] w-4 rotate-[-45deg] rounded-full bg-current" />
+                                  </span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
+                            </Tooltip>
                           )}
                           {expense.source === 'offBank' && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                              onClick={() => setDeleteConfirmExpense(item)}
-                              disabled={isDeletingOffBank}
-                              aria-label="Eliminar despesa definitivament"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => setDeleteConfirmExpense(item)}
+                                  disabled={isDeletingOffBank}
+                                  aria-label="Eliminar despesa"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Eliminar despesa</TooltipContent>
+                            </Tooltip>
                           )}
                           {expense.source === 'bank' && (
-                            <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                                aria-label={t.projectModule?.viewDetail ?? 'Veure detall'}
-                              >
-                                <ChevronRight className="h-3.5 w-3.5" />
-                              </Button>
-                            </Link>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link href={buildUrl(`/dashboard/project-module/expenses/${expense.txId}`)}>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                    aria-label={t.projectModule?.viewDetail ?? 'Veure detall'}
+                                  >
+                                    <ChevronRight className="h-3.5 w-3.5" />
+                                  </Button>
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent>{t.projectModule?.viewDetail ?? 'Veure detall'}</TooltipContent>
+                            </Tooltip>
                           )}
                         </div>
                       </TableCell>

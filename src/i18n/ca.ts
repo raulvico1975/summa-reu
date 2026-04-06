@@ -2395,9 +2395,9 @@ export const ca = {
       statusAssigned: "Imputada",
       statusCategoryPending: "Categoria pendent",
       // Breakdown badge
-      breakdownNProjects: (n: number) => `${n} projectes`,
-      breakdownNProjectsPcts: (n: number, pcts: string) => `${n} proj. (${pcts})`,
-      breakdownInThisProject: (pct: number) => `En aquest: ${pct}%`,
+      breakdownNProjects: (n: number) => `${n} proj.`,
+      breakdownNProjectsPcts: (n: number, pcts: string) => `${n} proj. ${pcts}%`,
+      breakdownInThisProject: (pct: number) => `Aquest proj. ${pct}%`,
       // Popover header
       popoverAssigned: "Imputat",
       popoverFree: "Lliure",
