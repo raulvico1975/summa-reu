@@ -6,6 +6,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, CalendarDays } from 'lucide-react';
+import { PublicEditorialMark } from '@/components/public/PublicEditorialMark';
 import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Badge } from '@/components/ui/badge';
@@ -102,6 +103,7 @@ export default async function NovetatsPage({ params }: PageProps) {
             <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
               {t.updates.title}
             </h1>
+            <PublicEditorialMark size="xs" className="-mt-2 opacity-65" />
             <p className="text-base leading-7 text-muted-foreground sm:text-lg">
               {t.updates.latestDescription}
             </p>

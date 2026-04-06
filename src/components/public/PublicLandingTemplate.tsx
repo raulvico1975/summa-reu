@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Clock3, PlayCircle } from 'lucide-react';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
+import { PublicEditorialMark } from '@/components/public/PublicEditorialMark';
 import { PublicLandingVideo } from '@/components/public/PublicLandingVideo';
 import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { Button } from '@/components/ui/button';
@@ -174,6 +175,7 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
                 <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.4rem]">
                   {content.hero.title}
                 </h1>
+                <PublicEditorialMark size="sm" className="mt-3 opacity-70" />
                 <p className="mt-4 max-w-3xl text-xl leading-8 text-muted-foreground">
                   {content.hero.subtitle}
                 </p>
@@ -191,6 +193,7 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
             <div className="grid gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-start lg:gap-10">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight mb-4">{content.hero.title}</h1>
+                <PublicEditorialMark size="sm" className="-mt-1 mb-4 opacity-70" />
                 <p className="text-lg text-muted-foreground mb-6">{content.hero.subtitle}</p>
                 <div className="space-y-4 text-muted-foreground">
                   {content.hero.introParagraphs.map((paragraph) => (

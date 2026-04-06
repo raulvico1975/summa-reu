@@ -122,12 +122,31 @@ export function RotatingHeroPhrase({
             </span>
           );
         })}
-        <span
-          className={cn(
-            'pointer-events-none absolute inset-x-0 bottom-[0.1em] h-[0.34em] rounded-full bg-amber-200/90',
-            underlineClassName
-          )}
-        />
+        <span className="pointer-events-none absolute inset-0 z-0">
+          <span className="summa-hero-focus-wash absolute left-[4%] top-[0.04em] h-[0.92em] w-[84%] rounded-[999px]" />
+        </span>
+        <span className="pointer-events-none absolute inset-x-0 bottom-[-0.04em] z-0 h-[0.38em]">
+          <span className="absolute left-[3%] right-[1%] bottom-[0.04em] h-[0.28em] rounded-full bg-sky-100/50 blur-[6px]" />
+          <svg
+            viewBox="0 0 240 34"
+            className={cn(
+              'absolute inset-x-0 bottom-0 h-full w-full overflow-visible',
+              underlineClassName
+            )}
+            preserveAspectRatio="none"
+          >
+            <path
+              d="M6 21C44 23 86 23 126 19C164 15 198 12 236 14"
+              className="summa-hero-underline-path"
+              pathLength={1}
+            />
+            <path
+              d="M18 24C66 26 122 26 178 21C202 19 220 18 236 18"
+              className="summa-hero-underline-path summa-hero-underline-path-secondary"
+              pathLength={1}
+            />
+          </svg>
+        </span>
       </span>
     </span>
   );

@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
+import { PublicEditorialMark } from '@/components/public/PublicEditorialMark'
 import { PUBLIC_SHELL_X } from '@/components/public/public-shell'
 import { PublicSiteFooter } from '@/components/public/PublicSiteFooter'
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader'
@@ -137,6 +138,7 @@ export async function BlogIndexView({
               <h1 className="text-[2.45rem] font-semibold tracking-[-0.05em] text-foreground sm:text-[3.2rem]">
                 {copy.title}
               </h1>
+              <PublicEditorialMark size="xs" className="-mt-1 opacity-65" />
               <p className="text-base leading-7 text-muted-foreground sm:text-[1.04rem]">
                 {copy.description}
               </p>
@@ -163,6 +165,7 @@ export async function BlogIndexView({
             <h1 className="text-[2.45rem] font-semibold tracking-[-0.05em] text-foreground sm:text-[3.2rem]">
               {copy.title}
             </h1>
+            <PublicEditorialMark size="xs" className="-mt-1 opacity-65" />
             <p className="text-base leading-7 text-muted-foreground sm:text-[1.04rem]">
               {copy.description}
             </p>

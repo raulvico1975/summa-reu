@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { PublicFeaturesExplorer, type PublicFeaturesExplorerSection } from '@/components/public/PublicFeaturesExplorer';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
+import { PublicEditorialMark } from '@/components/public/PublicEditorialMark';
 import { PublicHeroParticles } from '@/components/public/PublicHeroParticles';
 import { PUBLIC_SHELL_X, PUBLIC_WIDE_SHELL } from '@/components/public/public-shell';
 import { RotatingHeroPhrase } from '@/components/public/RotatingHeroPhrase';
@@ -1854,6 +1855,7 @@ export default async function HomePage({ params }: PageProps) {
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-[2.45rem]">
               {t.home.systemOverview.title}
             </h2>
+            <PublicEditorialMark align="center" size="sm" className="mt-3 opacity-80" />
             {t.home.systemOverview.subtitle ? (
               <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
                 {t.home.systemOverview.subtitle}

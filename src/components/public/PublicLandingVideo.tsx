@@ -234,6 +234,48 @@ export function PublicLandingVideo({
     };
   }, [autoPlay, hasStartedPlayback]);
 
+  useEffect(() => {
+    if (!autoPlay) {
+      return;
+    }
+
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const ensurePlayback = () => {
+      if (cancelled) {
+        return;
+      }
+
+      video.defaultMuted = muted;
+      video.muted = muted;
+
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        void playPromise.catch(() => {
+          // El navegador pot bloquejar l'autoplay en alguns contextos de render.
+        });
+      }
+    };
+
+    video.load();
+    ensurePlayback();
+    video.addEventListener('loadedmetadata', ensurePlayback);
+    video.addEventListener('loadeddata', ensurePlayback);
+    video.addEventListener('canplay', ensurePlayback);
+
+    return () => {
+      cancelled = true;
+      video.removeEventListener('loadedmetadata', ensurePlayback);
+      video.removeEventListener('loadeddata', ensurePlayback);
+      video.removeEventListener('canplay', ensurePlayback);
+    };
+  }, [autoPlay, muted, src, mp4FallbackSrc]);
+
   const shouldRenderOverlay = captionsDisplay === 'overlay' && cues.length > 0;
   const shouldShowNativeControls = controls && (hasStartedPlayback || autoPlay);
 
