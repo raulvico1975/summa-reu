@@ -1,22 +1,24 @@
-# Impacte funcional i sincronitzacio documental
+manual_updated: no
+faq_updated: no
+justification_if_no_change: El comportament canvia només al mòdul Projectes i no altera el flux ni la guia operativa de Moviments o FAQ general.
 
-## Metadata
-- date: 2026-04-02
-- change_scope: Millora visual de la modal de donants en desktop i neteja local d'i18n de la mateixa modal
+Què ha canviat
 
-## Declaracio obligatoria
-- help_topics_updated:
-  - (cap)
-- manual_updated: no
-- manual_sections:
-- faq_updated: no
-- faq_questions:
-- justification_if_no_change: El canvi afecta el layout i els textos interns de la modal de donants dins del dashboard, pero no introdueix nous fluxos ni nous comportaments funcionals que requereixin manual o FAQ d'usuari final.
+- El mòdul `Projectes > Assignació de despeses` ja no bloqueja ni tracta com a cas especial les despeses bancàries sense categoria global.
+- Les despeses bancàries elegibles amb categoria `null`, `Revisar` o equivalent es poden seleccionar, imputar i editar igual que la resta.
+- El feed de projectes continua admetent aquestes despeses sense afegir cap filtre nou per categoria.
 
-## Brief de producte per canvis visibles
-- visible_user_change: yes
-- user_scope: equips d'entitat que creen o editen donants des de desktop
-- user_problem_before: la modal de donants en desktop quedava massa estreta i amb els camps principals mal resolts, i els textos nous podien barrejar idiomes en alguns entorns
-- user_change_now: la modal aprofita millor l'amplada disponible, ordena millor els camps per seccions i manté els textos nous alineats amb l'idioma actiu dins de la mateixa modal
-- user_day_to_day: editar o crear donants en desktop es mes clar, amb menys sensacio d'encaix i sense literals nous fora de lloc a la modal redissenyada
-- user_action_required: cap
+Per què importa a l'usuari
+
+- Es trenca la dependència funcional entre la classificació global a `Moviments` i la imputació a projecte.
+- L'equip pot avançar la justificació o l'assignació de projecte encara que la categoria global del moviment estigui pendent.
+
+Com ho notarà
+
+- Una despesa bancària sense categoria apareixerà a l'assignació de despeses amb comportament normal.
+- Es podrà marcar, fer `quick assign`, imputar des del detall i incloure en el filtre de no assignades sense cap avís específic per categoria.
+
+Ha de fer alguna acció?
+
+- No.
+- La classificació global continua gestionant-se a `Moviments`, però ja no impedeix imputar la despesa al mòdul `Projectes`.

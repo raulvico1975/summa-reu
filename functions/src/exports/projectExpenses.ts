@@ -191,9 +191,8 @@ function calculateEligibility(tx: Transaction): boolean {
   if (tx.isRemittance === true) return false;
   if (tx.isSplit === true) return false;
 
-  // Les despeses sense categoria també entren al feed:
-  // la UI les marca com "categoria pendent" i bloqueja la imputació
-  // fins que es categoritzin a Moviments.
+  // La categoria global no afecta l'elegibilitat del mòdul Projectes.
+  // Les despeses negatives elegibles entren igualment al feed.
   // TODO: si s'implementen transferències internes, excloure-les aquí.
   return true;
 }
