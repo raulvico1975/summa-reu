@@ -196,6 +196,7 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
 
       setStep('done');
       toast({
+        presentation: 'centered-success',
         title: t.importers.common.importComplete,
         description: tr(
           'bankAccountsImporter.importSummary',

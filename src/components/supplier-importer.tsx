@@ -438,6 +438,7 @@ export function SupplierImporter({
       onImportComplete?.(imported);
 
       toast({
+        presentation: 'centered-success',
         title: t.importers.supplier.importSuccess,
         description: t.importers.supplier.importSuccessDescription(imported),
       });

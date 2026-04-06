@@ -159,6 +159,7 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
         URL.revokeObjectURL(url);
 
         toast({
+          presentation: 'centered-success',
           title: t.reports.closingBundle.done,
           description: t.reports.closingBundle.doneDescription,
         });

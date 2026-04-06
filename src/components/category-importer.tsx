@@ -193,6 +193,7 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
 
       setStep('done');
       toast({
+        presentation: 'centered-success',
         title: t.importers.common.importComplete,
         description: tr('categoryImporter.importSummary', '{created} creades, {updated} actualitzades.')
           .replace('{created}', String(created))

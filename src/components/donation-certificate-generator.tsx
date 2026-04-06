@@ -894,7 +894,7 @@ export function DonationCertificateGenerator() {
     const doc = await generatePDF(summary);
     const fileName = `Certificat_${selectedYear}_${cleanName(summary.donor.name).replace(/\s+/g, '_')}.pdf`;
     doc.save(fileName);
-    toast({ title: t.certificates.certificateGenerated, description: t.certificates.certificateGeneratedDescription(fileName) });
+    toast({ presentation: 'centered-success', title: t.certificates.certificateGenerated, description: t.certificates.certificateGeneratedDescription(fileName) });
   };
 
   const handleDownloadAll = async () => {

@@ -916,6 +916,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           });
         } else {
           toast({
+            presentation: 'centered-success',
             title: t.importers.transaction.importSuccess,
             description: t.importers.transaction.importSuccessDescription(createdCount, totalDuplicatesSkipped),
           });

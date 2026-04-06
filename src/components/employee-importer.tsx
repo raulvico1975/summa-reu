@@ -179,6 +179,7 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
 
       setStep('done');
       toast({
+        presentation: 'centered-success',
         title: t.importers.common.importComplete,
         description: tr('employeeImporter.importSummary', '{created} creats, {updated} actualitzats.')
           .replace('{created}', String(created))

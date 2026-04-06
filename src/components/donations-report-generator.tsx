@@ -442,7 +442,7 @@ export function DonationsReportGenerator() {
     // Descarregar arxiu
     XLSX.writeFile(wb, `model182_${selectedYear}.xlsx`);
 
-    toast({ title: t.reports.exportComplete, description: t.reports.exportCompleteDescription });
+    toast({ presentation: 'centered-success', title: t.reports.exportComplete, description: t.reports.exportCompleteDescription });
   };
 
   /**
@@ -513,7 +513,7 @@ export function DonationsReportGenerator() {
     // Descarregar arxiu amb nom diferenciat
     XLSX.writeFile(wb, `model182_gestoria_A-G_${selectedYear}.xlsx`);
 
-    toast({ title: t.reports.exportComplete, description: t.reports.exportGestoriaTooltip });
+    toast({ presentation: 'centered-success', title: t.reports.exportComplete, description: t.reports.exportGestoriaTooltip });
   };
 
   /**
@@ -594,7 +594,7 @@ export function DonationsReportGenerator() {
 
     // 3. Cap exclòs → exportar directament
     downloadAEATFile(result.content);
-    toast({ title: t.reports.exportComplete, description: t.reports.exportAEATTooltip });
+    toast({ presentation: 'centered-success', title: t.reports.exportComplete, description: t.reports.exportAEATTooltip });
   };
 
   /**
@@ -671,7 +671,7 @@ export function DonationsReportGenerator() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast({ title: t.reports.exportComplete, description: t.reports.exportExcludedCsvDesc });
+    toast({ presentation: 'centered-success', title: t.reports.exportComplete, description: t.reports.exportExcludedCsvDesc });
   };
 
   /**

@@ -972,6 +972,7 @@ export function DonorImporter({
     onImportComplete?.(imported + updated);
 
     toast({
+      presentation: 'centered-success',
       title: t.importers.donor.importSuccess,
       description: t.importers.donor.importSuccessDescription(imported + updated),
     });

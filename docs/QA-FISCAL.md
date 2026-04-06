@@ -33,6 +33,23 @@ Ajust de layout en modals i diàlegs auxiliars de `Remeses SEPA`, conciliació S
 - [x] Els diàlegs de remeses guanyen amplada útil i redueixen dependència de truncaments o scrolls incòmodes.
 - [x] La guardrail fiscal queda coberta amb evidència manual específica del flux SEPA afectat.
 
+### Registre manual 2026-04-06 — Notificacions centrades d'èxit en imports i informes
+
+**Context:**
+Introducció d'una notificació centrada opt-in per a èxits clars d'importació i generació d'informes/certificats. El canvi només altera la presentació del feedback final en imports de donants, treballadors, categories, comptes bancaris, invitacions i transaccions, així com en exportacions del Model 182, Model 347, certificats i paquet de tancament. No toca càlculs, dades exportades, persistència ni permisos.
+
+**Comprovacions aplicades:**
+1. Revisió manual del diff per confirmar que `src/hooks/use-toast.ts` i `src/components/ui/toaster.tsx` afegeixen un mode nou optatiu (`centered-success`) sense canviar el comportament per defecte dels toasts existents.
+2. Revisió manual dels fitxers fiscals afectats (`donations-report-generator.tsx`, `suppliers-report-generator.tsx`, `donation-certificate-generator.tsx`) per validar que només s'afegeix `presentation: 'centered-success'` als missatges d'èxit després de la generació/descàrrega.
+3. Verificació tècnica amb `npm run typecheck` i `git diff --check` en verd sobre el commit candidat.
+4. Verificació de build de producció dins del ritual `npm run publica`, confirmant compilació correcta abans del guardrail fiscal.
+
+**Resultat:**
+- [x] El canvi és UI-only i no altera cap càlcul del 182, 347, certificats ni altres fluxos fiscals.
+- [x] Els errors, avisos i toasts amb CTA continuen intactes; només canvien alguns èxits simples i explícits.
+- [x] La nova notificació és opt-in i no modifica el comportament global dels toasts actuals.
+- [x] La guardrail fiscal queda coberta amb evidència manual específica del flux afectat.
+
 ### Registre manual 2026-04-05 — Amplada de modals d'importació/exportació sensibles
 
 **Context:**

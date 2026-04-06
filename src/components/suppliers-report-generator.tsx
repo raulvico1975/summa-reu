@@ -299,7 +299,7 @@ export function SuppliersReportGenerator() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    toast({ title: t.reports.exportComplete, description: t.reports.exportCompleteDescription });
+    toast({ presentation: 'centered-success', title: t.reports.exportComplete, description: t.reports.exportCompleteDescription });
   };
 
   // ── Export AEAT ──
@@ -386,6 +386,7 @@ export function SuppliersReportGenerator() {
     URL.revokeObjectURL(url);
 
     toast({
+      presentation: 'centered-success',
       title: t.reports.exportComplete,
       description: t.reports.model347AEATExcludedDesc(
         summary?.includedCount ?? 0,

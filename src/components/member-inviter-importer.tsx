@@ -192,6 +192,7 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
 
       setStep('done');
       toast({
+        presentation: 'centered-success',
         title: tr('memberInviterImporter.importCompleteTitle', 'Invitacions creades'),
         description: tr('memberInviterImporter.importCompleteDescription', "S'han creat {count} invitacions.").replace('{count}', String(created)),
       });
