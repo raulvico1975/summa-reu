@@ -12,6 +12,7 @@ import {
   ClosingManifestRow,
   ClosingDocumentInfo,
   DocumentDiagnostic,
+  DocumentStatusCounts,
   MAX_DOCUMENTS,
   MAX_TOTAL_SIZE_MB,
 } from './closing-types';
@@ -571,18 +572,6 @@ export function buildManifestRows(
       nomDocument: wasDownloaded && docInfo ? docInfo.fileName : '',
     };
   });
-}
-
-/**
- * Comptadors per status de documents (per al resum).
- */
-export interface DocumentStatusCounts {
-  ok: number;
-  noDocument: number;
-  urlNotParseable: number;
-  bucketMismatch: number;
-  notFound: number;
-  downloadError: number;
 }
 
 /**

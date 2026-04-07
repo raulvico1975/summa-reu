@@ -28,6 +28,7 @@ import {
   type PeriodOption,
   type ClosingBundleError,
   getCurrentYearRange,
+  getCurrentQuarterRange,
   getPreviousYearRange,
 } from '@/lib/closing-bundle/closing-bundle-types';
 
@@ -56,6 +57,8 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
         return getCurrentYearRange();
       case 'previous_year':
         return getPreviousYearRange();
+      case 'current_quarter':
+        return getCurrentQuarterRange();
       case 'custom':
         return { dateFrom: customDateFrom, dateTo: customDateTo };
       default:
@@ -210,6 +213,9 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
                 </SelectItem>
                 <SelectItem value="previous_year">
                   {t.reports.closingBundle.periodPreviousYear}
+                </SelectItem>
+                <SelectItem value="current_quarter">
+                  {t.reports.closingBundle.periodCurrentQuarter}
                 </SelectItem>
                 <SelectItem value="custom">
                   {t.reports.closingBundle.periodCustom}

@@ -5,7 +5,11 @@
  */
 
 import * as XLSX from 'xlsx';
-import { ClosingManifestRow, DocumentDiagnosticStatus } from './closing-types';
+import {
+  ClosingManifestRow,
+  ClosingIncidentRow,
+  DocumentDiagnosticStatus,
+} from './closing-types';
 
 /**
  * Fila de debug amb informació completa de diagnòstic.
@@ -144,6 +148,47 @@ export function buildDebugXlsx(debugRows: DebugRow[]): Buffer {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Debug');
+
+  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
+/**
+ * Genera el buffer de incidencies.xlsx (visible per a l'entitat).
+ * Una fila per incidència, incloent el context del moviment.
+ */
+export function buildIncidenciesXlsx(rows: ClosingIncidentRow[]): Buffer {
+  const data = rows.map((row) => ({
+    Ordre: row.ordre,
+    Data: formatDateEU(row.data),
+    Import: formatAmountEU(row.import),
+    Concepte: row.concepte,
+    Categoria: row.categoria || '',
+    Contacte: row.contacte || '',
+    Tipus: row.tipus,
+    Severitat: row.severitat,
+    Missatge: row.missatge,
+    txId: row.txId,
+    documentStatus: row.documentStatus || '',
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(data);
+
+  ws['!cols'] = [
+    { wch: 6 },   // Ordre
+    { wch: 12 },  // Data
+    { wch: 12 },  // Import
+    { wch: 50 },  // Concepte
+    { wch: 25 },  // Categoria
+    { wch: 25 },  // Contacte
+    { wch: 24 },  // Tipus
+    { wch: 12 },  // Severitat
+    { wch: 50 },  // Missatge
+    { wch: 28 },  // txId
+    { wch: 20 },  // documentStatus
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Incidencies');
 
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }

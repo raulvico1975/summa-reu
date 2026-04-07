@@ -14,7 +14,7 @@ export type IncidentType =
   | 'SENSE_CONTACTE'
   | 'DEVOLUCIO_PENDENT'
   | 'REMESA_PARCIAL'
-  | 'DOC_DESCARREGA_FALLIDA';
+  | 'DOCUMENT_NO_RESOLUBLE';
 
 export type IncidentSeverity = 'alta' | 'mitjana' | 'baixa';
 
@@ -89,6 +89,20 @@ export interface ClosingIncident {
   message: string;
 }
 
+export interface ClosingIncidentRow {
+  ordre: number;
+  data: string;
+  import: number;
+  concepte: string;
+  categoria: string;
+  contacte: string;
+  tipus: IncidentType;
+  severitat: IncidentSeverity;
+  missatge: string;
+  txId: string;
+  documentStatus: DocumentDiagnosticStatus | '';
+}
+
 export interface ClosingDocumentInfo {
   txId: string;
   ordre: number;
@@ -106,6 +120,36 @@ export interface ClosingBundleStats {
   totalIncidents: number;
   totalIncome: number;
   totalExpense: number;
+}
+
+export interface DocumentStatusCounts {
+  ok: number;
+  noDocument: number;
+  urlNotParseable: number;
+  bucketMismatch: number;
+  notFound: number;
+  downloadError: number;
+}
+
+export interface ClosingBundleManifest {
+  version: number;
+  runId: string;
+  generatedAt: string;
+  orgSlug: string;
+  dateFrom: string;
+  dateTo: string;
+  totalTransactions: number;
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  totalWithDocRef: number;
+  totalIncluded: number;
+  totalIncidents: number;
+  statusCounts: DocumentStatusCounts;
+  limits: {
+    maxDocuments: number;
+    maxTotalSizeMb: number;
+  };
 }
 
 export interface ClosingBundleError {

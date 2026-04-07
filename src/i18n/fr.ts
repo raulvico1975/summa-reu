@@ -1591,6 +1591,7 @@ export const fr = {
       period: "Période",
       periodCurrentYear: "Année en cours",
       periodPreviousYear: "Année précédente",
+      periodCurrentQuarter: "Trimestre en cours",
       periodCustom: "Personnalisé",
       dateFrom: "Date de début",
       dateTo: "Date de fin",

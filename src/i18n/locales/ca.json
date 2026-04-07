@@ -4025,6 +4025,7 @@
   "reports.closingBundle.generate": "Descarregar ZIP",
   "reports.closingBundle.generating": "Generant...",
   "reports.closingBundle.period": "Període",
+  "reports.closingBundle.periodCurrentQuarter": "Trimestre actual",
   "reports.closingBundle.periodCurrentYear": "Any actual",
   "reports.closingBundle.periodCustom": "Personalitzat",
   "reports.closingBundle.periodPreviousYear": "Any anterior",
