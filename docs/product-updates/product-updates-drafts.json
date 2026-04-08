@@ -1,7 +1,17 @@
 {
-  "generatedAt": "2026-01-21T12:46:30.483Z",
+  "generatedAt": "2026-04-08T11:05:00.000Z",
   "range": "last50",
   "drafts": [
+    {
+      "id": "draft-20260408-informes-closing-bundle",
+      "title": "Millores en informes",
+      "description": "Paquet de tancament net per defecte, mode avançat amb diagnòstic, preset trimestral i permisos alineats.",
+      "link": null,
+      "evidence": [
+        "fix(closing-bundle): keep public release user-only",
+        "feat: strengthen closing bundle phase 1"
+      ]
+    },
     {
       "id": "draft-20260121-general-1",
       "title": "Noves funcionalitats generals",
