@@ -3920,6 +3920,7 @@
   "reports.closingBundle.generate": "Baixar ZIP",
   "reports.closingBundle.generating": "Gerando...",
   "reports.closingBundle.period": "Período",
+  "reports.closingBundle.periodCurrentQuarter": "Trimestre atual",
   "reports.closingBundle.periodCurrentYear": "Ano atual",
   "reports.closingBundle.periodCustom": "Personalizado",
   "reports.closingBundle.periodPreviousYear": "Ano anterior",

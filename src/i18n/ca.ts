@@ -1591,6 +1591,7 @@ export const ca = {
       period: "Període",
       periodCurrentYear: "Any actual",
       periodPreviousYear: "Any anterior",
+      periodCurrentQuarter: "Trimestre actual",
       periodCustom: "Personalitzat",
       dateFrom: "Data inici",
       dateTo: "Data fi",

@@ -52,6 +52,16 @@ export interface PublicLandingContent {
       muted?: boolean;
     };
   };
+  visualProof?: {
+    title: string;
+    intro: string;
+    items: Array<{
+      title: string;
+      description: string;
+      imageSrc: string;
+      imageAlt: string;
+    }>;
+  };
   problem: {
     title: string;
     intro: string;
@@ -104,6 +114,8 @@ export type PublicLandingSlug =
   | 'importar-extracte-bancari'
   | 'gestio-donants'
   | 'control-donacions-ong'
+  | 'gestio-projectes-justificacio'
+  | 'control-visibilitat-entitats'
   | 'software-gestion-ong'
   | 'programa-associacions';
 
@@ -156,6 +168,18 @@ const LANDING_NAMES: Record<string, Record<PublicLocale, string>> = {
     fr: 'Controle des dons pour associations',
     pt: 'Controle de doacoes para ONG',
   },
+  'gestio-projectes-justificacio': {
+    ca: 'Gestió de projectes i justificació',
+    es: 'Gestión de proyectos y justificación',
+    fr: 'Gestion de projets et justification',
+    pt: 'Gestao de projetos e justificacao',
+  },
+  'control-visibilitat-entitats': {
+    ca: 'Control i visibilitat per a entitats',
+    es: 'Control y visibilidad para entidades',
+    fr: 'Controle et visibilite pour associations',
+    pt: 'Controlo e visibilidade para entidades',
+  },
   'software-gestion-ong': {
     ca: 'Software de gestió per ONG',
     es: 'Software de gestion para ONG',
@@ -191,10 +215,12 @@ const RELATED_LANDINGS_BY_SLUG: Record<PublicLandingSlug, PublicLandingSlug[]> =
   'model-347-ong': ['importar-extracte-bancari', 'conciliacio-bancaria-ong', 'model-182'],
   'remeses-sepa': ['devolucions-rebuts-socis', 'control-donacions-ong', 'conciliacio-bancaria-ong'],
   'devolucions-rebuts-socis': ['remeses-sepa', 'control-donacions-ong', 'model-182'],
-  'conciliacio-bancaria-ong': ['importar-extracte-bancari', 'control-donacions-ong', 'model-347-ong'],
+  'conciliacio-bancaria-ong': ['remeses-sepa', 'control-donacions-ong', 'model-182', 'gestio-projectes-justificacio'],
   'importar-extracte-bancari': ['conciliacio-bancaria-ong', 'model-347-ong', 'control-donacions-ong'],
   'gestio-donants': ['control-donacions-ong', 'certificats-donacio', 'model-182'],
   'control-donacions-ong': ['certificats-donacio', 'model-182', 'remeses-sepa'],
+  'gestio-projectes-justificacio': ['conciliacio-bancaria-ong', 'remeses-sepa', 'control-visibilitat-entitats'],
+  'control-visibilitat-entitats': ['model-182', 'gestio-projectes-justificacio', 'conciliacio-bancaria-ong'],
   'software-gestion-ong': ['programa-associacions', 'gestio-donants', 'control-donacions-ong'],
   'programa-associacions': ['software-gestion-ong', 'gestio-donants', 'remeses-sepa'],
 };
@@ -253,6 +279,18 @@ const LANDING_TEASERS: Record<PublicLandingSlug, Record<PublicLocale, string>> =
     es: 'Sigue las aportaciones de cada donante.',
     fr: 'Suivez les contributions de chaque donateur.',
     pt: 'Acompanhe as contribuicoes de cada doador.',
+  },
+  'gestio-projectes-justificacio': {
+    ca: 'Segueix pressupost, imputacions i justificació de projectes dins del mateix sistema econòmic.',
+    es: 'Sigue presupuesto, imputaciones y justificación de proyectos dentro del mismo sistema económico.',
+    fr: 'Suivez budget, imputations et justification de projets dans le meme systeme.',
+    pt: 'Acompanhe orcamento, imputacoes e justificacao de projetos no mesmo sistema economico.',
+  },
+  'control-visibilitat-entitats': {
+    ca: 'Dona visibilitat a dashboard, informes i exportacions perquè direcció i equip decideixin amb una sola base.',
+    es: 'Da visibilidad a dashboard, informes y exportaciones para que dirección y equipo decidan con una sola base.',
+    fr: 'Donnez de la visibilite au tableau de bord, aux rapports et aux exports.',
+    pt: 'Dê visibilidade a dashboard, relatórios e exportacoes com uma unica base.',
   },
   'software-gestion-ong': {
     ca: 'Visió general del software per centralitzar moviments, donants, quotes i fiscalitat.',
@@ -642,6 +680,30 @@ const DONATION_CERTIFICATES_CONTENT_CA: PublicLandingContent = {
       alt: 'Animació del procés de certificats de donació a Summa Social',
     },
   },
+  visualProof: {
+    title: 'Què pot revisar l’equip abans d’emetre els certificats',
+    intro: 'El valor no és només generar el PDF final, sinó arribar-hi amb les dades fiscals, l’historial i la sortida final ben preparats.',
+    items: [
+      {
+        title: 'Dades fiscals del donant',
+        description: 'La fitxa fiscal ajuda a detectar si falten dades abans d’emetre certificats o preparar models.',
+        imageSrc: '/visuals/web/features-v3/block2_fitxa_fiscal_start_4k.webp',
+        imageAlt: 'Pantalla de fitxa fiscal del donant a Summa Social',
+      },
+      {
+        title: 'Generació de certificats',
+        description: 'L’equip pot preparar els certificats a partir de les donacions reals treballades durant l’any.',
+        imageSrc: '/visuals/web/features-v3/block4_certificats_start_4k.webp',
+        imageAlt: 'Pantalla de generació de certificats de donació a Summa Social',
+      },
+      {
+        title: 'Exportació i compartició final',
+        description: 'La sortida final queda preparada per compartir-la amb l’equip o amb la gestoria sense reconstruir dades fora del sistema.',
+        imageSrc: '/visuals/web/features-v3/block4_excel_gestoria_start_4k.webp',
+        imageAlt: 'Pantalla d’exportació fiscal per a gestoria a Summa Social',
+      },
+    ],
+  },
   problem: {
     title: 'El problema real dels certificats de donació',
     intro: "Quan arriba el moment d'emetre certificats, moltes entitats es troben amb situacions com aquestes:",
@@ -729,6 +791,37 @@ const DONATION_CERTIFICATES_CONTENT_ES: PublicLandingContent = {
       'Cuando este proceso se hace con hojas de cálculo, plantillas y correos manuales, es fácil que aparezcan errores, duplicidades o simplemente demasiado trabajo acumulado en pocos días.',
       'Summa Social simplifica este proceso.',
       'Es una aplicación pensada específicamente para entidades sociales que permite generar los certificados de donación a partir de los datos reales del año y enviarlos de forma ordenada desde un único lugar.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/landings/certificats-donacio/animations/anima-certificats.webm',
+      mp4FallbackSrc: '/visuals/landings/certificats-donacio/animations/anima-certificats.mp4',
+      poster: '/visuals/landings/certificats-donacio/optimized/anima-certificats-poster.webp',
+      alt: 'Animación del proceso de certificados de donación en Summa Social',
+    },
+  },
+  visualProof: {
+    title: 'Qué puede revisar el equipo antes de emitir los certificados',
+    intro: 'El valor no es solo generar el PDF final, sino llegar a ese punto con los datos fiscales, el historial y la salida final bien preparados.',
+    items: [
+      {
+        title: 'Datos fiscales del donante',
+        description: 'La ficha fiscal ayuda a detectar si faltan datos antes de emitir certificados o preparar modelos.',
+        imageSrc: '/visuals/web/features-v3/block2_fitxa_fiscal_start_4k.webp',
+        imageAlt: 'Pantalla de ficha fiscal del donante en Summa Social',
+      },
+      {
+        title: 'Generación de certificados',
+        description: 'El equipo puede preparar los certificados a partir de las donaciones reales trabajadas durante el año.',
+        imageSrc: '/visuals/web/features-v3/block4_certificats_start_4k.webp',
+        imageAlt: 'Pantalla de generación de certificados de donación en Summa Social',
+      },
+      {
+        title: 'Exportación y compartición final',
+        description: 'La salida final queda preparada para compartirla con el equipo o con la gestoría sin reconstruir datos fuera del sistema.',
+        imageSrc: '/visuals/web/features-v3/block4_excel_gestoria_start_4k.webp',
+        imageAlt: 'Pantalla de exportación fiscal para gestoría en Summa Social',
+      },
     ],
   },
   problem: {
@@ -856,6 +949,30 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
       "Summa Social simplifica aquest procés. L'aplicació permet preparar les remeses de cobrament de quotes a partir de les dades reals dels socis i generar el fitxer que el banc necessita.",
     ],
   },
+  visualProof: {
+    title: 'Què pot revisar l’equip abans d’enviar la remesa',
+    intro: 'La clau no és només generar un fitxer SEPA, sinó arribar-hi amb la selecció, els imports i les incidències sota control.',
+    items: [
+      {
+        title: 'Divisió i preparació de la remesa',
+        description: 'L’equip pot revisar quins cobraments entren a la remesa i separar casos abans de generar el fitxer definitiu.',
+        imageSrc: '/visuals/web/features-v3/block3_divisor_remeses_start_4k.webp',
+        imageAlt: 'Pantalla de preparació i divisió de remeses a Summa Social',
+      },
+      {
+        title: 'Generació de la remesa SEPA',
+        description: 'La remesa queda preparada a partir de les dades reals dels socis i de la periodicitat de les quotes.',
+        imageSrc: '/visuals/web/features-v3/block3_remeses_sepa_start_4k.webp',
+        imageAlt: 'Pantalla de generació de remeses SEPA a Summa Social',
+      },
+      {
+        title: 'Seguiment de devolucions',
+        description: 'Quan hi ha rebuts retornats, l’equip pot veure la incidència i actuar sense perdre el fil del cobrament.',
+        imageSrc: '/visuals/web/features-v3/block3_devolucions_start_4k.webp',
+        imageAlt: 'Pantalla de seguiment de devolucions de rebuts a Summa Social',
+      },
+    ],
+  },
   problem: {
     title: 'El problema habitual amb les remeses de quotes',
     intro: 'Quan les remeses es preparen manualment, és fàcil trobar-se amb situacions com aquestes:',
@@ -954,6 +1071,30 @@ const SEPA_REMITTANCES_CONTENT_ES: PublicLandingContent = {
       'Muchas entidades cobran las cuotas de sus socios mediante domiciliación bancaria. Pero preparar las remesas SEPA suele implicar hojas de cálculo, revisiones manuales y mucho cuidado para evitar errores.',
       'Hay que comprobar los IBAN, revisar a quién toca cobrar ese mes, generar el fichero correcto y enviarlo al banco.',
       'Summa Social simplifica este proceso. La aplicación permite preparar las remesas de cobro de cuotas a partir de los datos reales de los socios y generar el fichero que el banco necesita.',
+    ],
+  },
+  visualProof: {
+    title: 'Qué puede revisar el equipo antes de enviar la remesa',
+    intro: 'La clave no es solo generar un fichero SEPA, sino llegar a ese punto con la selección, los importes y las incidencias bajo control.',
+    items: [
+      {
+        title: 'División y preparación de la remesa',
+        description: 'El equipo puede revisar qué cobros entran en la remesa y separar casos antes de generar el fichero definitivo.',
+        imageSrc: '/visuals/web/features-v3/block3_divisor_remeses_start_4k.webp',
+        imageAlt: 'Pantalla de preparación y división de remesas en Summa Social',
+      },
+      {
+        title: 'Generación de la remesa SEPA',
+        description: 'La remesa queda preparada a partir de los datos reales de los socios y de la periodicidad de las cuotas.',
+        imageSrc: '/visuals/web/features-v3/block3_remeses_sepa_start_4k.webp',
+        imageAlt: 'Pantalla de generación de remesas SEPA en Summa Social',
+      },
+      {
+        title: 'Seguimiento de devoluciones',
+        description: 'Cuando hay recibos devueltos, el equipo puede ver la incidencia y actuar sin perder el hilo del cobro.',
+        imageSrc: '/visuals/web/features-v3/block3_devolucions_start_4k.webp',
+        imageAlt: 'Pantalla de seguimiento de devoluciones de recibos en Summa Social',
+      },
     ],
   },
   problem: {
@@ -1077,6 +1218,30 @@ const BANK_STATEMENT_IMPORT_CONTENT_CA: PublicLandingContent = {
       'Així, totes les entrades i sortides de diners es poden revisar, classificar i vincular amb donants o proveïdors.',
     ],
   },
+  visualProof: {
+    title: 'Què passa un cop entra l’extracte al sistema',
+    intro: 'Importar l’extracte només és el primer pas. El valor real és poder revisar els moviments i deixar-los preparats per treballar.',
+    items: [
+      {
+        title: "Pujada prèvia de l'arxiu",
+        description: 'L’equip pot validar el fitxer abans d’importar-lo i evitar una càrrega cega del banc.',
+        imageSrc: '/visuals/web/features-v3/block1_import_extractes_preimport_4k.webp',
+        imageAlt: "Pantalla prèvia a la importació de l'extracte bancari a Summa Social",
+      },
+      {
+        title: 'Importació dels moviments',
+        description: 'Els moviments entren al sistema i queden centralitzats per començar a treballar-los des d’un únic lloc.',
+        imageSrc: '/visuals/web/features-v3/block1_import_extractes_start_4k.webp',
+        imageAlt: "Pantalla d'importació d'extracte bancari a Summa Social",
+      },
+      {
+        title: 'Classificació posterior',
+        description: 'Després de la importació, l’equip pot completar i classificar els moviments amb molt menys treball manual.',
+        imageSrc: '/visuals/web/features-v3/block1_classificacio_auto_4k.webp',
+        imageAlt: 'Pantalla de classificació automàtica de moviments bancaris a Summa Social',
+      },
+    ],
+  },
   problem: {
     title: 'El problema habitual amb els extractes bancaris',
     intro: 'Quan els moviments del banc es gestionen manualment, apareixen dificultats com:',
@@ -1173,6 +1338,30 @@ const BANK_STATEMENT_IMPORT_CONTENT_ES: PublicLandingContent = {
       'Así, todas las entradas y salidas de dinero pueden revisarse, clasificarse y vincularse con donantes o proveedores.',
     ],
   },
+  visualProof: {
+    title: 'Qué pasa una vez entra el extracto en el sistema',
+    intro: 'Importar el extracto es solo el primer paso. El valor real es poder revisar los movimientos y dejarlos preparados para trabajar.',
+    items: [
+      {
+        title: 'Carga previa del archivo',
+        description: 'El equipo puede validar el fichero antes de importarlo y evitar una carga ciega del banco.',
+        imageSrc: '/visuals/web/features-v3/block1_import_extractes_preimport_4k.webp',
+        imageAlt: 'Pantalla previa a la importación del extracto bancario en Summa Social',
+      },
+      {
+        title: 'Importación de los movimientos',
+        description: 'Los movimientos entran en el sistema y quedan centralizados para empezar a trabajarlos desde un único lugar.',
+        imageSrc: '/visuals/web/features-v3/block1_import_extractes_start_4k.webp',
+        imageAlt: 'Pantalla de importación de extracto bancario en Summa Social',
+      },
+      {
+        title: 'Clasificación posterior',
+        description: 'Después de la importación, el equipo puede completar y clasificar los movimientos con mucho menos trabajo manual.',
+        imageSrc: '/visuals/web/features-v3/block1_classificacio_auto_4k.webp',
+        imageAlt: 'Pantalla de clasificación automática de movimientos bancarios en Summa Social',
+      },
+    ],
+  },
   problem: {
     title: 'El problema habitual con los extractos bancarios',
     intro: 'Cuando los movimientos del banco se gestionan manualmente, aparecen dificultades como:',
@@ -1265,8 +1454,9 @@ const BANK_RECONCILIATION_ONG_METADATA: Record<PublicLocale, PublicLandingMetada
 
 const BANK_RECONCILIATION_ONG_CONTENT_CA: PublicLandingContent = {
   hero: {
-    title: 'Conciliació bancària per a ONG i associacions',
-    subtitle: 'Tenir els moviments del banc clars, classificats i sota control.',
+    title: 'Conciliació bancària per a ONG.',
+    subtitle:
+      'Deixa enrere els extractes dispersos i els fulls de càlcul. Connecta, classifica i entén què passa realment amb els comptes de la teva entitat.',
     introParagraphs: [
       'Moltes entitats gestionen els seus comptes a partir dels extractes bancaris i fulls de càlcul. Amb el temps, això fa difícil entendre realment què ha passat durant el mes.',
       'Ingressos, despeses, quotes de socis, donacions, devolucions... tota aquesta informació acaba dispersa entre documents i revisions manuals.',
@@ -1288,6 +1478,30 @@ const BANK_RECONCILIATION_ONG_CONTENT_CA: PublicLandingContent = {
       loop: false,
       muted: false,
     },
+  },
+  visualProof: {
+    title: 'Què veu realment l’equip dins de Summa',
+    intro: 'Abans d’arribar al tancament o als informes, l’equip pot treballar els moviments amb una vista clara i operativa.',
+    items: [
+      {
+        title: 'Importació neta',
+        description: 'El moviment entra al sistema llest per treballar, sense formatatges manuals.',
+        imageSrc: '/visuals/landings/conciliacio-bancaria-ong/editorial/card-import.png',
+        imageAlt: "Pantalla d'importació d'extracte bancari a Summa Social",
+      },
+      {
+        title: 'Connexió automàtica',
+        description: 'Cada cobrament o despesa queda enllaçat amb el donant corresponent a l’instant.',
+        imageSrc: '/visuals/landings/conciliacio-bancaria-ong/editorial/card-link.png',
+        imageAlt: 'Pantalla de classificació automàtica de moviments bancaris a Summa Social',
+      },
+      {
+        title: 'Base fiscal impecable',
+        description: 'Quan arriba el Model 182, la informació econòmica ja està auditada i quadrada.',
+        imageSrc: '/visuals/landings/conciliacio-bancaria-ong/editorial/card-fiscal.png',
+        imageAlt: 'Pantalla d’assignació de contactes als moviments bancaris a Summa Social',
+      },
+    ],
   },
   problem: {
     title: 'El problema habitual amb els moviments del banc',
@@ -1355,8 +1569,8 @@ const BANK_RECONCILIATION_ONG_CONTENT_CA: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Parlem de la teva entitat',
-    text: "Si cada mes l'equip ha de revisar extractes bancaris i fulls de càlcul per entendre què ha passat, contacta amb nosaltres i valorarem si Summa Social us pot ajudar a simplificar aquesta feina.",
+    title: 'Parlem amb ordre i control',
+    text: "Si vols deixar enrere els extractes dispersos i entendre millor què passa als comptes de l'entitat, parlem i t'ensenyarem com Summa Social t'ho resol.",
     linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
@@ -1364,8 +1578,9 @@ const BANK_RECONCILIATION_ONG_CONTENT_CA: PublicLandingContent = {
 
 const BANK_RECONCILIATION_ONG_CONTENT_ES: PublicLandingContent = {
   hero: {
-    title: 'Conciliación bancaria para ONG y asociaciones',
-    subtitle: 'Tener los movimientos del banco claros, clasificados y bajo control.',
+    title: 'Conciliación bancaria para ONG.',
+    subtitle:
+      'Deja atrás los extractos dispersos y las hojas de cálculo. Conecta, clasifica y entiende qué pasa realmente con las cuentas de tu entidad.',
     media: {
       type: 'video',
       src: '/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-es.mp4',
@@ -1386,6 +1601,30 @@ const BANK_RECONCILIATION_ONG_CONTENT_ES: PublicLandingContent = {
       'Ingresos, gastos, cuotas de socios, donaciones, devoluciones... toda esa información acaba dispersa entre documentos y revisiones manuales.',
       'Summa Social permite hacer la conciliación bancaria de una forma clara y ordenada.',
       'Los movimientos del banco pueden importarse al sistema y trabajarse directamente sobre ellos para entender qué corresponde a cada ingreso o gasto.',
+    ],
+  },
+  visualProof: {
+    title: 'Qué ve realmente el equipo dentro de Summa',
+    intro: 'Antes de llegar al cierre o a los informes, el equipo puede trabajar los movimientos con una vista clara y operativa.',
+    items: [
+      {
+        title: 'Importación limpia',
+        description: 'El movimiento entra en el sistema listo para trabajar, sin formateos manuales.',
+        imageSrc: '/visuals/landings/conciliacio-bancaria-ong/editorial/card-import.png',
+        imageAlt: 'Pantalla de importación de extracto bancario en Summa Social',
+      },
+      {
+        title: 'Conexión automática',
+        description: 'Cada cobro o gasto queda enlazado con el donante correspondiente al instante.',
+        imageSrc: '/visuals/landings/conciliacio-bancaria-ong/editorial/card-link.png',
+        imageAlt: 'Pantalla de clasificación automática de movimientos bancarios en Summa Social',
+      },
+      {
+        title: 'Base fiscal impecable',
+        description: 'Cuando llega el Modelo 182, la información económica ya está auditada y cuadrada.',
+        imageSrc: '/visuals/landings/conciliacio-bancaria-ong/editorial/card-fiscal.png',
+        imageAlt: 'Pantalla de asignación de contactos a movimientos bancarios en Summa Social',
+      },
     ],
   },
   problem: {
@@ -1454,8 +1693,8 @@ const BANK_RECONCILIATION_ONG_CONTENT_ES: PublicLandingContent = {
     ],
   },
   finalCta: {
-    title: 'Hablemos de vuestra entidad',
-    text: 'Si cada mes el equipo tiene que revisar extractos bancarios y hojas de cálculo para entender qué ha pasado, contactad con nosotros y valoraremos si Summa Social puede ayudaros a simplificar este trabajo.',
+    title: 'Hablemos con orden y control',
+    text: 'Si quieres dejar atrás los extractos dispersos y entender mejor qué pasa en las cuentas de la entidad, hablemos y te enseñaremos cómo lo resuelve Summa Social.',
     linkLabel: 'Contacta con nosotros',
     href: '/es/contact',
   },
@@ -1504,6 +1743,30 @@ const DONATIONS_CONTROL_ONG_CONTENT_CA: PublicLandingContent = {
       loop: false,
       controls: true,
     },
+  },
+  visualProof: {
+    title: 'Què pot veure l’equip sobre els donants i les aportacions',
+    intro: 'La força d’aquesta landing és demostrar que Summa no només registra ingressos, sinó que els converteix en una base de suport entenedora.',
+    items: [
+      {
+        title: 'Segments i filtres de socis o donants',
+        description: 'L’equip pot filtrar i entendre ràpidament quin tipus de base activa té al darrere.',
+        imageSrc: '/visuals/web/features-v3/block2_filtres_socis_start_4k.webp',
+        imageAlt: 'Pantalla de filtres de socis i donants a Summa Social',
+      },
+      {
+        title: 'Històric del donant',
+        description: 'Cada persona pot tenir el seu recorregut d’aportacions i incidències visible dins de la mateixa aplicació.',
+        imageSrc: '/visuals/web/features-v3/block2_historic_donant_start_4k.webp',
+        imageAlt: 'Pantalla d’històric del donant a Summa Social',
+      },
+      {
+        title: 'Dades fiscals preparades',
+        description: 'La fitxa fiscal ajuda a connectar les donacions amb la part de certificats i model 182.',
+        imageSrc: '/visuals/web/features-v3/block2_fitxa_fiscal_start_4k.webp',
+        imageAlt: 'Pantalla de fitxa fiscal del donant a Summa Social',
+      },
+    ],
   },
   problem: {
     title: 'El problema habitual amb el seguiment de donacions',
@@ -1600,6 +1863,30 @@ const DONATIONS_CONTROL_ONG_CONTENT_ES: PublicLandingContent = {
       loop: false,
       controls: true,
     },
+  },
+  visualProof: {
+    title: 'Qué puede ver el equipo sobre los donantes y las aportaciones',
+    intro: 'La fuerza de esta landing es demostrar que Summa no solo registra ingresos, sino que los convierte en una base de apoyo entendible.',
+    items: [
+      {
+        title: 'Segmentos y filtros de socios o donantes',
+        description: 'El equipo puede filtrar y entender rápidamente qué tipo de base activa tiene detrás.',
+        imageSrc: '/visuals/web/features-v3/block2_filtres_socis_start_4k.webp',
+        imageAlt: 'Pantalla de filtros de socios y donantes en Summa Social',
+      },
+      {
+        title: 'Histórico del donante',
+        description: 'Cada persona puede tener su recorrido de aportaciones e incidencias visible dentro de la misma aplicación.',
+        imageSrc: '/visuals/web/features-v3/block2_historic_donant_start_4k.webp',
+        imageAlt: 'Pantalla de histórico del donante en Summa Social',
+      },
+      {
+        title: 'Datos fiscales preparados',
+        description: 'La ficha fiscal ayuda a conectar las donaciones con la parte de certificados y Modelo 182.',
+        imageSrc: '/visuals/web/features-v3/block2_fitxa_fiscal_start_4k.webp',
+        imageAlt: 'Pantalla de ficha fiscal del donante en Summa Social',
+      },
+    ],
   },
   problem: {
     title: 'El problema habitual con el seguimiento de donaciones',
@@ -1700,6 +1987,41 @@ const SOFTWARE_MANAGEMENT_ONG_CONTENT_CA: PublicLandingContent = {
       "Amb el temps, això fa difícil entendre què està passant realment amb les finances de l'organització.",
       'Summa Social és un software de gestió econòmica pensat específicament per a entitats socials.',
       'Permet centralitzar la informació econòmica, els donants i les obligacions fiscals en un únic sistema.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/web/features-v3/block6_dashboard_loop_4k.mp4',
+      poster: '/visuals/web/features-v3/block6_dashboard_start_4k.webp',
+      alt: 'Vídeo de visió general del sistema de Summa Social',
+      durationLabel: '5 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Quines pantalles resolen aquesta promesa de producte',
+    intro: 'Aquesta landing és més transversal. La millor manera de fer-la creïble és ensenyar que la visió general, els moviments i la fiscalitat conviuen dins del mateix entorn.',
+    items: [
+      {
+        title: 'Visió general del sistema',
+        description: 'El panell principal ajuda a entendre en quin punt està l’entitat sense saltar entre eines.',
+        imageSrc: '/visuals/web/features-v3/block6_dashboard_start_4k.webp',
+        imageAlt: 'Pantalla principal de dashboard de Summa Social',
+      },
+      {
+        title: 'Treball sobre moviments reals',
+        description: 'La base econòmica es construeix a partir de moviments bancaris revisables i classificables.',
+        imageSrc: '/visuals/web/features-v3/block1_import_extractes_start_4k.webp',
+        imageAlt: 'Pantalla d’importació d’extracte bancari a Summa Social',
+      },
+      {
+        title: 'Sortida fiscal preparada',
+        description: 'Quan arriba la part fiscal, l’equip ja treballa sobre dades ordenades i pot generar els models des del mateix sistema.',
+        imageSrc: '/visuals/web/features-v3/block4_model182_start_4k.webp',
+        imageAlt: 'Pantalla de generació del Model 182 a Summa Social',
+      },
     ],
   },
   problem: {
@@ -1804,6 +2126,41 @@ const ASSOCIATIONS_PROGRAM_CONTENT_CA: PublicLandingContent = {
       'Summa Social és un programa de gestió pensat específicament per a associacions i entitats socials.',
       'Permet centralitzar la informació econòmica, els donants i les obligacions fiscals en un únic sistema.',
     ],
+    media: {
+      type: 'video',
+      src: '/visuals/web/features-v3/block6_dashboard_loop_4k.mp4',
+      poster: '/visuals/web/features-v3/block6_dashboard_start_4k.webp',
+      alt: 'Vídeo de visió general del programa de gestió de Summa Social',
+      durationLabel: '5 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Què pot veure una associació dins del programa',
+    intro: 'La idea aquí és demostrar que el programa no és un concepte abstracte, sinó una seqüència de pantalles útils per al dia a dia.',
+    items: [
+      {
+        title: 'Moviments i extractes',
+        description: 'Els ingressos i despeses parteixen de moviments reals que l’equip pot revisar i classificar.',
+        imageSrc: '/visuals/web/features-v3/block1_import_extractes_start_4k.webp',
+        imageAlt: 'Pantalla d’importació d’extracte bancari per a una associació a Summa Social',
+      },
+      {
+        title: 'Seguiment de quotes i cobraments',
+        description: 'La part de quotes i remeses queda integrada amb la resta de la gestió econòmica.',
+        imageSrc: '/visuals/web/features-v3/block3_remeses_sepa_start_4k.webp',
+        imageAlt: 'Pantalla de remeses SEPA per a associacions a Summa Social',
+      },
+      {
+        title: 'Base de socis i donants',
+        description: 'L’associació pot seguir historial, fitxes i incidències sense dependre de fulls separats.',
+        imageSrc: '/visuals/web/features-v3/block2_historic_donant_start_4k.webp',
+        imageAlt: 'Pantalla d’històric de soci o donant a Summa Social',
+      },
+    ],
   },
   problem: {
     title: "El problema habitual de la gestió d'una associació",
@@ -1883,8 +2240,9 @@ const DONOR_MANAGEMENT_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
       "Centralitza socis i donants en una base clara, amb historial d'aportacions i suport per a certificats i Model 182.",
   },
   es: {
-    title: 'Gestion de donantes | Summa Social',
-    description: 'Landing en preparacion para gestion de donantes de entidades sin animo de lucro.',
+    title: 'Gestión de donantes para entidades sociales | Software de gestión | Summa Social',
+    description:
+      'Centraliza socios y donantes en una base clara, con historial de aportaciones y soporte para certificados y Modelo 182.',
   },
   fr: {
     title: 'Gestion des donateurs | Summa Social',
@@ -1907,11 +2265,39 @@ const DONOR_MANAGEMENT_CONTENT_CA: PublicLandingContent = {
     ],
     media: {
       type: 'video',
-      src: '/visuals/landings/gestio-donants/animations/anima-gestio-socis.webm',
-      mp4FallbackSrc: '/visuals/landings/gestio-donants/animations/anima-gestio-socis.mp4',
-      poster: '/visuals/landings/gestio-donants/optimized/anima-gestio-socis-poster.webp',
-      alt: 'Animació de la gestió de donants a Summa Social',
+      src: '/visuals/web/features-v3/block2_filtres_socis_loop_4k.mp4',
+      poster: '/visuals/web/features-v3/block2_filtres_socis_start_4k.webp',
+      alt: 'Vídeo de base i filtres de donants a Summa Social',
+      durationLabel: '9 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
     },
+  },
+  visualProof: {
+    title: 'Què pot fer l’equip amb la base de donants',
+    intro: 'La prova visual d’aquesta landing ha d’ensenyar que hi ha base, historial i dades preparades per a la part fiscal.',
+    items: [
+      {
+        title: 'Filtres i segmentació',
+        description: 'La base es pot revisar i filtrar sense dependre d’un Excel viu i fràgil.',
+        imageSrc: '/visuals/web/features-v3/block2_filtres_socis_start_4k.webp',
+        imageAlt: 'Pantalla de filtres de socis i donants a Summa Social',
+      },
+      {
+        title: 'Històric complet del donant',
+        description: 'Cada donant pot tenir el seu recorregut visible amb aportacions i moviments relacionats.',
+        imageSrc: '/visuals/web/features-v3/block2_historic_donant_start_4k.webp',
+        imageAlt: 'Pantalla d’històric complet del donant a Summa Social',
+      },
+      {
+        title: 'Fitxa fiscal del donant',
+        description: 'La informació clau per certificats i model 182 queda accessible dins de la mateixa fitxa.',
+        imageSrc: '/visuals/web/features-v3/block2_fitxa_fiscal_start_4k.webp',
+        imageAlt: 'Pantalla de fitxa fiscal del donant a Summa Social',
+      },
+    ],
   },
   problem: {
     title: 'El problema habitual amb les bases de donants',
@@ -1984,6 +2370,122 @@ const DONOR_MANAGEMENT_CONTENT_CA: PublicLandingContent = {
   },
 };
 
+const DONOR_MANAGEMENT_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Gestionar los donantes de la entidad sin hojas de cálculo',
+    subtitle: 'Tener una base clara de socios y donantes.',
+    introParagraphs: [
+      'Para muchas entidades, la información de los donantes está repartida entre hojas de cálculo, listados antiguos y correos electrónicos.',
+      'Eso hace difícil saber quiénes son realmente los donantes activos, cuánto ha aportado cada persona y qué socios pagan cuotas de forma regular.',
+      'Summa Social centraliza la gestión de donantes en un único lugar.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/web/features-v3/block2_filtres_socis_loop_4k.mp4',
+      poster: '/visuals/web/features-v3/block2_filtres_socis_start_4k.webp',
+      alt: 'Vídeo de base y filtros de donantes en Summa Social',
+      durationLabel: '9 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Qué puede hacer el equipo con la base de donantes',
+    intro: 'La prueba visual de esta landing debe enseñar que hay base, histórico y datos preparados para la parte fiscal.',
+    items: [
+      {
+        title: 'Filtros y segmentación',
+        description: 'La base puede revisarse y filtrarse sin depender de un Excel vivo y frágil.',
+        imageSrc: '/visuals/web/features-v3/block2_filtres_socis_start_4k.webp',
+        imageAlt: 'Pantalla de filtros de socios y donantes en Summa Social',
+      },
+      {
+        title: 'Histórico completo del donante',
+        description: 'Cada donante puede tener su recorrido visible con aportaciones y movimientos relacionados.',
+        imageSrc: '/visuals/web/features-v3/block2_historic_donant_start_4k.webp',
+        imageAlt: 'Pantalla de histórico completo del donante en Summa Social',
+      },
+      {
+        title: 'Ficha fiscal del donante',
+        description: 'La información clave para certificados y Modelo 182 queda accesible dentro de la misma ficha.',
+        imageSrc: '/visuals/web/features-v3/block2_fitxa_fiscal_start_4k.webp',
+        imageAlt: 'Pantalla de ficha fiscal del donante en Summa Social',
+      },
+    ],
+  },
+  problem: {
+    title: 'El problema habitual con las bases de donantes',
+    intro: 'Cuando la información de los donantes se gestiona con Excel, aparecen problemas como:',
+    points: [
+      'datos duplicados o desactualizados',
+      'dificultad para saber qué ha aportado cada persona',
+      'errores al preparar certificados de donación',
+      'falta de visión sobre la evolución de los donantes',
+    ],
+    outroParagraphs: ['Con el tiempo, la base de datos se vuelve difícil de mantener.'],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social permite gestionar a los donantes como una base estructurada vinculada a los movimientos económicos.',
+    steps: [
+      {
+        title: 'Registras a los donantes de la entidad',
+        body: 'Cada persona o empresa tiene su ficha con los datos principales.',
+      },
+      {
+        title: 'Puedes importar donantes desde Excel',
+        body: 'La base inicial puede cargarse sin tener que crear cada ficha manualmente.',
+      },
+      {
+        title: 'Las donaciones se vinculan automáticamente',
+        body: 'Cuando entra una donación, queda asociada al donante correspondiente.',
+      },
+      {
+        title: 'Puedes ver el histórico de cada donante',
+        body: 'La ficha muestra todas las aportaciones y devoluciones.',
+      },
+      {
+        title: 'La información sirve para los informes fiscales',
+        body: 'Los certificados y el Modelo 182 utilizan esta base de datos.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar Summa Social',
+    intro: 'Con Summa Social, la entidad puede:',
+    items: [
+      'tener una base actualizada de socios y donantes',
+      'importar donantes desde Excel',
+      'ver el histórico completo de donaciones',
+      'identificar donantes recurrentes o puntuales',
+    ],
+    outroParagraphs: ['Esto permite entender mejor quién sostiene la actividad de la entidad.'],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Base de donantes clara: la información ya no está repartida entre distintos documentos.',
+      'Mejor control de las donaciones: es fácil ver qué ha aportado cada persona.',
+      'Preparación más simple de los informes fiscales: los datos de los donantes ya están estructurados.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades sociales',
+    paragraphs: [
+      'Summa Social está pensado para entidades que tienen socios o donantes recurrentes, quieren ordenar su base de donantes y necesitan generar certificados o informes fiscales.',
+      'Es una herramienta para facilitar la gestión cotidiana de la entidad.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra entidad',
+    text: 'Si la base de donantes de vuestra entidad está repartida entre varios documentos u hojas de cálculo, contactad con nosotros y veremos si Summa Social puede ayudaros a unificarla.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
 const MODEL_347_ONG_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: 'Model 347 per a ONG | Software de gestió per a entitats | Summa Social',
@@ -2013,6 +2515,41 @@ const MODEL_347_ONG_CONTENT_CA: PublicLandingContent = {
       "El Model 347 obliga a revisar les operacions amb tercers que superen el llindar anual i a verificar que les dades dels proveïdors siguin correctes abans d'exportar.",
       "Quan aquesta feina es fa amb extractes, Excels i comprovacions manuals, és habitual arribar al tancament amb CIFs incomplets, imports dubtosos o operacions que encara s'han de revisar.",
       "Summa Social ajuda a preparar aquesta part de la fiscalitat a partir dels moviments i dels proveïdors que l'entitat ja treballa durant l'any.",
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/web/features-v3/block4_model347_loop_4k.mp4',
+      poster: '/visuals/web/features-v3/block4_model347_start_4k.webp',
+      alt: 'Vídeo de demostració del Model 347 a Summa Social',
+      durationLabel: '6 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Què ajuda a deixar el 347 preparat',
+    intro: 'La credibilitat d’aquesta landing surt d’ensenyar el detall del model, el diàleg de revisió i la sortida final per a gestoria.',
+    items: [
+      {
+        title: 'Vista del Model 347',
+        description: 'L’equip pot veure el conjunt de tercers i imports sense reconstruir l’informe fora del sistema.',
+        imageSrc: '/visuals/web/features-v3/block4_model347_start_4k.webp',
+        imageAlt: 'Pantalla del Model 347 a Summa Social',
+      },
+      {
+        title: 'Diàleg de revisió',
+        description: 'Abans d’exportar, es poden revisar els detalls crítics que afecten la sortida final.',
+        imageSrc: '/visuals/web/features-v3/block4_model347_dialog_4k.webp',
+        imageAlt: 'Pantalla de revisió del Model 347 a Summa Social',
+      },
+      {
+        title: 'Exportació per a gestoria',
+        description: 'La informació queda llesta per compartir-se amb una base molt més neta i explicable.',
+        imageSrc: '/visuals/web/features-v3/block4_excel_gestoria_start_4k.webp',
+        imageAlt: 'Pantalla d’exportació per a gestoria a Summa Social',
+      },
     ],
   },
   problem: {
@@ -2098,6 +2635,41 @@ const MODEL_347_ONG_CONTENT_ES: PublicLandingContent = {
       'El Modelo 347 obliga a revisar las operaciones con terceros que superan el umbral anual y a verificar que los datos de los proveedores sean correctos antes de exportar.',
       'Cuando este trabajo se hace con extractos, Excel y comprobaciones manuales, es habitual llegar al cierre con CIF incompletos, importes dudosos u operaciones que todavía deben revisarse.',
       'Summa Social ayuda a preparar esta parte de la fiscalidad a partir de los movimientos y de los proveedores que la entidad ya trabaja durante el año.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/web/features-v3/block4_model347_loop_4k.mp4',
+      poster: '/visuals/web/features-v3/block4_model347_start_4k.webp',
+      alt: 'Vídeo de demostración del Modelo 347 en Summa Social',
+      durationLabel: '6 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Qué ayuda a dejar el 347 preparado',
+    intro: 'La credibilidad de esta landing sale de enseñar el detalle del modelo, el diálogo de revisión y la salida final para gestoría.',
+    items: [
+      {
+        title: 'Vista del Modelo 347',
+        description: 'El equipo puede ver el conjunto de terceros e importes sin reconstruir el informe fuera del sistema.',
+        imageSrc: '/visuals/web/features-v3/block4_model347_start_4k.webp',
+        imageAlt: 'Pantalla del Modelo 347 en Summa Social',
+      },
+      {
+        title: 'Diálogo de revisión',
+        description: 'Antes de exportar, pueden revisarse los detalles críticos que afectan a la salida final.',
+        imageSrc: '/visuals/web/features-v3/block4_model347_dialog_4k.webp',
+        imageAlt: 'Pantalla de revisión del Modelo 347 en Summa Social',
+      },
+      {
+        title: 'Exportación para gestoría',
+        description: 'La información queda lista para compartirse con una base mucho más limpia y explicable.',
+        imageSrc: '/visuals/web/features-v3/block4_excel_gestoria_start_4k.webp',
+        imageAlt: 'Pantalla de exportación para gestoría en Summa Social',
+      },
     ],
   },
   problem: {
@@ -2205,6 +2777,41 @@ const RETURNED_RECEIPTS_CONTENT_CA: PublicLandingContent = {
       "Cal saber de quin soci o donant és cada devolució, revisar si forma part d'una remesa i assegurar que el total net quedi ben calculat.",
       "Summa Social ajuda a gestionar aquest procés dins del mateix flux econòmic de l'entitat, sense haver de portar un control separat amb Excel.",
     ],
+    media: {
+      type: 'video',
+      src: '/visuals/web/features-v3/block3_devolucions_loop_4k.mp4',
+      poster: '/visuals/web/features-v3/block3_devolucions_start_4k.webp',
+      alt: 'Vídeo de gestió de devolucions de rebuts a Summa Social',
+      durationLabel: '6 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Què veu l’equip quan gestiona rebuts retornats',
+    intro: 'Aquí la prova visual ha d’ensenyar incidència, relació amb la remesa i traçabilitat dins de la base del donant.',
+    items: [
+      {
+        title: 'Seguiment de devolucions',
+        description: 'Les devolucions es poden revisar com a incidència real dins del flux de cobrament.',
+        imageSrc: '/visuals/web/features-v3/block3_devolucions_start_4k.webp',
+        imageAlt: 'Pantalla de devolucions de rebuts a Summa Social',
+      },
+      {
+        title: 'Context de la remesa',
+        description: 'L’equip pot entendre d’on surt el cobrament i en quin lot o remesa queda emmarcat.',
+        imageSrc: '/visuals/web/features-v3/block3_divisor_remeses_start_4k.webp',
+        imageAlt: 'Pantalla de context de remeses a Summa Social',
+      },
+      {
+        title: 'Traçabilitat a la fitxa del donant',
+        description: 'La incidència no queda flotant: es pot seguir dins de l’historial de la persona afectada.',
+        imageSrc: '/visuals/web/features-v3/block2_historic_donant_start_4k.webp',
+        imageAlt: 'Pantalla d’històric del donant amb devolucions a Summa Social',
+      },
+    ],
   },
   problem: {
     title: 'El problema habitual amb els rebuts retornats',
@@ -2289,6 +2896,41 @@ const RETURNED_RECEIPTS_CONTENT_ES: PublicLandingContent = {
       'Cuando el banco devuelve recibos de cuotas o donaciones recurrentes, el trabajo no termina al ver el importe negativo en el extracto.',
       'Hay que saber de qué socio o donante es cada devolución, revisar si forma parte de una remesa y asegurarse de que el total neto quede bien calculado.',
       'Summa Social ayuda a gestionar este proceso dentro del mismo flujo económico de la entidad, sin tener que llevar un control separado en Excel.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/web/features-v3/block3_devolucions_loop_4k.mp4',
+      poster: '/visuals/web/features-v3/block3_devolucions_start_4k.webp',
+      alt: 'Vídeo de gestión de devoluciones de recibos en Summa Social',
+      durationLabel: '6 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Qué ve el equipo cuando gestiona recibos devueltos',
+    intro: 'Aquí la prueba visual debe enseñar incidencia, relación con la remesa y trazabilidad dentro de la base del donante.',
+    items: [
+      {
+        title: 'Seguimiento de devoluciones',
+        description: 'Las devoluciones pueden revisarse como una incidencia real dentro del flujo de cobro.',
+        imageSrc: '/visuals/web/features-v3/block3_devolucions_start_4k.webp',
+        imageAlt: 'Pantalla de devoluciones de recibos en Summa Social',
+      },
+      {
+        title: 'Contexto de la remesa',
+        description: 'El equipo puede entender de dónde sale el cobro y en qué lote o remesa queda enmarcado.',
+        imageSrc: '/visuals/web/features-v3/block3_divisor_remeses_start_4k.webp',
+        imageAlt: 'Pantalla de contexto de remesas en Summa Social',
+      },
+      {
+        title: 'Trazabilidad en la ficha del donante',
+        description: 'La incidencia no queda flotando: puede seguirse dentro del histórico de la persona afectada.',
+        imageSrc: '/visuals/web/features-v3/block2_historic_donant_start_4k.webp',
+        imageAlt: 'Pantalla de histórico del donante con devoluciones en Summa Social',
+      },
     ],
   },
   problem: {
@@ -2391,6 +3033,30 @@ const MODEL_182_CONTENT_CA: PublicLandingContent = {
       controls: true,
       muted: false,
     },
+  },
+  visualProof: {
+    title: 'Què ajuda a preparar el Model 182 amb seguretat',
+    intro: 'La landing guanya molt quan no es queda en discurs fiscal i ensenya el model, la revisió i la sortida final.',
+    items: [
+      {
+        title: 'Vista del Model 182',
+        description: 'El sistema centralitza la informació fiscal perquè l’equip pugui revisar-la dins de la mateixa aplicació.',
+        imageSrc: '/visuals/web/features-v3/block4_model182_start_4k.webp',
+        imageAlt: 'Pantalla del Model 182 a Summa Social',
+      },
+      {
+        title: 'Diàleg de validació',
+        description: 'Abans de generar la sortida, es poden comprovar els punts crítics del model.',
+        imageSrc: '/visuals/web/features-v3/block4_model182_dialog_4k.webp',
+        imageAlt: 'Pantalla de validació del Model 182 a Summa Social',
+      },
+      {
+        title: 'Exportació per a gestoria o AEAT',
+        description: 'Quan les dades ja estan netes, la sortida final queda preparada sense reconstruccions d’última hora.',
+        imageSrc: '/visuals/web/features-v3/block4_excel_gestoria_start_4k.webp',
+        imageAlt: 'Pantalla d’exportació fiscal a Summa Social',
+      },
+    ],
   },
   problem: {
     title: 'El problema real del Model 182',
@@ -2497,6 +3163,30 @@ const MODEL_182_CONTENT_ES: PublicLandingContent = {
       muted: false,
     },
   },
+  visualProof: {
+    title: 'Qué ayuda a preparar el Modelo 182 con seguridad',
+    intro: 'La landing gana mucho cuando no se queda en discurso fiscal y enseña el modelo, la revisión y la salida final.',
+    items: [
+      {
+        title: 'Vista del Modelo 182',
+        description: 'El sistema centraliza la información fiscal para que el equipo pueda revisarla dentro de la misma aplicación.',
+        imageSrc: '/visuals/web/features-v3/block4_model182_start_4k.webp',
+        imageAlt: 'Pantalla del Modelo 182 en Summa Social',
+      },
+      {
+        title: 'Diálogo de validación',
+        description: 'Antes de generar la salida, pueden comprobarse los puntos críticos del modelo.',
+        imageSrc: '/visuals/web/features-v3/block4_model182_dialog_4k.webp',
+        imageAlt: 'Pantalla de validación del Modelo 182 en Summa Social',
+      },
+      {
+        title: 'Exportación para gestoría o AEAT',
+        description: 'Cuando los datos ya están limpios, la salida final queda preparada sin reconstrucciones de última hora.',
+        imageSrc: '/visuals/web/features-v3/block4_excel_gestoria_start_4k.webp',
+        imageAlt: 'Pantalla de exportación fiscal en Summa Social',
+      },
+    ],
+  },
   problem: {
     title: 'El problema real del Modelo 182',
     intro: 'Cuando llega enero, muchas entidades se encuentran con situaciones como estas:',
@@ -2571,6 +3261,528 @@ const MODEL_182_CONTENT_ES: PublicLandingContent = {
   finalCta: {
     title: 'Hablemos de vuestra entidad',
     text: 'Si lleváis la gestión económica de una entidad y cada año sufrís con el Modelo 182, contactad con nosotros y valoraremos si Summa Social puede ayudaros a simplificar este cierre.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
+const PROJECT_MANAGEMENT_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
+  ca: {
+    title: 'Gestió de projectes i justificació per a entitats | Summa Social',
+    description:
+      'Segueix pressupost, imputacions i justificacions de projectes dins del mateix sistema econòmic de l’entitat.',
+  },
+  es: {
+    title: 'Gestión de proyectos y justificación para entidades | Summa Social',
+    description:
+      'Sigue presupuesto, imputaciones y justificaciones de proyectos dentro del mismo sistema económico de la entidad.',
+  },
+  fr: {
+    title: 'Gestion de projets et justification | Summa Social',
+    description: 'Landing en preparation pour la gestion de projets et la justification des associations.',
+  },
+  pt: {
+    title: 'Gestao de projetos e justificacao | Summa Social',
+    description: 'Landing em preparacao para gestao de projetos e justificacao de entidades.',
+  },
+};
+
+const PROJECT_MANAGEMENT_CONTENT_CA: PublicLandingContent = {
+  hero: {
+    title: 'Projectes, subvencions i justificació sense treballar en paral·lel',
+    subtitle: 'Controla pressupost, imputació de despeses i material de justificació dins del mateix sistema.',
+    introParagraphs: [
+      'Quan la part econòmica del projecte viu separada de la resta de la gestió, l’equip acaba repartint pressupostos, factures, justificacions i exports entre documents diferents.',
+      'Això fa més difícil saber què està executat, què falta imputar i què es podrà justificar bé davant del finançador.',
+      'Summa Social resol aquesta capa operativa dins del mateix entorn econòmic de l’entitat.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/landings/gestio-projectes-justificacio/animations/gestio-projectes-bloc.mp4',
+      poster: '/visuals/landings/gestio-projectes-justificacio/optimized/gestio-projectes-bloc-poster.webp',
+      alt: 'Vídeo de pressupost, imputació i justificació de projectes a Summa Social',
+      durationLabel: '18 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Què veu l’equip quan treballa projectes dins de Summa',
+    intro: 'Pressupost, imputació i justificació formen part del mateix flux econòmic, no d’eines separades.',
+    items: [
+      {
+        title: 'Seguiment pressupostari',
+        description: 'Comparativa entre pressupostat i executat per entendre ràpidament on està cada projecte.',
+        imageSrc: '/visuals/web/features-v3/block5_pressupost_partides_start_4k.webp',
+        imageAlt: 'Pantalla de seguiment pressupostari de projectes a Summa Social',
+      },
+      {
+        title: 'Imputació de despeses',
+        description: 'Cada despesa es pot repartir entre projectes o partides amb traçabilitat real.',
+        imageSrc: '/visuals/web/features-v3/block5_assignacio_despeses_start_4k.webp',
+        imageAlt: 'Pantalla d’imputació de despeses a projectes a Summa Social',
+      },
+      {
+        title: 'Justificació per al finançador',
+        description: 'Quan toca justificar, l’export surt d’una base ja ordenada dins del mateix sistema.',
+        imageSrc: '/visuals/web/features-v3/block5_export_financador_dialog_4k.webp',
+        imageAlt: 'Pantalla d’exportació de justificació per a finançadors a Summa Social',
+      },
+    ],
+  },
+  problem: {
+    title: 'El problema habitual dels projectes i subvencions',
+    intro: 'Quan el seguiment econòmic dels projectes va separat, apareixen bloquejos com aquests:',
+    points: [
+      'pressupostos i execució repartits entre diversos fulls',
+      'despeses sense imputació clara al projecte correcte',
+      'despesa de terreny o tiquets fora del circuit de justificació',
+      'justificacions finals preparades a última hora',
+    ],
+    outroParagraphs: [
+      'El resultat és menys control durant l’execució i més tensió quan toca justificar.',
+    ],
+  },
+  solution: {
+    title: 'Com ho resol Summa Social',
+    intro: 'Summa Social permet portar la part econòmica del projecte dins del mateix flux de gestió.',
+    steps: [
+      {
+        title: 'Definiu pressupost i partides',
+        body: 'Cada projecte pot tenir les seves partides per seguir què estava previst i què s’està executant.',
+      },
+      {
+        title: 'Imputeu despeses al projecte',
+        body: 'Les despeses es poden repartir de forma sencera o parcial segons el projecte o partida que toca.',
+      },
+      {
+        title: 'Captureu despesa de terreny',
+        body: 'Els tiquets o petites despeses es poden registrar sense treure-les del circuit de justificació.',
+      },
+      {
+        title: 'Reviseu desviacions i execució',
+        body: 'L’equip pot veure què està gastat, què falta i on hi ha risc abans del tancament.',
+      },
+      {
+        title: 'Prepareu l’export final',
+        body: 'Quan toca justificar, la base ja està ordenada per generar la sortida per al finançador.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Què permet gestionar aquest bloc',
+    intro: 'Dins d’aquest bloc de projectes, Summa Social permet:',
+    items: [
+      'seguir pressupost i execució per partides',
+      'imputar despeses a projectes de manera total o parcial',
+      'registrar despesa de terreny dins del mateix flux',
+      'preparar justificacions i exports per al finançador',
+    ],
+    outroParagraphs: [
+      'La idea és que la part econòmica del projecte no sigui un món paral·lel a la resta del sistema.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficis operatius',
+    items: [
+      'Més control de l’execució abans d’arribar a la justificació final.',
+      'Menys feina dispersa entre pressupost, despesa i documentació per al finançador.',
+      'Millor traçabilitat de cada despesa dins del projecte corresponent.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensat per a entitats que gestionen subvencions o projectes amb finançament',
+    paragraphs: [
+      'És especialment útil per a equips que necessiten saber què està executat, què queda pendent i com arribar a la justificació amb una base ordenada.',
+      'No és un gestor de projectes generalista. És una capa de control econòmic i justificatiu pensada per a entitats socials.',
+    ],
+  },
+  finalCta: {
+    title: 'Parlem del vostre seguiment de projectes',
+    text: 'Si avui pressupost, imputacions i justificacions viuen en documents separats, contacteu amb nosaltres i valorarem si Summa Social us pot ajudar a unificar aquest flux.',
+    linkLabel: 'Contacta amb nosaltres',
+    href: '/ca/contact',
+  },
+};
+
+const PROJECT_MANAGEMENT_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Proyectos, subvenciones y justificación sin trabajar en paralelo',
+    subtitle: 'Controla presupuesto, imputación de gastos y material de justificación dentro del mismo sistema.',
+    introParagraphs: [
+      'Cuando la parte económica del proyecto vive separada del resto de la gestión, el equipo acaba repartiendo presupuestos, facturas, justificaciones y exportaciones entre documentos distintos.',
+      'Eso hace más difícil saber qué está ejecutado, qué falta por imputar y qué podrá justificarse bien ante el financiador.',
+      'Summa Social resuelve esta capa operativa dentro del mismo entorno económico de la entidad.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/landings/gestio-projectes-justificacio/animations/gestio-projectes-bloc.mp4',
+      poster: '/visuals/landings/gestio-projectes-justificacio/optimized/gestio-projectes-bloc-poster.webp',
+      alt: 'Vídeo de presupuesto, imputación y justificación de proyectos en Summa Social',
+      durationLabel: '18 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Qué ve el equipo cuando trabaja proyectos dentro de Summa',
+    intro: 'Presupuesto, imputación y justificación forman parte del mismo flujo económico, no de herramientas separadas.',
+    items: [
+      {
+        title: 'Seguimiento presupuestario',
+        description: 'Comparativa entre presupuestado y ejecutado para entender rápidamente en qué punto está cada proyecto.',
+        imageSrc: '/visuals/web/features-v3/block5_pressupost_partides_start_4k.webp',
+        imageAlt: 'Pantalla de seguimiento presupuestario de proyectos en Summa Social',
+      },
+      {
+        title: 'Imputación de gastos',
+        description: 'Cada gasto puede repartirse entre proyectos o partidas con trazabilidad real.',
+        imageSrc: '/visuals/web/features-v3/block5_assignacio_despeses_start_4k.webp',
+        imageAlt: 'Pantalla de imputación de gastos a proyectos en Summa Social',
+      },
+      {
+        title: 'Justificación para el financiador',
+        description: 'Cuando toca justificar, la exportación sale de una base ya ordenada dentro del mismo sistema.',
+        imageSrc: '/visuals/web/features-v3/block5_export_financador_dialog_4k.webp',
+        imageAlt: 'Pantalla de exportación de justificación para financiadores en Summa Social',
+      },
+    ],
+  },
+  problem: {
+    title: 'El problema habitual de los proyectos y subvenciones',
+    intro: 'Cuando el seguimiento económico de los proyectos va separado, aparecen bloqueos como estos:',
+    points: [
+      'presupuestos y ejecución repartidos entre distintas hojas',
+      'gastos sin imputación clara al proyecto correcto',
+      'gasto de terreno o tickets fuera del circuito de justificación',
+      'justificaciones finales preparadas a última hora',
+    ],
+    outroParagraphs: [
+      'El resultado es menos control durante la ejecución y más tensión cuando toca justificar.',
+    ],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social permite llevar la parte económica del proyecto dentro del mismo flujo de gestión.',
+    steps: [
+      {
+        title: 'Definís presupuesto y partidas',
+        body: 'Cada proyecto puede tener sus partidas para seguir qué estaba previsto y qué se está ejecutando.',
+      },
+      {
+        title: 'Imputáis gastos al proyecto',
+        body: 'Los gastos pueden repartirse de forma total o parcial según el proyecto o partida correspondiente.',
+      },
+      {
+        title: 'Capturáis gasto de terreno',
+        body: 'Los tickets o pequeños gastos pueden registrarse sin sacarlos del circuito de justificación.',
+      },
+      {
+        title: 'Revisáis desviaciones y ejecución',
+        body: 'El equipo puede ver qué está gastado, qué falta y dónde hay riesgo antes del cierre.',
+      },
+      {
+        title: 'Preparáis la exportación final',
+        body: 'Cuando toca justificar, la base ya está ordenada para generar la salida para el financiador.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar este bloque',
+    intro: 'Dentro de este bloque de proyectos, Summa Social permite:',
+    items: [
+      'seguir presupuesto y ejecución por partidas',
+      'imputar gastos a proyectos de forma total o parcial',
+      'registrar gasto de terreno dentro del mismo flujo',
+      'preparar justificaciones y exportaciones para el financiador',
+    ],
+    outroParagraphs: [
+      'La idea es que la parte económica del proyecto no sea un mundo paralelo al resto del sistema.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Más control de la ejecución antes de llegar a la justificación final.',
+      'Menos trabajo disperso entre presupuesto, gasto y documentación para el financiador.',
+      'Mejor trazabilidad de cada gasto dentro del proyecto correspondiente.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades que gestionan subvenciones o proyectos con financiación',
+    paragraphs: [
+      'Es especialmente útil para equipos que necesitan saber qué está ejecutado, qué queda pendiente y cómo llegar a la justificación con una base ordenada.',
+      'No es un gestor de proyectos generalista. Es una capa de control económico y justificativo pensada para entidades sociales.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestro seguimiento de proyectos',
+    text: 'Si hoy presupuesto, imputaciones y justificaciones viven en documentos separados, contactad con nosotros y valoraremos si Summa Social puede ayudaros a unificar este flujo.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
+const CONTROL_VISIBILITY_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
+  ca: {
+    title: 'Control i visibilitat per a entitats | Summa Social',
+    description:
+      'Dona visibilitat a dashboard, informes i exportacions perquè direcció i equip puguin entendre la situació econòmica sense reconstruir-la.',
+  },
+  es: {
+    title: 'Control y visibilidad para entidades | Summa Social',
+    description:
+      'Da visibilidad a dashboard, informes y exportaciones para que dirección y equipo puedan entender la situación económica sin reconstruirla.',
+  },
+  fr: {
+    title: 'Controle et visibilite pour associations | Summa Social',
+    description: 'Landing en preparation pour le controle et la visibilite des associations.',
+  },
+  pt: {
+    title: 'Controlo e visibilidade para entidades | Summa Social',
+    description: 'Landing em preparacao para controlo e visibilidade de entidades.',
+  },
+};
+
+const CONTROL_VISIBILITY_CONTENT_CA: PublicLandingContent = {
+  hero: {
+    title: 'Control i visibilitat perquè la direcció entengui què passa',
+    subtitle: 'Dashboard, informes i exportacions per seguir la situació econòmica sense demanar un Excel nou cada vegada.',
+    introParagraphs: [
+      'Quan la informació econòmica està dispersa, cada reunió de junta, patronat o coordinació acaba començant amb la mateixa feina: reconstruir què ha passat i en quin punt està l’entitat.',
+      'Això frena la capacitat de decidir i obliga l’equip a preparar informes ad hoc una vegada i una altra.',
+      'Summa Social concentra aquesta capa de visibilitat dins del mateix sistema de treball.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/landings/control-visibilitat-entitats/animations/control-visibilitat-bloc.mp4',
+      poster: '/visuals/landings/control-visibilitat-entitats/optimized/control-visibilitat-bloc-poster.webp',
+      alt: 'Vídeo de dashboard de control i visibilitat a Summa Social',
+      durationLabel: '15 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Què veu l’equip quan necessita visió i sortida',
+    intro: 'Aquest bloc no tracta només de veure dades, sinó de convertir-les en informes compartibles i exportacions útils.',
+    items: [
+      {
+        title: 'Dashboard directiu',
+        description: 'La direcció pot veure indicadors, evolució i categories rellevants sense sortir del mateix panell.',
+        imageSrc: '/visuals/web/features-v3/block6_dashboard_start_4k.webp',
+        imageAlt: 'Pantalla de dashboard directiu a Summa Social',
+      },
+      {
+        title: 'Informe per a junta o patronat',
+        description: 'L’equip pot preparar una sortida pensada per compartir l’estat econòmic amb òrgans de govern.',
+        imageSrc: '/visuals/web/features-v3/block6_informe_junta_modal_4k.webp',
+        imageAlt: 'Pantalla d’informe econòmic per a junta a Summa Social',
+      },
+      {
+        title: 'Exportació de dades',
+        description: 'Quan cal baixar dades o compartir un resum executiu, la sortida queda preparada dins del mateix sistema.',
+        imageSrc: '/visuals/web/features-v3/block6_exportacio_dades_pdf_4k.webp',
+        imageAlt: 'Pantalla d’exportació de dades i PDF a Summa Social',
+      },
+    ],
+  },
+  problem: {
+    title: 'El problema habitual del control i la visibilitat',
+    intro: 'Quan el seguiment econòmic no està resolt, acostumen a aparèixer situacions com aquestes:',
+    points: [
+      'dashboard dispers o inexistent per fer seguiment real',
+      'informes per a junta preparats a mà cada vegada',
+      'exportacions i resums que depenen d’un Excel extern',
+      'direcció i equip treballant amb versions diferents de la mateixa realitat',
+    ],
+    outroParagraphs: [
+      'Això genera més feina i menys criteri just en els moments en què cal prendre decisions.',
+    ],
+  },
+  solution: {
+    title: 'Com ho resol Summa Social',
+    intro: 'Summa Social converteix la base econòmica del sistema en una capa de lectura i comunicació útil per a l’equip i la direcció.',
+    steps: [
+      {
+        title: 'Consolideu la informació al sistema',
+        body: 'El dashboard i les sortides parteixen de la mateixa base econòmica que l’equip ja treballa cada dia.',
+      },
+      {
+        title: 'Reviseu el panell directiu',
+        body: 'Indicadors, categories i situació general queden visibles des d’un únic lloc.',
+      },
+      {
+        title: 'Prepareu l’informe per als òrgans de govern',
+        body: 'L’equip pot convertir la informació en una sortida pensada per junta o patronat.',
+      },
+      {
+        title: 'Exporteu dades quan toca',
+        body: 'Quan cal compartir, revisar o treballar fora del sistema, la sortida ja està preparada.',
+      },
+      {
+        title: 'Manteniu una sola versió de la realitat',
+        body: 'Direcció, coordinació i administració treballen sobre la mateixa base, no sobre documents reconstruïts.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Què permet gestionar aquest bloc',
+    intro: 'Dins d’aquest bloc de control i visibilitat, Summa Social permet:',
+    items: [
+      'seguir un dashboard directiu amb lectura econòmica clara',
+      'preparar informes per a junta o patronat',
+      'exportar dades i resums executius des del sistema',
+      'alinear equip i direcció sobre una mateixa base de dades',
+    ],
+    outroParagraphs: [
+      'L’objectiu és que la informació econòmica serveixi per decidir, no només per arxivar-la.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficis operatius',
+    items: [
+      'Menys temps preparant informes recurrents per a òrgans de govern.',
+      'Més claredat per entendre la situació econòmica sense reconstruccions manuals.',
+      'Millor alineació entre equip operatiu i direcció.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensat per a entitats que necessiten explicar bé què està passant',
+    paragraphs: [
+      'És especialment útil per a equips que han de rendir comptes a junta, patronat o coordinació i no poden perdre temps refent informes cada setmana o cada mes.',
+      'No és només un dashboard bonic. És una capa de lectura i sortida perquè la informació econòmica sigui útil per governar l’entitat.',
+    ],
+  },
+  finalCta: {
+    title: 'Parlem de la vostra visibilitat econòmica',
+    text: 'Si avui cada informe per a junta o patronat us obliga a reconstruir dades, contacteu amb nosaltres i valorarem si Summa Social us pot ajudar a ordenar aquesta capa de control.',
+    linkLabel: 'Contacta amb nosaltres',
+    href: '/ca/contact',
+  },
+};
+
+const CONTROL_VISIBILITY_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Control y visibilidad para que dirección entienda qué está pasando',
+    subtitle: 'Dashboard, informes y exportaciones para seguir la situación económica sin pedir un Excel nuevo cada vez.',
+    introParagraphs: [
+      'Cuando la información económica está dispersa, cada reunión de junta, patronato o coordinación acaba empezando con el mismo trabajo: reconstruir qué ha pasado y en qué punto está la entidad.',
+      'Eso frena la capacidad de decidir y obliga al equipo a preparar informes ad hoc una y otra vez.',
+      'Summa Social concentra esta capa de visibilidad dentro del mismo sistema de trabajo.',
+    ],
+    media: {
+      type: 'video',
+      src: '/visuals/landings/control-visibilitat-entitats/animations/control-visibilitat-bloc.mp4',
+      poster: '/visuals/landings/control-visibilitat-entitats/optimized/control-visibilitat-bloc-poster.webp',
+      alt: 'Vídeo de dashboard de control y visibilidad en Summa Social',
+      durationLabel: '15 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Qué ve el equipo cuando necesita visión y salida',
+    intro: 'Este bloque no trata solo de ver datos, sino de convertirlos en informes compartibles y exportaciones útiles.',
+    items: [
+      {
+        title: 'Dashboard directivo',
+        description: 'La dirección puede ver indicadores, evolución y categorías relevantes sin salir del mismo panel.',
+        imageSrc: '/visuals/web/features-v3/block6_dashboard_start_4k.webp',
+        imageAlt: 'Pantalla de dashboard directivo en Summa Social',
+      },
+      {
+        title: 'Informe para junta o patronato',
+        description: 'El equipo puede preparar una salida pensada para compartir el estado económico con órganos de gobierno.',
+        imageSrc: '/visuals/web/features-v3/block6_informe_junta_modal_4k.webp',
+        imageAlt: 'Pantalla de informe económico para junta en Summa Social',
+      },
+      {
+        title: 'Exportación de datos',
+        description: 'Cuando hace falta bajar datos o compartir un resumen ejecutivo, la salida queda preparada dentro del mismo sistema.',
+        imageSrc: '/visuals/web/features-v3/block6_exportacio_dades_pdf_4k.webp',
+        imageAlt: 'Pantalla de exportación de datos y PDF en Summa Social',
+      },
+    ],
+  },
+  problem: {
+    title: 'El problema habitual del control y la visibilidad',
+    intro: 'Cuando el seguimiento económico no está resuelto, suelen aparecer situaciones como estas:',
+    points: [
+      'dashboard disperso o inexistente para hacer seguimiento real',
+      'informes para junta preparados a mano cada vez',
+      'exportaciones y resúmenes que dependen de un Excel externo',
+      'dirección y equipo trabajando con versiones distintas de la misma realidad',
+    ],
+    outroParagraphs: [
+      'Eso genera más trabajo y menos criterio justo en los momentos en los que hay que tomar decisiones.',
+    ],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social convierte la base económica del sistema en una capa de lectura y comunicación útil para el equipo y la dirección.',
+    steps: [
+      {
+        title: 'Consolidáis la información en el sistema',
+        body: 'El dashboard y las salidas parten de la misma base económica que el equipo ya trabaja cada día.',
+      },
+      {
+        title: 'Revisáis el panel directivo',
+        body: 'Indicadores, categorías y situación general quedan visibles desde un único lugar.',
+      },
+      {
+        title: 'Preparáis el informe para los órganos de gobierno',
+        body: 'El equipo puede convertir la información en una salida pensada para junta o patronato.',
+      },
+      {
+        title: 'Exportáis datos cuando toca',
+        body: 'Cuando hace falta compartir, revisar o trabajar fuera del sistema, la salida ya está preparada.',
+      },
+      {
+        title: 'Mantenéis una sola versión de la realidad',
+        body: 'Dirección, coordinación y administración trabajan sobre la misma base, no sobre documentos reconstruidos.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar este bloque',
+    intro: 'Dentro de este bloque de control y visibilidad, Summa Social permite:',
+    items: [
+      'seguir un dashboard directivo con lectura económica clara',
+      'preparar informes para junta o patronato',
+      'exportar datos y resúmenes ejecutivos desde el sistema',
+      'alinear a equipo y dirección sobre una misma base de datos',
+    ],
+    outroParagraphs: [
+      'El objetivo es que la información económica sirva para decidir, no solo para archivarla.',
+    ],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Menos tiempo preparando informes recurrentes para órganos de gobierno.',
+      'Más claridad para entender la situación económica sin reconstrucciones manuales.',
+      'Mejor alineación entre equipo operativo y dirección.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para entidades que necesitan explicar bien qué está pasando',
+    paragraphs: [
+      'Es especialmente útil para equipos que deben rendir cuentas a junta, patronato o coordinación y no pueden perder tiempo rehaciendo informes cada semana o cada mes.',
+      'No es solo un dashboard bonito. Es una capa de lectura y salida para que la información económica sea útil para gobernar la entidad.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra visibilidad económica',
+    text: 'Si hoy cada informe para junta o patronato os obliga a reconstruir datos, contactad con nosotros y valoraremos si Summa Social puede ayudaros a ordenar esta capa de control.',
     linkLabel: 'Contacta con nosotros',
     href: '/es/contact',
   },
@@ -2658,6 +3870,26 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
     },
   },
   {
+    slug: 'gestio-projectes-justificacio',
+    metadata: PROJECT_MANAGEMENT_METADATA,
+    content: {
+      ca: withRelatedLandings(PROJECT_MANAGEMENT_CONTENT_CA, 'ca', 'gestio-projectes-justificacio'),
+      es: withRelatedLandings(PROJECT_MANAGEMENT_CONTENT_ES, 'es', 'gestio-projectes-justificacio'),
+      fr: buildPendingContent('fr', LANDING_NAMES['gestio-projectes-justificacio'].fr),
+      pt: buildPendingContent('pt', LANDING_NAMES['gestio-projectes-justificacio'].pt),
+    },
+  },
+  {
+    slug: 'control-visibilitat-entitats',
+    metadata: CONTROL_VISIBILITY_METADATA,
+    content: {
+      ca: withRelatedLandings(CONTROL_VISIBILITY_CONTENT_CA, 'ca', 'control-visibilitat-entitats'),
+      es: withRelatedLandings(CONTROL_VISIBILITY_CONTENT_ES, 'es', 'control-visibilitat-entitats'),
+      fr: buildPendingContent('fr', LANDING_NAMES['control-visibilitat-entitats'].fr),
+      pt: buildPendingContent('pt', LANDING_NAMES['control-visibilitat-entitats'].pt),
+    },
+  },
+  {
     slug: 'software-gestion-ong',
     metadata: SOFTWARE_MANAGEMENT_ONG_METADATA,
     content: {
@@ -2682,7 +3914,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
     metadata: DONOR_MANAGEMENT_METADATA,
     content: {
       ca: withRelatedLandings(DONOR_MANAGEMENT_CONTENT_CA, 'ca', 'gestio-donants'),
-      es: buildPendingContent('es', LANDING_NAMES['gestio-donants'].es),
+      es: withRelatedLandings(DONOR_MANAGEMENT_CONTENT_ES, 'es', 'gestio-donants'),
       fr: buildPendingContent('fr', LANDING_NAMES['gestio-donants'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['gestio-donants'].pt),
     },

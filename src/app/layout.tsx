@@ -59,8 +59,8 @@ export default function RootLayout({
     process.env.NEXT_PUBLIC_ENV === 'staging' || projectId.includes('staging');
 
   return (
-    <html lang="ca" className={`${inter.variable} h-full overflow-x-hidden`} suppressHydrationWarning>
-      <body className="h-full overflow-x-hidden font-sans antialiased" suppressHydrationWarning>
+    <html lang="ca" className={`${inter.variable} min-h-full overflow-x-hidden`} suppressHydrationWarning>
+      <body className="min-h-full overflow-x-hidden font-sans antialiased" suppressHydrationWarning>
         {isStagingEnv ? (
           <div className="w-full bg-amber-400 px-3 py-1 text-center text-xs font-semibold text-black">
             STAGING · Entorn de proves aillat · No produccio

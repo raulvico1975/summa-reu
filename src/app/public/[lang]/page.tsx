@@ -1486,7 +1486,7 @@ export default async function HomePage({ params }: PageProps) {
     payments: `/${locale}/remeses-sepa`,
     fiscal: `/${locale}/model-182`,
     projects: `/${locale}/gestio-projectes-justificacio`,
-    control: `/${locale}/control-operatiu-entitats`,
+    control: `/${locale}/control-visibilitat-entitats`,
   };
   const BLOCK_CARDS: Record<HomeBlockKey, readonly string[]> = {
     conciliation: ['importStatements', 'autoClassification', 'contactAssignment', 'multiBankAccount'],

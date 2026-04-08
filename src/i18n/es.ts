@@ -1623,6 +1623,7 @@ export const es = {
       period: "Período",
       periodCurrentYear: "Año actual",
       periodPreviousYear: "Año anterior",
+      periodCurrentQuarter: "Trimestre actual",
       periodCustom: "Personalizado",
       dateFrom: "Fecha inicio",
       dateTo: "Fecha fin",

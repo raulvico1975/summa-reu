@@ -15,6 +15,8 @@ import type { Response } from 'express';
 import {
   ClosingBundleRequest,
   ClosingBundleError,
+  ClosingBundleMode,
+  DocumentStatusCounts,
 } from './closing-bundle/closing-types';
 import {
   loadTransactions,
@@ -24,14 +26,19 @@ import {
   prepareDiagnostics,
   validateLimits,
   buildManifestRows,
-  buildReadmeText,
-  buildSummaryText,
-  buildDebugSummaryText,
-  DocumentStatusCounts,
   loadCategoryMap,
   loadContactMap,
 } from './closing-bundle/build-closing-data';
-import { buildMovimentsXlsx, buildDebugXlsx, DebugRow } from './closing-bundle/build-closing-xlsx';
+import {
+  buildClosingBundleEntries,
+  buildClosingBundleManifest,
+  buildDebugSummaryText,
+  buildIncidentRows,
+  buildSummaryText,
+  buildVisibleIncidents,
+  DebugRow,
+} from './closing-bundle/build-closing-artifacts';
+import { canGenerateClosingBundle } from './closing-bundle/closing-permissions';
 import { inferExtension, buildDocumentFileName } from './closing-bundle/normalize-filename';
 
 const db = admin.firestore();
@@ -115,6 +122,7 @@ export const exportClosingBundleZip = functions
     }
 
     const { orgId, dateFrom, dateTo } = body;
+    const mode: ClosingBundleMode = body.mode === 'full' ? 'full' : 'user';
 
     // Validar camps
     if (!orgId || typeof orgId !== 'string') {
@@ -132,25 +140,28 @@ export const exportClosingBundleZip = functions
       return;
     }
 
-    // 4. Verificar rol de l'usuari
+    // 4. Verificar permisos efectius de l'usuari
     try {
       const memberRef = db.doc(`organizations/${orgId}/members/${uid}`);
       const memberSnap = await memberRef.get();
 
-      if (!memberSnap.exists) {
-        sendError(res, 403, { code: 'UNAUTHORIZED', message: 'No ets membre d\'aquesta organització' });
-        return;
-      }
+      const superAdminSnap = memberSnap.exists
+        ? null
+        : await db.doc(`systemSuperAdmins/${uid}`).get();
 
-      const memberData = memberSnap.data();
-      const role = memberData?.role as string | undefined;
-
-      if (role !== 'admin' && role !== 'superadmin') {
-        sendError(res, 403, { code: 'UNAUTHORIZED', message: 'No tens permisos per generar aquest paquet' });
+      if (!canGenerateClosingBundle({
+        memberData: memberSnap.exists ? memberSnap.data() : null,
+        isSystemSuperAdmin: !!superAdminSnap?.exists,
+      })) {
+        sendError(
+          res,
+          403,
+          { code: 'UNAUTHORIZED', message: memberSnap.exists ? 'No tens permisos per generar aquest paquet' : 'No ets membre d\'aquesta organització' }
+        );
         return;
       }
     } catch (err) {
-      functions.logger.error('[closingBundleZip] Error verificant rol', err);
+      functions.logger.error('[closingBundleZip] Error verificant permisos', err);
       sendError(res, 500, { code: 'INTERNAL_ERROR', message: 'Error verificant permisos' });
       return;
     }
@@ -333,17 +344,38 @@ export const exportClosingBundleZip = functions
       const totalIncome = transactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
       const totalExpense = transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0);
       const totalWithDocRef = transactions.filter((t) => t.document).length;
+      const finalIncidents = buildVisibleIncidents(transactions, incidents, diagnostics);
+      const generatedAt = new Date().toISOString();
 
-      // 16. README.txt (arrel) — explicació del paquet
-      const readmeText = buildReadmeText(orgSlug, dateFrom, dateTo);
-      archive.append(readmeText, { name: 'README.txt' });
-
-      // 17. moviments.xlsx (arrel) — simplificat per a l'entitat
       const manifestRows = buildManifestRows(transactions, txWithDoc, downloadedTxIds, categoryMap, contactMap);
-      const movimentsBuffer = buildMovimentsXlsx(manifestRows);
-      archive.append(movimentsBuffer, { name: 'moviments.xlsx' });
-
-      // 18. resum.txt (arrel) — resum humà sense detalls tècnics
+      const manifestRowsByTxId = new Map(
+        manifestRows.map((row) => [
+          row.txId,
+          {
+            ordre: row.ordre,
+            data: row.data,
+            import: row.import,
+            concepte: row.concepte,
+            categoria: row.categoria,
+            contacte: row.contacte,
+          },
+        ])
+      );
+      const incidentRows = buildIncidentRows(finalIncidents, manifestRowsByTxId, diagnostics);
+      const manifestJson = buildClosingBundleManifest({
+        runId,
+        generatedAt,
+        orgSlug,
+        dateFrom,
+        dateTo,
+        totalTransactions: transactions.length,
+        totalIncome,
+        totalExpense,
+        totalWithDocRef,
+        totalIncluded: downloadedTxIds.size,
+        totalIncidents: finalIncidents.length,
+        statusCounts,
+      });
       const summaryText = buildSummaryText({
         runId,
         orgSlug,
@@ -355,11 +387,8 @@ export const exportClosingBundleZip = functions
         totalWithDocRef,
         totalIncluded: downloadedTxIds.size,
         statusCounts,
-        totalIncidents: incidents.length,
+        totalIncidents: finalIncidents.length,
       });
-      archive.append(summaryText, { name: 'resum.txt' });
-
-      // 19. debug/resum_debug.txt — resum tècnic amb breakdown per status
       const debugSummaryText = buildDebugSummaryText({
         runId,
         orgSlug,
@@ -370,9 +399,6 @@ export const exportClosingBundleZip = functions
         totalIncluded: downloadedTxIds.size,
         statusCounts,
       });
-      archive.append(debugSummaryText, { name: 'debug/resum_debug.txt' });
-
-      // 20. debug/debug.xlsx — diagnòstics tècnics complets
       const debugRows: DebugRow[] = transactions.map((tx) => {
         const diagnostic = diagnostics.get(tx.id);
         return {
@@ -388,18 +414,34 @@ export const exportClosingBundleZip = functions
           errorAt: diagnostic?.errorAt || null,
         };
       });
-      const debugBuffer = buildDebugXlsx(debugRows);
-      archive.append(debugBuffer, { name: 'debug/debug.xlsx' });
 
-      // 19. Finalitzar ZIP
+      const entries = buildClosingBundleEntries({
+        mode,
+        orgSlug,
+        dateFrom,
+        dateTo,
+        manifestRows,
+        incidentRows,
+        debugRows,
+        manifest: manifestJson,
+        summaryText,
+        debugSummaryText,
+      });
+
+      for (const entry of entries) {
+        archive.append(entry.content, { name: entry.name });
+      }
+
+      // 23. Finalitzar ZIP
       await archive.finalize();
 
       functions.logger.info(`[closingBundleZip][${runId}] Generat amb èxit`, {
         orgId,
+        mode,
         transactions: transactions.length,
         documentsIncluded: downloadedTxIds.size,
         statusCounts,
-        incidents: incidents.length,
+        incidents: finalIncidents.length,
       });
     } catch (err) {
       functions.logger.error(`[closingBundleZip][${runId}] Error intern`, err);

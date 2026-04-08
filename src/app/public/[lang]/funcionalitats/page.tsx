@@ -32,10 +32,10 @@ interface PageProps {
 }
 
 type FeatureSectionKey =
-  | 'dashboard'
+  | 'control'
   | 'conciliation'
-  | 'expenses'
-  | 'members'
+  | 'donorsMembers'
+  | 'payments'
   | 'fiscal'
   | 'projects';
 
@@ -142,9 +142,9 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
     footerSupportNote:
       'Ens agrada entendre primer la realitat de cada entitat abans de proposar res.',
     sections: {
-      dashboard: {
-        label: 'Visió general del sistema',
-        title: 'Panell de control',
+      control: {
+        label: 'Control i visibilitat',
+        title: 'Dashboard, informes i exportació',
         description:
           "És la pantalla per seguir l'estat econòmic, el període actiu i les diferents àrees de control sense sortir del mateix panell.",
         items: {
@@ -173,34 +173,17 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
           },
         },
       },
-      expenses: {
-        label: 'Gestió de factures i liquidacions (amb IA)',
-        title: 'Documents, pagaments i liquidacions',
+      donorsMembers: {
+        label: 'Socis i donants',
+        title: 'Base de socis, donants i historial',
         description:
-          'Factures, nòmines, pagaments i tiquets dins del mateix flux, amb lectura assistida i menys treball manual.',
-        items: {
-          invoices: {
-            title: 'Factures i nòmines amb IA',
-            description:
-              'Arrossegues documents, revises les dades llegides i els prepares per pagar sense picar-ho tot a mà.',
-          },
-          payments: {
-            title: 'Pagaments SEPA',
-            description:
-              'Generes remeses de pagament amb els documents i imports ja ordenats dins del sistema.',
-          },
-          settlements: {
-            title: 'Liquidacions i tiquets',
-            description:
-              'Captura de despeses, viatges i quilometratge amb liquidacions regenerables en PDF.',
-          },
-        },
+          'Fitxes, imports, historial i dades fiscals de socis i donants dins d’una sola base viva.',
       },
-      members: {
-        label: 'Gestió de socis i quotes',
-        title: 'Base de socis, quotes i devolucions',
+      payments: {
+        label: 'Cobraments i pagaments',
+        title: 'Remeses, devolucions i cobrament recurrent',
         description:
-          'La relació amb socis i donants queda connectada amb quotes, incidències, rebuts retornats i historial d’aportacions.',
+          'Quotes, remeses, devolucions i cobrament de donacions dins d’un mateix flux econòmic.',
       },
       fiscal: {
         label: 'Fiscalitat (models AEAT ready)',
@@ -251,9 +234,9 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
     footerSupportNote:
       'Nos gusta entender primero la realidad de cada entidad antes de proponer nada.',
     sections: {
-      dashboard: {
-        label: 'Visión general del sistema',
-        title: 'Panel de control',
+      control: {
+        label: 'Control y visibilidad',
+        title: 'Dashboard, informes y exportación',
         description:
           'Es la pantalla para seguir el estado económico, el periodo activo y las distintas áreas de control sin salir del mismo panel.',
         items: {
@@ -282,34 +265,17 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
           },
         },
       },
-      expenses: {
-        label: 'Gestión de facturas y liquidaciones (con IA)',
-        title: 'Documentos, pagos y liquidaciones',
+      donorsMembers: {
+        label: 'Socios y donantes',
+        title: 'Base de socios, donantes e histórico',
         description:
-          'Facturas, nóminas, pagos y tickets dentro del mismo flujo, con lectura asistida y menos trabajo manual.',
-        items: {
-          invoices: {
-            title: 'Facturas y nóminas con IA',
-            description:
-              'Arrastras documentos, revisas los datos leídos y los preparas para pagar sin picarlo todo a mano.',
-          },
-          payments: {
-            title: 'Pagos SEPA',
-            description:
-              'Generas remesas de pago con los documentos e importes ya ordenados dentro del sistema.',
-          },
-          settlements: {
-            title: 'Liquidaciones y tickets',
-            description:
-              'Captura de gastos, viajes y kilometraje con liquidaciones regenerables en PDF.',
-          },
-        },
+          'Fichas, importes, histórico y datos fiscales de socios y donantes dentro de una sola base viva.',
       },
-      members: {
-        label: 'Gestión de socios y cuotas',
-        title: 'Base de socios, cuotas y devoluciones',
+      payments: {
+        label: 'Cobros y pagos',
+        title: 'Remesas, devoluciones y cobro recurrente',
         description:
-          'La relación con socios y donantes queda conectada con cuotas, incidencias, recibos devueltos e historial de aportaciones.',
+          'Cuotas, remesas, devoluciones y cobro de donaciones dentro de un mismo flujo económico.',
       },
       fiscal: {
         label: 'Fiscalidad (modelos AEAT ready)',
@@ -360,9 +326,9 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
     footerSupportNote:
       "Nous aimons comprendre d'abord la réalité de chaque structure avant de proposer quoi que ce soit.",
     sections: {
-      dashboard: {
-        label: 'Vue générale du système',
-        title: 'Tableau de bord',
+      control: {
+        label: 'Contrôle et visibilité',
+        title: 'Tableau de bord, rapports et export',
         description:
           "C'est l'écran pour suivre l'état économique, la période active et les différentes zones de contrôle sans quitter le tableau de bord.",
         items: {
@@ -391,34 +357,17 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
           },
         },
       },
-      expenses: {
-        label: 'Gestion des factures et notes de frais (avec IA)',
-        title: 'Documents, paiements et liquidations',
+      donorsMembers: {
+        label: 'Membres et donateurs',
+        title: 'Base membres, donateurs et historique',
         description:
-          'Factures, salaires, paiements et justificatifs dans le même flux, avec lecture assistée et moins de travail manuel.',
-        items: {
-          invoices: {
-            title: 'Factures et salaires avec IA',
-            description:
-              'Vous déposez les documents, vérifiez les données lues et les préparez pour paiement sans tout ressaisir.',
-          },
-          payments: {
-            title: 'Paiements SEPA',
-            description:
-              'Vous générez des remises de paiement avec documents et montants déjà ordonnés dans le système.',
-          },
-          settlements: {
-            title: 'Notes de frais et justificatifs',
-            description:
-              'Capture des dépenses, déplacements et kilométrage avec PDF régénérables.',
-          },
-        },
+          'Fiches, montants, historique et données fiscales des membres et donateurs dans une base unique.',
       },
-      members: {
-        label: 'Gestion des membres et cotisations',
-        title: 'Base membres, cotisations et rejets',
+      payments: {
+        label: 'Encaissements et paiements',
+        title: 'Prélèvements, rejets et encaissement récurrent',
         description:
-          'La relation avec membres et donateurs reste liée aux cotisations, incidents, rejets et historique de contributions.',
+          'Cotisations, remises, rejets et encaissement des dons dans un même flux économique.',
       },
       fiscal: {
         label: 'Fiscalité (modèles AEAT ready)',
@@ -469,9 +418,9 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
     footerSupportNote:
       'Gostamos de perceber primeiro a realidade de cada entidade antes de propor seja o que for.',
     sections: {
-      dashboard: {
-        label: 'Visão geral do sistema',
-        title: 'Painel de controlo',
+      control: {
+        label: 'Controlo e visibilidade',
+        title: 'Dashboard, relatórios e exportação',
         description:
           'É o ecrã para seguir o estado económico, o período ativo e as diferentes áreas de controlo sem sair do mesmo painel.',
         items: {
@@ -500,34 +449,17 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
           },
         },
       },
-      expenses: {
-        label: 'Gestão de faturas e liquidações (com IA)',
-        title: 'Documentos, pagamentos e liquidações',
+      donorsMembers: {
+        label: 'Sócios e doadores',
+        title: 'Base de sócios, doadores e histórico',
         description:
-          'Faturas, salários, pagamentos e comprovativos no mesmo fluxo, com leitura assistida e menos trabalho manual.',
-        items: {
-          invoices: {
-            title: 'Faturas e salários com IA',
-            description:
-              'Arrastas documentos, revês os dados lidos e preparas tudo para pagamento sem voltar a digitar.',
-          },
-          payments: {
-            title: 'Pagamentos SEPA',
-            description:
-              'Gerar remessas de pagamento com documentos e montantes já organizados dentro do sistema.',
-          },
-          settlements: {
-            title: 'Liquidações e comprovativos',
-            description:
-              'Captura de despesas, viagens e quilometragem com PDF regenerável.',
-          },
-        },
+          'Fichas, montantes, histórico e dados fiscais de sócios e doadores numa única base viva.',
       },
-      members: {
-        label: 'Gestão de sócios e quotas',
-        title: 'Base de sócios, quotas e devoluções',
+      payments: {
+        label: 'Cobranças e pagamentos',
+        title: 'Remessas, devoluções e cobrança recorrente',
         description:
-          'A relação com sócios e doadores fica ligada a quotas, incidências, recibos devolvidos e histórico de contribuições.',
+          'Quotas, remessas, devoluções e cobrança de doações dentro do mesmo fluxo económico.',
       },
       fiscal: {
         label: 'Fiscalidade (modelos AEAT ready)',
@@ -597,10 +529,10 @@ function getSectionShowcaseMedia(
   copy: PageCopy
 ): Record<FeatureSectionKey, PublicLandingHeroMedia> {
   return {
-    dashboard: createImageMedia(visuals.dashboard, copy.sections.dashboard.title),
+    control: createImageMedia(visuals.dashboard, copy.sections.control.title),
     conciliation: createImageMedia(visuals.conciliation, copy.sections.conciliation.title),
-    expenses: createImageMedia(visuals.expenses, copy.sections.expenses.title),
-    members: createImageMedia(visuals.remittances, copy.sections.members.title),
+    donorsMembers: createImageMedia('/visuals/web/features-v3/block2_historic_donant_start_4k.webp', copy.sections.donorsMembers.title),
+    payments: createImageMedia(visuals.remittances, copy.sections.payments.title),
     fiscal: createImageMedia(visuals.fiscal, copy.sections.fiscal.title),
     projects: createImageMedia(visuals.projects, copy.sections.projects.title),
   };
@@ -688,32 +620,6 @@ export default async function FeaturesPage({ params }: PageProps) {
 
   const sections: PublicFeaturesExplorerSection[] = [
     {
-      id: 'dashboard',
-      label: copy.sections.dashboard.label,
-      title: copy.sections.dashboard.title,
-      description: copy.sections.dashboard.description,
-      items: [
-        buildStaticItem({
-          id: 'dashboard-overview',
-          title: copy.sections.dashboard.title,
-          description: copy.sections.dashboard.description,
-          image: visuals.dashboard,
-        }),
-        buildStaticItem({
-          id: 'dashboard-metrics',
-          title: copy.sections.dashboard.items!.metrics.title,
-          description: copy.sections.dashboard.items!.metrics.description,
-          image: visuals.dashboard,
-        }),
-        buildStaticItem({
-          id: 'dashboard-reports',
-          title: copy.sections.dashboard.items!.reports.title,
-          description: copy.sections.dashboard.items!.reports.description,
-          image: visuals.reports,
-        }),
-      ],
-    },
-    {
       id: 'conciliation',
       label: copy.sections.conciliation.label,
       title: copy.sections.conciliation.title,
@@ -749,45 +655,10 @@ export default async function FeaturesPage({ params }: PageProps) {
       ],
     },
     {
-      id: 'expenses',
-      label: copy.sections.expenses.label,
-      title: copy.sections.expenses.title,
-      description: copy.sections.expenses.description,
-      items: [
-        buildStaticItem({
-          id: 'expenses-invoices',
-          title: copy.sections.expenses.items!.invoices.title,
-          description: copy.sections.expenses.items!.invoices.description,
-          image: visuals.expenses,
-          href: contactHref,
-          ctaLabel: copy.contactCta,
-          badgeLabel: copy.screenBadge,
-        }),
-        buildStaticItem({
-          id: 'expenses-payments',
-          title: copy.sections.expenses.items!.payments.title,
-          description: copy.sections.expenses.items!.payments.description,
-          image: visuals.pending,
-          href: contactHref,
-          ctaLabel: copy.contactCta,
-          badgeLabel: copy.screenBadge,
-        }),
-        buildStaticItem({
-          id: 'expenses-settlements',
-          title: copy.sections.expenses.items!.settlements.title,
-          description: copy.sections.expenses.items!.settlements.description,
-          image: visuals.liquidations,
-          href: contactHref,
-          ctaLabel: copy.contactCta,
-          badgeLabel: copy.screenBadge,
-        }),
-      ],
-    },
-    {
-      id: 'members',
-      label: copy.sections.members.label,
-      title: copy.sections.members.title,
-      description: copy.sections.members.description,
+      id: 'donorsMembers',
+      label: copy.sections.donorsMembers.label,
+      title: copy.sections.donorsMembers.title,
+      description: copy.sections.donorsMembers.description,
       items: [
         buildLandingItem({
           slug: 'gestio-donants',
@@ -798,6 +669,44 @@ export default async function FeaturesPage({ params }: PageProps) {
           demoBadge: copy.demoBadge,
           landingBadge: copy.landingBadge,
         }),
+        buildStaticItem({
+          id: 'donorsMembers-bulkImport',
+          title: locale === 'ca' ? 'Importació massiva' : locale === 'es' ? 'Importación masiva' : locale === 'fr' ? 'Import massif' : 'Importação massiva',
+          description: locale === 'ca'
+            ? 'Carrega base inicial de socis o donants sense crear fitxes una a una.'
+            : locale === 'es'
+              ? 'Carga la base inicial de socios o donantes sin crear fichas una a una.'
+              : locale === 'fr'
+                ? 'Chargez la base initiale de membres ou donateurs sans créer chaque fiche.'
+                : 'Carrega a base inicial de sócios ou doadores sem criar fichas uma a uma.',
+          image: '/visuals/web/features-v3/block2_importacio_massiva_start_4k.webp',
+          href: `/${detailLocale}/gestio-donants`,
+          ctaLabel: copy.detailCta,
+          badgeLabel: copy.screenBadge,
+        }),
+        buildStaticItem({
+          id: 'donorsMembers-history',
+          title: locale === 'ca' ? 'Històric del donant' : locale === 'es' ? 'Histórico del donante' : locale === 'fr' ? 'Historique du donateur' : 'Histórico do doador',
+          description: locale === 'ca'
+            ? 'Consulta aportacions, incidències i dades fiscals dins de la mateixa fitxa.'
+            : locale === 'es'
+              ? 'Consulta aportaciones, incidencias y datos fiscales dentro de la misma ficha.'
+              : locale === 'fr'
+                ? 'Consultez contributions, incidents et données fiscales dans la même fiche.'
+                : 'Consulta contribuições, incidências e dados fiscais na mesma ficha.',
+          image: '/visuals/web/features-v3/block2_historic_donant_start_4k.webp',
+          href: `/${detailLocale}/gestio-donants`,
+          ctaLabel: copy.detailCta,
+          badgeLabel: copy.screenBadge,
+        }),
+      ],
+    },
+    {
+      id: 'payments',
+      label: copy.sections.payments.label,
+      title: copy.sections.payments.title,
+      description: copy.sections.payments.description,
+      items: [
         buildLandingItem({
           slug: 'remeses-sepa',
           previewLocale: locale,
@@ -816,14 +725,6 @@ export default async function FeaturesPage({ params }: PageProps) {
           demoBadge: copy.demoBadge,
           landingBadge: copy.landingBadge,
         }),
-      ],
-    },
-    {
-      id: 'fiscal',
-      label: copy.sections.fiscal.label,
-      title: copy.sections.fiscal.title,
-      description: copy.sections.fiscal.description,
-      items: [
         buildLandingItem({
           slug: 'control-donacions-ong',
           previewLocale: locale,
@@ -833,6 +734,14 @@ export default async function FeaturesPage({ params }: PageProps) {
           demoBadge: copy.demoBadge,
           landingBadge: copy.landingBadge,
         }),
+      ],
+    },
+    {
+      id: 'fiscal',
+      label: copy.sections.fiscal.label,
+      title: copy.sections.fiscal.title,
+      description: copy.sections.fiscal.description,
+      items: [
         buildLandingItem({
           slug: 'certificats-donacio',
           previewLocale: locale,
@@ -860,6 +769,21 @@ export default async function FeaturesPage({ params }: PageProps) {
           demoBadge: copy.demoBadge,
           landingBadge: copy.landingBadge,
         }),
+        buildStaticItem({
+          id: 'fiscal-export',
+          title: locale === 'ca' ? 'Excel per a gestoria' : locale === 'es' ? 'Excel para gestoría' : locale === 'fr' ? 'Excel pour le cabinet' : 'Excel para contabilidade',
+          description: locale === 'ca'
+            ? 'Prepara la sortida final perquè la gestoria treballi amb una base neta.'
+            : locale === 'es'
+              ? 'Prepara la salida final para que la gestoría trabaje con una base limpia.'
+              : locale === 'fr'
+                ? 'Prépare la sortie finale pour que le cabinet travaille avec une base propre.'
+                : 'Prepara a saída final para que a contabilidade trabalhe com uma base limpa.',
+          image: '/visuals/web/features-v3/block4_excel_gestoria_start_4k.webp',
+          href: `/${detailLocale}/model-182`,
+          ctaLabel: copy.detailCta,
+          badgeLabel: copy.screenBadge,
+        }),
       ],
     },
     {
@@ -873,17 +797,17 @@ export default async function FeaturesPage({ params }: PageProps) {
           title: copy.sections.projects.items!.budget.title,
           description: copy.sections.projects.items!.budget.description,
           image: visuals.projects,
-          href: contactHref,
-          ctaLabel: copy.contactCta,
-          badgeLabel: copy.screenBadge,
+          href: `/${detailLocale}/gestio-projectes-justificacio`,
+          ctaLabel: copy.detailCta,
+          badgeLabel: copy.landingBadge,
         }),
         buildStaticItem({
           id: 'projects-grants',
           title: copy.sections.projects.items!.grants.title,
           description: copy.sections.projects.items!.grants.description,
           image: visuals.projects,
-          href: contactHref,
-          ctaLabel: copy.contactCta,
+          href: `/${detailLocale}/gestio-projectes-justificacio`,
+          ctaLabel: copy.detailCta,
           badgeLabel: copy.screenBadge,
         }),
         buildStaticItem({
@@ -891,8 +815,43 @@ export default async function FeaturesPage({ params }: PageProps) {
           title: copy.sections.projects.items!.reporting.title,
           description: copy.sections.projects.items!.reporting.description,
           image: visuals.projects,
-          href: contactHref,
-          ctaLabel: copy.contactCta,
+          href: `/${detailLocale}/gestio-projectes-justificacio`,
+          ctaLabel: copy.detailCta,
+          badgeLabel: copy.screenBadge,
+        }),
+      ],
+    },
+    {
+      id: 'control',
+      label: copy.sections.control.label,
+      title: copy.sections.control.title,
+      description: copy.sections.control.description,
+      items: [
+        buildStaticItem({
+          id: 'control-overview',
+          title: copy.sections.control.title,
+          description: copy.sections.control.description,
+          image: visuals.dashboard,
+          href: `/${detailLocale}/control-visibilitat-entitats`,
+          ctaLabel: copy.detailCta,
+          badgeLabel: copy.landingBadge,
+        }),
+        buildStaticItem({
+          id: 'control-metrics',
+          title: copy.sections.control.items!.metrics.title,
+          description: copy.sections.control.items!.metrics.description,
+          image: visuals.dashboard,
+          href: `/${detailLocale}/control-visibilitat-entitats`,
+          ctaLabel: copy.detailCta,
+          badgeLabel: copy.screenBadge,
+        }),
+        buildStaticItem({
+          id: 'control-reports',
+          title: copy.sections.control.items!.reports.title,
+          description: copy.sections.control.items!.reports.description,
+          image: visuals.reports,
+          href: `/${detailLocale}/control-visibilitat-entitats`,
+          ctaLabel: copy.detailCta,
           badgeLabel: copy.screenBadge,
         }),
       ],
