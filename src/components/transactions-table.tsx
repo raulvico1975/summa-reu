@@ -1677,8 +1677,8 @@ export function TransactionsTable({
   const handleExportFilteredTransactions = async () => {
     if (!canRenderResolvedResults || hasMoreTransactions) {
       toast({
-        title: 'Carregant més moviments',
-        description: 'Cal acabar de carregar les pàgines del resultat actual abans d’exportar-lo complet.',
+        title: tr('movements.table.loadingMoreToExport', 'Carregant més moviments'),
+        description: tr('movements.table.loadingMoreToExportDesc', 'Cal acabar de carregar les pàgines del resultat actual abans d’exportar-lo complet.'),
       });
       return;
     }
@@ -2650,13 +2650,13 @@ export function TransactionsTable({
             <div className="space-y-1">
               <p className="font-medium text-foreground">
                 {isResolvingLocalFilters
-                  ? 'Carregant més moviments'
-                  : 'No s\'han pogut completar els filtres locals'}
+                  ? tr('movements.table.localFiltersResolving', 'Carregant més moviments')
+                  : tr('movements.table.localFiltersIncomplete', "No s'han pogut completar els filtres locals")}
               </p>
               <p className="text-muted-foreground">
                 {isResolvingLocalFilters
-                  ? 'Alguns filtres avançats encara necessiten recórrer més pàgines perquè no tenen suport complet al backend en aquesta iteració.'
-                  : 'Reintenta la càrrega o neteja aquests filtres locals per evitar un resultat parcial.'}
+                  ? tr('movements.table.localFiltersResolvingDesc', 'Alguns filtres avançats encara necessiten recórrer més pàgines perquè no tenen suport complet al backend en aquesta iteració.')
+                  : tr('movements.table.localFiltersIncompleteDesc', 'Reintenta la càrrega o neteja aquests filtres locals per evitar un resultat parcial.')}
               </p>
             </div>
           </div>
