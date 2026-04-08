@@ -10,7 +10,7 @@ import * as React from 'react';
 import { useState, useRef, useCallback } from 'react';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useStorage } from '@/firebase/provider';
-import { useSaveOffBankExpense } from '@/hooks/use-project-module';
+import { useSaveOffBankExpense, useUpdateOffBankExpense } from '@/hooks/use-project-module';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { suggestCategory } from '@/lib/expense-category-suggestions';
@@ -22,7 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Camera, Upload, X, Loader2, Check, Image as ImageIcon, FileText, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
+import { useOrgUrl } from '@/hooks/organization-provider';
 
 // =============================================================================
 // TYPES
@@ -86,6 +86,20 @@ function getFileIcon(contentType: string) {
   return <FileText className="h-5 w-5 text-gray-500" />;
 }
 
+function buildAttachmentsFromUploads(entries: PendingUpload[]): OffBankAttachment[] {
+  const uploadedAt = new Date().toISOString().split('T')[0];
+
+  return entries
+    .filter((entry) => entry.url && !entry.error)
+    .map((entry) => ({
+      url: entry.url!,
+      name: entry.file.name,
+      contentType: entry.file.type,
+      size: entry.file.size,
+      uploadedAt,
+    }));
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -93,13 +107,10 @@ function getFileIcon(contentType: string) {
 export function QuickExpenseScreen({ organizationId, isLandingMode = false }: QuickExpenseScreenProps) {
   const storage = useStorage();
   const { save, isSaving } = useSaveOffBankExpense();
+  const { update, isUpdating } = useUpdateOffBankExpense();
   const { toast } = useToast();
-  const { t, tr } = useTranslations();
+  const { tr } = useTranslations();
   const { buildUrl } = useOrgUrl();
-  const { organization } = useCurrentOrganization();
-
-  // Textos i18n
-  const q = t.projectModule?.quickExpense;
 
   // Refs per inputs
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +127,8 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
   const [concept, setConcept] = useState('');
   const [date, setDate] = useState(''); // Per a la data extreta per IA
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draftExpenseId, setDraftExpenseId] = useState<string | null>(null);
+  const [isDraftSyncing, setIsDraftSyncing] = useState(false);
 
   // Estats multimoneda (per monedes ≠ EUR)
   const [currency, setCurrency] = useState('EUR');
@@ -129,7 +142,86 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
   // Derivats
   const hasAttachments = uploads.some(u => u.url && !u.error);
   const isUploading = uploads.some(u => u.uploading);
-  const canSubmit = hasAttachments && !isUploading && !isSubmitting;
+  const isPersisting = isSubmitting || isDraftSyncing || isSaving || isUpdating;
+  const canSubmit = hasAttachments && !isUploading && !isPersisting;
+
+  const buildDraftPayload = useCallback((entries: PendingUpload[]) => {
+    const attachments = buildAttachmentsFromUploads(entries);
+
+    if (attachments.length === 0) {
+      return null;
+    }
+
+    const finalDate = date || new Date().toISOString().split('T')[0];
+    const finalConcept = concept.trim() || tr('projectModule.quickExpense.defaultConcept');
+    const suggestedCategory = suggestCategory(finalConcept);
+
+    const isMulticurrency = currency !== 'EUR' && currency !== '';
+    let finalAmountEUR: string | null = null;
+    let finalOriginalCurrency: string | null = null;
+    let finalOriginalAmount: string | null = null;
+
+    if (isMulticurrency) {
+      finalOriginalCurrency = currency;
+      const parsedOriginal = amountOriginal.trim() ? parseFloat(amountOriginal) : null;
+      finalOriginalAmount = parsedOriginal !== null && !Number.isNaN(parsedOriginal)
+        ? String(parsedOriginal)
+        : null;
+
+      const parsedEUR = amountEUR.trim() ? parseFloat(amountEUR) : null;
+      if (parsedEUR !== null && parsedEUR > 0) {
+        finalAmountEUR = String(parsedEUR);
+      }
+    } else {
+      const parsedAmount = amountEUR.trim() ? parseFloat(amountEUR) : null;
+      if (parsedAmount !== null && parsedAmount > 0) {
+        finalAmountEUR = String(parsedAmount);
+      }
+    }
+
+    return {
+      date: finalDate,
+      concept: finalConcept,
+      amountEUR: finalAmountEUR,
+      counterpartyName: '',
+      categoryName: suggestedCategory ?? '',
+      attachments,
+      needsReview: true,
+      originalCurrency: finalOriginalCurrency,
+      originalAmount: finalOriginalAmount,
+    };
+  }, [amountEUR, amountOriginal, concept, currency, date, tr]);
+
+  const syncDraftExpense = useCallback(async (entries: PendingUpload[]) => {
+    const payload = buildDraftPayload(entries);
+
+    if (!payload) {
+      if (draftExpenseId) {
+        await update(draftExpenseId, { attachments: [] });
+      }
+      return;
+    }
+
+    setIsDraftSyncing(true);
+    try {
+      if (draftExpenseId) {
+        await update(draftExpenseId, payload);
+      } else {
+        const newId = await save(payload);
+        setDraftExpenseId(newId);
+      }
+    } catch (error) {
+      console.error('[QuickExpense] Draft sync error:', error);
+      toast({
+        title: tr('projectModule.quickExpense.errorTitle'),
+        description: tr('projectModule.quickExpense.errorBody'),
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setIsDraftSyncing(false);
+    }
+  }, [buildDraftPayload, draftExpenseId, save, toast, tr, update]);
 
   // ---------------------------------------------------------------------------
   // IA EXTRACTION
@@ -249,7 +341,8 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     if (validFiles.length === 0) return;
 
     // Afegir a la llista
-    setUploads(prev => [...prev, ...validFiles]);
+    let nextUploads = [...uploads, ...validFiles];
+    setUploads(nextUploads);
 
     // Pujar cadascun i extreure amb IA si és imatge
     let firstImageUpload: { url: string; storagePath: string } | null = null;
@@ -257,19 +350,18 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     for (const pending of validFiles) {
       const result = await uploadFile(pending.file);
 
-      setUploads(prev =>
-        prev.map(p =>
-          p.id === pending.id
-            ? {
-                ...p,
-                uploading: false,
-                url: result?.url ?? undefined,
-                storagePath: result?.storagePath ?? undefined,
-                error: result ? undefined : 'Error',
-              }
-            : p
-        )
+      nextUploads = nextUploads.map((entry) =>
+        entry.id === pending.id
+          ? {
+              ...entry,
+              uploading: false,
+              url: result?.url ?? undefined,
+              storagePath: result?.storagePath ?? undefined,
+              error: result ? undefined : 'Error',
+            }
+          : entry
       );
+      setUploads(nextUploads);
 
       // Guardar la primera imatge per fer extracció IA
       if (result && pending.file.type.startsWith('image/') && !firstImageUpload) {
@@ -281,18 +373,28 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     if (firstImageUpload && aiState === 'idle') {
       extractWithAI(firstImageUpload.url, firstImageUpload.storagePath);
     }
-  }, [uploadFile, extractWithAI, aiState]);
+
+    if (nextUploads.some((entry) => entry.url && !entry.error)) {
+      await syncDraftExpense(nextUploads);
+    }
+  }, [aiState, extractWithAI, syncDraftExpense, uploadFile, uploads]);
 
   const handleRemoveUpload = useCallback(async (id: string) => {
     const upload = uploads.find(u => u.id === id);
-    if (upload?.url) {
+    if (upload?.storagePath || upload?.url) {
       try {
-        const storageRef = ref(storage, upload.url);
+        const storageRef = ref(storage, upload.storagePath ?? upload.url!);
         await deleteObject(storageRef).catch(() => {});
       } catch {}
     }
-    setUploads(prev => prev.filter(u => u.id !== id));
-  }, [uploads, storage]);
+
+    const nextUploads = uploads.filter((entry) => entry.id !== id);
+    setUploads(nextUploads);
+
+    if (draftExpenseId) {
+      await syncDraftExpense(nextUploads);
+    }
+  }, [draftExpenseId, storage, syncDraftExpense, uploads]);
 
   // ---------------------------------------------------------------------------
   // CAMERA HANDLER
@@ -324,83 +426,31 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     setIsSubmitting(true);
 
     try {
-      // Preparar attachments
-      const attachments: OffBankAttachment[] = uploads
-        .filter(u => u.url && !u.error)
-        .map(u => ({
-          url: u.url!,
-          name: u.file.name,
-          contentType: u.file.type,
-          size: u.file.size,
-          uploadedAt: new Date().toISOString().split('T')[0],
-        }));
-
-      // Data: usar la extreta per IA si disponible, sinó avui
-      const finalDate = date || new Date().toISOString().split('T')[0];
-
-      // Concepte per defecte si buit
-      const finalConcept = concept.trim() || tr('projectModule.quickExpense.defaultConcept');
-
-      // Suggerir categoria basada en concepte
-      const suggestedCategory = suggestCategory(finalConcept);
-
-      // Preparar imports segons moneda
       const isMulticurrency = currency !== 'EUR' && currency !== '';
-      let finalAmountEUR: string | null = null;
-      let finalOriginalCurrency: string | null = null;
-      let finalOriginalAmount: string | null = null;
+      const parsedOriginal = amountOriginal.trim() ? parseFloat(amountOriginal) : null;
+      const parsedAmount = amountEUR.trim() ? parseFloat(amountEUR) : null;
 
-      if (isMulticurrency) {
-        // Moneda estrangera
-        finalOriginalCurrency = currency;
-        const parsedOriginal = amountOriginal.trim() ? parseFloat(amountOriginal) : null;
-
-        if (parsedOriginal !== null && parsedOriginal <= 0) {
-          toast({
-            title: tr('projectModule.quickExpense.invalidAmountTitle'),
-            description: tr('projectModule.quickExpense.invalidAmountDesc'),
-            variant: 'destructive',
-          });
-          setIsSubmitting(false);
-          return;
-        }
-
-        finalOriginalAmount = parsedOriginal !== null ? String(parsedOriginal) : null;
-
-        // Si també s'ha especificat amountEUR manualment
-        const parsedEUR = amountEUR.trim() ? parseFloat(amountEUR) : null;
-        if (parsedEUR !== null && parsedEUR > 0) {
-          finalAmountEUR = String(parsedEUR);
-        }
-      } else {
-        // EUR directe
-        const parsedAmount = amountEUR.trim() ? parseFloat(amountEUR) : null;
-
-        if (parsedAmount !== null && parsedAmount <= 0) {
-          toast({
-            title: tr('projectModule.quickExpense.invalidAmountTitle'),
-            description: tr('projectModule.quickExpense.invalidAmountDesc'),
-            variant: 'destructive',
-          });
-          setIsSubmitting(false);
-          return;
-        }
-
-        finalAmountEUR = parsedAmount !== null ? String(parsedAmount) : null;
+      if (isMulticurrency && parsedOriginal !== null && parsedOriginal <= 0) {
+        toast({
+          title: tr('projectModule.quickExpense.invalidAmountTitle'),
+          description: tr('projectModule.quickExpense.invalidAmountDesc'),
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
       }
 
-      await save({
-        date: finalDate,
-        concept: finalConcept,
-        amountEUR: finalAmountEUR,
-        counterpartyName: '',
-        categoryName: suggestedCategory ?? '',
-        attachments,
-        needsReview: true,
-        // Camps multimoneda
-        originalCurrency: finalOriginalCurrency,
-        originalAmount: finalOriginalAmount,
-      });
+      if (!isMulticurrency && parsedAmount !== null && parsedAmount <= 0) {
+        toast({
+          title: tr('projectModule.quickExpense.invalidAmountTitle'),
+          description: tr('projectModule.quickExpense.invalidAmountDesc'),
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      await syncDraftExpense(uploads);
 
       // Èxit
       toast({
@@ -415,6 +465,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       setConcept('');
       setDate('');
       setCurrency('EUR');
+      setDraftExpenseId(null);
       setAIState('idle');
       setAIExtraction(null);
       setLastAIAttempt(null);
@@ -424,15 +475,10 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
 
     } catch (error) {
       console.error('[QuickExpense] Save error:', error);
-      toast({
-        title: tr('projectModule.quickExpense.errorTitle'),
-        description: tr('projectModule.quickExpense.errorBody'),
-        variant: 'destructive',
-      });
     } finally {
       setIsSubmitting(false);
     }
-  }, [canSubmit, uploads, amountEUR, amountOriginal, currency, date, concept, save, toast, q]);
+  }, [amountEUR, amountOriginal, canSubmit, currency, syncDraftExpense, toast, tr, uploads]);
 
   // ---------------------------------------------------------------------------
   // RENDER
@@ -720,9 +766,9 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
             size="lg"
             className="w-full h-14 text-lg"
             onClick={handleSubmit}
-            disabled={!canSubmit || isSubmitting}
+            disabled={!canSubmit || isPersisting}
           >
-            {isSubmitting ? (
+            {isPersisting ? (
               <>
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                 {tr('projectModule.quickExpense.saving')}
