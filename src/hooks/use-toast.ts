@@ -11,7 +11,10 @@ import type {
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
-export type ToasterToastPresentation = "default" | "centered-success"
+export type ToasterToastPresentation =
+  | "default"
+  | "centered-success"
+  | "centered-progress"
 
 export type ToasterToast = ToastProps & {
   id: string

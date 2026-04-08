@@ -1139,6 +1139,15 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
     setStep('processing');
     setIsProcessing(true);
+    const processingToast = toast({
+      presentation: 'centered-progress',
+      title: tr('returnImporter.processingProgress', 'Processant devolucions...'),
+      description: tr(
+        'returnImporter.processingDesc',
+        'Assignant donants i actualitzant comptadors'
+      ),
+      duration: 0,
+    });
 
     // Track locks to release in finally (declarat fora del try per accedir-hi al finally)
     const acquiredLocks: string[] = [];
@@ -1502,6 +1511,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       });
       setStep('preview');
     } finally {
+      processingToast.dismiss();
       // Alliberar tots els locks adquirits
       if (userId) {
         for (const parentId of acquiredLocks) {

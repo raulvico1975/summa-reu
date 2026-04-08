@@ -824,6 +824,12 @@ export function DonorImporter({
 
   setStep('importing');
   setImportProgress(0);
+  const importingToast = toast({
+    presentation: 'centered-progress',
+    title: t.importers.common.importing,
+    description: t.importers.donor.importingDescription || 'Important dades...',
+    duration: 0,
+  });
 
   // Filtrar files noves i a actualitzar
   const newRows = importRows.filter(r => r.status === 'new');
@@ -989,6 +995,7 @@ export function DonorImporter({
   } finally {
     // Assegurar que el progress indicator no queda bloquejat
     // El progress es reseteja al useEffect quan el dialog es tanca
+    importingToast.dismiss();
   }
 };
 

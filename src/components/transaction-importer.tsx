@@ -739,6 +739,16 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       return;
     }
 
+    const importingToast = toast({
+      presentation: 'centered-progress',
+      title: tr('transactionImporter.importingTitle', 'Important moviments bancaris...'),
+      description: tr(
+        'transactionImporter.importingDescription',
+        'Això pot trigar uns segons.'
+      ),
+      duration: 0,
+    });
+
     try {
         // ═══════════════════════════════════════════════════════════════════
         // MATCHING PER NOM (instantani, sense IA)
@@ -910,11 +920,13 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         const createdCount = result.createdCount ?? transactionsToProcess.length;
 
         if (result.idempotent) {
+          importingToast.dismiss();
           toast({
             title: t.importers.transaction.noNewTransactions,
             description: 'Aquest fitxer ja s’havia importat prèviament (idempotent).',
           });
         } else {
+          importingToast.dismiss();
           toast({
             presentation: 'centered-success',
             title: t.importers.transaction.importSuccess,
@@ -923,6 +935,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         }
 
     } catch (error: any) {
+        importingToast.dismiss();
         console.error("Error executing import:", error);
         toast({
           variant: 'destructive',

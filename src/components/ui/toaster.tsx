@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { CheckCircle2, X } from "lucide-react"
+import { CheckCircle2, Loader2, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { type ToasterToast, useToast } from "@/hooks/use-toast"
@@ -52,8 +52,12 @@ function CenteredToastCard({
     <div className="pointer-events-none fixed inset-0 z-[120] flex items-center justify-center p-4">
       <div
         className={cn(
-          "pointer-events-auto w-full max-w-lg rounded-[24px] border bg-white/98 p-5 shadow-[0_28px_90px_rgba(15,23,42,0.18)] backdrop-blur-sm",
-          toast.variant === "destructive" ? "border-red-200" : "border-emerald-200"
+          "pointer-events-auto w-full max-w-lg rounded-[24px] border bg-white p-5 shadow-[0_28px_90px_rgba(15,23,42,0.18)]",
+          toast.presentation === "centered-progress"
+            ? "border-slate-200"
+            : toast.variant === "destructive"
+              ? "border-red-200"
+              : "border-emerald-200"
         )}
         role="status"
         aria-live="polite"
@@ -62,12 +66,18 @@ function CenteredToastCard({
           <div
             className={cn(
               "mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full",
-              toast.variant === "destructive"
+              toast.presentation === "centered-progress"
+                ? "bg-slate-100 text-slate-700"
+                : toast.variant === "destructive"
                 ? "bg-red-100 text-red-700"
                 : "bg-emerald-100 text-emerald-700"
             )}
           >
-            <CheckCircle2 className="h-5 w-5" />
+            {toast.presentation === "centered-progress" ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-5 w-5" />
+            )}
           </div>
 
           <div className="min-w-0 flex-1">
@@ -104,10 +114,14 @@ function CenteredToastCard({
 export function Toaster() {
   const { toasts, dismiss } = useToast()
   const centeredToasts = toasts.filter(
-    (toast) => toast.presentation === "centered-success"
+    (toast) =>
+      toast.presentation === "centered-success" ||
+      toast.presentation === "centered-progress"
   )
   const standardToasts = toasts.filter(
-    (toast) => toast.presentation !== "centered-success"
+    (toast) =>
+      toast.presentation !== "centered-success" &&
+      toast.presentation !== "centered-progress"
   )
 
   return (
