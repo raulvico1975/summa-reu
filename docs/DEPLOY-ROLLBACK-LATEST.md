@@ -1,7 +1,7 @@
 # Rollback Plan (auto) — Summa Social
 
-Generat: 2026-04-08 10:56
-Risc: BAIX
+Generat: 2026-04-08 17:52
+Risc: ALT
 Backup curt: NO_REQUIRED
 SHA prod abans de publicar: cefe4c1f
 SHA branca a publicar (main): c4edf21c
@@ -19,6 +19,6 @@ bash scripts/deploy.sh main
 Emergencia critica (nomes si la produccio cau i no hi ha alternativa):
 ```bash
 git checkout prod
-git reset --hard cefe4c1f
+git reset --hard 4f797cd7
 git push origin prod --force-with-lease
 ```

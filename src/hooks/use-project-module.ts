@@ -1419,15 +1419,6 @@ export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
         txId
       );
 
-      // Guardrail: no permetre eliminar si té assignacions actives
-      const linkSnap = await getDoc(linkRef);
-      if (linkSnap.exists()) {
-        const data = linkSnap.data();
-        if (data.assignments?.length > 0) {
-          throw new Error('CANNOT_DELETE_HAS_ASSIGNMENTS');
-        }
-      }
-
       await deleteDoc(linkRef);
 
     } catch (err) {
