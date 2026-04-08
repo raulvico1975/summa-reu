@@ -21,6 +21,10 @@ import {
   buildDocumentFileName,
   inferExtension,
 } from './normalize-filename';
+import {
+  areEquivalentStorageBuckets,
+  resolveDocumentBucketName,
+} from './storage-bucket';
 
 const db = admin.firestore();
 
@@ -230,7 +234,7 @@ export function diagnoseTxDocument(
   }
 
   // Bucket mismatch (no intentar descarregar)
-  if (ref.bucket && configuredBucket && ref.bucket !== configuredBucket) {
+  if (ref.bucket && configuredBucket && !areEquivalentStorageBuckets(ref.bucket, configuredBucket)) {
     return {
       txId: tx.id,
       rawDocumentValue: rawValue,
@@ -458,6 +462,7 @@ export function prepareDocuments(
       txId: tx.id,
       ordre,
       storagePath,
+      bucketName: resolveDocumentBucketName(diagnostic.bucketInUrl, diagnostic.bucketConfigured),
       fileName,
       contentType: null,
       size: null,
@@ -485,11 +490,11 @@ export async function validateLimits(
   }
 
   // Calcular mida total amb metadata
-  const bucket = admin.storage().bucket();
   let totalSize = 0;
 
   for (const doc of docs) {
     try {
+      const bucket = doc.bucketName ? admin.storage().bucket(doc.bucketName) : admin.storage().bucket();
       const file = bucket.file(doc.storagePath);
       const [metadata] = await file.getMetadata();
       const size = parseInt(metadata.size as string, 10) || 0;

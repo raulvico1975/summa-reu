@@ -110,6 +110,7 @@ export interface ClosingDocumentInfo {
   txId: string;
   ordre: number;
   storagePath: string;
+  bucketName: string | null;
   fileName: string;
   contentType: string | null;
   size: number | null;

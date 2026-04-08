@@ -245,7 +245,6 @@ export const exportClosingBundleZip = functions
 
       archive.pipe(res);
 
-      const bucket = admin.storage().bucket(bucketName);
       const downloadedTxIds = new Set<string>();
 
       // 14. Descarregar documents amb exists() previ
@@ -254,6 +253,9 @@ export const exportClosingBundleZip = functions
         if (!diagnostic) continue;
 
         try {
+          const bucket = docInfo.bucketName
+            ? admin.storage().bucket(docInfo.bucketName)
+            : admin.storage().bucket(bucketName);
           const file = bucket.file(docInfo.storagePath);
 
           // Verificar existència abans de descarregar

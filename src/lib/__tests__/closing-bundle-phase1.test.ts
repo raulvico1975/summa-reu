@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import admin from 'firebase-admin';
 import JSZip from 'jszip';
 import * as XLSX from 'xlsx';
 import {
@@ -101,6 +102,65 @@ function createStatusCounts(): DocumentStatusCounts {
     downloadError: 0,
   };
 }
+
+test('storage bucket aliases appspot/firebasestorage are treated as equivalent and keep the document bucket', async () => {
+  if (admin.apps.length === 0) {
+    admin.initializeApp({ projectId: 'summa-social', credential: admin.credential.applicationDefault() });
+  }
+
+  const { diagnoseTxDocument, prepareDocuments } = await import('../../../functions/src/exports/closing-bundle/build-closing-data');
+
+  const diagnostic = diagnoseTxDocument(
+    {
+      id: 'tx-doc-1',
+      date: '2026-04-02',
+      amount: -605,
+      description: 'Moviment amb document',
+      category: 'bankFees',
+      categoryName: 'bankFees',
+      contactId: null,
+      contactName: null,
+      document: 'https://firebasestorage.googleapis.com/v0/b/summa-social.firebasestorage.app/o/organizations%2Forg-1%2Fdocuments%2Fdoc-1%2Ffactura.pdf?alt=media&token=abc',
+      transactionType: 'normal',
+      isRemittance: false,
+      remittanceStatus: null,
+      source: 'bank',
+      parentTransactionId: null,
+      isRemittanceItem: false,
+    },
+    'summa-social.appspot.com'
+  );
+
+  assert.equal(diagnostic.status, 'OK');
+  assert.equal(diagnostic.bucketInUrl, 'summa-social.firebasestorage.app');
+
+  const { docs } = prepareDocuments(
+    [
+      {
+        id: 'tx-doc-1',
+        date: '2026-04-02',
+        amount: -605,
+        description: 'Moviment amb document',
+        category: 'bankFees',
+        categoryName: 'bankFees',
+        contactId: null,
+        contactName: null,
+        document: 'https://firebasestorage.googleapis.com/v0/b/summa-social.firebasestorage.app/o/organizations%2Forg-1%2Fdocuments%2Fdoc-1%2Ffactura.pdf?alt=media&token=abc',
+        transactionType: 'normal',
+        isRemittance: false,
+        remittanceStatus: null,
+        source: 'bank',
+        parentTransactionId: null,
+        isRemittanceItem: false,
+      },
+    ],
+    new Map([['tx-doc-1', diagnostic]])
+  );
+
+  assert.equal(docs.length, 1);
+  assert.equal(docs[0].bucketName, 'summa-social.firebasestorage.app');
+  assert.equal(docs[0].storagePath, 'organizations/org-1/documents/doc-1/factura.pdf');
+});
 
 test('bundle permissions: allows informes.exportar, denies without it, honors grants/denies and systemSuperAdmin bypass', () => {
   assert.equal(canGenerateClosingBundle({
