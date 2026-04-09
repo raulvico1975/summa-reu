@@ -23,6 +23,7 @@ const expenseCategory: Category = {
 const donorWithDefaultCategory: Donor = {
   id: 'donor-1',
   type: 'donor',
+  roles: { donor: true, employee: true },
   donorType: 'individual',
   membershipType: 'one-time',
   name: 'Donant prova',
@@ -70,6 +71,25 @@ test('buildContactInlineUpdate mirrors default category auto-assignment', () => 
   });
 });
 
+test('buildContactInlineUpdate preserves an explicitly selected employee role', () => {
+  const result = buildContactInlineUpdate({
+    transaction: buildTransaction(),
+    nextContactId: donorWithDefaultCategory.id,
+    contactType: 'employee',
+    availableContacts: [donorWithDefaultCategory],
+    availableCategories: [incomeCategory, expenseCategory],
+  });
+
+  assert.equal(result.localPatch.contactId, donorWithDefaultCategory.id);
+  assert.equal(result.localPatch.contactType, 'employee');
+  assert.equal(result.localPatch.category, incomeCategory.id);
+  assert.deepEqual(result.remoteUpdate, {
+    contactId: donorWithDefaultCategory.id,
+    contactType: 'employee',
+    category: incomeCategory.id,
+  });
+});
+
 test('buildContactInlineUpdate does not assign an incompatible default category', () => {
   const result = buildContactInlineUpdate({
     transaction: buildTransaction({ amount: -25 }),
@@ -97,6 +117,21 @@ test('applyTransactionPatch updates the row inside the current source-of-truth a
   assert.notEqual(nextTransactions, transactions);
   assert.equal(nextTransactions?.[0].contactId, donorWithDefaultCategory.id);
   assert.equal(nextTransactions?.[0].category, incomeCategory.id);
+});
+
+test('applyTransactionPatch can change only the role for the same contact', () => {
+  const original = buildTransaction({
+    contactId: donorWithDefaultCategory.id,
+    contactType: 'donor',
+  });
+  const nextTransactions = applyTransactionPatch([original], 'tx-1', {
+    contactId: donorWithDefaultCategory.id,
+    contactType: 'employee',
+  });
+
+  assert.equal(nextTransactions?.[0].contactId, donorWithDefaultCategory.id);
+  assert.equal(nextTransactions?.[0].contactType, 'employee');
+  assert.equal(nextTransactions?.[0].description, original.description);
 });
 
 test('category update under uncategorized filter stops matching immediately', () => {

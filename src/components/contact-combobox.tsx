@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SummaTooltip } from '@/components/ui/summa-tooltip';
 import { useTranslations } from '@/i18n';
+import type { ContactRoles, ContactType } from '@/lib/data';
 import {
   Command,
   CommandEmpty,
@@ -20,6 +21,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  buildContactRoleOptions,
+  resolveContactRoleOption,
+  type ContactRoleOption,
+} from '@/lib/contacts/contact-role-options';
+import { getContactTypeLabel } from '@/lib/ui/display-labels';
 
 /**
  * Helper: middle ellipsis per a noms llargs
@@ -34,13 +41,15 @@ function middleEllipsis(s: string, head = 18, tail = 10): string {
 export interface Contact {
   id: string;
   name: string;
-  type: 'donor' | 'supplier' | 'employee';
+  type: ContactType;
+  roles?: ContactRoles;
 }
 
 interface ContactComboboxProps {
   contacts: Contact[];
   value: string | null;
-  onSelect: (contactId: string | null) => void;
+  valueContactType?: ContactType | null;
+  onSelect: (contactId: string | null, contactType: ContactType | null) => void;
   onCreateNew: (type: 'donor' | 'supplier') => void;
   disabled?: boolean;
   placeholder?: string;
@@ -54,6 +63,7 @@ interface ContactComboboxProps {
 export const ContactCombobox = React.memo(function ContactCombobox({
   contacts,
   value,
+  valueContactType = null,
   onSelect,
   onCreateNew,
   disabled = false,
@@ -76,34 +86,44 @@ export const ContactCombobox = React.memo(function ContactCombobox({
   const unlinkTextValue = unlinkText || t.contactCombobox.unlink;
   const searchPlaceholderValue = searchPlaceholder || t.contactCombobox.searchPlaceholder;
 
-  const selectedContact = contacts.find((contact) => contact.id === value);
+  const roleOptions = React.useMemo(() => buildContactRoleOptions(contacts), [contacts]);
 
-  const donors = contacts.filter((c) => c.type === 'donor');
-  const suppliers = contacts.filter((c) => c.type === 'supplier');
-  const workers = contacts.filter((c) => c.type === 'employee');
+  const selectedOption = React.useMemo(
+    () => resolveContactRoleOption(contacts, value, valueContactType),
+    [contacts, value, valueContactType]
+  );
 
-  const filteredDonors = donors.filter((donor) =>
-    donor.name.toLowerCase().includes(search.toLowerCase())
+  const getOptionLabel = React.useCallback((option: ContactRoleOption) => {
+    const roleLabel = getContactTypeLabel(option.contactType, t.common ?? {});
+    return option.isMultiRole ? `${option.contactName} · ${roleLabel}` : option.contactName;
+  }, [t.common]);
+
+  const filteredDonors = roleOptions.filter((option) =>
+    option.contactType === 'donor' &&
+    getOptionLabel(option).toLowerCase().includes(search.toLowerCase())
   );
-  const filteredSuppliers = suppliers.filter((supplier) =>
-    supplier.name.toLowerCase().includes(search.toLowerCase())
+  const filteredSuppliers = roleOptions.filter((option) =>
+    option.contactType === 'supplier' &&
+    getOptionLabel(option).toLowerCase().includes(search.toLowerCase())
   );
-  const filteredWorkers = workers.filter((worker) =>
-    worker.name.toLowerCase().includes(search.toLowerCase())
+  const filteredWorkers = roleOptions.filter((option) =>
+    option.contactType === 'employee' &&
+    getOptionLabel(option).toLowerCase().includes(search.toLowerCase())
   );
 
   const hasResults = filteredDonors.length > 0 || filteredSuppliers.length > 0 || filteredWorkers.length > 0;
 
-  const handleSelect = (contactId: string) => {
+  const handleSelect = (option: ContactRoleOption) => {
     if (disabled) return;
-    onSelect(contactId === value ? null : contactId);
+    const shouldClear = option.contactId === value && option.contactType === valueContactType;
+    onSelect(shouldClear ? null : option.contactId, shouldClear ? null : option.contactType);
     setOpen(false);
     setSearch('');
   };
 
   const handleUnlink = () => {
     if (disabled) return;
-    onSelect(null);
+    onSelect(null, null);
     setOpen(false);
     setSearch('');
   };
@@ -114,28 +134,34 @@ export const ContactCombobox = React.memo(function ContactCombobox({
     onCreateNew(type);
   };
 
+  const renderRoleIcon = React.useCallback((contactType: ContactType, className?: string) => {
+    if (contactType === 'donor') {
+      return <Heart className={cn('text-red-500', className)} />;
+    }
+
+    if (contactType === 'employee') {
+      return <Users className={cn('text-green-600', className)} />;
+    }
+
+    return <Building2 className={cn('text-blue-500', className)} />;
+  }, []);
+
   return (
     <Popover open={open} onOpenChange={(nextOpen) => {
       if (disabled && nextOpen) return;
       setOpen(nextOpen);
     }}>
       <PopoverTrigger asChild>
-        {selectedContact ? (
+        {selectedOption ? (
           <Button
             variant="ghost"
             className="flex h-auto w-full min-w-0 items-center gap-1 overflow-hidden p-0 text-left font-normal"
             disabled={disabled}
           >
-            {selectedContact.type === 'donor' ? (
-              <Heart className="h-3 w-3 text-red-500 shrink-0" />
-            ) : selectedContact.type === 'employee' ? (
-              <Users className="h-3 w-3 text-green-600 shrink-0" />
-            ) : (
-              <Building2 className="h-3 w-3 text-blue-500 shrink-0" />
-            )}
-            <SummaTooltip content={selectedContact.name}>
+            {renderRoleIcon(selectedOption.contactType, 'h-3 w-3 shrink-0')}
+            <SummaTooltip content={getOptionLabel(selectedOption)}>
               <span className="min-w-0 flex-1 truncate text-[13px]">
-                {middleEllipsis(selectedContact.name)}
+                {middleEllipsis(getOptionLabel(selectedOption))}
               </span>
             </SummaTooltip>
             <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 text-muted-foreground" />
@@ -167,18 +193,18 @@ export const ContactCombobox = React.memo(function ContactCombobox({
               <CommandGroup heading={t.contactCombobox.donors}>
                 {filteredDonors.map((donor) => (
                   <CommandItem
-                    key={donor.id}
-                    value={donor.id}
-                    onSelect={() => handleSelect(donor.id)}
+                    key={donor.key}
+                    value={donor.key}
+                    onSelect={() => handleSelect(donor)}
                   >
                     <Check
                       className={cn(
                         'mr-2 h-4 w-4',
-                        value === donor.id ? 'opacity-100' : 'opacity-0'
+                        value === donor.contactId && valueContactType === donor.contactType ? 'opacity-100' : 'opacity-0'
                       )}
                     />
                     <Heart className="mr-2 h-3 w-3 text-red-500" />
-                    {donor.name}
+                    {getOptionLabel(donor)}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -189,23 +215,23 @@ export const ContactCombobox = React.memo(function ContactCombobox({
               <>
                 {filteredDonors.length > 0 && <CommandSeparator />}
                 <CommandGroup heading={t.contactCombobox.suppliers}>
-                  {filteredSuppliers.map((supplier) => (
-                    <CommandItem
-                      key={supplier.id}
-                      value={supplier.id}
-                      onSelect={() => handleSelect(supplier.id)}
-                    >
-                      <Check
-                        className={cn(
-                          'mr-2 h-4 w-4',
-                          value === supplier.id ? 'opacity-100' : 'opacity-0'
-                        )}
-                      />
-                      <Building2 className="mr-2 h-3 w-3 text-blue-500" />
-                      {supplier.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                {filteredSuppliers.map((supplier) => (
+                  <CommandItem
+                    key={supplier.key}
+                    value={supplier.key}
+                    onSelect={() => handleSelect(supplier)}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value === supplier.contactId && valueContactType === supplier.contactType ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <Building2 className="mr-2 h-3 w-3 text-blue-500" />
+                    {getOptionLabel(supplier)}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
               </>
             )}
 
@@ -214,22 +240,22 @@ export const ContactCombobox = React.memo(function ContactCombobox({
               <>
                 {(filteredDonors.length > 0 || filteredSuppliers.length > 0) && <CommandSeparator />}
                 <CommandGroup heading={t.contactCombobox.employees}>
-                  {filteredWorkers.map((worker) => (
-                    <CommandItem
-                      key={worker.id}
-                      value={worker.id}
-                      onSelect={() => handleSelect(worker.id)}
-                    >
-                      <Check
-                        className={cn(
-                          'mr-2 h-4 w-4',
-                          value === worker.id ? 'opacity-100' : 'opacity-0'
-                        )}
-                      />
-                      <Users className="mr-2 h-3 w-3 text-green-600" />
-                      {worker.name}
-                    </CommandItem>
-                  ))}
+                {filteredWorkers.map((worker) => (
+                  <CommandItem
+                    key={worker.key}
+                    value={worker.key}
+                    onSelect={() => handleSelect(worker)}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value === worker.contactId && valueContactType === worker.contactType ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <Users className="mr-2 h-3 w-3 text-green-600" />
+                    {getOptionLabel(worker)}
+                  </CommandItem>
+                ))}
                 </CommandGroup>
               </>
             )}

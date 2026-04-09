@@ -58,7 +58,7 @@ import {
   X,
   Trash2,
 } from 'lucide-react';
-import type { Transaction, Category, Project, AnyContact, Donor, Supplier, Employee, ContactType } from '@/lib/data';
+import type { Transaction, Category, Project, AnyContact, Donor, ContactType } from '@/lib/data';
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { trackUX } from '@/lib/ux/trackUX';
@@ -126,6 +126,7 @@ import {
   buildContactInlineUpdate,
   matchesInlineReactiveFilter,
 } from '@/lib/transactions/inline-update-state';
+import { hasEffectiveContactRole } from '@/lib/contacts/contact-role-options';
 import type { Donation } from '@/lib/types/donations';
 import {
   summarizeActiveStripeImputationsByParent,
@@ -658,16 +659,16 @@ export function TransactionsTable({
   }, [availableContacts]);
   
   const suppliers = React.useMemo(() =>
-    availableContacts?.filter(c => c.type === 'supplier') as Supplier[] || [],
+    availableContacts?.filter((contact) => hasEffectiveContactRole(contact, 'supplier')) || [],
   [availableContacts]);
 
   const employees = React.useMemo(() =>
-    availableContacts?.filter(c => c.type === 'employee') as Employee[] || [],
+    availableContacts?.filter((contact) => hasEffectiveContactRole(contact, 'employee')) || [],
   [availableContacts]);
 
   // Memoized contacts for ContactCombobox to prevent re-renders
   const comboboxContacts = React.useMemo(() =>
-    availableContacts?.map(c => ({ id: c.id, name: c.name, type: c.type })) || [],
+    availableContacts?.map(c => ({ id: c.id, name: c.name, type: c.type, roles: c.roles })) || [],
   [availableContacts]);
 
   const projectMap = React.useMemo(() =>
@@ -969,7 +970,7 @@ export function TransactionsTable({
     toast,
   ]);
 
-  const handleSetContact = React.useCallback((txId: string, newContactId: string | null, contactType?: ContactType) => {
+  const handleSetContact = React.useCallback((txId: string, newContactId: string | null, contactType: ContactType | null) => {
     const tx = allTransactionsById[txId];
     if (!tx) return;
 
@@ -1743,7 +1744,11 @@ export function TransactionsTable({
         [exportCols.amount]: tx.amount,
         [exportCols.category]: tx.category ? getCategoryDisplayName(tx.category) : '',
         [exportCols.contact]: contact?.name || '',
-        [exportCols.contactType]: contact?.type ? (contactTypeLabels[contact.type] || contact.type) : '',
+        [exportCols.contactType]: tx.contactType
+          ? (contactTypeLabels[tx.contactType] || tx.contactType)
+          : contact?.type
+          ? (contactTypeLabels[contact.type] || contact.type)
+          : '',
         [exportCols.project]: tx.projectId ? (projectMap[tx.projectId] || '') : '',
         [exportCols.bankAccount]: tx.bankAccountId ? (bankAccountMap[tx.bankAccountId] || '') : '',
         [exportCols.source]: tx.source ? (sourceLabels[tx.source] || tx.source) : '',
@@ -2827,7 +2832,7 @@ export function TransactionsTable({
               key={tx.id}
               transaction={tx}
               contactName={tx.contactId ? contactMap[tx.contactId]?.name || null : null}
-              contactType={tx.contactId ? contactMap[tx.contactId]?.type || null : null}
+              contactType={tx.contactType ?? (tx.contactId ? contactMap[tx.contactId]?.type || null : null)}
               stripeImputationSummary={stripeImputationSummaryByParentId[tx.id] ?? null}
               categoryDisplayName={getCategoryDisplayName(tx.category)}
               onEdit={handleEditClick}
@@ -2930,7 +2935,7 @@ export function TransactionsTable({
                   key={tx.id}
                   transaction={tx}
                   contactName={tx.contactId ? contactMap[tx.contactId]?.name || null : null}
-                  contactType={tx.contactId ? contactMap[tx.contactId]?.type || null : null}
+                  contactType={tx.contactType ?? (tx.contactId ? contactMap[tx.contactId]?.type || null : null)}
                   stripeImputationSummary={stripeImputationSummaryByParentId[tx.id] ?? null}
                   projectName={tx.projectId ? projectMap[tx.projectId] || null : null}
                   relevantCategories={tx.amount > 0 ? categoriesByType.income : categoriesByType.expense}
@@ -3343,8 +3348,6 @@ export function TransactionsTable({
       <EditTransactionDialog
         open={isEditDialogOpen}
         transaction={editingTransaction}
-        donors={donors}
-        suppliers={suppliers}
         projects={availableProjects?.filter(p => !p.archivedAt) ?? null}
         availableContacts={availableContacts}
         onSave={handleSaveEdit}

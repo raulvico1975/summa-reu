@@ -112,7 +112,7 @@ interface TransactionRowProps {
   // Handlers
   onSetNote: (txId: string, note: string) => void;
   onSetCategory: (txId: string, category: string) => void;
-  onSetContact: (txId: string, contactId: string | null, contactType?: ContactType) => void;
+  onSetContact: (txId: string, contactId: string | null, contactType: ContactType | null) => void;
   onSetProject: (txId: string, projectId: string | null) => void;
   onAttachDocument: (txId: string) => void;
   onDeleteDocument: (txId: string) => void;
@@ -209,6 +209,7 @@ interface TransactionRowProps {
 export const TransactionRow = React.memo(function TransactionRow({
   transaction: tx,
   contactName,
+  contactType,
   projectName,
   stripeImputationSummary,
   relevantCategories,
@@ -313,14 +314,9 @@ export const TransactionRow = React.memo(function TransactionRow({
     tx.transactionType !== 'fee';
 
   // Stable callbacks using useCallback to prevent child re-renders
-  const handleSelectContact = React.useCallback((contactId: string | null) => {
-    if (contactId) {
-      const contact = comboboxContacts.find(c => c.id === contactId);
-      onSetContact(tx.id, contactId, contact?.type);
-    } else {
-      onSetContact(tx.id, null);
-    }
-  }, [tx.id, comboboxContacts, onSetContact]);
+  const handleSelectContact = React.useCallback((nextContactId: string | null, nextContactType: ContactType | null) => {
+    onSetContact(tx.id, nextContactId, nextContactType);
+  }, [tx.id, onSetContact]);
 
   const handleCreateNewContact = React.useCallback((type: 'donor' | 'supplier') => {
     onCreateNewContact(tx.id, type);
@@ -864,6 +860,7 @@ export const TransactionRow = React.memo(function TransactionRow({
           <ContactCombobox
             contacts={comboboxContacts}
             value={tx.contactId ?? null}
+            valueContactType={contactType}
             onSelect={handleSelectContact}
             onCreateNew={handleCreateNewContact}
             disabled={isContactLoading}

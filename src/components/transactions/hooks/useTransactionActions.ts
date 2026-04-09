@@ -24,6 +24,7 @@ interface EditFormData {
   amount: string;
   note: string;
   contactId: string | null;
+  contactType: ContactType | null;
   projectId: string | null;
 }
 
@@ -58,7 +59,7 @@ interface UseTransactionActionsReturn {
   // PROPERTY SETTERS
   // ─────────────────────────────────────────────────────────────────────────
   handleSetCategory: (txId: string, newCategory: string) => void;
-  handleSetContact: (txId: string, newContactId: string | null, contactType?: ContactType) => void;
+  handleSetContact: (txId: string, newContactId: string | null, contactType: ContactType | null) => void;
   handleSetProject: (txId: string, newProjectId: string | null) => void;
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -232,7 +233,7 @@ export function useTransactionActions({
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: categoryId });
   }, [ensureCanEdit, transactionsCollection, transactions, availableCategories, toast, t]);
 
-  const handleSetContact = React.useCallback((txId: string, newContactId: string | null, contactType?: ContactType) => {
+  const handleSetContact = React.useCallback((txId: string, newContactId: string | null, contactType: ContactType | null) => {
     if (!ensureCanEdit()) return;
     if (!transactionsCollection) return;
 
@@ -247,7 +248,7 @@ export function useTransactionActions({
       const tx = transactions?.find(t => t.id === txId);
       if (contact?.defaultCategoryId && !tx?.category) {
         // Guardrail: només assignar si categories carregades i tipus compatible
-        if (availableCategories && isCategoryIdCompatibleStrict(tx!.amount, contact.defaultCategoryId, availableCategories)) {
+        if (tx && availableCategories && isCategoryIdCompatibleStrict(tx.amount, contact.defaultCategoryId, availableCategories)) {
           updates.category = contact.defaultCategoryId;
         }
       }
@@ -536,23 +537,19 @@ export function useTransactionActions({
     if (!ensureCanEdit()) return;
     if (!editingTransaction || !transactionsCollection) return;
 
-    const selectedContact = formData.contactId
-      ? availableContacts?.find(c => c.id === formData.contactId)
-      : null;
-
     updateDocumentNonBlocking(doc(transactionsCollection, editingTransaction.id), {
       description: formData.description,
       amount: parseFloat(formData.amount),
       note: formData.note || null,
       contactId: formData.contactId,
-      contactType: selectedContact?.type || null,
+      contactType: formData.contactId ? formData.contactType : null,
       projectId: formData.projectId,
     });
 
     toast({ title: t.movements.table.transactionUpdated });
     setIsEditDialogOpen(false);
     setEditingTransaction(null);
-  }, [ensureCanEdit, editingTransaction, transactionsCollection, availableContacts, toast, t]);
+  }, [ensureCanEdit, editingTransaction, transactionsCollection, toast, t]);
 
   const handleCloseEditDialog = React.useCallback(() => {
     setIsEditDialogOpen(false);
