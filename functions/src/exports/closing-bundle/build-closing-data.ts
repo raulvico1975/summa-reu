@@ -26,7 +26,9 @@ import {
   resolveDocumentBucketName,
 } from './storage-bucket';
 
-const db = admin.firestore();
+function getDb() {
+  return admin.firestore();
+}
 
 /**
  * Traduccions de categories per defecte (claus → noms catalans).
@@ -60,7 +62,7 @@ const DEFAULT_CATEGORY_NAMES: Record<string, string> = {
  * Carrega les categories d'una organització i retorna un mapa ID → nom.
  */
 export async function loadCategoryMap(orgId: string): Promise<Map<string, string>> {
-  const categoriesRef = db.collection(`organizations/${orgId}/categories`);
+  const categoriesRef = getDb().collection(`organizations/${orgId}/categories`);
   const snapshot = await categoriesRef.get();
 
   const categoryMap = new Map<string, string>();
@@ -87,7 +89,7 @@ export async function loadCategoryMap(orgId: string): Promise<Map<string, string
  * Carrega els contactes d'una organització i retorna un mapa ID → nom.
  */
 export async function loadContactMap(orgId: string): Promise<Map<string, string>> {
-  const contactsRef = db.collection(`organizations/${orgId}/contacts`);
+  const contactsRef = getDb().collection(`organizations/${orgId}/contacts`);
   const snapshot = await contactsRef.get();
 
   const contactMap = new Map<string, string>();
@@ -283,7 +285,7 @@ export async function loadTransactions(
   dateFrom: string,
   dateTo: string
 ): Promise<ClosingTransaction[]> {
-  const txRef = db.collection(`organizations/${orgId}/transactions`);
+  const txRef = getDb().collection(`organizations/${orgId}/transactions`);
 
   const snapshot = await txRef
     .where('date', '>=', dateFrom)
