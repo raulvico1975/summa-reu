@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
 import { requirePermission } from '@/lib/api/require-permission';
 import { canViewFinancialDashboard } from '@/lib/can-view-financial-dashboard';
+import { findSystemCategoryId } from '@/lib/constants';
 import type { Transaction } from '@/lib/data';
 import { buildDashboardSummary, resolvePeriodRange } from '@/lib/read-models/transactions';
 
@@ -38,19 +39,22 @@ export async function GET(request: NextRequest) {
     transactionsQuery = transactionsQuery.where('date', '<=', end);
   }
 
-  const [transactionsSnap, missionTransferCategoriesSnap] = await Promise.all([
+  const [transactionsSnap, categoriesSnap] = await Promise.all([
     transactionsQuery.get(),
-    db
-      .collection(`organizations/${orgId}/categories`)
-      .where('systemKey', '==', 'missionTransfers')
-      .limit(1)
-      .get(),
+    db.collection(`organizations/${orgId}/categories`).get(),
   ]);
 
   const transactions = transactionsSnap.docs.map(
     (doc) => ({ id: doc.id, ...doc.data() }) as Transaction
   );
-  const missionTransferCategoryId = missionTransferCategoriesSnap.docs[0]?.id ?? null;
+  const missionTransferCategoryId = findSystemCategoryId(
+    categoriesSnap.docs.map((doc) => ({
+      id: doc.id,
+      name: String(doc.data().name ?? ''),
+      systemKey: typeof doc.data().systemKey === 'string' ? doc.data().systemKey : null,
+    })),
+    'missionTransfers'
+  );
   const summary = buildDashboardSummary(transactions, missionTransferCategoryId);
 
   return NextResponse.json({
