@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { Transaction, Donor, Supplier, Employee } from '@/lib/data';
+import type { Transaction, Donor, AnyContact } from '@/lib/data';
 import { formatCurrencyEU, isValidSpanishTaxId, getSpanishTaxIdType, normalizeTaxId, formatIBANDisplay, normalizeIBAN } from '@/lib/normalize';
 import type { SpanishTaxIdType } from '@/lib/normalize';
 import {
@@ -70,6 +70,15 @@ import { filterMatchableContacts, filterAllForIbanMatching, isNumericLikeName, m
 import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
 import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
 import { normalizeForMatching } from '@/lib/auto-match';
+import {
+  buildPaymentContactOptions,
+  findPaymentBeneficiary,
+  resolvePaymentChildContactType,
+  resolvePaymentContactOption,
+  type PaymentContactType,
+} from '@/lib/remittances/payment-contact-resolution';
+import { parseContactRoleValue } from '@/lib/contacts/contact-role-options';
+import { getContactTypeLabel } from '@/lib/ui/display-labels';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -80,8 +89,8 @@ interface RemittanceSplitterProps {
   onOpenChange: (open: boolean) => void;
   transaction: Transaction;
   existingDonors: Donor[];
-  existingSuppliers?: Supplier[];
-  existingEmployees?: Employee[];
+  existingSuppliers?: AnyContact[];
+  existingEmployees?: AnyContact[];
   onSplitDone: () => void;
 }
 
@@ -138,6 +147,7 @@ interface ParsedDonation {
   matchNote?: string;
   // Selecció manual per IBAN ambigu (compte conjunta) o IBAN no trobat
   manualMatchContactId?: string;
+  manualMatchContactType?: PaymentContactType;
   // Suggeriment per DNI quan IBAN no trobat (per facilitar assignació)
   suggestedDonorByTaxId?: Donor;
 }
@@ -402,6 +412,29 @@ export function RemittanceSplitter({
     return bankAccounts.find(ba => ba.id === transaction.bankAccountId) ?? null;
   }, [transaction.bankAccountId, bankAccounts]);
 
+  const paymentContacts = React.useMemo(
+    () => [...existingSuppliers, ...existingEmployees],
+    [existingEmployees, existingSuppliers]
+  );
+
+  const paymentContactOptions = React.useMemo(
+    () => buildPaymentContactOptions(paymentContacts),
+    [paymentContacts]
+  );
+
+  const getPaymentContactLabel = React.useCallback((contactId: string | null | undefined, contactType: PaymentContactType | null | undefined) => {
+    const option = resolvePaymentContactOption(paymentContacts, contactId, contactType);
+    if (!option) return null;
+
+    const roleLabel = getContactTypeLabel(option.contactType, t.common ?? {});
+    return {
+      key: option.key,
+      name: option.contactName,
+      type: option.contactType,
+      label: option.isMultiRole ? `${option.contactName} · ${roleLabel}` : option.contactName,
+    };
+  }, [paymentContacts, t.common]);
+
   // Reset quan es tanca el diàleg
   React.useEffect(() => {
     if (!open) {
@@ -641,12 +674,13 @@ export function RemittanceSplitter({
 
       // Convertir pagaments SEPA a ParsedDonation (reutilitzem l'estructura)
       const donations: ParsedDonation[] = result.payments.map((payment, index) => {
-        // Intentar trobar proveïdor existent per IBAN
-        const matchedDonor = existingDonors.find(d =>
-          d.iban && d.iban.replace(/\s/g, '').toUpperCase() === payment.creditorIban
-        ) || existingDonors.find(d =>
-          d.name && d.name.toLowerCase() === payment.creditorName.toLowerCase()
-        );
+        const matchedPaymentContact = findPaymentBeneficiary({
+          name: payment.creditorName,
+          taxId: '',
+          iban: payment.creditorIban,
+          contacts: paymentContacts,
+        });
+        const matchedDonor = matchedPaymentContact.contact as Donor | null;
 
         return {
           rowIndex: index + 1,
@@ -659,6 +693,7 @@ export function RemittanceSplitter({
           amount: payment.amount,
           status: matchedDonor ? 'found' : 'new_without_taxid' as const,
           matchedDonor: matchedDonor ?? null,
+          matchedContactType: matchedPaymentContact.contactType,
           shouldCreate: !matchedDonor,
           zipCode: '',
         };
@@ -716,12 +751,18 @@ export function RemittanceSplitter({
 
     try {
       // Preparar pagaments
-      const payments = parsedDonations.map((d, index) => ({
-        amount: d.amount,
-        creditorName: d.name || d.matchedDonor?.name || `Beneficiari ${index + 1}`,
-        creditorIban: d.iban || d.matchedDonor?.iban || '',
-        concept: d.name ? `Pagament a ${d.name}` : `Pagament ${index + 1}`,
-      }));
+      const payments = parsedDonations.map((d, index) => {
+        const manualPaymentContact = d.manualMatchContactId
+          ? paymentContacts.find((contact) => contact.id === d.manualMatchContactId) ?? null
+          : null;
+
+        return {
+          amount: d.amount,
+          creditorName: d.name || manualPaymentContact?.name || d.matchedDonor?.name || `Beneficiari ${index + 1}`,
+          creditorIban: d.iban || manualPaymentContact?.iban || d.matchedDonor?.iban || '',
+          concept: d.name ? `Pagament a ${d.name}` : `Pagament ${index + 1}`,
+        };
+      });
 
       // Validar que tots tenen IBAN
       const missingIban = payments.filter(p => !p.creditorIban);
@@ -1040,47 +1081,17 @@ export function RemittanceSplitter({
     taxId: string,
     iban: string
   ): { contact: Donor | null; contactType: 'supplier' | 'employee' | undefined } => {
-    const normalizedCsvName = normalizeString(name);
+    const result = findPaymentBeneficiary({
+      name,
+      taxId,
+      iban,
+      contacts: paymentContacts,
+    });
 
-    // 1. Buscar per IBAN (màxima prioritat per pagaments)
-    if (iban) {
-      const normalizedCsvIban = normalizeIban(iban);
-
-      // Buscar a TREBALLADORS PRIMER (nòmines tenen prioritat)
-      const foundEmployee = existingEmployees.find(e => e.iban && normalizeIban(e.iban) === normalizedCsvIban);
-      if (foundEmployee) return { contact: foundEmployee as unknown as Donor, contactType: 'employee' };
-
-      // Després buscar a proveïdors
-      const foundSupplier = existingSuppliers.find(s => s.iban && normalizeIban(s.iban) === normalizedCsvIban);
-      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
-    }
-
-    // 2. Buscar per NIF/CIF
-    if (taxId) {
-      const normalizedTaxId = normalizeString(taxId);
-
-      // Buscar a TREBALLADORS PRIMER
-      const foundEmployee = existingEmployees.find(e => normalizeString(e.taxId) === normalizedTaxId);
-      if (foundEmployee) return { contact: foundEmployee as unknown as Donor, contactType: 'employee' };
-
-      // Després buscar a proveïdors
-      const foundSupplier = existingSuppliers.find(s => normalizeString(s.taxId) === normalizedTaxId);
-      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
-    }
-
-    // 3. Buscar per nom exacte (normalitzat)
-    if (normalizedCsvName) {
-      // Buscar a TREBALLADORS PRIMER
-      const foundEmployee = existingEmployees.find(e => normalizeString(e.name) === normalizedCsvName);
-      if (foundEmployee) return { contact: foundEmployee as unknown as Donor, contactType: 'employee' };
-
-      // Després buscar a proveïdors
-      const foundSupplier = existingSuppliers.find(s => normalizeString(s.name) === normalizedCsvName);
-      if (foundSupplier) return { contact: foundSupplier as unknown as Donor, contactType: 'supplier' };
-    }
-
-    const emptyContactType: 'supplier' | 'employee' | undefined = undefined;
-    return { contact: null, contactType: emptyContactType };
+    return {
+      contact: result.contact as Donor | null,
+      contactType: result.contactType,
+    };
   };
 
   const handleContinueToPreview = () => {
@@ -1319,7 +1330,9 @@ export function RemittanceSplitter({
   // Assignar donant manualment a una línia ambigua
   const handleAssignDonorToLine = (rowIndex: number, donorId: string) => {
     setParsedDonations(prev => prev.map(d =>
-      d.rowIndex === rowIndex ? { ...d, manualMatchContactId: donorId } : d
+      d.rowIndex === rowIndex
+        ? { ...d, manualMatchContactId: donorId, manualMatchContactType: undefined }
+        : d
     ));
   };
 
@@ -1327,11 +1340,86 @@ export function RemittanceSplitter({
   const handleAssignDonorToGroup = (ibanKey: string, donorId: string) => {
     setParsedDonations(prev => prev.map(d => {
       if (d.status === 'ambiguous_iban' && normalizeIBAN(d.iban) === ibanKey) {
-        return { ...d, manualMatchContactId: donorId };
+        return { ...d, manualMatchContactId: donorId, manualMatchContactType: undefined };
       }
       return d;
     }));
   };
+
+  const handleAssignPaymentContactToLine = (rowIndex: number, serializedValue: string) => {
+    if (!serializedValue) {
+      setParsedDonations((prev) => prev.map((donation) =>
+        donation.rowIndex === rowIndex
+          ? { ...donation, manualMatchContactId: undefined, manualMatchContactType: undefined }
+          : donation
+      ));
+      return;
+    }
+
+    const { contactId, contactType } = parseContactRoleValue(serializedValue);
+    if (!contactId || (contactType !== 'supplier' && contactType !== 'employee')) {
+      return;
+    }
+
+    setParsedDonations((prev) => prev.map((donation) =>
+      donation.rowIndex === rowIndex
+        ? { ...donation, manualMatchContactId: contactId, manualMatchContactType: contactType }
+        : donation
+    ));
+  };
+
+  const renderPaymentManualMatchControl = React.useCallback((donation: ParsedDonation) => {
+    if (!isPaymentRemittance) return null;
+    if (donation.status !== 'new_with_taxid' && donation.status !== 'new_without_taxid') return null;
+    if (paymentContactOptions.length === 0) return null;
+
+    const selectedOption = getPaymentContactLabel(
+      donation.manualMatchContactId,
+      donation.manualMatchContactType ?? null
+    );
+
+    return (
+      <div className="space-y-1.5 pt-1">
+        {selectedOption ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-green-700 font-medium">{selectedOption.name}</span>
+            <Badge variant="secondary" className="text-xs px-1.5 py-0">
+              {getContactTypeLabel(selectedOption.type, t.common ?? {})}
+            </Badge>
+          </div>
+        ) : null}
+        <Select
+          value={selectedOption?.key ?? '__none__'}
+          onValueChange={(value) => handleAssignPaymentContactToLine(donation.rowIndex, value === '__none__' ? '' : value)}
+        >
+          <SelectTrigger className="h-7 text-xs">
+            <SelectValue placeholder={tr('movements.splitter.selectExistingPaymentContact', 'Vincula proveidor o treballador')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">
+              {selectedOption
+                ? tr('movements.splitter.clearExistingPaymentContact', 'Treure vincle manual')
+                : tr('movements.splitter.keepCreateOrPending', 'Deixar com està')}
+            </SelectItem>
+            {paymentContactOptions.map((option) => (
+              <SelectItem key={option.key} value={option.key}>
+                {option.isMultiRole
+                  ? `${option.contactName} · ${getContactTypeLabel(option.contactType, t.common ?? {})}`
+                  : option.contactName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }, [
+    getPaymentContactLabel,
+    handleAssignPaymentContactToLine,
+    isPaymentRemittance,
+    paymentContactOptions,
+    t.common,
+    tr,
+  ]);
 
   // Navegació ràpida: scroll a primera fila amb status donat
   const handleScrollToStatus = (status: 'ambiguous_iban' | 'no_iban_match') => {
@@ -1686,16 +1774,24 @@ export function RemittanceSplitter({
       const resolvableDonations = parsedDonations.filter(d =>
         d.status === 'found' ||
         d.status === 'found_inactive' ||
-        (d.status === 'new_with_taxid' && d.name && d.amount > 0)
+        d.status === 'found_archived' ||
+        d.status === 'found_deleted' ||
+        !!d.manualMatchContactId ||
+        (d.status === 'new_with_taxid' && !d.manualMatchContactId && d.name && d.amount > 0)
       );
 
       const pendingDonations = parsedDonations.filter(d =>
-        d.status === 'new_without_taxid' ||
-        (d.status === 'new_with_taxid' && (!d.name || d.amount <= 0))
+        !d.manualMatchContactId &&
+        (
+          d.status === 'new_without_taxid' ||
+          (d.status === 'new_with_taxid' && (!d.name || d.amount <= 0))
+        )
       );
 
       // 1. Crear nous contactes (mode OUT)
-      const contactsToCreate = resolvableDonations.filter(d => d.status === 'new_with_taxid');
+      const contactsToCreate = resolvableDonations.filter(
+        (d) => d.status === 'new_with_taxid' && !d.manualMatchContactId
+      );
 
       for (let i = 0; i < contactsToCreate.length; i += CHUNK_SIZE) {
         const chunk = contactsToCreate.slice(i, i + CHUNK_SIZE);
@@ -1744,6 +1840,12 @@ export function RemittanceSplitter({
           const category = transaction.category || 'supplierPayments';
           const finalAmount = -Math.abs(item.amount);
           const description = `Pagament: ${displayName}`;
+          const resolvedContactType = resolvePaymentChildContactType({
+            contactId,
+            status: item.status,
+            manualMatchContactType: item.manualMatchContactType ?? null,
+            matchedContactType: item.matchedContactType,
+          });
 
           resolvedTotalCents += Math.round(Math.abs(item.amount) * 100);
 
@@ -1761,7 +1863,7 @@ export function RemittanceSplitter({
             bankAccountId: transaction.bankAccountId ?? null,
             isRemittanceItem: true,
             remittanceId,
-            ...(contactId ? { contactType: 'supplier' as const } : {}),
+            ...(resolvedContactType ? { contactType: resolvedContactType } : {}),
           };
 
           batch.set(newTxRef, newTxData);
@@ -2989,6 +3091,7 @@ export function RemittanceSplitter({
                             <div className="text-[11px] text-blue-500">
                               {donation.name} · {donation.taxIdType}: {donation.taxId}
                             </div>
+                            {renderPaymentManualMatchControl(donation)}
                           </div>
                         ) : (
                           /* Mode OUT: sense taxId */
@@ -2999,6 +3102,7 @@ export function RemittanceSplitter({
                                 ? (t.movements.splitter.nonFiscalIdReason ?? 'ID no és DNI/CIF vàlid')
                                 : (t.movements.splitter.noTaxIdReason ?? 'Sense identificador fiscal')}
                             </div>
+                            {renderPaymentManualMatchControl(donation)}
                           </div>
                         )}
                       </TableCell>

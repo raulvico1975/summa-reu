@@ -12,7 +12,7 @@ export interface BuiltInlineTransactionUpdate {
 interface BuildContactInlineUpdateParams {
   transaction: Transaction;
   nextContactId: string | null;
-  contactType?: ContactType;
+  contactType: ContactType | null;
   availableContacts?: AnyContact[] | null;
   availableCategories?: Category[] | null;
 }
@@ -29,7 +29,7 @@ export function buildContactInlineUpdate({
     : null;
 
   const resolvedContactType = nextContactId
-    ? contactType ?? selectedContact?.type ?? null
+    ? contactType
     : null;
 
   const nextCategory = (

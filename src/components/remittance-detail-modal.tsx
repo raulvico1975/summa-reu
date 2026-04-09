@@ -641,7 +641,7 @@ export function RemittanceDetailModal({
               ) : (
                 filteredItems.map((item) => {
                   const contact = item.contactId ? contactMap[item.contactId] : null;
-                  const isDonor = contact?.type === 'donor';
+                  const isDonor = item.contactType ? item.contactType === 'donor' : contact?.type === 'donor';
 
                   return (
                     <div key={item.id} className="rounded-lg border bg-background p-4">
@@ -689,7 +689,7 @@ export function RemittanceDetailModal({
                 <TableBody>
                   {filteredItems.map((item) => {
                     const contact = item.contactId ? contactMap[item.contactId] : null;
-                    const isDonor = contact?.type === 'donor';
+                    const isDonor = item.contactType ? item.contactType === 'donor' : contact?.type === 'donor';
 
                     return (
                       <TableRow key={item.id}>

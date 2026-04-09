@@ -20,23 +20,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Heart, Building2 } from 'lucide-react';
+import { Heart, Building2, Users } from 'lucide-react';
 import { useTranslations } from '@/i18n';
-import type { Transaction, Donor, Supplier, Project, AnyContact } from '@/lib/data';
+import type { Transaction, Project, AnyContact, ContactType } from '@/lib/data';
+import {
+  buildContactRoleOptions,
+  parseContactRoleValue,
+  resolveContactRoleOption,
+} from '@/lib/contacts/contact-role-options';
+import { getContactTypeLabel } from '@/lib/ui/display-labels';
 
 interface EditFormData {
   description: string;
   amount: string;
   note: string;
   contactId: string | null;
+  contactType: ContactType | null;
   projectId: string | null;
 }
 
 interface EditTransactionDialogProps {
   open: boolean;
   transaction: Transaction | null;
-  donors: Donor[];
-  suppliers: Supplier[];
   projects: Project[] | null;
   availableContacts: AnyContact[] | null;
   onSave: (data: EditFormData) => void;
@@ -46,9 +51,8 @@ interface EditTransactionDialogProps {
 export const EditTransactionDialog = React.memo(function EditTransactionDialog({
   open,
   transaction,
-  donors,
-  suppliers,
   projects,
+  availableContacts,
   onSave,
   onClose,
 }: EditTransactionDialogProps) {
@@ -63,21 +67,81 @@ export const EditTransactionDialog = React.memo(function EditTransactionDialog({
     amount: '',
     note: '',
     contactId: null,
+    contactType: null,
     projectId: null,
   });
 
-  // Sync local state when transaction changes (dialog opens)
+  const contactOptions = React.useMemo(
+    () => buildContactRoleOptions(availableContacts ?? []),
+    [availableContacts]
+  );
+
+  const donorOptions = React.useMemo(
+    () => contactOptions.filter((option) => option.contactType === 'donor'),
+    [contactOptions]
+  );
+
+  const supplierOptions = React.useMemo(
+    () => contactOptions.filter((option) => option.contactType === 'supplier'),
+    [contactOptions]
+  );
+
+  const employeeOptions = React.useMemo(
+    () => contactOptions.filter((option) => option.contactType === 'employee'),
+    [contactOptions]
+  );
+
+  const getOptionLabel = React.useCallback((contactType: ContactType, contactName: string, isMultiRole: boolean) => {
+    const roleLabel = getContactTypeLabel(contactType, t.common ?? {});
+    return isMultiRole ? `${contactName} · ${roleLabel}` : contactName;
+  }, [t.common]);
+
+  const selectedContactValue = React.useMemo(() => {
+    const selectedOption = resolveContactRoleOption(
+      availableContacts ?? [],
+      formData.contactId,
+      formData.contactType
+    );
+
+    return selectedOption?.key ?? 'null';
+  }, [availableContacts, formData.contactId, formData.contactType]);
+
   React.useEffect(() => {
-    if (transaction) {
-      setFormData({
-        description: transaction.description,
-        amount: String(transaction.amount),
-        note: transaction.note || '',
-        contactId: transaction.contactId || null,
-        projectId: transaction.projectId || null,
-      });
-    }
+    if (!transaction) return;
+
+    const selectedOption = resolveContactRoleOption(
+      availableContacts ?? [],
+      transaction.contactId ?? null,
+      transaction.contactType ?? null
+    );
+
+    setFormData({
+      description: transaction.description,
+      amount: String(transaction.amount),
+      note: transaction.note || '',
+      contactId: selectedOption?.contactId ?? transaction.contactId ?? null,
+      contactType: selectedOption?.contactType ?? transaction.contactType ?? null,
+      projectId: transaction.projectId || null,
+    });
   }, [transaction]);
+
+  React.useEffect(() => {
+    if (!open || !formData.contactId || formData.contactType) return;
+
+    const selectedOption = resolveContactRoleOption(
+      availableContacts ?? [],
+      formData.contactId,
+      null
+    );
+
+    if (!selectedOption) return;
+
+    setFormData((prev) => (
+      prev.contactId === selectedOption.contactId && !prev.contactType
+        ? { ...prev, contactType: selectedOption.contactType }
+        : prev
+    ));
+  }, [availableContacts, formData.contactId, formData.contactType, open]);
 
   const handleSave = React.useCallback(() => {
     onSave(formData);
@@ -141,39 +205,62 @@ export const EditTransactionDialog = React.memo(function EditTransactionDialog({
               {t.movements.table.contact}
             </Label>
             <Select
-              value={formData.contactId || 'null'}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, contactId: value === 'null' ? null : value }))}
+              value={selectedContactValue}
+              onValueChange={(value) => {
+                if (value === 'null') {
+                  setFormData(prev => ({ ...prev, contactId: null, contactType: null }));
+                  return;
+                }
+
+                const { contactId, contactType } = parseContactRoleValue(value);
+                setFormData(prev => ({ ...prev, contactId, contactType }));
+              }}
             >
               <SelectTrigger className="col-span-3">
                 <SelectValue placeholder={t.movements.table.selectContact} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="null">{t.common.none}</SelectItem>
-                {donors.length > 0 && (
+                {donorOptions.length > 0 && (
                   <>
                     <SelectItem value="__donors_label__" disabled className="text-xs text-muted-foreground">
                       {t.movements.table.donorsSection}
                     </SelectItem>
-                    {donors.map(donor => (
-                      <SelectItem key={donor.id} value={donor.id}>
+                    {donorOptions.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
                         <span className="flex items-center gap-2">
                           <Heart className="h-3 w-3 text-red-500" />
-                          {donor.name}
+                          {getOptionLabel(option.contactType, option.contactName, option.isMultiRole)}
                         </span>
                       </SelectItem>
                     ))}
                   </>
                 )}
-                {suppliers.length > 0 && (
+                {supplierOptions.length > 0 && (
                   <>
                     <SelectItem value="__suppliers_label__" disabled className="text-xs text-muted-foreground">
                       {t.movements.table.suppliersSection}
                     </SelectItem>
-                    {suppliers.map(supplier => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
+                    {supplierOptions.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
                         <span className="flex items-center gap-2">
                           <Building2 className="h-3 w-3 text-blue-500" />
-                          {supplier.name}
+                          {getOptionLabel(option.contactType, option.contactName, option.isMultiRole)}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                {employeeOptions.length > 0 && (
+                  <>
+                    <SelectItem value="__employees_label__" disabled className="text-xs text-muted-foreground">
+                      {t.contactCombobox.employees}
+                    </SelectItem>
+                    {employeeOptions.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
+                        <span className="flex items-center gap-2">
+                          <Users className="h-3 w-3 text-green-600" />
+                          {getOptionLabel(option.contactType, option.contactName, option.isMultiRole)}
                         </span>
                       </SelectItem>
                     ))}
