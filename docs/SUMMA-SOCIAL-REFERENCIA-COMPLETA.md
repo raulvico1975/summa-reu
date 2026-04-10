@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Última actualització: 27 Març 2026
+# Última actualització: 10 Abril 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -81,7 +81,7 @@ Eina centralitzada amb:
 - Justificació econòmica per subvencions i finançadors
 - Exportació de justificació amb Excel i ZIP de factures/comprovants, ordenats cronològicament o per partides, llestos per enviar al finançador
 - Importador de devolucions del banc
-- Importador de donacions Stripe
+- Imputació Stripe sobre abonaments bancaris, amb càrrega CSV opcional, assignació manual i persistència fiscal a `donations`
 - Multicomptes bancaris amb filtre i traçabilitat
 - Web pública multiidioma amb landing, contacte, privacitat, pàgina "Qui som" i blog editorial
 
@@ -98,7 +98,7 @@ Eina centralitzada amb:
 
 | Component | Tecnologia / servei |
 |-----------|----------------------|
-| Frontend | Next.js (App Router) + React |
+| Frontend | Next.js 15 (App Router) + React 18 |
 | Llenguatge | TypeScript |
 | UI Components | shadcn/ui + Radix UI + Lucide |
 | Estils | Tailwind CSS |
@@ -110,7 +110,7 @@ Eina centralitzada amb:
 | Backend d'API | Next.js Route Handlers + Firebase Admin SDK |
 | Processos backend | Firebase Cloud Functions |
 | Hosting | Firebase App Hosting |
-| IA | Genkit + Google Gemini |
+| IA | Genkit + Google Gemini + usos puntuals d'OpenAI |
 | Email transaccional | Resend |
 | Idiomes | Català, Espanyol, Francès i Portuguès |
 | Excel/CSV | SheetJS + PapaParse |
@@ -153,7 +153,7 @@ Per a les properes línies de producte, Summa Social se centra en **tres blocs p
 | **Dades mínimes obligatòries** | CP i adreça per Model 182 | ✅ Implementat |
 | **Consolidació anual** | Import total per donant/proveïdor amb devolucions aplicades | ✅ Implementat |
 | **Excel net per gestoria** | Format estàndard Model 182 amb recurrència | ✅ Implementat |
-| **Importador Stripe** | Dividir remeses Stripe amb traçabilitat completa (donacions + comissions) | ✅ Implementat |
+| **Imputació Stripe** | Imputar abonaments Stripe sobre un moviment bancari, amb persistència a `donations`, CSV opcional i desfer per moviment pare | ✅ Implementat |
 
 ### Bloc 3: Projectes, Documents i Justificació Econòmica
 
@@ -356,15 +356,17 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
       /funcionalitats/page.tsx   → Funcionalitats (CA)
       /funcionalidades/page.tsx  → Funcionalitats (ES)
       /fonctionnalites/page.tsx  → Funcionalitats (FR)
+      /blog/page.tsx             → Llistat públic del blog
+      /blog/[slug]/page.tsx      → Detall públic del blog
       /qui-som/page.tsx          → Pàgina corporativa "Qui som" (canònica a tots els idiomes)
       /quienes-somos/page.tsx    → Alias ES → /{lang}/qui-som
       /qui-sommes-nous/page.tsx  → Alias FR → /{lang}/qui-som
       /quem-somos/page.tsx       → Alias PT → /{lang}/qui-som
-      /privacy/page.tsx          → Política de privacitat (CA/EN)
+      /privacy/page.tsx          → Política de privacitat (CA)
       /privacidad/page.tsx       → Política de privacitat (ES)
       /confidentialite/page.tsx  → Política de privacitat (FR)
       /privacidade/page.tsx      → Política de privacitat (PT)
-      /contact/page.tsx          → Contacte (CA/EN)
+      /contact/page.tsx          → Contacte (CA)
       /contacto/page.tsx         → Contacte (ES)
       /novetats/page.tsx         → Novetats del producte
       /novetats/[slug]/page.tsx  → Detall novetat
@@ -373,13 +375,24 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
       /dashboard
         /page.tsx                → Dashboard principal
         /movimientos             → Gestió de transaccions
-        /donantes                → Gestió de donants
-        /proveedores             → Gestió de proveïdors
-        /trabajadores            → Gestió de treballadors
-        /ejes-de-actuacion       → Gestió d'eixos i classificació bàsica
+          /liquidacions          → Liquidacions de despeses de viatge
+          /pendents              → Documents pendents
+        /donants                 → Gestió de donants
+          /remeses-cobrament     → Wizard SEPA pain.008
+        /proveidors              → Gestió de proveïdors
+        /treballadors            → Gestió de treballadors
+        /projectes               → Eixos i classificació bàsica
+        /project-module          → Mòdul Projectes opcional
+          /projects              → Projectes i pressupost
+          /expenses              → Assignació de despeses
+          /admin                 → Configuració del mòdul
+          /quick-expense         → Captura ràpida off-bank del mòdul
         /informes                → Informes fiscals (182, 347)
           /certificats           → Certificats de donació
         /configuracion           → Configuració de l'organització
+        /manual                  → Manual llarg dins l'app
+        /guides                  → Ruta legacy d'ajuda (compatibilitat)
+        /quick-expense           → Captura ràpida de despesa
       /login                     → Login per organització
     /admin                       → Panel SuperAdmin global
     /login                       → Redirect stub → /{lang}/login (via middleware)
@@ -394,10 +407,12 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
       useReturnImporter.ts       → Hook amb lògica de matching
       ReturnImporter.tsx         → Modal UI de l'importador
       index.ts                   → Exports
-    /stripe-importer             → Importador de donacions Stripe
-      useStripeImporter.ts       → Hook amb lògica de parsing i matching
-      StripeImporter.tsx         → Modal UI de l'importador
-      index.ts                   → Exports
+    /stripe                      → Imputació Stripe sobre abonaments bancaris
+      StripeImputationModal.tsx  → Modal principal (CSV o manual)
+      StripeImputationDetailDialog.tsx → Detall + desfer imputació
+    /stripe-importer             → Utilitats CSV i quick create de suport
+      useStripeImporter.ts       → Parsing del CSV i agrupació per payout
+      CreateQuickDonorDialog.tsx → Alta ràpida d'un donant des del flux Stripe
     /onboarding                  → Components d'onboarding
       WelcomeOnboardingModal.tsx → Modal de benvinguda per primer admin
       OnboardingWizard.tsx       → Wizard de configuració inicial
@@ -427,7 +442,7 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
       /validateBlogPost.ts       → Validació server-side del payload
       /publish-local-store.ts    → Store local segur fora de producció
       /__tests__                 → Tests de publish i upload de portada
-    /notifications.ts            → Product updates (deprecated, fallback local)
+    /notifications.ts            → Inbox de novetats del producte
     /__tests__                   → Tests unitaris Node de domini i integració
   /scripts                       → Scripts d'utilitat i demo
   /help                          → Contingut d'ajuda per idioma (ca/, es/, fr/)
@@ -552,6 +567,26 @@ organizations/
       │       ├── createdAt: timestamp
       │       └── updatedAt: timestamp
       │
+      ├── donations/
+      │   └── {donationId}/
+      │       ├── date: string                    # Data de la donació/imputació
+      │       ├── type: 'donation' | 'stripe_adjustment'
+      │       ├── source: 'stripe'
+      │       ├── contactId: string | null        # Obligatori per donació visible
+      │       ├── amountGross: number | null      # Import brut de la donació
+      │       ├── amount: number | null           # Només per ajustos
+      │       ├── feeAmount: number | null        # Comissió Stripe associada
+      │       ├── parentTransactionId: string     # Moviment bancari pare
+      │       ├── stripePaymentId: string | null  # ID del pagament Stripe
+      │       ├── stripeTransferId: string | null # ID del payout / transfer
+      │       ├── customerEmail: string | null
+      │       ├── description: string | null
+      │       ├── imputationOrigin: 'csv' | 'manual' | 'system' | null
+      │       ├── archivedAt: string | null
+      │       ├── archivedByUid: string | null
+      │       ├── archivedReason: string | null
+      │       └── archivedFromAction: string | null
+      │
       ├── bankAccounts/
       │   └── {bankAccountId}/
       │       ├── name: string                   # Nom identificatiu
@@ -645,6 +680,7 @@ organizations/
 
 - Model canònic `Transaction`: `note`, `document`, `contactId`, `contactType`, `projectId`.
 - Camps com `documentUrl`, `notes`, `emisorName`, `categoryName`, `contactName`, `projectName` són **legacy/desnormalitzats** (compatibilitat/export) i no formen part del contracte canònic principal.
+- En el flux Stripe vigent, la font fiscal principal és `donations`; els camps Stripe a `transactions` existeixen sobretot per compatibilitat, lectura legacy i traçabilitat del moviment pare.
 
 ## 2.3 Sistema d'Autenticació i Rols
 
@@ -2207,6 +2243,29 @@ La quota ara mostra el sufix de periodicitat al llistat i al detall:
 
 La plantilla d'importació ara usa el header "Quota" (abans "Quota mensual").
 
+### 3.6.3e Eliminats i restauració
+
+La pantalla de donants diferencia tres segments visibles:
+- **Actius**
+- **Baixa**
+- **Eliminats**
+
+**Contracte UX actual:**
+- L'acció visible com "Eliminar" fa **soft-delete** del contacte via `archivedAt`
+- A la vista "Eliminats" es pot **restaurar** el donant
+- Si intentes crear o importar un donant que coincideix amb un eliminat, la UI avisa abans de duplicar-lo
+
+**Guardrail específic de Donants:**
+- Des de `donor-manager.tsx`, l'eliminació passa `blockIfAnyTransaction: true`
+- Això vol dir que, per a donants, si hi ha **qualsevol moviment vinculat** (actiu o arxivat), l'eliminació queda bloquejada
+- El flux genèric d'arxivat de contactes continua existint, però la UI de donants aplica aquest criteri més conservador
+
+**API i fitxers clau:**
+- `POST /api/contacts/archive`
+- `POST /api/contacts/restore`
+- `src/components/donor-manager.tsx`
+- `src/services/contacts.ts`
+
 ### 3.6.4 Importador de Donants
 
 **Plantilla oficial única:**
@@ -3044,261 +3103,181 @@ On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
 - Contracte extern complet de la integració: `docs/contracts/blog-publish-cover-image.md`
 
 
-## 3.10 IMPORTADOR STRIPE
+## 3.10 IMPUTACIÓ STRIPE SOBRE ABONAMENT BANCARI
 
 ### 3.10.1 Visió general
 
-L'importador Stripe permet dividir les liquidacions (payouts) de Stripe en transaccions individuals, identificant cada donació i separant les comissions.
+El flux vigent de Stripe ja no tracta el payout com un split fiscal principal dins `transactions`. El moviment bancari pare es conserva al ledger i la imputació activa es persisteix a `organizations/{orgId}/donations`.
 
-| Característica | Valor |
-|----------------|-------|
-| **Format entrada** | CSV exportat de Stripe ("Pagos → Columnes predeterminades") |
-| **Matching donants** | Per email (exacte, case insensitive) |
-| **Creació automàtica donants** | NO |
-| **Gestió comissions** | Despesa agregada per payout |
+| Característica | Contracte actual |
+|----------------|------------------|
+| **Entrada** | Moviment bancari positiu detectat com a Stripe |
+| **Càrrega** | CSV exportat de Stripe o entrada manual línia a línia |
+| **Matching inicial** | Email exacte (case-insensitive), amb revisió manual |
+| **Alta de donant** | Manual guiada des del mateix modal (`CreateQuickDonorDialog`) |
+| **Persistència** | `donations` + `stripeTransferId` al moviment pare |
+| **Comissions** | `feeAmount` per donació; no es crea com a norma una despesa agregada visible al ledger |
+| **Diferències** | Si banc i net calculat no quadren, es crea un `stripe_adjustment` |
 
-**Principi fonamental:** El moviment bancari original (payout) es **preserva com a pare**. No es reemplaça ni se n'elimina la traçabilitat; es marca com a processat per bloquejar re-split i eliminació accidental.
+**Principi fonamental:** un moviment pare només pot tenir **una imputació Stripe activa**. Si ja existeix, primer cal obrir el detall "Stripe imputat" i usar **Desfer imputació Stripe**.
 
 ### 3.10.2 Flux d'ús
 
 ```
-1. L'usuari veu un ingrés de Stripe al llistat de moviments
-2. Menú ⋮ → "Dividir remesa Stripe"
-3. Puja el CSV exportat de Stripe
-4. El sistema agrupa per Transfer (payout) i cerca el que quadra amb l'import bancari
-5. Previsualització: donacions + comissions + matching donants
-6. L'usuari revisa i assigna manualment els pendents
-7. Confirma → Es creen les transaccions filles
+1. L'usuari veu un abonament Stripe a Moviments
+2. Menú ⋮ → obre la imputació Stripe
+3. Pot carregar un CSV o afegir línies manualment
+4. El sistema proposa payout(s) que quadren amb l'import del banc
+5. L'usuari revisa, assigna donants o en crea un de nou
+6. Si hi ha diferència amb el banc, la confirma explícitament
+7. Confirma → s'escriuen donacions a `donations` i es marca el pare
 ```
 
 ### 3.10.3 Condició per mostrar l'acció
 
-L'opció "Dividir remesa Stripe" apareix si:
+L'acció només apareix sobre ingressos compatibles amb Stripe i sense imputació activa:
 
 ```typescript
-const canSplitStripeRemittance = (tx: Transaction): boolean => {
-  const isIncome = tx.amount > 0;
-  const isNotAlreadyDivided = tx.transactionType !== 'donation' && tx.transactionType !== 'fee';
-  const isNotRemittance = !tx.isRemittance;
-  const hasStripeChildren = !!tx.stripeTransferId;
-  
-  if (!isIncome || !isNotAlreadyDivided || !isNotRemittance || hasStripeChildren) return false;
-  
-  // Transaccions noves Stripe
-  if (tx.source === 'stripe') return true;
-  
-  // Fallback legacy només si encara no hi ha source
-  if (tx.source) return false;
-  const descUpper = tx.description?.toUpperCase() || '';
-  return descUpper.includes('STRIPE') || descUpper.includes('TRANSFERENCIA DE STRIPE');
-};
+function canSplitStripeRemittance(tx: Transaction): boolean {
+  if (tx.amount <= 0) return false;
+  if (tx.isRemittance || tx.isRemittanceItem) return false;
+  if (tx.isSplit || !!tx.parentTransactionId || !!tx.stripeTransferId) return false;
+  if (tx.transactionType === 'donation' || tx.transactionType === 'fee') return false;
+  if (tx.source === 'remittance') return false;
+
+  return tx.source === 'stripe' || hasStripeKeyword(tx.description);
+}
 ```
 
-### 3.10.4 Camps CSV requerits
+### 3.10.4 CSV: camps i filtratge
+
+**Camps rellevants del CSV:**
 
 | Camp Stripe | Ús a Summa Social | Obligatori |
 |-------------|-------------------|------------|
-| `id` | Traçabilitat (`stripePaymentId`) | ✅ |
+| `id` | `stripePaymentId` | ✅ |
 | `Created date (UTC)` | Data de la donació | ✅ |
 | `Amount` | Import brut | ✅ |
-| `Fee` | Comissió Stripe | ✅ |
-| `Customer Email` | Matching amb donant | ✅ |
-| `Status` | Filtrar només `succeeded` | ✅ |
-| `Transfer` | Agrupació per payout (`po_xxx`) | ⚠️ Només obligatori per files que ja formen part d'un payout |
-| `Amount Refunded` | Detectar reemborsos | ✅ |
-| `Description` | Concepte (opcional) | ❌ |
+| `Fee` | Comissió de la donació | ✅ |
+| `Customer Email` | Matching inicial | ✅ |
+| `Status` | Accepta `succeeded`, `paid`, `Paid` | ✅ |
+| `Transfer` | Agrupació per payout (`po_xxx`) | ⚠️ Només si el pagament ja és dins un payout |
+| `Amount Refunded` | Exclusió de reemborsats | ✅ |
+| `Description` | Concepte opcional | ❌ |
 
-### 3.10.5 Filtratge automàtic
+**Filtrat automàtic:**
+- `Status` no vàlid → s'exclou silenciosament
+- `Amount Refunded > 0` → s'exclou i es mostra avís
+- Files sense `Transfer` → no entren al payout matching
 
-| Condició | Acció |
-|----------|-------|
-| `Status !== 'succeeded'` | Excloure silenciosament |
-| `Amount Refunded > 0` | Excloure + mostrar avís |
-| `Transfer` buit o nul | Ignorar la fila + mostrar avís no bloquejant |
+### 3.10.5 Agrupació i matching amb el banc
 
-### 3.10.6 Agrupació per payout
-
-El CSV de Stripe pot contenir files sense camp `Transfer`.
-
-Aquestes files representen pagaments encara no inclosos en cap payout i s'ignoren durant la importació.
-
-Només les files amb `Transfer` participen en:
-- agrupació per payout
-- càlcul del net payout
-- conciliació amb el moviment bancari
-
-Si, després del filtratge, no queda cap fila amb `Transfer`, l'operació falla amb `ERR_NO_PAYOUT_ROWS`.
+Quan hi ha CSV, les files amb `Transfer` es agrupen per payout:
 
 ```typescript
-interface PayoutGroup {
-  transferId: string;    // po_xxx
-  rows: StripeRow[];     // Donacions del payout
-  gross: number;         // Σ Amount
-  fees: number;          // Σ Fee
-  net: number;           // gross - fees
+interface StripePayoutGroup {
+  transferId: string; // po_xxx
+  gross: number;
+  fees: number;
+  net: number;
+  rows: StripeRow[];
 }
 ```
 
-### 3.10.7 Match amb el banc
+**Criteri de match:** el sistema compara el **net** del payout amb l'import del banc amb tolerància petita. Si hi ha més d'un candidat, l'usuari n'ha de triar un.
 
-**Criteri:** Per import net (±0,02€ de tolerància)
+### 3.10.6 Assignació de donants
 
-```typescript
-const tolerance = 0.02;
-const match = Math.abs(payoutGroup.net - bankTransaction.amount) <= tolerance;
-```
+| Capa | Comportament |
+|------|--------------|
+| **Suggeriment** | Email exacte contra `contacts.email` |
+| **Manual** | L'usuari pot escollir qualsevol donant |
+| **Alta ràpida** | Es pot crear un donant al moment des del flux Stripe |
 
-> ⚠️ El banc NO porta el `Transfer` (po_xxx). El match és exclusivament per import.
+**Guardrails:**
+- No hi ha fuzzy matching
+- No es confirma cap línia visible sense `contactId`
+- `stripePaymentId` duplicat actiu bloqueja la confirmació
 
-### 3.10.8 Matching de donants
+### 3.10.7 Persistència i model de dades
 
-| Prioritat | Criteri | Implementació |
-|-----------|---------|---------------|
-| 1 | Email | `donor.email.toLowerCase() === stripeRow.customerEmail.toLowerCase()` |
-
-**Regles estrictes:**
-- NO fuzzy matching
-- NO crear donants automàticament
-- Si no hi ha match → fila queda "Pendent d'assignar"
-
-### 3.10.9 Transaccions generades
-
-**Per cada donació (N ingressos):**
+**Donació Stripe (`donations`):**
 
 ```typescript
 {
-  date: stripeRow.createdDate,
-  description: ensureStripeInDescription(stripeRow.description, stripeRow.customerEmail),
-  amount: stripeRow.amount,              // Import BRUT (positiu)
-  contactId: matchedDonor?.id || null,
-  contactType: matchedDonor ? 'donor' : null,
-  contactName: matchedDonor?.name || null,
+  date,
+  type: 'donation',
   source: 'stripe',
-  transactionType: 'donation',
-  parentTransactionId: bankTransaction.id,
-  stripePaymentId: stripeRow.id,         // ch_xxx
-  stripeTransferId: selectedGroup.transferId,  // po_xxx
-  categoryId: matchedDonor?.defaultCategoryId || null
+  contactId,
+  amountGross,
+  feeAmount,
+  parentTransactionId,
+  stripePaymentId,
+  stripeTransferId,
+  customerEmail,
+  description,
+  imputationOrigin: 'csv' | 'manual'
 }
 ```
 
-**Per les comissions (1 despesa agregada):**
+**Ajust automàtic (`donations`):**
 
 ```typescript
 {
-  date: bankTransaction.date,
-  description: `Comissions Stripe - ${count} donacions`,
-  amount: -totalFees,                    // Negatiu (despesa)
+  date: adjustmentDate,
+  type: 'stripe_adjustment',
   source: 'stripe',
-  transactionType: 'fee',
-  parentTransactionId: bankTransaction.id,
-  stripeTransferId: selectedGroup.transferId,
-  categoryId: bankFeesCategoryId         // Categoria 'bankFees'
+  contactId: null,
+  amount: difference,
+  parentTransactionId,
+  description: 'Ajust Stripe',
+  imputationOrigin: 'system'
 }
 ```
 
-**Estat del pare i guardrails operatius:**
-- El pare es conserva al ledger i es marca amb `stripeTransferId = selectedGroup.transferId`
-- Les filles (`parentTransactionId != null`) s'oculten del ledger principal i només compten on toca
-- Ni el pare ni les filles es poden eliminar mentre el desglossament existeixi
-- Per corregir errors s'ha d'usar el flux **undo/desfer**, no un segon split ni un delete manual
-- L'escriptura es fa en chunks de fins a **49 filles**; l'últim batch marca el pare. Si alguna part falla, hi ha rollback i validació post-commit
+**Estat del pare:**
+- Es conserva al ledger principal
+- Es marca amb `stripeTransferId`
+- El detall visible "Stripe imputat" es construeix a partir de `donations` actives, no de filles noves del ledger
 
-**Cercabilitat (sufix automàtic):**
+### 3.10.8 Impacte fiscal
 
-```typescript
-function ensureStripeInDescription(desc: string | null, email: string): string {
-  const base = desc || `Donació Stripe - ${email}`;
-  if (base.toUpperCase().includes('STRIPE')) return base;
-  return `${base} (via Stripe)`;
-}
-```
+| Consumidor | Font real |
+|------------|-----------|
+| **Model 182** | `transactions` + `donations`, deduplicat per `stripePaymentId` i preferint `donations` |
+| **Certificats** | Només donacions fiscals reals (`type='donation'`) |
+| **Fitxa de donant** | Llegeix les Stripe des de `donations` |
+| **Ajustos** | `stripe_adjustment` queda fora del còmput fiscal del donant |
 
-### 3.10.10 Model de dades
+### 3.10.9 Undo / desfer
 
-**Camps específics Stripe a Transaction:**
+L'operació oficial per corregir una imputació és:
+- `POST /api/transactions/stripe/undo`
 
-| Camp | Tipus | Descripció |
-|------|-------|------------|
-| `source` | `'stripe'` | Identifica origen |
-| `transactionType` | `'donation' \| 'fee'` | Tipus de transacció |
-| `stripePaymentId` | `string \| null` | ID pagament (`ch_xxx`) - Idempotència |
-| `stripeTransferId` | `string \| null` | ID payout (`po_xxx`) - Correlació |
-| `parentTransactionId` | `string` | ID del moviment bancari pare |
+**Comportament:**
+- Arxiva les entrades actives de `donations` vinculades al `parentTransactionId`
+- Reseteja els camps Stripe del moviment pare
+- Si hi havia fills legacy de `transactions`, els arxiva o elimina segons el seu tipus
+- Deixa traça a `audit_logs`
 
-### 3.10.11 Impacte fiscal
-
-| Document | Tractament |
-|----------|------------|
-| **Model 182** | Només compten les filles amb `contactId` i `transactionType: 'donation'` |
-| **Certificats** | Import = Σ donacions Stripe del donant |
-| **Comissions** | NO afecten fiscalitat donants (són despeses de l'entitat) |
-
-### 3.10.12 UI
-
-**Pas 1: Pujar fitxer**
-```
-┌─────────────────────────────────────────┐
-│ Dividir remesa Stripe                   │
-│                                         │
-│ Import al banc: 115,55 €                │
-│                                         │
-│ [Arrossega el CSV aquí]                 │
-│                                         │
-│ ⚠️ No obrir el CSV amb Excel abans      │
-└─────────────────────────────────────────┘
-```
-
-**Pas 2: Revisió**
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ 3 donacions trobades                                            │
-│                                                                 │
-│ Brut:        120,00 €                                           │
-│ Comissions:   -4,45 €                                           │
-│ Net:         115,55 € ✅ (quadra amb banc)                      │
-│                                                                 │
-│ ─────────────────────────────────────────────────────────────   │
-│ ✅ lourdes@example.com    → Lourdes Hoyal       50,00 €         │
-│ ✅ pere@example.com       → Pere Martí          30,00 €         │
-│ ⚠️ nou@email.com          → [Assignar]          40,00 €         │
-│                                                                 │
-│                              [Cancel·lar] [Processar]           │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### 3.10.13 Errors i missatges
-
-| Codi | Condició | Missatge |
-|------|----------|----------|
-| `ERR_NO_COLUMNS` | Falten columnes | "El CSV no té les columnes necessàries: {columnes}" |
-| `ERR_NO_PAYOUT_ROWS` | No queda cap fila amb payout | "Aquest export de Stripe encara no conté cap payout. Torna a exportar-lo més tard quan Stripe hagi generat la transferència al banc." |
-| `ERR_NO_MATCH` | Cap payout quadra | "No s'ha trobat cap payout que coincideixi amb {amount} €" |
-| `ERR_AMOUNT_MISMATCH` | Import no quadra | "L'import no quadra. Esperats {expected} €, calculats {actual} €" |
-| `ERR_NO_BANK_FEES_CATEGORY` | Falta categoria | "No s'ha trobat la categoria de despeses bancàries" |
-| `WARN_REFUNDED` | Hi ha reemborsos | "S'han exclòs {count} donacions reemborsades ({amount} €)" |
-| `WARN_NO_TRANSFER_IGNORED` | Hi ha pagaments encara sense payout | "S'han ignorat {count} pagaments que encara no formen part d'un payout de Stripe." |
-| `WARN_NO_DONOR` | Sense match | "{count} donacions pendents d'assignar donant" |
-
-### 3.10.14 Límits del sistema
-
-| Permès | NO permès |
-|--------|-----------|
-| Matching per email exacte | Fuzzy matching |
-| Assignació manual pendents | Creació automàtica donants |
-| Múltiples payouts al CSV | Connexió directa API Stripe |
-| Exclusió reemborsos | Processament automàtic refunds |
-
-### 3.10.15 Estructura de fitxers
+### 3.10.10 Fitxers clau
 
 ```
+/src/components/stripe/
+  ├── StripeImputationModal.tsx
+  └── StripeImputationDetailDialog.tsx
+
 /src/components/stripe-importer/
-  ├── useStripeImporter.ts    # Hook amb lògica de parsing i matching
-  ├── StripeImporter.tsx      # Component UI (modal)
-  └── index.ts                # Exports
+  ├── useStripeImporter.ts
+  └── CreateQuickDonorDialog.tsx
+
+/src/lib/stripe/
+  ├── createStripeDonations.ts
+  ├── commitStripeImputationWrites.ts
+  └── activeStripeImputation.ts
 ```
 
-**Punt de connexió:** `transaction-table.tsx` → menú ⋮ si `canSplitStripeRemittance(tx)`
+**Punt de connexió:** `src/components/transactions-table.tsx`
 
 
 ## 3.11 MÒDUL PROJECTES — JUSTIFICACIÓ ECONÒMICA
@@ -4321,17 +4300,20 @@ Panell de control exclusiu per al SuperAdmin del sistema, accessible des de `/ad
 
 ### 3.13.2 Funcionalitats
 
-**Redisseny Torre de Control:**
+**Estructura simplificada actual:**
 
-| Bloc | Descripció |
+| Àrea | Descripció |
 |------|------------|
-| **1. Estat global** | Visió executiva amb targetes de sistema, incidències, contingut i traduccions |
-| **2. Entitats** | Govern de totes les organitzacions (entrar, suspendre/reactivar, accessos ràpids) |
-| **3. Coneixement i Bot** | Data d'actualització KB, volum de preguntes i temes freqüents + eines avançades |
-| **4. Comunicació** | Darreres publicacions, esborranys pendents i estat editorial |
-| **5. Configuració avançada** | Operacions sensibles (nova org, migracions, reset, secció demo) en bloc col·lapsat |
+| **Vista general** | Resum executiu del dia: entitats actives, contingut pendent, última novetat i avisos tècnics |
+| **Contingut visible** | Novetats ja visibles i gestor de traduccions |
+| **Entitats** | Entrar a una org, suspendre/reactivar, copiar URL pública, obrir Moviments/Configuració i descarregar backup local |
+| **Incidències i manteniment** | Avisos tècnics, bot/KB, reset de contrasenya, demo, migracions i logs d'auditoria |
 
-**Navegació:** barra sticky per seccions (`estat`, `entitats`, `coneixement`, `comunicacio`, `configuracio`) amb scroll suau.
+**Navegació:** tabs sticky `overview`, `content`, `entities`, `technical`.
+
+**Submòduls visibles a Contingut:**
+- `updates` → lectura operativa de novetats publicades
+- `translations` → gestor de traduccions
 
 **Origen del resum executiu:** endpoint `GET /api/admin/control-tower/summary`.
 
@@ -4582,6 +4564,11 @@ Solució: tots els updates de contactes passen per `POST /api/contacts/import` (
 Flux d'edició de donant: UI → `updateContactViaApi()` (`src/services/contacts.ts`) → `/api/contacts/import` → Admin SDK.
 
 **Creates** (nous contactes) continuen client-side (`addDocumentNonBlocking`).
+
+**Restauració i criteri conservador de Donants:**
+- `POST /api/contacts/restore` permet restaurar un contacte arxivat
+- La UI de Donants fa servir `blockIfAnyTransaction: true` quan l'usuari prem "Eliminar"
+- Per tant, a Donants l'eliminació queda bloquejada si existeix qualsevol historial vinculat, encara que ja estigui arxivat
 
 Fitxers: `src/app/api/contacts/import/route.ts`, `src/services/contacts.ts`.
 
@@ -5778,6 +5765,8 @@ Les fites històriques i els desplegaments anteriors es documenten a `docs/CHANG
 | 1.7 | Des 2024 | Excel Model 182 per gestoria, suport Excel remeses, camps city/province, session persistence |
 | 1.8 | Des 2024 | Importador devolucions del banc, remeses parcials, suport multi-banc (Santander/Triodos), tests unitaris, fixes modals Radix, UX simplificada |
 | 1.9 | Des 2025 | Importador Stripe (payouts → donacions + comissions), matching per email, traçabilitat completa |
+| **1.50** | **9 Abr 2026** | **Dashboard: el resum de "terreny / mission transfers" ja contempla categories legacy sense `systemKey`, evitant desalineacions entre el resum API i la categorització històrica.** |
+| **1.49** | **9 Abr 2026** | **Donants: nova vista d'eliminats amb restauració, bloqueig conservador d'eliminar si hi ha qualsevol moviment vinculat, avís de duplicat contra donants eliminats i flux `POST /api/contacts/restore`.** |
 | **1.48** | **27 Mar 2026** | **Novetats localitzades per idioma: contracte `productUpdates` amb `locale` base i `locales.es`, publicació S2S amb auto-generació de castellà, i consum públic/app amb fallback `fr/pt -> es`. Home, llistat i detall de novetats en mode dinàmic per evitar contingut congelat post-publish.** |
 | **1.47** | **22 Mar 2026** | **Web pública reforçada: HOME comercial polida, capçalera amb accés visible a funcionalitats/"Qui som"/blog, nova pàgina corporativa `/{lang}/qui-som` amb aliases ES/FR/PT, i millores visuals al detall de blog. Blog editorial operable per API: nou endpoint `/api/blog/upload-cover`, validació server-side de portada i `publish`, persistència local segura per entorns no productius, verificació d'escriptura i smoke test local `test:blog-publish-local`. Operativa de deploy accelerada per canvis de web/blog amb perfil `FAST_PUBLIC` i guardrails associats.** |
 | **1.10** | **Des 2025** | **Mòdul Projectes: justificació econòmica per partides, suggerències heurístiques, split parcial de despeses, simulació en memòria** |

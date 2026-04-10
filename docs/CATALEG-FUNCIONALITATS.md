@@ -17,6 +17,7 @@ No descriu el producte al detall; per això ja existeixen:
 - multicomptes bancaris
 - remeses i devolucions
 - cobrament SEPA pain.008
+- imputació Stripe sobre abonaments bancaris
 
 ### Fiscalitat i informes
 
@@ -25,10 +26,12 @@ No descriu el producte al detall; per això ja existeixen:
 - certificats de donació
 - exports per a gestoria i AEAT
 - control de dades fiscals mínimes
+- consolidació fiscal de donacions Stripe via `donations`
 
 ### Contactes i estructura de l'entitat
 
 - donants
+- eliminats i restauració de donants
 - proveïdors
 - treballadors
 - permisos i membres
@@ -38,13 +41,20 @@ No descriu el producte al detall; per això ja existeixen:
 - documents pendents
 - adjunts sobre moviments
 - liquidacions de despesa
+- captura ràpida de despesa
 - projectes, partides i assignacions
 - export de justificació per al finançador
 
+### Web pública i comunicació
+
+- landing pública multiidioma
+- pàgina corporativa "Qui som"
+- blog editorial
+- novetats del producte
+
 ### Suport i operació interna
 
-- manual i hub de guies
-- ajuda contextual i bot
+- manual, ajuda contextual i bot
 - eines de SuperAdmin
 - exportació i backup local
 
