@@ -5,6 +5,7 @@ import {
   editorialPaths,
   ensureEditorialDirs,
   getEditorialKbPath,
+  hasEditorialQueueState,
   loadCalendar,
   loadCriteriaContext,
   loadQueueState,
@@ -19,7 +20,9 @@ import { buildBlogDraft, buildLinkedInArtifact } from './content'
 import type {
   ApprovalStatus,
   BlogDraftArtifact,
+  EditorialCalendar,
   EditorialCalendarPost,
+  EditorialCriteriaContext,
   LinkedInArtifact,
   PublishMode,
   QueueItem,
@@ -110,14 +113,21 @@ function mergeWarnings(queueState: QueueState, warnings: string[]) {
   queueState.warnings = Array.from(new Set(warnings))
 }
 
-export async function seedHistoricalQueue() {
-  await ensureEditorialDirs()
-  const calendar = await loadCalendar()
-  const criteriaContext = await loadCriteriaContext(calendar)
-  const queueState = await loadQueueState(
-    calendar.calendarId,
-    getEditorialKbPath(calendar.criteriaSources.sectorKnowledgeBasePath)
-  )
+export function seedQueueStateFromCalendar(
+  calendar: EditorialCalendar,
+  criteriaContext: EditorialCriteriaContext,
+  existingQueueState?: QueueState
+) {
+  const queueState: QueueState =
+    existingQueueState ?? {
+      version: 1,
+      calendarId: calendar.calendarId,
+      updatedAt: nowIso(),
+      kbPath: getEditorialKbPath(calendar.criteriaSources.sectorKnowledgeBasePath),
+      kbAvailable: false,
+      warnings: [],
+      items: [],
+    }
 
   queueState.calendarId = calendar.calendarId
   queueState.updatedAt = nowIso()
@@ -144,9 +154,22 @@ export async function seedHistoricalQueue() {
     upsertQueueItem(queueState, nextQueueItem)
   }
 
-  await saveQueueState(queueState)
+  return queueState
+}
+
+export async function seedHistoricalQueue() {
+  await ensureEditorialDirs()
+  const calendar = await loadCalendar()
+  const criteriaContext = await loadCriteriaContext(calendar)
+  const queueState = await loadQueueState(
+    calendar.calendarId,
+    getEditorialKbPath(calendar.criteriaSources.sectorKnowledgeBasePath)
+  )
+  const seededQueueState = seedQueueStateFromCalendar(calendar, criteriaContext, queueState)
+
+  await saveQueueState(seededQueueState)
   await appendEditorialLog({
-    timestamp: queueState.updatedAt,
+    timestamp: seededQueueState.updatedAt,
     action: 'seed_historical_queue',
     level: 'info',
     detail: `Queue seeded from ${calendar.posts.length} calendar posts.`,
@@ -156,7 +179,21 @@ export async function seedHistoricalQueue() {
     },
   })
 
-  return queueState
+  return seededQueueState
+}
+
+export async function loadOrSeedRuntimeQueueState() {
+  await ensureEditorialDirs()
+  const calendar = await loadCalendar()
+
+  if (!(await hasEditorialQueueState())) {
+    return seedHistoricalQueue()
+  }
+
+  return loadQueueState(
+    calendar.calendarId,
+    getEditorialKbPath(calendar.criteriaSources.sectorKnowledgeBasePath)
+  )
 }
 
 export async function generateMonthlyDraft(postId?: string) {
@@ -277,13 +314,30 @@ export async function deriveLinkedIn(postId: string) {
   }
 }
 
-type TelegramApprovalResult = {
+type ApprovalRequestResult = {
   mode: PublishMode
   approvalPath: string
   approvalStatus: ApprovalStatus
 }
 
-export async function requestTelegramApproval(postId: string): Promise<TelegramApprovalResult> {
+async function createApprovalRequest(
+  postId: string,
+  channel: 'telegram' | 'web'
+): Promise<{
+  queueState: QueueState
+  queueItem: QueueItem
+  approvalPayload: {
+    itemId: string
+    title: string
+    requestedAt: string
+    channel: 'telegram' | 'web'
+    status: 'pending'
+    draftJsonPath: string | undefined
+    linkedInJsonPath: string | undefined
+    summary: string
+  }
+  approvalFilePath: string
+}> {
   const calendar = await loadCalendar()
   const queueState = await loadQueueState(
     calendar.calendarId,
@@ -299,8 +353,8 @@ export async function requestTelegramApproval(postId: string): Promise<TelegramA
     itemId: postId,
     title: queueItem.title,
     requestedAt: nowIso(),
-    channel: calendar.defaults.approvalChannel,
-    status: 'pending',
+    channel,
+    status: 'pending' as const,
     draftJsonPath: queueItem.artifactPaths.draftJson,
     linkedInJsonPath: queueItem.artifactPaths.linkedinJson,
     summary:
@@ -309,6 +363,49 @@ export async function requestTelegramApproval(postId: string): Promise<TelegramA
 
   const approvalFilePath = path.join(editorialPaths.approvalsDir, `${postId}.json`)
   await writeJsonArtifact(approvalFilePath, approvalPayload)
+
+  return {
+    queueState,
+    queueItem,
+    approvalPayload,
+    approvalFilePath,
+  }
+}
+
+async function persistPendingApproval(
+  queueState: QueueState,
+  queueItem: QueueItem,
+  approvalRequestedAt: string,
+  approvalFilePath: string,
+  action: 'request_telegram_approval' | 'request_web_approval',
+  detail: string,
+  level: 'info' | 'warning'
+) {
+  queueItem.approvalStatus = 'pending_telegram'
+  queueItem.blogStatus = queueItem.blogStatus === 'draft_ready' ? 'pending_approval' : queueItem.blogStatus
+  queueItem.linkedinStatus =
+    queueItem.linkedinStatus === 'derived' ? 'pending_approval' : queueItem.linkedinStatus
+  queueItem.artifactPaths.approvalJson = toWorkspaceRelativePath(approvalFilePath)
+  queueItem.lastAction = action
+  queueItem.lastActionAt = approvalRequestedAt
+
+  upsertQueueItem(queueState, queueItem)
+  queueState.updatedAt = approvalRequestedAt
+  await saveQueueState(queueState)
+  await appendEditorialLog({
+    timestamp: approvalRequestedAt,
+    action,
+    itemId: queueItem.id,
+    level,
+    detail,
+  })
+}
+
+export async function requestTelegramApproval(postId: string): Promise<ApprovalRequestResult> {
+  const { queueState, queueItem, approvalPayload, approvalFilePath } = await createApprovalRequest(
+    postId,
+    'telegram'
+  )
 
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim()
   const chatId = process.env.TELEGRAM_CHAT_ID?.trim()
@@ -338,27 +435,17 @@ export async function requestTelegramApproval(postId: string): Promise<TelegramA
     mode = 'live'
   }
 
-  queueItem.approvalStatus = 'pending_telegram'
-  queueItem.blogStatus = queueItem.blogStatus === 'draft_ready' ? 'pending_approval' : queueItem.blogStatus
-  queueItem.linkedinStatus =
-    queueItem.linkedinStatus === 'derived' ? 'pending_approval' : queueItem.linkedinStatus
-  queueItem.artifactPaths.approvalJson = toWorkspaceRelativePath(approvalFilePath)
-  queueItem.lastAction = 'request_telegram_approval'
-  queueItem.lastActionAt = approvalPayload.requestedAt
-
-  upsertQueueItem(queueState, queueItem)
-  queueState.updatedAt = approvalPayload.requestedAt
-  await saveQueueState(queueState)
-  await appendEditorialLog({
-    timestamp: approvalPayload.requestedAt,
-    action: 'request_telegram_approval',
-    itemId: postId,
-    level: mode === 'live' ? 'info' : 'warning',
-    detail:
-      mode === 'live'
-        ? `Telegram approval requested for ${postId}.`
-        : `Telegram credentials not available. Approval request stored in mock mode for ${postId}.`,
-  })
+  await persistPendingApproval(
+    queueState,
+    queueItem,
+    approvalPayload.requestedAt,
+    approvalFilePath,
+    'request_telegram_approval',
+    mode === 'live'
+      ? `Telegram approval requested for ${postId}.`
+      : `Telegram credentials not available. Approval request stored in mock mode for ${postId}.`,
+    mode === 'live' ? 'info' : 'warning'
+  )
 
   return {
     mode,
@@ -367,10 +454,34 @@ export async function requestTelegramApproval(postId: string): Promise<TelegramA
   }
 }
 
-export async function recordTelegramApprovalDecision(
+export async function requestWebApproval(postId: string): Promise<ApprovalRequestResult> {
+  const { queueState, queueItem, approvalPayload, approvalFilePath } = await createApprovalRequest(
+    postId,
+    'web'
+  )
+
+  await persistPendingApproval(
+    queueState,
+    queueItem,
+    approvalPayload.requestedAt,
+    approvalFilePath,
+    'request_web_approval',
+    `Web approval requested for ${postId}.`,
+    'info'
+  )
+
+  return {
+    mode: 'live',
+    approvalPath: toWorkspaceRelativePath(approvalFilePath),
+    approvalStatus: queueItem.approvalStatus,
+  }
+}
+
+async function recordApprovalDecision(
   postId: string,
   decision: 'approved' | 'rejected',
-  decidedBy: string
+  decidedBy: string,
+  channel: 'telegram' | 'web'
 ) {
   const calendar = await loadCalendar()
   const queueState = await loadQueueState(
@@ -402,8 +513,15 @@ export async function recordTelegramApprovalDecision(
     if (queueItem.linkedinStatus === 'pending_approval') {
       queueItem.linkedinStatus = 'approved'
     }
+  } else {
+    if (queueItem.blogStatus === 'pending_approval') {
+      queueItem.blogStatus = 'draft_ready'
+    }
+    if (queueItem.linkedinStatus === 'pending_approval') {
+      queueItem.linkedinStatus = 'derived'
+    }
   }
-  queueItem.lastAction = 'record_telegram_approval'
+  queueItem.lastAction = channel === 'web' ? 'record_web_approval' : 'record_telegram_approval'
   queueItem.lastActionAt = decidedAt
 
   upsertQueueItem(queueState, queueItem)
@@ -411,15 +529,64 @@ export async function recordTelegramApprovalDecision(
   await saveQueueState(queueState)
   await appendEditorialLog({
     timestamp: decidedAt,
-    action: 'record_telegram_approval',
+    action: channel === 'web' ? 'record_web_approval' : 'record_telegram_approval',
     itemId: postId,
     level: 'info',
-    detail: `Telegram approval recorded as ${decision} by ${decidedBy}.`,
+    detail:
+      channel === 'web'
+        ? `Web approval recorded as ${decision} by ${decidedBy}.`
+        : `Telegram approval recorded as ${decision} by ${decidedBy}.`,
   })
 
   return {
     approvalStatus: queueItem.approvalStatus,
     approvalPath: queueItem.artifactPaths.approvalJson,
+  }
+}
+
+export async function recordTelegramApprovalDecision(
+  postId: string,
+  decision: 'approved' | 'rejected',
+  decidedBy: string
+) {
+  return recordApprovalDecision(postId, decision, decidedBy, 'telegram')
+}
+
+export async function recordWebApprovalDecision(
+  postId: string,
+  decision: 'approved' | 'rejected',
+  decidedBy: string
+) {
+  return recordApprovalDecision(postId, decision, decidedBy, 'web')
+}
+
+type PublishableDraftLike = {
+  title: string
+  slug: string
+  seoTitle: string
+  metaDescription: string
+  excerpt: string
+  tags: string[]
+  contentHtml?: string | null
+  category?: string | null
+  publishedAt?: string | null
+  workflow?: {
+    publishedAt?: string | null
+    scheduledAt?: string | null
+  } | null
+}
+
+function toPublishPayload(draft: PublishableDraftLike) {
+  return {
+    title: draft.title,
+    slug: draft.slug,
+    seoTitle: draft.seoTitle,
+    metaDescription: draft.metaDescription,
+    excerpt: draft.excerpt,
+    contentHtml: draft.contentHtml ?? '',
+    tags: draft.tags,
+    category: draft.category ?? 'Blog',
+    publishedAt: draft.publishedAt ?? draft.workflow?.publishedAt ?? draft.workflow?.scheduledAt ?? nowIso(),
   }
 }
 
@@ -468,9 +635,9 @@ export async function publishBlog(postId: string, force = false): Promise<Publis
   }).catch(async () => {
     const fs = await import('node:fs/promises')
     const raw = await fs.readFile(draftJsonPath, 'utf8')
-    return { default: JSON.parse(raw) as BlogDraftArtifact }
+    return { default: JSON.parse(raw) as BlogDraftArtifact & PublishableDraftLike }
   })
-  const draft = rawDraft.default as BlogDraftArtifact
+  const draft = rawDraft.default as BlogDraftArtifact & PublishableDraftLike
 
   const baseUrl = process.env.BLOG_PUBLISH_BASE_URL?.trim()
   const secret =
@@ -480,17 +647,7 @@ export async function publishBlog(postId: string, force = false): Promise<Publis
   let mode: PublishMode = 'mock'
   let status: 'published' | 'mock_published' = 'mock_published'
 
-  const payload = {
-    title: draft.title,
-    slug: draft.slug,
-    seoTitle: draft.seoTitle,
-    metaDescription: draft.metaDescription,
-    excerpt: draft.excerpt,
-    contentHtml: draft.contentHtml,
-    tags: draft.tags,
-    category: draft.category,
-    publishedAt: draft.publishedAt,
-  }
+  const payload = toPublishPayload(draft)
 
   if (liveRequested && baseUrl && secret) {
     const response = await postJson(`${baseUrl.replace(/\/+$/, '')}/api/blog/publish`, payload, {
@@ -515,6 +672,9 @@ export async function publishBlog(postId: string, force = false): Promise<Publis
   }
 
   queueItem.blogStatus = status
+  if (status === 'published' || status === 'mock_published') {
+    queueItem.publishedAt = payload.publishedAt
+  }
   queueItem.lastAction = 'publish_blog'
   queueItem.lastActionAt = nowIso()
   upsertQueueItem(queueState, queueItem)

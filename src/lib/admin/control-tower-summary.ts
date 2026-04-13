@@ -5,12 +5,14 @@ import {
   isAlertExpired,
   type AdminAlertStatus,
 } from '@/lib/admin/admin-alerts'
+import { getBlogPostsCollectionPath, resolveBlogOrgId } from '@/lib/blog/firestore'
+import { buildNativeBlogQueueSummary } from '@/lib/editorial-native/store'
 import { calculateS9FiscalCoherence } from '@/lib/fiscal/sentinels/s9-fiscal-coherence'
 
 export type ControlStatus = 'ok' | 'warning' | 'critical'
 export type AlertPolicy = 'conservative'
 
-export type GlobalStatusCardId = 'system' | 'incidents' | 'content' | 'translations'
+export type GlobalStatusCardId = 'system' | 'incidents' | 'content'
 
 export interface GlobalStatusCard {
   id: GlobalStatusCardId
@@ -63,6 +65,38 @@ export interface CommunicationSummary {
   pendingDrafts: number
 }
 
+export interface BlogQueueSummary {
+  available: boolean
+  updatedAt: string | null
+  planned: number
+  draftReady: number
+  pendingApproval: number
+  approved: number
+  published: number
+}
+
+export interface BlogSummary {
+  latestPublished: Array<{
+    id: string
+    title: string
+    slug: string
+    publishedAt: string | null
+  }>
+  latestPublishedAt: string | null
+  queue: BlogQueueSummary | null
+}
+
+export interface GrowthSummary {
+  pendingReview: number
+  approvedReady: number
+  errors: number
+  replies: number
+  contacted: number
+  discarded: number
+  latestReplyAt: string | null
+  latestUpdatedAt: string | null
+}
+
 export interface ThresholdsApplied {
   policy: AlertPolicy
   system: {
@@ -95,6 +129,8 @@ export interface AdminControlTowerSummary {
   entities: EntityRow[]
   kbBotSummary: KbBotSummary
   communicationSummary: CommunicationSummary
+  blogSummary: BlogSummary
+  growthSummary: GrowthSummary
   thresholdsApplied: ThresholdsApplied
 }
 
@@ -203,6 +239,105 @@ function normalizeKey(value: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, '')
+}
+
+async function loadBlogSummary(db: Firestore): Promise<BlogSummary> {
+  try {
+    const [queue, orgId] = await Promise.all([
+      buildNativeBlogQueueSummary(db),
+      resolveBlogOrgId(db),
+    ])
+
+    const publishedSnap = await db
+      .collection(getBlogPostsCollectionPath(orgId))
+      .orderBy('publishedAt', 'desc')
+      .limit(3)
+      .get()
+
+    const latestPublished = publishedSnap.docs.map((doc) => {
+      const data = doc.data() as Record<string, unknown>
+      return {
+        id: doc.id,
+        title: typeof data.title === 'string' ? data.title : 'Sense títol',
+        slug: typeof data.slug === 'string' ? data.slug : doc.id,
+        publishedAt: toIsoOrNull(data.publishedAt),
+      }
+    })
+
+    return {
+      latestPublished,
+      latestPublishedAt: latestPublished[0]?.publishedAt ?? null,
+      queue: {
+        available: true,
+        updatedAt: queue.updatedAt,
+        planned: 0,
+        draftReady: queue.draftReady,
+        pendingApproval: 0,
+        approved: queue.approved,
+        published: queue.published,
+      },
+    }
+  } catch {
+    return {
+      latestPublished: [],
+      latestPublishedAt: null,
+      queue: null,
+    }
+  }
+}
+
+async function loadGrowthSummary(db: Firestore): Promise<GrowthSummary> {
+  try {
+    const leadsSnap = await db.collection('ops_leads').get()
+
+    let pendingReview = 0
+    let approvedReady = 0
+    let errors = 0
+    let replies = 0
+    let contacted = 0
+    let discarded = 0
+    let latestReplyAt: string | null = null
+    let latestUpdatedAt: string | null = null
+
+    for (const doc of leadsSnap.docs) {
+      const data = doc.data() as Record<string, unknown>
+      const status = typeof data.status === 'string' ? data.status : null
+      const outreach = (data.outreach as Record<string, unknown> | undefined) ?? {}
+      const inbound = (data.inbound as Record<string, unknown> | undefined) ?? {}
+
+      if (status === 'pending_review') pendingReview += 1
+      if (status === 'approved_for_sending') approvedReady += 1
+      if (status === 'contacted') contacted += 1
+      if (status === 'replied') replies += 1
+      if (status === 'discarded') discarded += 1
+      if (outreach.status === 'send_failed') errors += 1
+
+      latestReplyAt = pickMostRecentIso([latestReplyAt, toIsoOrNull(inbound.lastMessageAt)])
+      latestUpdatedAt = pickMostRecentIso([latestUpdatedAt, toIsoOrNull(data.updatedAt), toIsoOrNull(data.createdAt)])
+    }
+
+    return {
+      pendingReview,
+      approvedReady,
+      errors,
+      replies,
+      contacted,
+      discarded,
+      latestReplyAt,
+      latestUpdatedAt,
+    }
+  } catch {
+    return {
+      pendingReview: 0,
+      approvedReady: 0,
+      errors: 0,
+      replies: 0,
+      contacted: 0,
+      discarded: 0,
+      latestReplyAt: null,
+      latestUpdatedAt: null,
+    }
+  }
 }
 
 function shouldIncludeEntityInAdminShell(
@@ -569,19 +704,21 @@ export async function buildAdminControlTowerSummary(
   const [
     incidentsSnap,
     supportKbSnap,
-    i18nSnap,
     orgsSnap,
     botQuestionsSnap,
     publishedSnap,
     draftsSnap,
+    blogSummary,
+    growthSummary,
   ] = await Promise.all([
     db.collection('systemIncidents').where('status', '==', 'OPEN').get(),
     db.doc('system/supportKb').get(),
-    db.doc('system/i18n').get(),
     db.collection('organizations').orderBy('createdAt', 'desc').get(),
     db.collectionGroup('supportBotQuestions').get(),
     db.collection('productUpdates').orderBy('publishedAt', 'desc').limit(30).get(),
     db.collection('productUpdateDrafts').where('status', '==', 'draft').get(),
+    loadBlogSummary(db),
+    loadGrowthSummary(db),
   ])
 
   const openIncidents = incidentsSnap.docs.length
@@ -594,19 +731,10 @@ export async function buildAdminControlTowerSummary(
       supportKbSnap.data()?.draftUpdatedAt
   )
 
-  const i18nUpdatedAt = toIsoOrNull(i18nSnap.data()?.updatedAt)
-
   const contentStatus = evaluateStalenessStatus(
     kbUpdatedAt,
     CONTROL_TOWER_THRESHOLDS.content.warningAfterDays,
     CONTROL_TOWER_THRESHOLDS.content.criticalAfterDays,
-    now
-  )
-
-  const translationsStatus = evaluateStalenessStatus(
-    i18nUpdatedAt,
-    CONTROL_TOWER_THRESHOLDS.translations.warningAfterDays,
-    CONTROL_TOWER_THRESHOLDS.translations.criticalAfterDays,
     now
   )
 
@@ -732,17 +860,10 @@ export async function buildAdminControlTowerSummary(
     },
     {
       id: 'content',
-      title: 'Contingut',
+      title: 'Blog i Novetats',
       status: contentStatus,
       headline: kbUpdatedAt ? `KB actualitzada ${formatDateCaShort(kbUpdatedAt)}` : 'KB pendent de publicar',
       date: kbUpdatedAt,
-    },
-    {
-      id: 'translations',
-      title: 'Traduccions',
-      status: translationsStatus,
-      headline: i18nUpdatedAt ? `Publicades ${formatDateCaShort(i18nUpdatedAt)}` : 'Sense publicació',
-      date: i18nUpdatedAt,
     },
   ]
 
@@ -766,6 +887,8 @@ export async function buildAdminControlTowerSummary(
       latestPublishedAt,
       pendingDrafts,
     },
+    blogSummary,
+    growthSummary,
     thresholdsApplied: CONTROL_TOWER_THRESHOLDS,
   }
 }

@@ -200,6 +200,25 @@ type PublishedUpdate = {
   } | null;
 };
 
+function normalizeDateLike(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate?: () => Date }).toDate === 'function'
+  ) {
+    const parsed = (value as { toDate: () => Date }).toDate();
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+}
+
 type DraftsImport = {
   generatedAt: string;
   range: string;
@@ -267,10 +286,11 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   const [isPublishingAI, setIsPublishingAI] = React.useState(false);
   const [generatedContent, setGeneratedContent] = React.useState<AIGeneratedContent | null>(null);
   const [previewTab, setPreviewTab] = React.useState<'app' | 'web' | 'x' | 'linkedin'>('app');
+  const hasFirestore = Boolean(firestore);
 
   // Col·leccions - CRÍTIC: retornar null si no és superadmin per evitar permission denied
   const draftsQuery = useMemoFirebase(
-    () => isSuperAdmin
+    () => isSuperAdmin && firestore
       ? query(collection(firestore, 'productUpdateDrafts'), orderBy('createdAt', 'desc'))
       : null,
     [firestore, isSuperAdmin]
@@ -278,7 +298,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   // Només mostrar publicades actives (isActive !== false)
   // Nota: Simplificat per evitar problemes amb col·lecció buida
   const publishedQuery = useMemoFirebase(
-    () => isSuperAdmin
+    () => isSuperAdmin && firestore
       ? query(
           collection(firestore, 'productUpdates'),
           orderBy('publishedAt', 'desc')
@@ -308,10 +328,28 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     return null;
   }
 
+  function getReadyFirestore() {
+    if (firestore) {
+      return firestore;
+    }
+
+    toast({
+      variant: 'destructive',
+      title: tr('admin.productUpdates.toast.errorTitle', 'Error'),
+      description: tr(
+        'admin.productUpdates.toast.firestoreNotReady',
+        'Firebase encara no està llest. Torna-ho a provar d’aquí un moment.'
+      ),
+    });
+    return null;
+  }
+
   // Handler importar JSON
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const db = getReadyFirestore();
+    if (!db) return;
 
     setIsImporting(true);
     try {
@@ -324,11 +362,11 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       }
 
       // Obtenir IDs existents per evitar duplicats
-      const existingSnap = await getDocs(collection(firestore, 'productUpdateDrafts'));
+      const existingSnap = await getDocs(collection(db, 'productUpdateDrafts'));
       const existingIds = new Set(existingSnap.docs.map(d => d.id));
 
       // Inserir nous drafts
-      const batch = writeBatch(firestore);
+      const batch = writeBatch(db);
       let insertedCount = 0;
       let skippedCount = 0;
 
@@ -356,7 +394,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
           draft.description = draft.description.slice(0, 140);
         }
 
-        const docRef = doc(firestore, 'productUpdateDrafts', draft.id);
+        const docRef = doc(db, 'productUpdateDrafts', draft.id);
         batch.set(docRef, stripUndefined({
           id: draft.id,
           title: draft.title,
@@ -405,6 +443,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   // Handler guardar edició
   const handleSaveEdit = async () => {
     if (!editingDraft) return;
+    const db = getReadyFirestore();
+    if (!db) return;
 
     // Validar
     if (!editTitle.trim()) {
@@ -426,7 +466,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
 
     setIsSaving(true);
     try {
-      await updateDoc(doc(firestore, 'productUpdateDrafts', editingDraft.id), {
+      await updateDoc(doc(db, 'productUpdateDrafts', editingDraft.id), {
         title: editTitle.trim(),
         description: editDescription.trim(),
         link: editLink.trim() || null,
@@ -445,11 +485,13 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
 
   // Handler publicar
   const handlePublish = async (draft: DraftItem) => {
+    const db = getReadyFirestore();
+    if (!db) return;
     setIsPublishing(draft.id);
     try {
       // Crear a productUpdates amb isActive: true
       const updateId = `update-${Date.now()}`;
-      await setDoc(doc(firestore, 'productUpdates', updateId), stripUndefined({
+      await setDoc(doc(db, 'productUpdates', updateId), stripUndefined({
         id: updateId,
         locale: 'ca',
         title: draft.title,
@@ -461,7 +503,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       }));
 
       // Marcar draft com publicat
-      await updateDoc(doc(firestore, 'productUpdateDrafts', draft.id), {
+      await updateDoc(doc(db, 'productUpdateDrafts', draft.id), {
         status: 'published',
       });
 
@@ -479,9 +521,11 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
 
   // Handler descartar
   const handleDiscard = async (draft: DraftItem) => {
+    const db = getReadyFirestore();
+    if (!db) return;
     setIsDiscarding(draft.id);
     try {
-      await updateDoc(doc(firestore, 'productUpdateDrafts', draft.id), {
+      await updateDoc(doc(db, 'productUpdateDrafts', draft.id), {
         status: 'discarded',
       });
       toast({ title: tr('admin.productUpdates.toast.draftDiscarded', 'Esborrany descartat') });
@@ -495,9 +539,11 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
 
   // Handler despublicar (soft delete)
   const handleUnpublish = async (update: PublishedUpdate) => {
+    const db = getReadyFirestore();
+    if (!db) return;
     setIsUnpublishing(update.id);
     try {
-      await updateDoc(doc(firestore, 'productUpdates', update.id), {
+      await updateDoc(doc(db, 'productUpdates', update.id), {
         isActive: false,
       });
       toast({ title: tr('admin.productUpdates.toast.unpublishedTitle', 'Novetat despublicada'), description: tr('admin.productUpdates.toast.unpublishedDescription', 'Els usuaris ja no la veuran.') });
@@ -563,6 +609,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.generateFirst', 'Genera contingut primer.') });
       return;
     }
+    const db = getReadyFirestore();
+    if (!db) return;
 
     setIsPublishingAI(true);
     try {
@@ -571,6 +619,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
+      const localizedEs = generatedContent.locales?.es;
+      const localizedEsWeb = localizedEs?.web;
 
       const updateData = stripUndefinedDeep({
         id: updateId,
@@ -582,22 +632,13 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
         createdAt: Timestamp.now(),
         isActive: true,
         contentLong: generatedContent.contentLong,
-        locales: generatedContent.locales?.es ? {
+        locales: localizedEs ? {
           es: {
-            title: generatedContent.locales.es.title,
-            description: generatedContent.locales.es.description,
-            contentLong: generatedContent.locales.es.contentLong,
+            title: localizedEs.title,
+            description: localizedEs.description,
+            contentLong: localizedEs.contentLong,
           },
         } : null,
-        ai: {
-          input: {
-            changeBrief: aiChangeBrief.trim() || null,
-            problemReal: aiProblemReal.trim() || null,
-            affects: aiAffects.trim() || null,
-            userAction: aiUserAction.trim() || null,
-          },
-          analysis: generatedContent.analysis,
-        },
         web: webEnabled && generatedContent.web ? {
           enabled: true,
           slug,
@@ -605,23 +646,17 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
           title: aiTitle.trim(),
           excerpt: generatedContent.web.excerpt,
           content: generatedContent.web.content,
-          locales: generatedContent.locales?.es?.web ? {
+          locales: localizedEsWeb ? {
             es: {
-              title: generatedContent.locales.es.web.title,
-              excerpt: generatedContent.locales.es.web.excerpt,
-              content: generatedContent.locales.es.web.content,
+              title: localizedEsWeb.title,
+              excerpt: localizedEsWeb.excerpt,
+              content: localizedEsWeb.content,
             },
           } : null,
         } : null,
-        social: socialEnabled && generatedContent.social ? {
-          enabled: true,
-          xText: generatedContent.social.xText,
-          linkedinText: generatedContent.social.linkedinText,
-          linkUrl: webEnabled ? `https://summasocial.app/ca/novetats/${slug}` : null,
-        } : null,
       });
 
-      await setDoc(doc(firestore, 'productUpdates', updateId), updateData);
+      await setDoc(doc(db, 'productUpdates', updateId), updateData);
 
       toast({
         title: tr('admin.productUpdates.toast.publishedTitle', 'Novetat publicada'),
@@ -785,6 +820,12 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
         </div>
       </CardHeader>
       <CardContent>
+        {!hasFirestore ? (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {tr('admin.productUpdates.loadingFirebase', 'Connectant amb Firebase per carregar les novetats...')}
+          </div>
+        ) : null}
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           {/* Mobile: Select navigation */}
           {isMobile ? (
@@ -942,8 +983,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {update.publishedAt instanceof Date
-                          ? update.publishedAt.toLocaleDateString(uiLocale, {
+                        {normalizeDateLike(update.publishedAt)
+                          ? normalizeDateLike(update.publishedAt)!.toLocaleDateString(uiLocale, {
                               day: '2-digit',
                               month: '2-digit',
                               year: 'numeric',

@@ -5,7 +5,6 @@ import { getAdminDb } from '@/lib/api/admin-sdk';
 import { PUBLIC_LOCALES } from '@/lib/public-locale';
 import {
   type ProductUpdateContentLocale,
-  getBaseProductUpdateLocale,
 } from '@/lib/product-updates/localized';
 import { generateSpanishProductUpdateVariant } from '@/lib/product-updates/server-localization';
 
@@ -708,15 +707,6 @@ export async function handleProductUpdatesPublish(
           }
         : null,
       social: null,
-      sourceMeta: {
-        system: 'openclaw',
-        externalId: payload.externalId,
-        sourceRefs: payload.sourceMeta.sourceRefs,
-        evidenceRefs: payload.sourceMeta.evidenceRefs,
-        approvedAt: payload.sourceMeta.approvedAt ?? null,
-        approvedBy: payload.sourceMeta.approvedBy ?? null,
-      },
-      channels: payload.channels,
     }) as Record<string, unknown>;
 
     try {

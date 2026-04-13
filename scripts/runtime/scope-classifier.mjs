@@ -63,6 +63,10 @@ export function classifyScope(files) {
     }
   }
 
+  if (normalizedFiles.some((file) => isDataTsFile(file) || isApiFile(file))) {
+    return 'core';
+  }
+
   return 'edge';
 }
 

@@ -123,6 +123,10 @@ async function fileExists(targetPath: string) {
   }
 }
 
+export async function hasEditorialQueueState() {
+  return fileExists(editorialPaths.queue)
+}
+
 async function loadTextSnapshot(inputPath: string): Promise<CriteriaSourceSnapshot> {
   const resolvedPath = resolveWorkspacePath(inputPath)
   try {

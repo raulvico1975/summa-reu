@@ -143,6 +143,25 @@ service cloud.firestore {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // GROWTH OPS (CRM/Leads + Jobs)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    match /ops_leads/{leadId} {
+      // Llegir i escriure: només SuperAdmin
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /ops_jobs/{jobId} {
+      // Llegir i escriure: només SuperAdmin
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /ops_editorial_blog_posts/{postId} {
+      // Llegir i escriure: només SuperAdmin
+      allow read, write: if isSuperAdmin();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // USUARIS
     // ═══════════════════════════════════════════════════════════════════════
 

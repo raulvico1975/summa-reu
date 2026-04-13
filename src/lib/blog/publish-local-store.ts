@@ -35,6 +35,9 @@ function sanitizeBlogPost(post: BlogPost): BlogPost {
 async function readStore(): Promise<LocalBlogPublishStore> {
   try {
     const raw = await readFile(getStoreFilePath(), 'utf8')
+    if (!raw.trim()) {
+      return { ...DEFAULT_STORE }
+    }
     const parsed = JSON.parse(raw) as Partial<LocalBlogPublishStore>
 
     return {
@@ -125,6 +128,21 @@ export async function updateLocalBlogPost(orgId: string, post: BlogPost): Promis
     ...postsByOrg,
     [post.slug]: sanitizeBlogPost(post),
   }
+
+  await writeStore(store)
+  return true
+}
+
+export async function deleteLocalBlogPost(orgId: string, slug: string): Promise<boolean> {
+  const store = await readStore()
+  const postsByOrg = store.posts[orgId] ?? {}
+
+  if (!postsByOrg[slug]) {
+    return false
+  }
+
+  const { [slug]: _removed, ...rest } = postsByOrg
+  store.posts[orgId] = rest
 
   await writeStore(store)
   return true

@@ -1,6 +1,6 @@
 export type CalendarPostKind = 'historical' | 'monthly'
 export type CalendarSourceStatus = 'provided' | 'inferred_from_missing_exact_yaml_block'
-export type ApprovalChannel = 'telegram'
+export type ApprovalChannel = 'telegram' | 'web'
 export type PublishMode = 'live' | 'mock'
 
 export type QueueBlogStatus =
@@ -159,4 +159,3 @@ export interface EditorialLogEntry {
   detail: string
   payload?: Record<string, unknown>
 }
-
