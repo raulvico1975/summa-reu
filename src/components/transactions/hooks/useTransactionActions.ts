@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, CollectionReference, type Firestore, writeBatch, deleteField, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, CollectionReference, type Firestore, writeBatch, deleteField, query, where, getDocs, limit, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 'firebase/storage';
 import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
 import { getMatchedPendingDocumentId } from '@/lib/pending-documents';
@@ -61,6 +61,7 @@ interface UseTransactionActionsReturn {
   handleSetCategory: (txId: string, newCategory: string) => void;
   handleSetContact: (txId: string, newContactId: string | null, contactType: ContactType | null) => void;
   handleSetProject: (txId: string, newProjectId: string | null) => void;
+  markAsDonation: (transactionId: string) => Promise<void>;
 
   // ─────────────────────────────────────────────────────────────────────────
   // DOCUMENT UPLOAD / DELETE
@@ -262,6 +263,29 @@ export function useTransactionActions({
     if (!transactionsCollection) return;
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { projectId: newProjectId });
   }, [ensureCanEdit, transactionsCollection]);
+
+  const markAsDonation = React.useCallback(async (transactionId: string) => {
+    if (!ensureCanEdit()) {
+      throw new Error('No tens permisos per editar moviments.');
+    }
+
+    if (!transactionsCollection) {
+      throw new Error("No s'ha pogut accedir a la col·lecció de moviments.");
+    }
+
+    const transaction = transactions?.find((tx) => tx.id === transactionId) ?? null;
+    if (!transaction) {
+      throw new Error('Moviment no trobat.');
+    }
+
+    if (transaction.transactionType === 'donation') {
+      return;
+    }
+
+    await updateDoc(doc(transactionsCollection, transactionId), {
+      transactionType: 'donation',
+    });
+  }, [ensureCanEdit, transactions, transactionsCollection]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DOCUMENT UPLOAD
@@ -732,6 +756,7 @@ export function useTransactionActions({
     handleSetCategory,
     handleSetContact,
     handleSetProject,
+    markAsDonation,
 
     // Document Upload / Delete
     docLoadingStates,

@@ -32,6 +32,7 @@ import {
   MessageSquare,
   GitMerge,
   Mail,
+  Loader2,
 } from 'lucide-react';
 import type { Transaction, ContactType } from '@/lib/data';
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
@@ -76,6 +77,9 @@ interface TransactionRowMobileProps {
   onGenerateReturnEmailDraft?: (tx: Transaction) => void;
   onViewRemittanceDetail?: (txId: string) => void;
   onAttachDocument?: (txId: string) => void;
+  showDonationCandidate?: boolean;
+  isDonationPending?: boolean;
+  onMarkAsDonation?: (txId: string) => void;
   t: {
     amount: string;
     balance: string;
@@ -108,6 +112,9 @@ interface TransactionRowMobileProps {
     generateReturnEmail?: string;
     addNote?: string;
     editNote?: string;
+    readyToCountIn182: string;
+    markAsDonation182: string;
+    fiscalDonation: string;
   };
 }
 
@@ -132,6 +139,9 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   onGenerateReturnEmailDraft,
   onViewRemittanceDetail,
   onAttachDocument,
+  showDonationCandidate,
+  isDonationPending,
+  onMarkAsDonation,
   t,
 }: TransactionRowMobileProps) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -187,6 +197,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     () => canSplitStripeRemittanceCandidate(tx),
     [tx]
   );
+  const isFiscalDonation = tx.transactionType === 'donation' && !isReturnedDonation;
   const deleteBlockedMessage = React.useMemo(() => {
     if (deleteBlockedReason === 'parentRemittance') {
       return t.deleteBlockedParentRemittance;
@@ -332,6 +343,11 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     }, 50);
   }, [onOpenStripeImputationDetail, tx]);
 
+  const handleMarkAsDonation = React.useCallback(() => {
+    if (!onMarkAsDonation || isDonationPending) return;
+    onMarkAsDonation(tx.id);
+  }, [isDonationPending, onMarkAsDonation, tx.id]);
+
   return (
     <div className={`rounded-xl border p-4 ${bgClass}`}>
       {/* Line 1: Data · Import · Saldo */}
@@ -425,6 +441,34 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
           </span>
         </Badge>
       </div>
+
+      {(showDonationCandidate || isFiscalDonation) && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          {showDonationCandidate ? (
+            <>
+              <span className="text-muted-foreground">{t.readyToCountIn182}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isDonationPending}
+                onClick={handleMarkAsDonation}
+                className="h-6 rounded-full px-2 text-[11px]"
+              >
+                {isDonationPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                {t.markAsDonation182}
+              </Button>
+            </>
+          ) : (
+            <Badge
+              variant="outline"
+              className="rounded-full border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700"
+            >
+              ✓ {t.fiscalDonation}
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* Middle: Badges (type + remittance) */}
       {(isReturn || isReturnFee || isReturnedDonation || tx.isRemittance || canShowUndoSplitAction(tx) || hasStripeImputation) && (

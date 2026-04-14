@@ -110,6 +110,7 @@ import {
   type UndoOperationType,
 } from '@/lib/fiscal/undoProcessing';
 import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
+import { isDonationCandidate } from '@/lib/transactions/is-donation-candidate';
 import { sortTransactionsForTable } from '@/lib/transactions/sort-transactions-for-table';
 import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
 import {
@@ -188,7 +189,7 @@ export function TransactionsTable({
   const [transactionsTotal, setTransactionsTotal] = React.useState<number | null>(null);
   const [autoLoadBlockedByError, setAutoLoadBlockedByError] = React.useState(false);
   const latestPageRequestIdRef = React.useRef(0);
-  const [inlineUpdatePendingByTxId, setInlineUpdatePendingByTxId] = React.useState<Record<string, 'contact' | 'category'>>({});
+  const [inlineUpdatePendingByTxId, setInlineUpdatePendingByTxId] = React.useState<Record<string, 'contact' | 'category' | 'donation'>>({});
   const INLINE_UPDATE_TIMEOUT_MS = 8000;
   // Memoitzar categoryTranslations per evitar re-renders innecessaris
   const categoryTranslations = React.useMemo(
@@ -812,6 +813,7 @@ export function TransactionsTable({
     handleSetCategory: handleSetCategoryFromHook,
     handleSetContact: handleSetContactFromHook,
     handleSetProject,
+    markAsDonation,
     // Document Upload / Delete
     docLoadingStates,
     handleAttachDocumentWithName,
@@ -849,7 +851,7 @@ export function TransactionsTable({
     canEditMovements,
   });
 
-  const setInlineUpdatePending = React.useCallback((txId: string, nextState: 'contact' | 'category' | null) => {
+  const setInlineUpdatePending = React.useCallback((txId: string, nextState: 'contact' | 'category' | 'donation' | null) => {
     setInlineUpdatePendingByTxId((prev) => {
       if (nextState === null) {
         if (!prev[txId]) return prev;
@@ -995,6 +997,38 @@ export function TransactionsTable({
     canEditMovements,
     handleSetContactFromHook,
     runInlineTransactionUpdate,
+  ]);
+
+  const handleMarkAsDonation = React.useCallback(async (txId: string) => {
+    const tx = allTransactionsById[txId];
+    if (!tx || inlineUpdatePendingByTxId[txId]) return;
+
+    setInlineUpdatePending(txId, 'donation');
+    setPagedTransactions((prev) => applyTransactionPatch(prev, txId, { transactionType: 'donation' }));
+
+    try {
+      await markAsDonation(txId);
+    } catch (error) {
+      rollbackInlineTransaction(tx);
+
+      const firebaseError = error as { message?: string };
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: firebaseError.message || t.common.dbConnectionError,
+      });
+    } finally {
+      setInlineUpdatePending(txId, null);
+    }
+  }, [
+    allTransactionsById,
+    inlineUpdatePendingByTxId,
+    markAsDonation,
+    rollbackInlineTransaction,
+    setInlineUpdatePending,
+    t.common.dbConnectionError,
+    t.common.error,
+    toast,
   ]);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2327,6 +2361,9 @@ export function TransactionsTable({
     moreOptionsAriaLabel: t.movements.table.moreOptionsAriaLabel,
     legacyCategory: t.movements?.table?.legacyCategory ?? 'Cal recategoritzar',
     noContact: t.movements.table.noContact,
+    readyToCountIn182: t.movements.table.readyToCountIn182,
+    markAsDonation182: t.movements.table.markAsDonation182,
+    fiscalDonation: t.movements.table.fiscalDonation,
   }), [t, tr]);
 
   // Memoized filter translations
@@ -2850,6 +2887,9 @@ export function TransactionsTable({
               onGenerateReturnEmailDraft={handleGenerateReturnEmailDraft}
               onViewRemittanceDetail={handleViewRemittanceDetail}
               onAttachDocument={handleAttachDocumentWithRename}
+              showDonationCandidate={canEditMovements && isDonationCandidate(tx)}
+              isDonationPending={inlineUpdatePendingByTxId[tx.id] === 'donation'}
+              onMarkAsDonation={handleMarkAsDonation}
               t={rowTranslations}
             />
           ))}
@@ -2945,8 +2985,8 @@ export function TransactionsTable({
                   availableProjects={availableProjects}
                   showProjectColumn={showProjectColumn}
                   isDocumentLoading={docLoadingStates[tx.id] || false}
-                  isCategoryLoading={loadingStates[tx.id] || Boolean(inlineUpdatePendingByTxId[tx.id])}
-                  isContactLoading={Boolean(inlineUpdatePendingByTxId[tx.id])}
+                  isCategoryLoading={loadingStates[tx.id] || inlineUpdatePendingByTxId[tx.id] === 'category'}
+                  isContactLoading={inlineUpdatePendingByTxId[tx.id] === 'contact'}
                   isSelected={canBulkEdit ? selectedIds.has(tx.id) : undefined}
                   isSelectionDisabled={canBulkEdit ? isBulkSelectionBlocked(tx) : undefined}
                   onToggleSelect={canBulkEdit ? toggleOne : undefined}
@@ -2970,6 +3010,9 @@ export function TransactionsTable({
                   onOpenSplitDetail={handleOpenSplitDetail}
                   onUndoSplit={handleUndoSplit}
                   onViewRemittanceDetail={handleViewRemittanceDetail}
+                  showDonationCandidate={canEditMovements && isDonationCandidate(tx)}
+                  isDonationPending={inlineUpdatePendingByTxId[tx.id] === 'donation'}
+                  onMarkAsDonation={handleMarkAsDonation}
                   onUndoRemittance={handleUndoRemittance}
                   onCreateNewContact={handleOpenNewContactDialog}
                   onOpenReturnImporter={(parentTx?: Transaction) => {
