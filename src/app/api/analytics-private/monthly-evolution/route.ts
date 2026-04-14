@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  computeBalance,
+  computeMonthlyEvolution,
   getDashboardLedgerTransactions,
   getOrganizationCategories,
   resolveMissionTransferCategoryId,
 } from '@/lib/read-models/analytics';
-import { authorizeAnalyticsRequest } from '@/app/api/internal/analytics/_shared';
+import { authorizeAnalyticsRequest } from '@/app/api/analytics-private/_shared';
 
 export async function POST(request: NextRequest) {
   const auth = await authorizeAnalyticsRequest(request);
@@ -18,7 +18,12 @@ export async function POST(request: NextRequest) {
   ]);
 
   const missionTransferCategoryId = resolveMissionTransferCategoryId(categories);
-  const result = computeBalance(ledgerTxs, missionTransferCategoryId);
+  const result = computeMonthlyEvolution(
+    ledgerTxs,
+    body.from,
+    body.to,
+    missionTransferCategoryId
+  );
 
   return NextResponse.json({
     success: true,

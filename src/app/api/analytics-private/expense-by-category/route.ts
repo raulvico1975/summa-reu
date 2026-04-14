@@ -5,7 +5,7 @@ import {
   getOrganizationCategories,
   resolveMissionTransferCategoryId,
 } from '@/lib/read-models/analytics';
-import { authorizeAnalyticsRequest } from '@/app/api/internal/analytics/_shared';
+import { authorizeAnalyticsRequest } from '@/app/api/analytics-private/_shared';
 
 export async function POST(request: NextRequest) {
   const auth = await authorizeAnalyticsRequest(request);
