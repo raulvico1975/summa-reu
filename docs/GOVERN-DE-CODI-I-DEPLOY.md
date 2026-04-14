@@ -107,6 +107,10 @@ La decisió de publicar és separada del tancament i de la integració. Acabar u
 - S'executa només des del repositori de control.
 - És l'única porta d'entrada a `prod`.
 - Publica a `prod` només allò que ja és a `main`.
+- Un `git push origin prod` no compta com a deploy verd si App Hosting encara serveix la revisió backend anterior.
+- El ritual ha de capturar la revisió backend activa abans de publicar, materialitzar o verificar el rollout real d'App Hosting i confirmar que la revisió efectiva canvia.
+- Si la revisió backend no canvia de debò, `publica` ha de fallar.
+- El criteri verd inclou una comprovació server-side canònica després del rollout real.
 - No bloqueja per simple existència d'altres worktrees `actius`.
 - Sí que bloqueja worktrees `bloquejants` o `residuals`.
 - Si falla, `prod` no s'ha de donar per actualitzada.

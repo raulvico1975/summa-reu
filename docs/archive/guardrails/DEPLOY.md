@@ -33,11 +33,20 @@ El ritual actual fa, en ordre:
 5. Backup curt predeploy si el risc ho requereix i hi ha configuració
 6. Avís guiat no tècnic si queda risc ALT residual
 7. Merge `main -> prod` i push
-8. Post-deploy check automàtic (SHA remot + smoke amb URL auto-resolta)
-9. Check post-producció automàtic de 3 minuts
-10. Registre i actualització de `docs/DEPLOY-LOG.md`
+8. Verificació de revisió backend App Hosting abans i després de publicar
+9. Materialització real del rollout d'App Hosting per al commit publicat, o comprovació que ja s'ha materialitzat
+10. Post-deploy check automàtic (SHA remot + smoke + comprovació server-side canònica)
+11. Check post-producció automàtic de 3 minuts
+12. Registre i actualització de `docs/DEPLOY-LOG.md`
 
 Si alguna comprovació crítica falla, el deploy aborta i no es publica res.
+
+## Criteri verd obligatori
+
+- `git push origin prod` no equival a backend nou servit.
+- El deploy només és verd si la revisió efectiva del backend App Hosting canvia de debò.
+- Si la revisió backend no canvia, `npm run publica` ha de fallar encara que el push a `prod` hagi anat bé.
+- La comprovació server-side canònica ha de passar després del rollout real.
 
 ## Checklist addicional per canvis d'auth/invitacions
 

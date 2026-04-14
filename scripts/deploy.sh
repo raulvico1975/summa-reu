@@ -38,6 +38,7 @@ MAIN_REMOTE_SYNC_STATUS="NO CAL"
 POSTDEPLOY_REMOTE_SHA_STATUS="NO CAL"
 POSTDEPLOY_SMOKE_STATUS="NO CAL"
 POSTDEPLOY_PUBLIC_CONTENT_STATUS="NO CAL"
+POSTDEPLOY_SERVER_CANARY_STATUS="NO CAL"
 POSTDEPLOY_3MIN_STATUS="NO CAL"
 POSTDEPLOY_ORACLE_STATUS="NO CAL"
 POSTDEPLOY_URLS_READY=false
@@ -56,6 +57,22 @@ TOUCHES_CORE_INDIRECTLY=false
 DEPLOY_SCOPE_MODE="ESTRICTE"
 DEPLOY_TARGET_BRANCH="${DEPLOY_TARGET_BRANCH:-${1:-main}}"
 DEPLOY_TARGET_BRANCH_SAFE="${DEPLOY_TARGET_BRANCH//\//-}"
+APPHOSTING_ROLLOUT_STATUS="NO CAL"
+APPHOSTING_BACKEND_ID=""
+APPHOSTING_PROJECT_ID=""
+APPHOSTING_REGION=""
+APPHOSTING_SERVICE_NAME=""
+APPHOSTING_REVISION_BEFORE=""
+APPHOSTING_REVISION_AFTER=""
+APPHOSTING_UPDATE_TIME_BEFORE=""
+APPHOSTING_UPDATE_TIME_AFTER=""
+APPHOSTING_ROLLOUT_COMMIT_SHA=""
+APPHOSTING_ROLLOUT_TIMEOUT_SECONDS="${APPHOSTING_ROLLOUT_TIMEOUT_SECONDS:-720}"
+APPHOSTING_ROLLOUT_POLL_SECONDS="${APPHOSTING_ROLLOUT_POLL_SECONDS:-15}"
+APPHOSTING_AUTO_ROLLOUT_WAIT_SECONDS="${APPHOSTING_AUTO_ROLLOUT_WAIT_SECONDS:-90}"
+SERVER_ROUTE_CANARY_PATH="${DEPLOY_SERVER_ROUTE_CANARY_PATH:-/api/contact}"
+SERVER_ROUTE_CANARY_EXPECTED_STATUS="${DEPLOY_SERVER_ROUTE_CANARY_EXPECTED_STATUS:-400}"
+SERVER_ROUTE_CANARY_EXPECTED_MARKER="${DEPLOY_SERVER_ROUTE_CANARY_EXPECTED_MARKER:-INVALID_PAYLOAD}"
 
 append_incident_log() {
   if [ "$INCIDENT_RECORDED" = true ]; then
@@ -236,6 +253,326 @@ resolve_postdeploy_urls() {
   fi
 
   POSTDEPLOY_URLS_READY=true
+}
+
+firebase_cli_latest() {
+  npx -y firebase-tools@latest "$@"
+}
+
+has_apphosting_backend_config() {
+  [ -f "$PROJECT_DIR/apphosting.yaml" ]
+}
+
+read_default_firebase_project_id() {
+  local rc_path="$PROJECT_DIR/.firebaserc"
+  if [ ! -f "$rc_path" ] || ! command -v node >/dev/null 2>&1; then
+    printf '%s' ""
+    return
+  fi
+
+  node -e '
+    const fs = require("fs");
+    const path = process.argv[1];
+    try {
+      const json = JSON.parse(fs.readFileSync(path, "utf8"));
+      process.stdout.write(json?.projects?.default || "");
+    } catch (_) {}
+  ' "$rc_path" 2>/dev/null || true
+}
+
+resolve_apphosting_backend_context() {
+  if ! has_apphosting_backend_config; then
+    return 1
+  fi
+
+  if [ -n "$APPHOSTING_BACKEND_ID" ] && [ -n "$APPHOSTING_PROJECT_ID" ] && [ -n "$APPHOSTING_REGION" ] && [ -n "$APPHOSTING_SERVICE_NAME" ]; then
+    return 0
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    DEPLOY_BLOCK_REASON="Node no disponible per resoldre el backend App Hosting."
+    return 1
+  fi
+
+  if ! command -v gcloud >/dev/null 2>&1; then
+    DEPLOY_BLOCK_REASON="gcloud no disponible per verificar la revisio efectiva d'App Hosting."
+    return 1
+  fi
+
+  local backend_id="${DEPLOY_APPHOSTING_BACKEND_ID:-}"
+  if [ -z "$backend_id" ]; then
+    local backends_json
+    if ! backends_json="$(firebase_cli_latest apphosting:backends:list --json 2>/dev/null)"; then
+      DEPLOY_BLOCK_REASON="No s'ha pogut llistar els backends d'App Hosting."
+      return 1
+    fi
+
+    backend_id="$(
+      printf '%s' "$backends_json" | node -e '
+        let data = "";
+        process.stdin.on("data", (chunk) => (data += chunk));
+        process.stdin.on("end", () => {
+          try {
+            const result = JSON.parse(data).result || [];
+            if (result.length === 1) {
+              const name = result[0].name || "";
+              process.stdout.write(name.split("/").pop() || "");
+              return;
+            }
+            if (result.length > 1) {
+              process.stdout.write("__AMBIGUOUS__");
+            }
+          } catch (_) {}
+        });
+      ' 2>/dev/null
+    )"
+
+    if [ "$backend_id" = "__AMBIGUOUS__" ]; then
+      DEPLOY_BLOCK_REASON="Hi ha mes d'un backend App Hosting. Defineix DEPLOY_APPHOSTING_BACKEND_ID."
+      return 1
+    fi
+
+    if [ -z "$backend_id" ]; then
+      DEPLOY_BLOCK_REASON="No s'ha detectat cap backend App Hosting actiu."
+      return 1
+    fi
+  fi
+
+  local backend_json parsed backend_project_id backend_region backend_service_name
+  if ! backend_json="$(firebase_cli_latest apphosting:backends:get "$backend_id" --json 2>/dev/null)"; then
+    DEPLOY_BLOCK_REASON="No s'ha pogut llegir el backend App Hosting '$backend_id'."
+    return 1
+  fi
+
+  parsed="$(
+    printf '%s' "$backend_json" | node -e '
+      let data = "";
+      process.stdin.on("data", (chunk) => (data += chunk));
+      process.stdin.on("end", () => {
+        try {
+          const result = JSON.parse(data).result || {};
+          const name = result.name || "";
+          const match = name.match(/^projects\/([^/]+)\/locations\/([^/]+)\/backends\/([^/]+)$/);
+          const runService = (result.managedResources || [])
+            .map((entry) => entry?.runService?.service || "")
+            .find(Boolean);
+          const serviceName = (runService || "").split("/").pop() || "";
+          const out = [
+            match ? match[3] : "",
+            match ? match[1] : "",
+            match ? match[2] : "",
+            serviceName,
+          ];
+          process.stdout.write(out.join("\t"));
+        } catch (_) {}
+      });
+    ' 2>/dev/null
+  )"
+
+  IFS=$'\t' read -r backend_id backend_project_id backend_region backend_service_name <<< "$parsed"
+
+  if [ -z "$backend_project_id" ]; then
+    backend_project_id="$(read_default_firebase_project_id)"
+  fi
+
+  if [ -z "$backend_id" ] || [ -z "$backend_project_id" ] || [ -z "$backend_region" ] || [ -z "$backend_service_name" ]; then
+    DEPLOY_BLOCK_REASON="No s'ha pogut resoldre el context efectiu d'App Hosting (backend, projecte, regio o servei)."
+    return 1
+  fi
+
+  APPHOSTING_BACKEND_ID="$backend_id"
+  APPHOSTING_PROJECT_ID="$backend_project_id"
+  APPHOSTING_REGION="$backend_region"
+  APPHOSTING_SERVICE_NAME="$backend_service_name"
+  return 0
+}
+
+get_apphosting_backend_update_time() {
+  if ! resolve_apphosting_backend_context; then
+    printf '%s' ""
+    return 1
+  fi
+
+  local backend_json
+  if ! backend_json="$(firebase_cli_latest apphosting:backends:get "$APPHOSTING_BACKEND_ID" --json 2>/dev/null)"; then
+    printf '%s' ""
+    return 1
+  fi
+
+  printf '%s' "$backend_json" | node -e '
+    let data = "";
+    process.stdin.on("data", (chunk) => (data += chunk));
+    process.stdin.on("end", () => {
+      try {
+        const result = JSON.parse(data).result || {};
+        process.stdout.write(result.updateTime || "");
+      } catch (_) {}
+    });
+  ' 2>/dev/null || true
+}
+
+get_apphosting_active_revision() {
+  if ! resolve_apphosting_backend_context; then
+    printf '%s' ""
+    return 1
+  fi
+
+  gcloud run services describe \
+    "$APPHOSTING_SERVICE_NAME" \
+    --region="$APPHOSTING_REGION" \
+    --project="$APPHOSTING_PROJECT_ID" \
+    --format='value(status.latestReadyRevisionName)' \
+    2>/dev/null || true
+}
+
+capture_apphosting_revision_before_deploy() {
+  if ! has_apphosting_backend_config; then
+    APPHOSTING_ROLLOUT_STATUS="NO CAL"
+    return 0
+  fi
+
+  CURRENT_PHASE="Capturar revisio App Hosting abans de publicar"
+  echo "[6c/9] Capturant estat real d'App Hosting..."
+  echo ""
+
+  if ! resolve_apphosting_backend_context; then
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    echo "ERROR: $DEPLOY_BLOCK_REASON"
+    exit 1
+  fi
+
+  APPHOSTING_REVISION_BEFORE="$(get_apphosting_active_revision)"
+  APPHOSTING_UPDATE_TIME_BEFORE="$(get_apphosting_backend_update_time)"
+
+  if [ -z "$APPHOSTING_REVISION_BEFORE" ]; then
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    DEPLOY_BLOCK_REASON="No s'ha pogut llegir la revisio activa d'App Hosting abans del deploy."
+    echo "ERROR: $DEPLOY_BLOCK_REASON"
+    exit 1
+  fi
+
+  echo "  Backend: $APPHOSTING_BACKEND_ID"
+  echo "  Servei Cloud Run: $APPHOSTING_SERVICE_NAME ($APPHOSTING_REGION)"
+  echo "  Revisio activa abans: $APPHOSTING_REVISION_BEFORE"
+  if [ -n "$APPHOSTING_UPDATE_TIME_BEFORE" ]; then
+    echo "  UpdateTime backend abans: $APPHOSTING_UPDATE_TIME_BEFORE"
+  fi
+  echo ""
+}
+
+wait_for_apphosting_revision_change() {
+  local timeout_seconds="${1:-$APPHOSTING_ROLLOUT_TIMEOUT_SECONDS}"
+  local start_ts now_ts current_revision
+  start_ts=$(date +%s)
+
+  while true; do
+    current_revision="$(get_apphosting_active_revision)"
+    if [ -n "$current_revision" ] && [ "$current_revision" != "$APPHOSTING_REVISION_BEFORE" ]; then
+      APPHOSTING_REVISION_AFTER="$current_revision"
+      APPHOSTING_UPDATE_TIME_AFTER="$(get_apphosting_backend_update_time)"
+      return 0
+    fi
+
+    now_ts=$(date +%s)
+    if [ $((now_ts - start_ts)) -ge "$timeout_seconds" ]; then
+      APPHOSTING_REVISION_AFTER="$current_revision"
+      APPHOSTING_UPDATE_TIME_AFTER="$(get_apphosting_backend_update_time)"
+      return 1
+    fi
+
+    sleep "$APPHOSTING_ROLLOUT_POLL_SECONDS"
+  done
+}
+
+materialize_apphosting_rollout() {
+  if ! has_apphosting_backend_config; then
+    APPHOSTING_ROLLOUT_STATUS="NO CAL"
+    return 0
+  fi
+
+  CURRENT_PHASE="Materialitzar rollout d'App Hosting"
+  echo "[7a/9] Materialitzant backend App Hosting..."
+  echo ""
+
+  if [ -z "$APPHOSTING_REVISION_BEFORE" ]; then
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    DEPLOY_BLOCK_REASON="Falta la revisio activa d'App Hosting abans del deploy."
+    echo "ERROR: $DEPLOY_BLOCK_REASON"
+    exit 1
+  fi
+
+  APPHOSTING_ROLLOUT_COMMIT_SHA="$(git rev-parse prod)"
+  echo "  Verificant si App Hosting ja ha materialitzat el commit publicat..."
+  if wait_for_apphosting_revision_change "$APPHOSTING_AUTO_ROLLOUT_WAIT_SECONDS"; then
+    APPHOSTING_ROLLOUT_STATUS="OK_AUTO"
+    echo "  Revisio activa despres: $APPHOSTING_REVISION_AFTER"
+    if [ -n "$APPHOSTING_UPDATE_TIME_AFTER" ]; then
+      echo "  UpdateTime backend despres: $APPHOSTING_UPDATE_TIME_AFTER"
+    fi
+    echo "  Materialitzacio detectada sense rollout manual."
+    echo ""
+    return 0
+  fi
+
+  echo "  No hi ha canvi de revisio encara. Creo rollout explicit per al commit: ${APPHOSTING_ROLLOUT_COMMIT_SHA:0:9}"
+
+  if ! firebase_cli_latest apphosting:rollouts:create "$APPHOSTING_BACKEND_ID" --git-commit "$APPHOSTING_ROLLOUT_COMMIT_SHA" -f; then
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    DEPLOY_BLOCK_REASON="Firebase App Hosting no ha acceptat el rollout del commit publicat a prod."
+    echo "ERROR: $DEPLOY_BLOCK_REASON"
+    exit 1
+  fi
+
+  echo "  Esperant una revisio backend nova..."
+  if ! wait_for_apphosting_revision_change; then
+    APPHOSTING_ROLLOUT_STATUS="BLOCKED_NO_NEW_REVISION"
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    DEPLOY_BLOCK_REASON="App Hosting no ha materialitzat una revisio nova del backend despres del rollout."
+    echo "ERROR: $DEPLOY_BLOCK_REASON"
+    echo "  Revisio abans: $APPHOSTING_REVISION_BEFORE"
+    echo "  Revisio despres: ${APPHOSTING_REVISION_AFTER:-<sense canvi>}"
+    exit 1
+  fi
+
+  APPHOSTING_ROLLOUT_STATUS="OK"
+  echo "  Revisio activa despres: $APPHOSTING_REVISION_AFTER"
+  if [ -n "$APPHOSTING_UPDATE_TIME_AFTER" ]; then
+    echo "  UpdateTime backend despres: $APPHOSTING_UPDATE_TIME_AFTER"
+  fi
+  echo ""
+}
+
+run_server_route_canary_check() {
+  if [ -z "$RESOLVED_DEPLOY_BASE_URL" ]; then
+    POSTDEPLOY_SERVER_CANARY_STATUS="PENDENT"
+    DEPLOY_RESULT="PENDENT"
+    echo "  Ruta backend canònica pendent: no s'ha pogut deduir la base URL."
+    return
+  fi
+
+  echo "  Verificant ruta backend canònica..."
+  local canary_url body_file http_code body
+  canary_url="${RESOLVED_DEPLOY_BASE_URL}${SERVER_ROUTE_CANARY_PATH}"
+  body_file="$(mktemp)"
+  http_code="$(
+    curl -sS -o "$body_file" -w '%{http_code}' \
+      -X POST \
+      -H 'Content-Type: application/json' \
+      -d '{}' \
+      "$canary_url" 2>/dev/null || printf '%s' '000'
+  )"
+  body="$(cat "$body_file" 2>/dev/null || true)"
+  rm -f "$body_file"
+
+  if [ "$http_code" = "$SERVER_ROUTE_CANARY_EXPECTED_STATUS" ] && printf '%s' "$body" | grep -Fq "$SERVER_ROUTE_CANARY_EXPECTED_MARKER"; then
+    POSTDEPLOY_SERVER_CANARY_STATUS="OK"
+    echo "  OK: ruta backend canònica (${SERVER_ROUTE_CANARY_PATH})"
+    return
+  fi
+
+  POSTDEPLOY_SERVER_CANARY_STATUS="PENDENT"
+  DEPLOY_RESULT="PENDENT"
+  echo "  PENDENT: la ruta backend canònica (${SERVER_ROUTE_CANARY_PATH}) no ha respost com s'esperava."
 }
 
 wait_for_text_marker() {
@@ -1054,7 +1391,21 @@ post_deploy_check() {
   fi
   echo ""
 
+  if [ "$APPHOSTING_ROLLOUT_STATUS" != "NO CAL" ]; then
+    echo "  Verificant backend App Hosting materialitzat..."
+    echo "    Revisio abans:  $APPHOSTING_REVISION_BEFORE"
+    echo "    Revisio despres: ${APPHOSTING_REVISION_AFTER:-<sense canvi>}"
+    if [ -n "$APPHOSTING_UPDATE_TIME_BEFORE" ] || [ -n "$APPHOSTING_UPDATE_TIME_AFTER" ]; then
+      echo "    UpdateTime abans:  ${APPHOSTING_UPDATE_TIME_BEFORE:-<desconegut>}"
+      echo "    UpdateTime despres: ${APPHOSTING_UPDATE_TIME_AFTER:-<desconegut>}"
+    fi
+    echo "    Estat rollout: $APPHOSTING_ROLLOUT_STATUS"
+    echo ""
+  fi
+
   resolve_postdeploy_urls
+  run_server_route_canary_check
+  echo ""
 
   if [ "$FAST_PUBLIC_SCOPE" = true ] && [ "$IS_FISCAL" = false ]; then
     need_dashboard_smoke=false
@@ -1237,6 +1588,10 @@ reconcile_postdeploy_result() {
     runtime_checks_ok=false
   fi
 
+  if [ "$POSTDEPLOY_SERVER_CANARY_STATUS" = "PENDENT" ]; then
+    runtime_checks_ok=false
+  fi
+
   if [ "$POSTDEPLOY_3MIN_STATUS" = "PENDENT" ]; then
     runtime_checks_ok=false
   fi
@@ -1244,6 +1599,14 @@ reconcile_postdeploy_result() {
   if [ "$POSTDEPLOY_ORACLE_STATUS" = "PENDENT" ]; then
     runtime_checks_ok=false
   fi
+
+  case "$APPHOSTING_ROLLOUT_STATUS" in
+    "OK"|"OK_AUTO"|"NO CAL")
+      ;;
+    *)
+      runtime_checks_ok=false
+      ;;
+  esac
 
   if [ "$POSTDEPLOY_REMOTE_SHA_STATUS" = "PENDENT" ] && [ "$runtime_checks_ok" = true ]; then
     DEPLOY_RESULT="OK"
@@ -1478,7 +1841,9 @@ main() {
   prepare_rollback_plan
   commit_deploy_logs_if_needed
   DEPLOY_CONTENT_SHA=$(git rev-parse --short "$DEPLOY_TARGET_BRANCH")
+  capture_apphosting_revision_before_deploy
   execute_merge_ritual       # Pas 7
+  materialize_apphosting_rollout
   post_deploy_check          # Pas 8
   post_production_3min_check
   run_fiscal_oracle_postdeploy_monitor

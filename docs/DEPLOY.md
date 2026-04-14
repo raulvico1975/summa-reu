@@ -73,6 +73,9 @@ npm run publica
 - Publica a `prod` només allò que ja és a `main`.
 - No accepta worktrees `bloquejants`, worktrees `residuals` ni `prod` fora de `main`.
 - No es bloqueja només perquè hi hagi altres worktrees `actius` i ordenats en paral·lel.
+- `git push origin prod` per si sol no és criteri suficient de deploy verd.
+- El ritual verifica la revisió backend activa abans de publicar, materialitza o comprova el rollout real d'App Hosting i exigeix canvi de revisió efectiva.
+- També exigeix una comprovació canònica d'un endpoint server-side estable abans de donar la publicació per bona.
 - Deixa traça operativa del resultat.
 
 ## Què passa quan alguna cosa falla

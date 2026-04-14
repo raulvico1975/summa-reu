@@ -220,12 +220,22 @@ Regles pràctiques:
 - `npm run acabat` tanca només els canvis del worktree actual.
 - `npm run integra` és l'única porta d'entrada a `main`.
 - `npm run publica` és l'única porta d'entrada a `prod`.
+- `git push origin prod` no equival a backend materialitzat: App Hosting pot continuar servint la revisió anterior.
+- Un deploy verd exigeix canvi real de revisió backend i una comprovació server-side canònica després del rollout.
 - si `npm run status` diu `BLOQUEJAT`, no es publica
 - una tasca pot estar tancada i no estar llesta per publicar
 - `integrable` i `publicable` no són sinònims
 - un worktree `actiu` no bloqueja; un worktree `bloquejant` sí
 - `autoritzo deploy` només es pot dir si `npm run status` diu explícitament `DECISIÓ CEO: POTS DIR "AUTORITZO DEPLOY"`
 - si hi ha residus, primer aplica `worktree:close`, `worktree:gc` o el diagnòstic del document de higiene
+
+Verificació mínima obligatòria del ritual de deploy:
+
+1. llegir la revisió activa del backend App Hosting abans de publicar
+2. publicar el commit correcte a `prod`
+3. verificar o forçar el rollout real d'App Hosting
+4. confirmar que la revisió backend efectiva ha canviat
+5. executar una comprovació backend estable abans de donar el deploy per verd
 
 Lectura humana dels worktrees:
 
