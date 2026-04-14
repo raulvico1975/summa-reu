@@ -2985,8 +2985,8 @@ export function TransactionsTable({
                   availableProjects={availableProjects}
                   showProjectColumn={showProjectColumn}
                   isDocumentLoading={docLoadingStates[tx.id] || false}
-                  isCategoryLoading={loadingStates[tx.id] || Boolean(inlineUpdatePendingByTxId[tx.id])}
-                  isContactLoading={Boolean(inlineUpdatePendingByTxId[tx.id])}
+                  isCategoryLoading={loadingStates[tx.id] || inlineUpdatePendingByTxId[tx.id] === 'category'}
+                  isContactLoading={inlineUpdatePendingByTxId[tx.id] === 'contact'}
                   isSelected={canBulkEdit ? selectedIds.has(tx.id) : undefined}
                   isSelectionDisabled={canBulkEdit ? isBulkSelectionBlocked(tx) : undefined}
                   onToggleSelect={canBulkEdit ? toggleOne : undefined}
