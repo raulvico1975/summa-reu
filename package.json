@@ -12,7 +12,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:node",
-    "test:node": "node --import tsx --test src/lib/__tests__/*.test.ts src/lib/blog/__tests__/*.test.ts tests/sepa-pain008/*.test.ts",
+    "test:node": "node --import tsx --test src/lib/__tests__/*.test.ts src/lib/read-models/__tests__/*.test.ts src/lib/blog/__tests__/*.test.ts tests/sepa-pain008/*.test.ts",
     "test:coverage": "node scripts/test/run-node-coverage.mjs; status=$?; node scripts/test/coverage-surface.mjs; exit $status",
     "dev:restart": "bash scripts/dev-restart.sh",
     "dev:demo": "node scripts/run-demo-dev.mjs",
