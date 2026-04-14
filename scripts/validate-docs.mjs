@@ -10,6 +10,10 @@ const ALLOWLIST_MISSING = new Set([
   'src/i18n/pt.ts',
   'src/i18n/locales/NEW.json',
 ]);
+const requestedFiles = process.argv
+  .slice(2)
+  .map(file => normalize(join(ROOT, file)))
+  .filter(file => file.startsWith(DOCS_DIR) && file.endsWith('.md') && existsSync(file));
 
 function walk(dir) {
   const out = [];
@@ -47,7 +51,7 @@ function normalizeCodeRef(ref) {
 }
 
 const missing = [];
-const files = walk(DOCS_DIR);
+const files = requestedFiles.length > 0 ? [...new Set(requestedFiles)] : walk(DOCS_DIR);
 
 for (const file of files) {
   const content = readFileSync(file, 'utf8');

@@ -17,6 +17,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
 const SRC = join(ROOT, 'src');
 const CA_PATH = join(ROOT, 'src/i18n/locales/ca.json');
+const requestedFiles = process.argv
+  .slice(2)
+  .map(file => join(ROOT, file))
+  .filter(file => file.startsWith(SRC) && ['.ts', '.tsx'].includes(extname(file)) && !file.endsWith('.d.ts'));
 
 const MAX_PRINT = 200;
 
@@ -75,7 +79,7 @@ function main() {
   const ca = loadJson(CA_PATH);
   const caKeys = new Set(Object.keys(ca));
 
-  const files = walkDir(SRC, new Set(['.ts', '.tsx']));
+  const files = requestedFiles.length > 0 ? [...new Set(requestedFiles)] : walkDir(SRC, new Set(['.ts', '.tsx']));
   const allKeys = new Set();
 
   for (const file of files) {
