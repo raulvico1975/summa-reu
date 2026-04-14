@@ -1,3 +1,6 @@
+# ⚠️ No utilitzar --no-verify.
+# Si el hook bloqueja un canvi funcional, el problema és del hook, no del commit.
+
 # Bloqueig de commits directes a prod
 branch=$(git rev-parse --abbrev-ref HEAD)
 if [ "$branch" = "prod" ]; then
@@ -6,9 +9,45 @@ if [ "$branch" = "prod" ]; then
   exit 1
 fi
 
+CHANGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
+DOCS_MD_FILES=$(printf '%s\n' "$CHANGED_FILES" | grep '^docs/.*\.md$' || true)
+I18N_TS_FILES=$(printf '%s\n' "$CHANGED_FILES" | grep '^src/.*\.\(ts\|tsx\)$' || true)
+ONLY_DOCS=true
+
+if [ -z "$CHANGED_FILES" ]; then
+  ONLY_DOCS=false
+fi
+
+for file in $CHANGED_FILES; do
+  case "$file" in
+    docs/*) ;;
+    *)
+      ONLY_DOCS=false
+      break
+      ;;
+  esac
+done
+
 npm test
-npm run docs:check
+
+if [ -n "$DOCS_MD_FILES" ]; then
+  if [ "$ONLY_DOCS" = true ]; then
+    echo "[pre-commit] docs-only -> running scoped docs:check"
+  else
+    echo "[pre-commit] mixed/code -> running scoped docs:check only for staged docs"
+  fi
+  npm run docs:check -- $DOCS_MD_FILES || exit 1
+else
+  echo "[pre-commit] code-only -> skipping docs:check"
+fi
+
 npm run i18n:validate-guides
 npm run i18n:validate-help
 npm run i18n:check
-npm run i18n:check-tr-keys
+
+if [ -n "$I18N_TS_FILES" ]; then
+  echo "[pre-commit] scoped i18n tr-key validation for staged src files"
+  npm run i18n:check-tr-keys -- $I18N_TS_FILES || exit 1
+else
+  echo "[pre-commit] no staged src ts/tsx files -> skipping i18n:check-tr-keys"
+fi
