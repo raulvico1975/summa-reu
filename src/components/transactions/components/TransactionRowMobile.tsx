@@ -349,7 +349,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   }, [isDonationPending, onMarkAsDonation, tx.id]);
 
   return (
-    <div className={`rounded-xl border p-4 ${bgClass}`}>
+    <div className={`rounded-xl border p-3 ${bgClass}`}>
       {/* Line 1: Data · Import · Saldo */}
       <div className="flex flex-wrap items-center gap-1 text-xs">
         <span className="text-muted-foreground whitespace-nowrap">{formatDateShort(displayDate)}</span>
@@ -382,7 +382,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       </div>
 
       {/* Line 3: Contacte + Categoria (chips) */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
         <Badge variant="secondary" className="max-w-[48%] rounded-full px-2 py-0.5 text-[11px] font-normal">
           <span className="truncate">{categoryDisplayName || '—'}</span>
         </Badge>
@@ -440,39 +440,34 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             )}
           </span>
         </Badge>
+        {showDonationCandidate ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isDonationPending}
+            onClick={handleMarkAsDonation}
+            aria-label={`${t.readyToCountIn182}. ${t.markAsDonation182}`}
+            title={`${t.readyToCountIn182}. ${t.markAsDonation182}`}
+            className="h-5 w-10 justify-center rounded-full border-amber-200 bg-amber-50 px-0 text-[10px] font-semibold text-amber-700 hover:bg-amber-100"
+          >
+            {isDonationPending ? <Loader2 className="h-3 w-3 animate-spin" /> : '182'}
+          </Button>
+        ) : null}
+        {!showDonationCandidate && isFiscalDonation ? (
+          <Badge
+            variant="outline"
+            title={t.fiscalDonation}
+            className="w-10 justify-center rounded-full border-emerald-200 bg-emerald-50 px-0 py-0.5 text-center text-[10px] font-semibold text-emerald-700"
+          >
+            182
+          </Badge>
+        ) : null}
       </div>
-
-      {(showDonationCandidate || isFiscalDonation) && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          {showDonationCandidate ? (
-            <>
-              <span className="text-muted-foreground">{t.readyToCountIn182}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={isDonationPending}
-                onClick={handleMarkAsDonation}
-                className="h-6 rounded-full px-2 text-[11px]"
-              >
-                {isDonationPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                {t.markAsDonation182}
-              </Button>
-            </>
-          ) : (
-            <Badge
-              variant="outline"
-              className="rounded-full border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700"
-            >
-              ✓ {t.fiscalDonation}
-            </Badge>
-          )}
-        </div>
-      )}
 
       {/* Middle: Badges (type + remittance) */}
       {(isReturn || isReturnFee || isReturnedDonation || tx.isRemittance || canShowUndoSplitAction(tx) || hasStripeImputation) && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
           {isReturn && (
             <Badge variant="outline" className="gap-1 rounded-full border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
               <Undo2 className="h-3 w-3" />

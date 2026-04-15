@@ -2924,10 +2924,10 @@ export function TransactionsTable({
         <div className="table-scroll-stable w-full overflow-hidden rounded-xl border border-border/60 bg-background/95 shadow-sm [&>div]:overflow-visible [&>div]:overflow-x-hidden">
           <Table className="w-full table-fixed">
             <TableHeader>
-              <TableRow className="h-11 bg-muted/20">
+              <TableRow className="h-10 bg-muted/20">
                 {/* Checkbox columna - només visible per admin/user */}
                 {canBulkEdit && (
-                  <TableHead className="w-[40px] px-2.5 py-3">
+                  <TableHead className="w-[40px] px-2.5 py-2.5">
                     <Checkbox
                       checked={checkboxState === 'checked'}
                       ref={(el) => {
@@ -2942,7 +2942,7 @@ export function TransactionsTable({
                     />
                   </TableHead>
                 )}
-                <TableHead className="w-[90px] py-3">
+                <TableHead className="w-[90px] py-2.5">
                   <button
                     onClick={() => setSortDateAsc(!sortDateAsc)}
                     className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
@@ -2955,18 +2955,18 @@ export function TransactionsTable({
                     )}
                   </button>
                 </TableHead>
-                <TableHead className="w-[110px] whitespace-nowrap py-3 text-right">{t.movements.table.amount}</TableHead>
-                <TableHead className="w-[120px] whitespace-nowrap py-3 text-right">{tr('movements.table.balance')}</TableHead>
-                <TableHead className="min-w-0 py-3">{t.movements.table.concept}</TableHead>
-                <TableHead className="hidden w-[180px] py-3 lg:table-cell">{t.movements.table.contact}</TableHead>
-                <TableHead className="hidden w-[160px] py-3 lg:table-cell">{t.movements.table.category}</TableHead>
+                <TableHead className="w-[110px] whitespace-nowrap py-2.5 text-right">{t.movements.table.amount}</TableHead>
+                <TableHead className="w-[120px] whitespace-nowrap py-2.5 text-right">{tr('movements.table.balance')}</TableHead>
+                <TableHead className="min-w-0 py-2.5">{t.movements.table.concept}</TableHead>
+                <TableHead className="hidden w-[180px] py-2.5 lg:table-cell">{t.movements.table.contact}</TableHead>
+                <TableHead className="hidden w-[160px] py-2.5 lg:table-cell">{t.movements.table.category}</TableHead>
                 {showProjectColumn && (
-                  <TableHead className="hidden w-[100px] py-3 lg:table-cell">
+                  <TableHead className="hidden w-[100px] py-2.5 lg:table-cell">
                     {t.movements.table.project}
                   </TableHead>
                 )}
-                <TableHead className="w-10 shrink-0 py-3 text-center"><span className="sr-only">Document</span></TableHead>
-                <TableHead className="w-9 shrink-0 py-3 pr-2 text-right"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+                <TableHead className="w-10 shrink-0 py-2.5 text-center"><span className="sr-only">Document</span></TableHead>
+                <TableHead className="w-9 shrink-0 py-2.5 pr-2 text-right"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
