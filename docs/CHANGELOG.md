@@ -10,6 +10,15 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-04-14
+
+- codi intern: nou panell d'`/admin` integrant mòduls de Growth i Editorial (Control Tower, cues de leads, drafts de blog i hub de contingut), amb noves capes de dades i hooks de suport
+- codi intern: el flux de Moviments identifica ingressos elegibles com a donació i permet marcar-los com a donació des de la taula per evitar classificacions ambigües
+- API/integracions: el read model d'analítica queda consolidat sota `GET /api/dashboard/*` (balance, monthly-evolution, income-composition, expense-by-category) per eliminar 404 de producció i mantenir contracte únic de dashboard
+- API/integracions: afegida ruta tècnica `GET /api/dashboard/ping-new-route` per diagnòstic ràpid de resolució de rutes en entorns productius
+- documentació per usuari: completades claus i18n de l'entorn admin (CA/ES/FR/PT) perquè el nou bloc de gestió de contingut i growth mostri copy coherent
+- operativa: el check de documentació en pre-commit deixa de bloquejar commits funcionals fora d'abast docs; es reforça també el ritual de deploy exigint verificació de rollout real d'App Hosting
+
 ### 2026-03-26
 
 - novetats de producte: web públic més descobrible (enllaç visible a home/header), sitemap amb rutes de detall i publicació/despublicació server-to-server més robusta
