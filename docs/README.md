@@ -58,6 +58,7 @@ Exemples:
 Exemple actual de `docs/contracts/`:
 
 - `docs/contracts/blog-publish-cover-image.md` - contracte extern OpenClaw -> Summa per al blog públic
+- `docs/contracts/private-admin-integrations-v1.md` - contracte objectiu per a integracions privades d'agents externs controlats per l'equip
 
 ## Regles de manteniment
 
