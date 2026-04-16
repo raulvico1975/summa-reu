@@ -6,10 +6,8 @@ import {
 } from '@/lib/api/admin-sdk';
 import { requirePermission } from '@/lib/api/require-permission';
 import {
-  assertStripePayoutPaid,
-  fetchStripePayout,
-  fetchStripePayoutPayments,
   getStripeSecretKeyFromEnv,
+  listRecentPaidStripePayouts,
   StripeApiError,
 } from '@/lib/stripe/payout-api';
 
@@ -26,25 +24,15 @@ function jsonError(code: string, error: string, status: number) {
   );
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ payoutId: string }> }
-) {
+export async function GET(request: NextRequest) {
   const auth = await verifyIdToken(request);
   if (!auth) {
     return jsonError('UNAUTHORIZED', 'No autenticat', 401);
   }
 
-  const { payoutId: rawPayoutId } = await params;
-  const payoutId = typeof rawPayoutId === 'string' ? rawPayoutId.trim() : '';
   const orgId = request.nextUrl.searchParams.get('orgId')?.trim() ?? '';
-
   if (!orgId) {
     return jsonError('MISSING_ORG_ID', 'orgId obligatori', 400);
-  }
-
-  if (!payoutId) {
-    return jsonError('MISSING_PAYOUT_ID', 'payoutId obligatori', 400);
   }
 
   const db = getAdminDb();
@@ -67,36 +55,13 @@ export async function GET(
   }
 
   try {
-    const payout = await fetchStripePayout({
+    const payouts = await listRecentPaidStripePayouts({
       secretKey,
-      payoutId,
-    });
-    assertStripePayoutPaid(payout);
-
-    const payments = await fetchStripePayoutPayments({
-      secretKey,
-      payoutId,
     });
 
-    return NextResponse.json(payments);
+    return NextResponse.json(payouts);
   } catch (error) {
     if (error instanceof StripeApiError) {
-      if (error.status === 404) {
-        return jsonError(
-          'STRIPE_PAYOUT_NOT_FOUND',
-          'No s ha trobat aquest payout a Stripe.',
-          404
-        );
-      }
-
-      if (error.code === 'STRIPE_PAYOUT_NOT_PAID') {
-        return jsonError(
-          'STRIPE_PAYOUT_NOT_PAID',
-          error.message,
-          409
-        );
-      }
-
       return jsonError('STRIPE_REQUEST_FAILED', error.message, 502);
     }
 
@@ -109,13 +74,14 @@ export async function GET(
     }
 
     if (error instanceof Error) {
-      console.error(`[api/stripe/payout] ${error.name}: ${error.message}`);
+      console.error(`[api/stripe/payouts] ${error.name}: ${error.message}`);
     } else {
-      console.error('[api/stripe/payout] Error inesperat');
+      console.error('[api/stripe/payouts] Error inesperat');
     }
+
     return jsonError(
       'INTERNAL_ERROR',
-      'No s ha pogut carregar el payout de Stripe.',
+      'No s han pogut carregar els payouts de Stripe.',
       500
     );
   }

@@ -89,6 +89,7 @@ import {
   buildStripePayoutGroupFromPayments,
   type StripePayoutPayment,
 } from '@/lib/stripe/payout-sync';
+import type { StripeRecentPayout } from '@/lib/stripe/payout-api';
 import { useTranslations, type TrFunction } from '@/i18n';
 
 interface BankTransactionSummary {
@@ -117,6 +118,39 @@ interface QuickCreateState {
   lineLocalId: string;
   kind: StripeQuickDonorKind;
   initialData?: Partial<QuickDonorFormData>;
+}
+
+function formatStripePayoutDate(timestamp: number): string {
+  if (!Number.isFinite(timestamp) || timestamp <= 0) {
+    return '--';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(timestamp * 1000));
+}
+
+function formatStripeCurrencyAmount(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(2)} ${currency.toUpperCase()}`;
+  }
+}
+
+function shortenStripeId(id: string): string {
+  if (id.length <= 14) {
+    return id;
+  }
+
+  return `${id.slice(0, 8)}...${id.slice(-4)}`;
 }
 
 function buildCsvWarning(parsedWarningCount: number, matchingCount: number, tr: TrFunction): string | null {
@@ -151,7 +185,9 @@ export function StripeImputationModal({
   const [localDonorOverrides, setLocalDonorOverrides] = React.useState<Donor[]>([]);
   const [quickCreateState, setQuickCreateState] = React.useState<QuickCreateState | null>(null);
   const [isStripeImportVisible, setIsStripeImportVisible] = React.useState(false);
-  const [stripePayoutIdInput, setStripePayoutIdInput] = React.useState('');
+  const [stripeRecentPayouts, setStripeRecentPayouts] = React.useState<StripeRecentPayout[]>([]);
+  const [selectedStripePayoutId, setSelectedStripePayoutId] = React.useState('');
+  const [isStripePayoutsLoading, setIsStripePayoutsLoading] = React.useState(false);
   const [isStripeImporting, setIsStripeImporting] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const lineIdRef = React.useRef(0);
@@ -174,7 +210,9 @@ export function StripeImputationModal({
       setLocalDonorOverrides([]);
       setQuickCreateState(null);
       setIsStripeImportVisible(false);
-      setStripePayoutIdInput('');
+      setStripeRecentPayouts([]);
+      setSelectedStripePayoutId('');
+      setIsStripePayoutsLoading(false);
       setIsStripeImporting(false);
       lineIdRef.current = 0;
       if (inputRef.current) {
@@ -354,15 +392,87 @@ export function StripeImputationModal({
     event.target.value = '';
   }, [handleFile]);
 
+  const loadRecentStripePayouts = React.useCallback(async (): Promise<StripeRecentPayout[]> => {
+    if (!organizationId) return [];
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: tr('dialogs.stripeImputation.modalErrorTitle', 'Error a la imputació Stripe'),
+        description: tr('dialogs.stripeImputation.authRequired', 'No s\'ha pogut validar la sessió. Torna-ho a provar.'),
+      });
+      return [];
+    }
+
+    setIsStripePayoutsLoading(true);
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(
+        `/api/stripe/payouts?orgId=${encodeURIComponent(organizationId)}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        }
+      );
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        const errorMessage =
+          payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string'
+            ? payload.error
+            : tr('dialogs.stripeImputation.loadStripeError', 'No s\'ha pogut carregar aquest payout de Stripe.');
+        throw new Error(errorMessage);
+      }
+
+      if (!Array.isArray(payload)) {
+        throw new Error(tr('dialogs.stripeImputation.loadStripeError', 'No s\'ha pogut carregar aquest payout de Stripe.'));
+      }
+
+      const payouts = payload as StripeRecentPayout[];
+      setStripeRecentPayouts(payouts);
+      setSelectedStripePayoutId((current) => {
+        if (current && payouts.some((payout) => payout.id === current)) {
+          return current;
+        }
+        return payouts[0]?.id ?? '';
+      });
+      return payouts;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t.common.unknownError;
+      toast({
+        variant: 'destructive',
+        title: tr('dialogs.stripeImputation.modalErrorTitle', 'Error a la imputació Stripe'),
+        description: message,
+      });
+      setStripeRecentPayouts([]);
+      setSelectedStripePayoutId('');
+      return [];
+    } finally {
+      setIsStripePayoutsLoading(false);
+    }
+  }, [organizationId, t.common.unknownError, toast, tr, user]);
+
+  const handleToggleStripeImport = React.useCallback(async () => {
+    if (isStripeImportVisible) {
+      setIsStripeImportVisible(false);
+      return;
+    }
+
+    setIsStripeImportVisible(true);
+    await loadRecentStripePayouts();
+  }, [isStripeImportVisible, loadRecentStripePayouts]);
+
   const handleImportFromStripe = React.useCallback(async () => {
     if (!organizationId) return;
 
-    const payoutId = stripePayoutIdInput.trim();
+    const payoutId = selectedStripePayoutId.trim();
     if (!payoutId) {
       toast({
         variant: 'destructive',
         title: tr('dialogs.stripeImputation.modalErrorTitle', 'Error a la imputació Stripe'),
-        description: tr('dialogs.stripeImputation.missingPayoutId', 'Indica un payoutId de Stripe abans d importar.'),
+        description: tr('dialogs.stripeImputation.missingPayoutId', 'Selecciona un payout de Stripe abans d importar.'),
       });
       return;
     }
@@ -412,8 +522,8 @@ export function StripeImputationModal({
         replaceLinesFromCsvState(nextState);
       }
 
-      setStripePayoutIdInput('');
       setIsStripeImportVisible(false);
+      setSelectedStripePayoutId('');
     } catch (error) {
       const message = error instanceof Error ? error.message : t.common.unknownError;
       toast({
@@ -424,7 +534,7 @@ export function StripeImputationModal({
     } finally {
       setIsStripeImporting(false);
     }
-  }, [buildStripeImportState, editableLines, organizationId, replaceLinesFromCsvState, stripePayoutIdInput, t.common.unknownError, toast, tr, user]);
+  }, [buildStripeImportState, editableLines, organizationId, replaceLinesFromCsvState, selectedStripePayoutId, t.common.unknownError, toast, tr, user]);
 
   const handleSelectGroup = React.useCallback((transferId: string) => {
     if (!csvImportState) return;
@@ -498,6 +608,9 @@ export function StripeImputationModal({
     setIsReplaceDialogOpen(false);
     setIsDifferenceConfirmed(false);
     setQuickCreateState(null);
+    setIsStripeImportVisible(false);
+    setStripeRecentPayouts([]);
+    setSelectedStripePayoutId('');
     if (inputRef.current) {
       inputRef.current.value = '';
     }
@@ -810,10 +923,10 @@ export function StripeImputationModal({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsStripeImportVisible((current) => !current)}
-                  disabled={isStripeImporting}
+                  onClick={() => { void handleToggleStripeImport(); }}
+                  disabled={isStripeImporting || isStripePayoutsLoading}
                 >
-                  {isStripeImporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  {isStripeImporting || isStripePayoutsLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                   {tr('dialogs.stripeImputation.importFromStripe', 'Importar des de Stripe')}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleAddManualLine}>
@@ -839,23 +952,37 @@ export function StripeImputationModal({
               {isStripeImportVisible && (
                 <div className="flex flex-col gap-3 rounded-md border bg-muted/30 p-4 sm:flex-row sm:items-end">
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="stripe-payout-id">
-                      {tr('dialogs.stripeImputation.stripePayoutIdLabel', 'Payout ID de Stripe')}
+                    <Label htmlFor="stripe-payout-select">
+                      {tr('dialogs.stripeImputation.recentPayoutLabel', 'Payout recent de Stripe')}
                     </Label>
-                    <Input
-                      id="stripe-payout-id"
-                      value={stripePayoutIdInput}
-                      onChange={(event) => setStripePayoutIdInput(event.target.value)}
-                      placeholder="po_..."
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      autoComplete="off"
-                    />
+                    {isStripePayoutsLoading ? (
+                      <div className="flex h-10 items-center rounded-md border bg-background px-3 text-sm text-muted-foreground">
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {tr('dialogs.stripeImputation.loadingRecentPayouts', 'Carregant payouts recents de Stripe...')}
+                      </div>
+                    ) : stripeRecentPayouts.length > 0 ? (
+                      <Select value={selectedStripePayoutId} onValueChange={setSelectedStripePayoutId}>
+                        <SelectTrigger id="stripe-payout-select">
+                          <SelectValue placeholder={tr('dialogs.stripeImputation.recentPayoutPlaceholder', 'Selecciona un payout paid')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stripeRecentPayouts.map((payout) => (
+                            <SelectItem key={payout.id} value={payout.id}>
+                              {`${formatStripePayoutDate(payout.arrivalDate || payout.created)} · ${formatStripeCurrencyAmount(payout.amount, payout.currency)} · ${shortenStripeId(payout.id)}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex h-10 items-center rounded-md border bg-background px-3 text-sm text-muted-foreground">
+                        {tr('dialogs.stripeImputation.noRecentPaidPayouts', 'No hi ha payouts paid recents disponibles a Stripe.')}
+                      </div>
+                    )}
                   </div>
                   <Button
                     type="button"
                     onClick={handleImportFromStripe}
-                    disabled={isStripeImporting || stripePayoutIdInput.trim().length === 0}
+                    disabled={isStripeImporting || isStripePayoutsLoading || selectedStripePayoutId.trim().length === 0}
                   >
                     {isStripeImporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                     {tr('dialogs.stripeImputation.loadStripePayout', 'Carregar payout')}

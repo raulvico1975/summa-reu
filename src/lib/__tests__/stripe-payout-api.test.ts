@@ -1,13 +1,113 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  assertStripePayoutPaid,
+  fetchStripePayout,
   fetchStripePayoutPayments,
-  readStripeSecretKeyForOrganization,
+  getStripeSecretKeyFromEnv,
+  listRecentPaidStripePayouts,
+  StripeApiError,
 } from '@/lib/stripe/payout-api';
 import {
   buildStripePayoutGroupFromPayments,
   stripeMinorAmountToMajor,
 } from '@/lib/stripe/payout-sync';
+
+test('listRecentPaidStripePayouts filters non-paid payouts and maps amounts', async () => {
+  const seenUrls: string[] = [];
+  const fetchImpl: typeof fetch = async (input) => {
+    seenUrls.push(String(input));
+
+    return new Response(
+      JSON.stringify({
+        object: 'list',
+        has_more: false,
+        data: [
+          {
+            id: 'po_paid_1',
+            amount: 12345,
+            currency: 'eur',
+            arrival_date: 1713360000,
+            created: 1713273600,
+            status: 'paid',
+          },
+          {
+            id: 'po_pending_1',
+            amount: 5000,
+            currency: 'eur',
+            arrival_date: 1713446400,
+            created: 1713446400,
+            status: 'pending',
+          },
+        ],
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  };
+
+  const payouts = await listRecentPaidStripePayouts({
+    secretKey: 'sk_test_123',
+    fetchImpl,
+    timeoutMs: 250,
+  });
+
+  assert.equal(payouts.length, 1);
+  assert.deepEqual(payouts[0], {
+    id: 'po_paid_1',
+    amount: 123.45,
+    currency: 'eur',
+    arrivalDate: 1713360000,
+    created: 1713273600,
+    status: 'paid',
+  });
+  assert.equal(seenUrls.length, 1);
+  assert.match(seenUrls[0], /\/payouts\?limit=10/);
+});
+
+test('fetchStripePayout normalizes payout data and assertStripePayoutPaid blocks unpaid payouts', async () => {
+  const fetchImpl: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({
+        id: 'po_pending_1',
+        amount: 5000,
+        currency: 'eur',
+        arrival_date: 1713446400,
+        created: 1713446400,
+        status: 'pending',
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+  const payout = await fetchStripePayout({
+    secretKey: 'sk_test_123',
+    payoutId: 'po_pending_1',
+    fetchImpl,
+    timeoutMs: 250,
+  });
+
+  assert.deepEqual(payout, {
+    id: 'po_pending_1',
+    amount: 50,
+    currency: 'eur',
+    arrivalDate: 1713446400,
+    created: 1713446400,
+    status: 'pending',
+  });
+
+  assert.throws(
+    () => assertStripePayoutPaid(payout),
+    (error: unknown) =>
+      error instanceof StripeApiError &&
+      error.code === 'STRIPE_PAYOUT_NOT_PAID' &&
+      error.status === 409
+  );
+});
 
 test('fetchStripePayoutPayments paginates, filters non-charge rows and maps amounts', async () => {
   const responses = [
@@ -111,6 +211,14 @@ test('fetchStripePayoutPayments paginates, filters non-charge rows and maps amou
   assert.match(seenUrls[1], /starting_after=txn_fee/);
 });
 
+test('getStripeSecretKeyFromEnv reads only STRIPE_SECRET_KEY from env', () => {
+  assert.equal(
+    getStripeSecretKeyFromEnv({ STRIPE_SECRET_KEY: '  sk_live_env  ' } as unknown as NodeJS.ProcessEnv),
+    'sk_live_env'
+  );
+  assert.equal(getStripeSecretKeyFromEnv({} as unknown as NodeJS.ProcessEnv), null);
+});
+
 test('stripeMinorAmountToMajor supports zero and three-decimal currencies', () => {
   assert.equal(stripeMinorAmountToMajor(12345, 'eur'), 123.45);
   assert.equal(stripeMinorAmountToMajor(12345, 'jpy'), 12345);
@@ -149,31 +257,4 @@ test('buildStripePayoutGroupFromPayments adapts API payload to the current imput
   assert.equal(group.rows[0]?.id, 'ch_1');
   assert.equal(group.rows[0]?.transfer, 'po_abc');
   assert.equal(group.rows[0]?.createdDate, '2024-04-16');
-});
-
-test('readStripeSecretKeyForOrganization prefers integration secret and falls back to legacy org field', async () => {
-  const docs = new Map<string, Record<string, unknown>>([
-    ['organizations/org-a/integrations/stripe', { secretKey: 'sk_live_org_a' }],
-    ['organizations/org-a', { stripeSecretKey: 'legacy_a' }],
-    ['organizations/org-b', { stripeSecretKey: 'legacy_b' }],
-  ]);
-
-  const db = {
-    doc(path: string) {
-      return {
-        async get() {
-          const data = docs.get(path) ?? {};
-          return {
-            get(field: string) {
-              return data[field];
-            },
-          };
-        },
-      };
-    },
-  } as any;
-
-  assert.equal(await readStripeSecretKeyForOrganization(db, 'org-a'), 'sk_live_org_a');
-  assert.equal(await readStripeSecretKeyForOrganization(db, 'org-b'), 'legacy_b');
-  assert.equal(await readStripeSecretKeyForOrganization(db, 'org-c'), null);
 });
