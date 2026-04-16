@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Building2, Save, Upload, Loader2, Image as ImageIcon, PenTool, Trash2 } from 'lucide-react';
 import type { Organization } from '@/lib/data';
@@ -53,6 +53,7 @@ export function OrganizationSettings() {
     contactAlertThreshold: 50,
     language: 'es' as 'ca' | 'es',
     returnEmailTemplate: '',
+    stripeSecretKey: '',
   });
 
   // Carregar dades de l'organització
@@ -88,6 +89,7 @@ export function OrganizationSettings() {
             contactAlertThreshold: data.contactAlertThreshold ?? 50,
             language: data.language ?? 'es',
             returnEmailTemplate: data.returnEmailTemplate || '',
+            stripeSecretKey: '',
           });
         }
       } catch (error) {
@@ -148,6 +150,23 @@ export function OrganizationSettings() {
       };
 
       await updateDoc(orgRef, dataToSave);
+
+      if (formData.stripeSecretKey.trim()) {
+        const stripeIntegrationRef = doc(firestore, 'organizations', organizationId, 'integrations', 'stripe');
+        await setDoc(
+          stripeIntegrationRef,
+          {
+            secretKey: formData.stripeSecretKey.trim(),
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+
+        setFormData((current) => ({
+          ...current,
+          stripeSecretKey: '',
+        }));
+      }
 
       // Si estem en onboarding, marcar pas complet i redirigir
       if (isOnboarding) {
@@ -566,6 +585,32 @@ export function OrganizationSettings() {
             >
               {tr('settings.returnEmailTemplate.restore')}
             </Button>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t space-y-3">
+          <h3 className="text-base font-semibold">
+            {tr('settings.stripeSync.title', 'Stripe Sync (read-only)')}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {tr('settings.stripeSync.description', 'Guarda aquí la clau secreta de Stripe de l entitat per poder importar payouts directament des del flux d imputació.')}
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="stripeSecretKey">
+              {tr('settings.stripeSync.secretKeyLabel', 'STRIPE_SECRET_KEY')}
+            </Label>
+            <Input
+              id="stripeSecretKey"
+              type="password"
+              value={formData.stripeSecretKey}
+              onChange={(e) => handleChange('stripeSecretKey', e.target.value)}
+              placeholder="sk_live_..."
+              autoComplete="new-password"
+              spellCheck={false}
+            />
+            <p className="text-xs text-muted-foreground">
+              {tr('settings.stripeSync.secretKeyHint', 'Es desa a nivell d organització i només s usa al backend. Deixa aquest camp buit si no vols canviar la clau actual.')}
+            </p>
           </div>
         </div>
 

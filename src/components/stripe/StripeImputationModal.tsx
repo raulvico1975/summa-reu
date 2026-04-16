@@ -85,6 +85,10 @@ import {
   toLocalDonorFromStripeQuickPayload,
   type StripeQuickDonorKind,
 } from '@/lib/stripe/quick-donor';
+import {
+  buildStripePayoutGroupFromPayments,
+  type StripePayoutPayment,
+} from '@/lib/stripe/payout-sync';
 import { useTranslations, type TrFunction } from '@/i18n';
 
 interface BankTransactionSummary {
@@ -106,6 +110,7 @@ interface CsvImportState {
   matchingGroups: StripePayoutGroup[];
   selectedTransferId: string | null;
   warning: string | null;
+  source: 'csv' | 'stripe';
 }
 
 interface QuickCreateState {
@@ -145,6 +150,9 @@ export function StripeImputationModal({
   const [stripeDonorUsageById, setStripeDonorUsageById] = React.useState<StripeDonorUsageStats>({});
   const [localDonorOverrides, setLocalDonorOverrides] = React.useState<Donor[]>([]);
   const [quickCreateState, setQuickCreateState] = React.useState<QuickCreateState | null>(null);
+  const [isStripeImportVisible, setIsStripeImportVisible] = React.useState(false);
+  const [stripePayoutIdInput, setStripePayoutIdInput] = React.useState('');
+  const [isStripeImporting, setIsStripeImporting] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const lineIdRef = React.useRef(0);
 
@@ -165,6 +173,9 @@ export function StripeImputationModal({
       setStripeDonorUsageById({});
       setLocalDonorOverrides([]);
       setQuickCreateState(null);
+      setIsStripeImportVisible(false);
+      setStripePayoutIdInput('');
+      setIsStripeImporting(false);
       lineIdRef.current = 0;
       if (inputRef.current) {
         inputRef.current.value = '';
@@ -245,6 +256,9 @@ export function StripeImputationModal({
     if (!csvImportState?.selectedTransferId) return null;
     return csvImportState.matchingGroups.find((group) => group.transferId === csvImportState.selectedTransferId) ?? null;
   }, [csvImportState]);
+  const importedSourceLabel = csvImportState?.source === 'stripe'
+    ? tr('dialogs.stripeImputation.importSourceStripe', 'Stripe')
+    : 'CSV';
 
   const summary = React.useMemo(() => calculateEditableStripeImputationSummary({
     lines: editableLines,
@@ -286,8 +300,27 @@ export function StripeImputationModal({
       matchingGroups: allMatches,
       selectedTransferId: initialSelectedTransferId,
       warning: buildCsvWarning(parsed.warnings.length, allMatches.length, tr),
+      source: 'csv',
     };
   }, [bankTransaction.amount, tr]);
+
+  const buildStripeImportState = React.useCallback((
+    payoutId: string,
+    payments: StripePayoutPayment[]
+  ): CsvImportState => {
+    if (payments.length === 0) {
+      throw new Error(
+        tr('dialogs.stripeImputation.noStripeCharges', 'Aquest payout no conté pagaments de tipus charge disponibles per imputar.')
+      );
+    }
+
+    return {
+      matchingGroups: [buildStripePayoutGroupFromPayments(payoutId, payments)],
+      selectedTransferId: payoutId,
+      warning: null,
+      source: 'stripe',
+    };
+  }, [tr]);
 
   const handleFile = React.useCallback(async (file: File) => {
     setIsParsing(true);
@@ -320,6 +353,78 @@ export function StripeImputationModal({
     await handleFile(file);
     event.target.value = '';
   }, [handleFile]);
+
+  const handleImportFromStripe = React.useCallback(async () => {
+    if (!organizationId) return;
+
+    const payoutId = stripePayoutIdInput.trim();
+    if (!payoutId) {
+      toast({
+        variant: 'destructive',
+        title: tr('dialogs.stripeImputation.modalErrorTitle', 'Error a la imputació Stripe'),
+        description: tr('dialogs.stripeImputation.missingPayoutId', 'Indica un payoutId de Stripe abans d importar.'),
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: tr('dialogs.stripeImputation.modalErrorTitle', 'Error a la imputació Stripe'),
+        description: tr('dialogs.stripeImputation.authRequired', 'No s\'ha pogut validar la sessió. Torna-ho a provar.'),
+      });
+      return;
+    }
+
+    setIsStripeImporting(true);
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch(
+        `/api/stripe/payout/${encodeURIComponent(payoutId)}?orgId=${encodeURIComponent(organizationId)}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
+        }
+      );
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        const errorMessage =
+          payload && typeof payload === 'object' && 'error' in payload && typeof payload.error === 'string'
+            ? payload.error
+            : tr('dialogs.stripeImputation.loadStripeError', 'No s\'ha pogut carregar aquest payout de Stripe.');
+        throw new Error(errorMessage);
+      }
+
+      if (!Array.isArray(payload)) {
+        throw new Error(tr('dialogs.stripeImputation.loadStripeError', 'No s\'ha pogut carregar aquest payout de Stripe.'));
+      }
+
+      const nextState = buildStripeImportState(payoutId, payload as StripePayoutPayment[]);
+
+      if (shouldPromptCsvReplacement(editableLines)) {
+        setPendingCsvImport(nextState);
+        setIsReplaceDialogOpen(true);
+      } else {
+        replaceLinesFromCsvState(nextState);
+      }
+
+      setStripePayoutIdInput('');
+      setIsStripeImportVisible(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t.common.unknownError;
+      toast({
+        variant: 'destructive',
+        title: tr('dialogs.stripeImputation.modalErrorTitle', 'Error a la imputació Stripe'),
+        description: message,
+      });
+    } finally {
+      setIsStripeImporting(false);
+    }
+  }, [buildStripeImportState, editableLines, organizationId, replaceLinesFromCsvState, stripePayoutIdInput, t.common.unknownError, toast, tr, user]);
 
   const handleSelectGroup = React.useCallback((transferId: string) => {
     if (!csvImportState) return;
@@ -565,7 +670,30 @@ export function StripeImputationModal({
         parentTransactionId: parentTxId,
       });
 
-      const payments: StripePaymentInput[] = editableLines.map((line) => ({
+      const existingStripePaymentIds = new Set(
+        (
+          await Promise.all(
+            editableLines
+              .map((line) => line.stripePaymentId)
+              .filter((stripePaymentId): stripePaymentId is string => Boolean(stripePaymentId))
+              .map(async (stripePaymentId) => {
+                const existingDonation = await findDonationByStripePaymentId(stripePaymentId);
+                if (existingDonation && !existingDonation.archivedAt) {
+                  return stripePaymentId;
+                }
+                return null;
+              })
+          )
+        ).filter((stripePaymentId): stripePaymentId is string => Boolean(stripePaymentId))
+      );
+
+      const skippedExistingCount = editableLines.filter(
+        (line) => line.stripePaymentId && existingStripePaymentIds.has(line.stripePaymentId)
+      ).length;
+
+      const payments: StripePaymentInput[] = editableLines
+        .filter((line) => !line.stripePaymentId || !existingStripePaymentIds.has(line.stripePaymentId))
+        .map((line) => ({
         stripePaymentId: line.stripePaymentId ?? null,
         amount: line.amountGross ?? 0,
         fee: line.feeAmount ?? 0,
@@ -573,15 +701,23 @@ export function StripeImputationModal({
         date: line.date ?? bankTransaction.date,
         customerEmail: line.customerEmail ?? null,
         description: line.description ?? null,
-        imputationOrigin: line.imputationOrigin,
+        imputationOrigin: line.imputationOrigin === 'manual' ? 'manual' : 'csv',
       }));
+
+      if (payments.length === 0) {
+        toast({
+          title: tr('dialogs.stripeImputation.noNewPaymentsTitle', 'Cap pagament nou per imputar'),
+          description: tr('dialogs.stripeImputation.noNewPaymentsDescription', 'Tots els stripePaymentId d aquesta selecció ja existeixen. No s han creat duplicats.'),
+        });
+        return;
+      }
 
       const { donations, adjustment } = await createStripeDonations({
         parentTransactionId: parentTxId,
         payments,
         bankAmount: bankTransaction.amount,
         adjustmentDate: bankTransaction.date,
-        findDonationByStripePaymentId,
+        findDonationByStripePaymentId: async () => null,
       });
 
       await persistStripeImputationWrites({
@@ -600,6 +736,10 @@ export function StripeImputationModal({
           .replace(
             '{adjustment}',
             adjustment ? tr('dialogs.stripeImputation.completedDescriptionAdjustment', ' i 1 ajust') : ''
+          ) + (
+            skippedExistingCount > 0
+              ? ` ${tr('dialogs.stripeImputation.completedSkippedExisting', 'S han ignorat {count} pagaments ja existents.')}`.replace('{count}', String(skippedExistingCount))
+              : ''
           ),
       });
 
@@ -641,7 +781,7 @@ export function StripeImputationModal({
           <DialogHeader className="shrink-0 border-b bg-background px-4 py-4 pr-10 sm:px-6">
             <DialogTitle>{tr('dialogs.stripeImputation.title', 'Imputar Stripe')}</DialogTitle>
             <DialogDescription className="break-words leading-relaxed">
-              {tr('dialogs.stripeImputation.description', 'Pots carregar un CSV de Stripe o completar la imputació manualment. La taula final sempre és editable abans de confirmar.')}
+              {tr('dialogs.stripeImputation.descriptionStripeImport', 'Pots carregar un CSV de Stripe, importar un payout des de Stripe o completar la imputació manualment. La taula final sempre és editable abans de confirmar.')}
             </DialogDescription>
           </DialogHeader>
 
@@ -667,6 +807,15 @@ export function StripeImputationModal({
                   {isParsing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                   {tr('dialogs.stripeImputation.uploadCsv', 'Carregar CSV')}
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsStripeImportVisible((current) => !current)}
+                  disabled={isStripeImporting}
+                >
+                  {isStripeImporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  {tr('dialogs.stripeImputation.importFromStripe', 'Importar des de Stripe')}
+                </Button>
                 <Button type="button" variant="outline" onClick={handleAddManualLine}>
                   <Plus className="h-4 w-4 mr-2" />
                   {tr('dialogs.stripeImputation.addLine', 'Afegir línia')}
@@ -674,7 +823,9 @@ export function StripeImputationModal({
                 {csvImportState && (
                   <Button type="button" variant="outline" onClick={handleResetFromCsv}>
                     <RotateCcw className="h-4 w-4 mr-2" />
-                    {tr('dialogs.stripeImputation.resetFromCsv', 'Reiniciar des del CSV')}
+                    {csvImportState.source === 'stripe'
+                      ? tr('dialogs.stripeImputation.resetFromStripe', 'Reiniciar des de Stripe')
+                      : tr('dialogs.stripeImputation.resetFromCsv', 'Reiniciar des del CSV')}
                   </Button>
                 )}
                 {(editableLines.length > 0 || csvImportState) && (
@@ -684,6 +835,33 @@ export function StripeImputationModal({
                   </Button>
                 )}
               </div>
+
+              {isStripeImportVisible && (
+                <div className="flex flex-col gap-3 rounded-md border bg-muted/30 p-4 sm:flex-row sm:items-end">
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="stripe-payout-id">
+                      {tr('dialogs.stripeImputation.stripePayoutIdLabel', 'Payout ID de Stripe')}
+                    </Label>
+                    <Input
+                      id="stripe-payout-id"
+                      value={stripePayoutIdInput}
+                      onChange={(event) => setStripePayoutIdInput(event.target.value)}
+                      placeholder="po_..."
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleImportFromStripe}
+                    disabled={isStripeImporting || stripePayoutIdInput.trim().length === 0}
+                  >
+                    {isStripeImporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    {tr('dialogs.stripeImputation.loadStripePayout', 'Carregar payout')}
+                  </Button>
+                </div>
+              )}
 
               {csvImportState?.warning && (
                 <Alert>
@@ -744,7 +922,7 @@ export function StripeImputationModal({
               <div className="space-y-3 lg:hidden">
                 {editableLines.length === 0 ? (
                   <div className="rounded-md border px-4 py-8 text-center text-sm text-muted-foreground">
-                    {tr('dialogs.stripeImputation.empty', 'Encara no hi ha línies d\'imputació. Pots començar manualment o carregar un CSV.')}
+                    {tr('dialogs.stripeImputation.emptyStripeImport', 'Encara no hi ha línies d\'imputació. Pots començar manualment, carregar un CSV o importar un payout des de Stripe.')}
                   </div>
                 ) : (
                   editableLines.map((line) => (
@@ -752,7 +930,7 @@ export function StripeImputationModal({
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 space-y-1">
                           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                            {line.imputationOrigin === 'csv' ? 'CSV' : tr('dialogs.stripeImputation.manualOrigin', 'Manual')}
+                            {line.imputationOrigin === 'csv' ? importedSourceLabel : tr('dialogs.stripeImputation.manualOrigin', 'Manual')}
                           </div>
                           <div className="break-all text-sm text-foreground">
                             {line.stripePaymentId || tr('dialogs.stripeImputation.noStripeIdentifier', 'Sense identificador Stripe')}
@@ -835,14 +1013,14 @@ export function StripeImputationModal({
                     {editableLines.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                          {tr('dialogs.stripeImputation.empty', 'Encara no hi ha línies d\'imputació. Pots començar manualment o carregar un CSV.')}
+                          {tr('dialogs.stripeImputation.emptyStripeImport', 'Encara no hi ha línies d\'imputació. Pots començar manualment, carregar un CSV o importar un payout des de Stripe.')}
                         </TableCell>
                       </TableRow>
                     ) : (
                       editableLines.map((line) => (
                         <TableRow key={line.localId}>
                           <TableCell className="align-top">
-                            <span className="text-sm">{line.imputationOrigin === 'csv' ? 'CSV' : tr('dialogs.stripeImputation.manualOrigin', 'Manual')}</span>
+                            <span className="text-sm">{line.imputationOrigin === 'csv' ? importedSourceLabel : tr('dialogs.stripeImputation.manualOrigin', 'Manual')}</span>
                           </TableCell>
                           <TableCell className="align-top text-sm text-muted-foreground">
                             {line.stripePaymentId ? (
@@ -993,13 +1171,17 @@ export function StripeImputationModal({
           <AlertDialogHeader>
             <AlertDialogTitle>{tr('dialogs.stripeImputation.replaceCsvTitle', 'Substituir la imputació actual?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {tr('dialogs.stripeImputation.replaceCsvDescription', 'Ja hi ha línies d\'imputació a la taula. Carregar aquest CSV substituirà completament les línies actuals.')}
+              {pendingCsvImport?.source === 'stripe'
+                ? tr('dialogs.stripeImputation.replaceStripeDescription', 'Ja hi ha línies d\'imputació a la taula. Importar aquest payout substituirà completament les línies actuals.')
+                : tr('dialogs.stripeImputation.replaceCsvDescription', 'Ja hi ha línies d\'imputació a la taula. Carregar aquest CSV substituirà completament les línies actuals.')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={handleCancelReplaceCsv}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmReplaceCsv}>
-              {tr('dialogs.stripeImputation.replaceCsvAction', 'Substituir per les línies del CSV')}
+              {pendingCsvImport?.source === 'stripe'
+                ? tr('dialogs.stripeImputation.replaceStripeAction', 'Substituir per les línies de Stripe')
+                : tr('dialogs.stripeImputation.replaceCsvAction', 'Substituir per les línies del CSV')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

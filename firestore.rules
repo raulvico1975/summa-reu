@@ -588,8 +588,10 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /integrations/{integrationId} {
-        // Read: membre, perfil amb org, o superadmin
-        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        // Read general: membre, perfil amb org, o superadmin
+        // Stripe: mai exposar secrets al client
+        allow read: if integrationId != 'stripe'
+          && (isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId));
         // Write: només admin de l'org o superadmin
         allow create, update, delete: if isSuperAdmin() || isAdminOf(orgId);
 
