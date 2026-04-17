@@ -323,6 +323,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-04-15 11:26 | e266263e6 | ALT | Si | 41 | OK_AMB_AVIS |
 | 2026-04-16 10:51 | ce819c77 | ALT | No | 16 | OK |
 | 2026-04-16 15:03 | 11d7591f6 | ALT | Si | 27 | OK_AMB_AVIS |
+| 2026-04-16 16:59 | ec8be4936 | MITJA | No | 7 | OK |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
