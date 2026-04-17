@@ -74,3 +74,4 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
   - Cloud Build correcte per la revisio `studio-build-2026-04-17-005`
   - smoke autenticat a produccio amb Baruma: `GET /api/stripe/payouts` `200`, selector de payouts visible, payout real carregat a la modal, sense confirmar cap imputacio nova
 - Estat final: `resolt`, `desplegat`, `verificat en produccio`
+| 2026-04-17 14:52 | Capturar revisio App Hosting abans de publicar | MITJA | 6ff56fe09 | 080ac3761 | BLOCKED_SAFE | gcloud no disponible per verificar la revisio efectiva d'App Hosting. | Pendent |
