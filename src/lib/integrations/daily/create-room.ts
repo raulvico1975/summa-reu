@@ -46,7 +46,7 @@ export async function createDailyRoom(meetingId: string) {
       properties: {
         enable_chat: true,
         enable_screenshare: true,
-        enable_recording: "cloud",
+        enable_recording: "cloud-audio-only",
         start_video_off: false,
       },
     }),

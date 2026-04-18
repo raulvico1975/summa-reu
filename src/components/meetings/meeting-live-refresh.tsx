@@ -6,9 +6,11 @@ import { useI18n } from "@/src/i18n/client";
 
 export function MeetingLiveRefresh({
   enabled,
+  reconcileMeetingId,
   intervalMs = 5000,
 }: {
   enabled: boolean;
+  reconcileMeetingId?: string | null;
   intervalMs?: number;
 }) {
   const { i18n } = useI18n();
@@ -19,14 +21,26 @@ export function MeetingLiveRefresh({
       return;
     }
 
-    const timer = window.setInterval(() => {
+    const timer = window.setInterval(async () => {
+      if (reconcileMeetingId) {
+        try {
+          await fetch("/api/owner/meetings/reconcile-recording", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ meetingId: reconcileMeetingId }),
+          });
+        } catch {
+          // Best-effort reconciliation; the UI still refreshes even if polling fails.
+        }
+      }
+
       router.refresh();
     }, intervalMs);
 
     return () => {
       window.clearInterval(timer);
     };
-  }, [enabled, intervalMs, router]);
+  }, [enabled, intervalMs, reconcileMeetingId, router]);
 
   if (!enabled) {
     return null;

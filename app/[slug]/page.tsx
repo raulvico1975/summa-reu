@@ -4,7 +4,12 @@ import { notFound } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { getRequestI18n } from "@/src/i18n/server";
 import { withLocalePath } from "@/src/i18n/routing";
-import { getAllMarketingPaths, getMarketingContent, getMarketingPageBySlug } from "@/src/lib/marketing";
+import {
+  getAllMarketingPaths,
+  getMarketingContent,
+  getMarketingPageByKey,
+  getMarketingPageBySlug,
+} from "@/src/lib/marketing";
 import { absoluteBaseUrl, localizedPublicMetadata } from "@/src/lib/seo";
 
 type MarketingLandingPageProps = {
@@ -26,9 +31,17 @@ export async function generateMetadata({ params }: MarketingLandingPageProps): P
     return {};
   }
 
+  const caLanding = getMarketingPageByKey("ca", landing.key);
+  const esLanding = getMarketingPageByKey("es", landing.key);
+
   return localizedPublicMetadata({
     locale,
     path: `/${slug}`,
+    alternatePaths: {
+      ca: caLanding ? `/${caLanding.slug}` : undefined,
+      es: esLanding ? `/${esLanding.slug}` : undefined,
+      "x-default": caLanding ? `/${caLanding.slug}` : undefined,
+    },
     title: landing.metaTitle,
     description: landing.metaDescription,
     keywords: landing.keywords,

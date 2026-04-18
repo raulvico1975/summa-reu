@@ -8,7 +8,10 @@ import {
 } from "@/src/lib/auth/require-active-subscription";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
-import { stopDailyRecording } from "@/src/lib/meetings/daily";
+import {
+  ensureDailyRecordingWebhookHealthy,
+  stopDailyRecording,
+} from "@/src/lib/meetings/daily";
 import { isTrustedSameOrigin } from "@/src/lib/security/request";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 
@@ -48,6 +51,21 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      try {
+        const webhookState = await ensureDailyRecordingWebhookHealthy();
+        console.info("daily_recording_webhook_health_checked", {
+          meetingId: meeting.id,
+          orgId: meeting.orgId,
+          status: webhookState,
+        });
+      } catch (error) {
+        console.warn("daily_recording_webhook_health_check_failed", {
+          meetingId: meeting.id,
+          orgId: meeting.orgId,
+          error,
+        });
+      }
+
       await stopDailyRecording(meeting.meetingUrl);
     } catch (error) {
       await updateMeetingRecordingState({

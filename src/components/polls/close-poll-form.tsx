@@ -51,7 +51,7 @@ export function ClosePollForm({
         throw new Error(data.error ?? i18n.poll.closePollError);
       }
 
-      router.push(withLocalePath(locale, `/owner/meetings/${data.meetingId}`));
+      router.push(withLocalePath(locale, `/owner/meetings/${data.meetingId}?created=1`));
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : i18n.poll.unexpectedError);

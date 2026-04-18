@@ -240,19 +240,13 @@ test("retry ingest only unlocks processing meetings after the deadline expires",
   assert.equal(retried.ok, true);
 });
 
-test("duplicate webhook keeps the current error state until a new ingest job is accepted", async () => {
+test("daily webhook processing reuses the shared workflow helper and keeps duplicate handling explicit", async () => {
   const source = await fs.readFile("app/api/webhooks/daily/recording-complete/route.ts", "utf8");
 
-  const enqueueIndex = source.indexOf("const enqueued = await enqueueMeetingIngestJob");
-  const duplicateReturnIndex = source.indexOf("return NextResponse.json({ ok: true, duplicate: true });");
-  const processingUpdateIndex = source.indexOf("await updateMeetingRecordingState({");
-
-  assert.equal(enqueueIndex >= 0, true);
-  assert.equal(duplicateReturnIndex >= 0, true);
-  assert.equal(processingUpdateIndex >= 0, true);
-  assert.equal(enqueueIndex < duplicateReturnIndex, true);
-  assert.equal(duplicateReturnIndex < processingUpdateIndex, true);
-  assert.equal(source.includes("recoveryState: null"), true);
+  assert.equal(source.includes("acceptDailyRecordingForMeeting"), true);
+  assert.equal(source.includes("if (accepted.duplicate) {"), true);
+  assert.equal(source.includes("markWebhookAt: true"), true);
+  assert.equal(source.includes("sharedSecret: serverEnv.dailyWebhookBearerToken"), true);
 });
 
 test("phase 3A surfaces retry room creation and retry ingest only where they belong", async () => {
@@ -270,4 +264,18 @@ test("phase 3A surfaces retry room creation and retry ingest only where they bel
   assert.equal(panelSource.includes("canRetryIngest ? ("), true);
   assert.equal(panelSource.includes("/api/owner/meetings/retry-ingest"), true);
   assert.equal(routeSource.includes("startMeetingIngestRetry"), true);
+});
+
+test("stopping meetings reconcile through polling while live refresh is active", async () => {
+  const [pageSource, refreshSource, routeSource, stopRouteSource] = await Promise.all([
+    fs.readFile("app/owner/meetings/[meetingId]/page.tsx", "utf8"),
+    fs.readFile("src/components/meetings/meeting-live-refresh.tsx", "utf8"),
+    fs.readFile("app/api/owner/meetings/reconcile-recording/route.ts", "utf8"),
+    fs.readFile("app/api/owner/meetings/stop-recording/route.ts", "utf8"),
+  ]);
+
+  assert.equal(pageSource.includes("reconcileMeetingId={recordingStatus === \"stopping\" ? meeting.id : null}"), true);
+  assert.equal(refreshSource.includes("/api/owner/meetings/reconcile-recording"), true);
+  assert.equal(routeSource.includes("reconcileStoppedMeetingRecording"), true);
+  assert.equal(stopRouteSource.includes("ensureDailyRecordingWebhookHealthy"), true);
 });

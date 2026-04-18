@@ -11,7 +11,7 @@
     "check:prod-env": "node scripts/check-prod-env-secrets.mjs",
     "i18n:check-es": "node scripts/i18n/check-es-coverage.mjs",
     "ci:smoke": "bash scripts/ci-smoke.sh",
-    "emu": "PATH=/opt/homebrew/opt/openjdk/bin:$PATH firebase emulators:exec --project summa-board --only auth,firestore,storage,ui \"NEXT_PUBLIC_USE_EMULATORS=true NEXT_PUBLIC_FIREBASE_PROJECT_ID=summa-board NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=summa-board.firebasestorage.app FIREBASE_PROJECT_ID=summa-board FIREBASE_STORAGE_BUCKET=summa-board.firebasestorage.app next dev --hostname 127.0.0.1 --port 3000\"",
+    "emu": "PATH=/opt/homebrew/opt/openjdk/bin:$PATH firebase emulators:exec --project summa-board --only auth,firestore,storage,ui \"NEXT_PUBLIC_USE_EMULATORS=true NEXT_PUBLIC_FIREBASE_PROJECT_ID=summa-board NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=summa-board.firebasestorage.app FIREBASE_PROJECT_ID=summa-board FIREBASE_STORAGE_BUCKET=summa-board.firebasestorage.app FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 next dev --hostname 127.0.0.1 --port 3000\"",
     "seed": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199 FIREBASE_PROJECT_ID=summa-board FIREBASE_STORAGE_BUCKET=summa-board.firebasestorage.app node scripts/seed.mjs",
     "test:smoke": "node scripts/smoke.mjs",
     "test:permissions": "node scripts/check-firebase-permissions.mjs",

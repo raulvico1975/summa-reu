@@ -16,6 +16,8 @@ export type RecordingProcessMode = "stub" | "real";
 export type RecordingProcessResult = {
   mode: RecordingProcessMode;
   model: string;
+  transcriptText: string;
+  minutesMarkdown: string;
 };
 
 export async function processRecordingTask(input: {
@@ -56,6 +58,7 @@ export async function processRecordingTask(input: {
         model: selectedModel,
         audioBytes: bytes,
         mimeType,
+        displayName: `manual-${input.meetingId}-${input.recordingId}`,
       });
       mode = "real";
     } catch {
@@ -80,6 +83,8 @@ export async function processRecordingTask(input: {
     text: transcriptText,
   });
 
+  let minutesMarkdown = "";
+
   if (hasKey) {
     try {
       const generated = await generateMinutesWithGemini({
@@ -96,27 +101,35 @@ export async function processRecordingTask(input: {
         minutesJson: generated.minutesJson,
       });
 
+      minutesMarkdown = generated.minutesMarkdown;
       mode = "real";
     } catch {
       const minutesJson = buildStubMinutes(transcriptText, input.language);
+      minutesMarkdown = renderMinutesMarkdown(minutesJson);
       await saveMinutes({
         meetingId: input.meetingId,
         recordingId: input.recordingId,
         status: "done",
-        minutesMarkdown: renderMinutesMarkdown(minutesJson),
+        minutesMarkdown,
         minutesJson,
       });
     }
   } else {
     const minutesJson = buildStubMinutes(transcriptText, input.language);
+    minutesMarkdown = renderMinutesMarkdown(minutesJson);
     await saveMinutes({
       meetingId: input.meetingId,
       recordingId: input.recordingId,
       status: "done",
-      minutesMarkdown: renderMinutesMarkdown(minutesJson),
+      minutesMarkdown,
       minutesJson,
     });
   }
 
-  return { mode, model: selectedModel };
+  return {
+    mode,
+    model: selectedModel,
+    transcriptText,
+    minutesMarkdown,
+  };
 }

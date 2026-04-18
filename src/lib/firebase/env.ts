@@ -18,6 +18,7 @@ export const serverEnv = {
   projectId: process.env.FIREBASE_PROJECT_ID ?? defaultProjectId,
   storageBucket:
     process.env.FIREBASE_STORAGE_BUCKET ?? `${defaultProjectId}.firebasestorage.app`,
+  canonicalHost: process.env.CANONICAL_HOST ?? "summareu.app",
   dailyApiKey: process.env.DAILY_API_KEY,
   dailyApiBaseUrl: process.env.DAILY_API_BASE_URL ?? "https://api.daily.co/v1",
   dailyDomain:

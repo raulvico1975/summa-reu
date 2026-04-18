@@ -39,10 +39,19 @@ export function ActivateSubscriptionButton({ label, loadingLabel, fallbackError 
 
   return (
     <div className="space-y-3">
-      <Button type="button" className="w-full" disabled={state.loading} onClick={onActivate}>
+      <Button
+        type="button"
+        className="h-11 w-full rounded-xl text-base font-semibold"
+        disabled={state.loading}
+        onClick={onActivate}
+      >
         {state.loading ? loadingLabel : label}
       </Button>
-      {state.error ? <p className="break-words text-sm text-red-600">{state.error}</p> : null}
+      {state.error ? (
+        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 break-words text-sm text-red-700">
+          {state.error}
+        </p>
+      ) : null}
     </div>
   );
 }

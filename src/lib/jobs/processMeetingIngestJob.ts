@@ -13,7 +13,7 @@ import { transcribeWithGemini } from "@/src/lib/gemini/transcribe";
 import { serverEnv } from "@/src/lib/firebase/env";
 import { renderMinutesMarkdown } from "@/src/lib/minutes/markdown";
 
-const MAX_INLINE_BYTES = 7 * 1024 * 1024;
+const MAX_RECORDING_DOWNLOAD_BYTES = 200 * 1024 * 1024;
 
 type RecordingFetchResult = {
   bytes: Buffer;
@@ -48,7 +48,16 @@ async function fetchRecording(url: string): Promise<RecordingFetchResult> {
     throw new Error(`MEETING_INGEST_DOWNLOAD_FAILED:${response.status}`);
   }
 
+  const contentLength = Number(response.headers.get("content-length") ?? "0");
+  if (contentLength > MAX_RECORDING_DOWNLOAD_BYTES) {
+    throw new Error("MEETING_INGEST_RECORDING_TOO_LARGE");
+  }
+
   const arrayBuffer = await response.arrayBuffer();
+  if (arrayBuffer.byteLength > MAX_RECORDING_DOWNLOAD_BYTES) {
+    throw new Error("MEETING_INGEST_RECORDING_TOO_LARGE");
+  }
+
   return {
     bytes: Buffer.from(arrayBuffer),
     mimeType: response.headers.get("content-type") ?? "video/mp4",
@@ -121,14 +130,12 @@ export async function processMeetingIngestJob(input: {
   const orgLanguage = org?.language;
 
   const recording = await fetchRecording(recordingUrl);
-  if (recording.bytes.length > MAX_INLINE_BYTES) {
-    throw new Error("MEETING_INGEST_RECORDING_TOO_LARGE");
-  }
 
   const transcriptText = await transcribeWithGemini({
     model: selectedModel,
     audioBytes: recording.bytes,
     mimeType: recording.mimeType,
+    displayName: `meeting-${input.meetingId}-${input.recordingId}`,
   });
 
   const generated = await generateMinutesWithGemini({

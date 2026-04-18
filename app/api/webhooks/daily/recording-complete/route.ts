@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  buildMeetingProcessingDeadline,
-  claimMeetingIngestJob,
-  enqueueMeetingIngestJob,
   getMeetingByMeetingUrl,
-  updateMeetingIngestJobStatus,
-  updateMeetingRecordingState,
 } from "@/src/lib/db/repo";
-import { processMeetingIngestJob } from "@/src/lib/jobs/processMeetingIngestJob";
-import { reportApiUnexpectedError, reportServerUnexpectedError } from "@/src/lib/monitoring/report";
+import { serverEnv } from "@/src/lib/firebase/env";
+import { reportApiUnexpectedError } from "@/src/lib/monitoring/report";
 import {
   buildDailyRoomUrl,
   getDailyRecordingLink,
   isAuthorizedDailyWebhook,
 } from "@/src/lib/meetings/daily";
+import { acceptDailyRecordingForMeeting } from "@/src/lib/meetings/daily-recording-workflow";
 import { getRequestI18nFromNextRequest } from "@/src/i18n/request";
 
 export const runtime = "nodejs";
@@ -48,7 +44,20 @@ export async function POST(request: NextRequest) {
   const { i18n } = getRequestI18nFromNextRequest(request);
 
   try {
-    if (!isAuthorizedDailyWebhook(request.headers.get("authorization"))) {
+    const rawBody = await request.text();
+    const body = rawBody.trim() ? (JSON.parse(rawBody) as DailyWebhookPayload) : {};
+    const { event, roomName, recordingId, recordingUrl } = resolveWebhookValue(body);
+    const isVerificationProbe = !event && !roomName;
+
+    if (
+      !isVerificationProbe &&
+      !isAuthorizedDailyWebhook({
+        authHeader: request.headers.get("authorization"),
+        signatureHeader: request.headers.get("x-webhook-signature"),
+        rawBody,
+        sharedSecret: serverEnv.dailyWebhookBearerToken,
+      })
+    ) {
       console.warn("meeting_recording_webhook_rejected", {
         meetingId: null,
         recordingId: null,
@@ -59,8 +68,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: i18n.errors.dailyWebhookUnauthorized }, { status: 401 });
     }
 
-    const body = (await request.json()) as DailyWebhookPayload;
-    const { event, roomName, recordingId, recordingUrl } = resolveWebhookValue(body);
+    if (isVerificationProbe) {
+      return NextResponse.json({ ok: true, ignored: true, verification: true });
+    }
 
     const isCompletedEvent =
       event === "recording.ready-to-download" ||
@@ -98,15 +108,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: i18n.errors.dailyWebhookInvalid }, { status: 400 });
     }
 
-    // Idempotency key: one ingest job per meetingId + recordingId.
-    const enqueued = await enqueueMeetingIngestJob({
+    const accepted = await acceptDailyRecordingForMeeting({
       meetingId: meeting.id,
       orgId: meeting.orgId,
       recordingId: resolvedRecordingId,
       recordingUrl: resolvedRecordingUrl,
+      reason: "webhook",
+      markWebhookAt: true,
     });
 
-    if (!enqueued.created) {
+    if (accepted.duplicate) {
       console.info("meeting_recording_webhook_duplicate", {
         meetingId: meeting.id,
         recordingId: resolvedRecordingId,
@@ -116,16 +127,6 @@ export async function POST(request: NextRequest) {
       });
       return NextResponse.json({ ok: true, duplicate: true });
     }
-
-    await updateMeetingRecordingState({
-      meetingId: meeting.id,
-      recordingStatus: "processing",
-      recordingUrl: resolvedRecordingUrl,
-      processingDeadlineAt: buildMeetingProcessingDeadline(),
-      recoveryState: null,
-      recoveryReason: null,
-      lastWebhookAt: Date.now(),
-    });
 
     console.info("DAILY_RECORDING_COMPLETE", {
       meetingId: meeting.id,
@@ -139,56 +140,6 @@ export async function POST(request: NextRequest) {
       status: "accepted",
       reason: event,
     });
-
-    void (async () => {
-      const claim = await claimMeetingIngestJob(enqueued.jobId);
-      if (claim !== "claimed") {
-        return;
-      }
-
-      try {
-        await processMeetingIngestJob({
-          meetingId: meeting.id,
-          recordingId: resolvedRecordingId,
-          recordingUrl: resolvedRecordingUrl,
-        });
-
-        await updateMeetingIngestJobStatus({
-          jobId: enqueued.jobId,
-          status: "completed",
-          error: null,
-        });
-      } catch (error) {
-        await updateMeetingRecordingState({
-          meetingId: meeting.id,
-          recordingStatus: "error",
-          recordingUrl: resolvedRecordingUrl,
-          recoveryState: "retry_pending",
-          recoveryReason: error instanceof Error ? error.message : "MEETING_INGEST_UNKNOWN_ERROR",
-        });
-
-        await updateMeetingIngestJobStatus({
-          jobId: enqueued.jobId,
-          status: "error",
-          error: error instanceof Error ? error.message : "MEETING_INGEST_UNKNOWN_ERROR",
-          lastErrorAt: Date.now(),
-        });
-
-        console.error("meeting_ingest_job_error", {
-          meetingId: meeting.id,
-          recordingId: resolvedRecordingId,
-          orgId: meeting.orgId,
-          status: "error",
-          reason: error instanceof Error ? error.message : "MEETING_INGEST_UNKNOWN_ERROR",
-        });
-
-        await reportServerUnexpectedError({
-          stage: "daily.recording-complete.processMeetingIngestJob",
-          error,
-          dedupeKey: `daily-recording-complete:${meeting.id}:${resolvedRecordingId}`,
-        });
-      }
-    })();
 
     return NextResponse.json({ ok: true });
   } catch (error) {

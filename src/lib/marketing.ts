@@ -722,6 +722,13 @@ export function getMarketingPageBySlug(locale: I18nLocale, slug: string): Market
   return marketingContent[locale].landings.find((page) => page.slug === slug) ?? null;
 }
 
+export function getMarketingPageByKey(
+  locale: I18nLocale,
+  key: MarketingLanding["key"]
+): MarketingLanding | null {
+  return marketingContent[locale].landings.find((page) => page.key === key) ?? null;
+}
+
 export function getAllMarketingPaths(): Array<{ locale: I18nLocale; slug: string }> {
   return (["ca", "es"] as const).flatMap((locale) =>
     marketingContent[locale].landings.map((page) => ({ locale, slug: page.slug }))

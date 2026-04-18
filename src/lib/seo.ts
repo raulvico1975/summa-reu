@@ -19,6 +19,7 @@ export function buildAbsolutePublicUrl(locale: I18nLocale, path: string): string
 export function localizedPublicMetadata(input: {
   locale: I18nLocale;
   path: string;
+  alternatePaths?: Partial<Record<I18nLocale | "x-default", string>>;
   title?: string;
   description?: string;
   keywords?: string[];
@@ -29,8 +30,9 @@ export function localizedPublicMetadata(input: {
   const base = absoluteBaseUrl();
   const canonicalPath = withLocalePath(input.locale, input.path);
   const canonicalUrl = `${base}${canonicalPath}`;
-  const caPath = withLocalePath("ca", input.path);
-  const esPath = withLocalePath("es", input.path);
+  const caPath = withLocalePath("ca", input.alternatePaths?.ca ?? input.path);
+  const esPath = withLocalePath("es", input.alternatePaths?.es ?? input.path);
+  const defaultPath = withLocalePath("ca", input.alternatePaths?.["x-default"] ?? input.alternatePaths?.ca ?? input.path);
   const title = input.title ?? "Summa Reu";
   const description = input.description ?? "";
   const imageUrl = input.imagePath
@@ -46,7 +48,7 @@ export function localizedPublicMetadata(input: {
       languages: {
         ca: `${base}${caPath}`,
         es: `${base}${esPath}`,
-        "x-default": `${base}${caPath}`,
+        "x-default": `${base}${defaultPath}`,
       },
     },
     openGraph: {

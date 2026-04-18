@@ -7,9 +7,12 @@ import {
 } from "@/src/lib/auth/require-active-subscription";
 import { getOwnerFromRequest } from "@/src/lib/firebase/auth";
 import {
+  buildMeetingProcessingDeadline,
   claimRecordingForProcessing,
   getMeetingById,
   getOrgById,
+  updateMeetingArtifacts,
+  updateMeetingRecordingState,
   updateRecordingStatus,
 } from "@/src/lib/db/repo";
 import { hasGeminiApiKey } from "@/src/lib/gemini/client";
@@ -65,6 +68,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, queued: false, status: "done" });
     }
 
+    await updateMeetingRecordingState({
+      meetingId: body.meetingId,
+      recordingStatus: "processing",
+      processingDeadlineAt: buildMeetingProcessingDeadline(),
+      recoveryState: "retry_running",
+      recoveryReason: "manual_upload",
+      lastRecoveryAttemptAt: Date.now(),
+    });
+
     const hasKey = hasGeminiApiKey();
     let selectedModel = getGeminiFallbackModel();
     if (hasKey) {
@@ -79,21 +91,41 @@ export async function POST(request: NextRequest) {
       recordingId: body.recordingId,
       language: org?.language,
     })
-      .then(async () => {
-        await updateRecordingStatus({
-          meetingId: body.meetingId,
-          recordingId: body.recordingId,
-          status: "done",
-          error: null,
-        });
+      .then(async (result) => {
+        await Promise.all([
+          updateRecordingStatus({
+            meetingId: body.meetingId,
+            recordingId: body.recordingId,
+            status: "done",
+            error: null,
+          }),
+          updateMeetingArtifacts({
+            meetingId: body.meetingId,
+            transcript: result.transcriptText,
+            minutesDraft: result.minutesMarkdown,
+            recordingStatus: "ready",
+          }),
+        ]);
       })
       .catch(async (error) => {
-        await updateRecordingStatus({
-          meetingId: body.meetingId,
-          recordingId: body.recordingId,
-          status: "error",
-          error: error instanceof Error ? error.message : i18n.meeting.processRecordingError,
-        });
+        const errorMessage =
+          error instanceof Error ? error.message : i18n.meeting.processRecordingError;
+
+        await Promise.all([
+          updateRecordingStatus({
+            meetingId: body.meetingId,
+            recordingId: body.recordingId,
+            status: "error",
+            error: errorMessage,
+          }),
+          updateMeetingRecordingState({
+            meetingId: body.meetingId,
+            recordingStatus: "error",
+            recoveryState: "retry_failed",
+            recoveryReason: "manual_upload",
+            lastRecoveryAttemptAt: Date.now(),
+          }),
+        ]);
 
         await reportServerUnexpectedError({
           stage: "process-recording.background-task",

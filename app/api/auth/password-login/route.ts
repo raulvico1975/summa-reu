@@ -36,8 +36,13 @@ function redirect303(location: string): NextResponse {
 }
 
 async function signInWithPassword(email: string, password: string): Promise<string | null> {
+  const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST?.trim();
+  const signInBaseUrl = authEmulatorHost
+    ? `http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1`
+    : "https://identitytoolkit.googleapis.com/v1";
+  const apiKey = authEmulatorHost ? "fake-api-key" : firebaseApiKey;
   const response = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(firebaseApiKey)}`,
+    `${signInBaseUrl}/accounts:signInWithPassword?key=${encodeURIComponent(apiKey)}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

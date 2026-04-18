@@ -24,7 +24,7 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   color: hsl(var(--foreground));
-  font-family: "Avenir Next", "Avenir", var(--font-sans), Inter, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   background:
     radial-gradient(circle at top left, rgba(56, 189, 248, 0.06), transparent 34%),
     radial-gradient(circle at 20% 20%, rgba(15, 23, 42, 0.04), transparent 16%),

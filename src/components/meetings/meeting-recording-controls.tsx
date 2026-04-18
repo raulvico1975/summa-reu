@@ -64,21 +64,33 @@ export function MeetingRecordingControls({
   const showStartRecordingButton = recordingStatus === "none";
   const showStopRecordingButton = recordingStatus === "recording";
 
+  let actionTitle = i18n.meeting.actionNowReadyToStartTitle;
   let stateHint = i18n.meeting.recordingStartHint;
   if (recordingStatus === "recording") {
+    actionTitle = i18n.meeting.actionNowRecordingTitle;
     stateHint = i18n.meeting.recordingStopHint;
   } else if (recordingStatus === "stopping") {
+    actionTitle = i18n.meeting.actionNowClosingTitle;
     stateHint = i18n.meeting.recordingPendingWebhook;
   } else if (recordingStatus === "processing") {
+    actionTitle = i18n.meeting.actionNowProcessingTitle;
     stateHint = i18n.meeting.recordingReady;
   } else if (recordingStatus === "ready") {
+    actionTitle = i18n.meeting.actionNowReadyTitle;
     stateHint = i18n.meeting.resultsReadyHint;
   } else if (recordingStatus === "error") {
+    actionTitle = i18n.meeting.actionNowNeedsHelpTitle;
     stateHint = i18n.meeting.processingErrorAction;
   }
 
   return (
     <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+          {i18n.meeting.actionNowLabel}
+        </p>
+        <p className="text-base font-semibold text-slate-900">{actionTitle}</p>
+      </div>
       {showStartRecordingButton || showStopRecordingButton ? (
         <div className="flex flex-col gap-2 sm:flex-row">
           {showStartRecordingButton ? (
@@ -103,6 +115,14 @@ export function MeetingRecordingControls({
             </Button>
           ) : null}
         </div>
+      ) : null}
+      {recordingStatus === "error" ? (
+        <a
+          href="#manual-recovery"
+          className="inline-flex w-full items-center justify-center rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-950 transition-colors hover:bg-amber-100 sm:w-auto"
+        >
+          {i18n.meeting.goToManualRecovery}
+        </a>
       ) : null}
       <p className="text-sm text-slate-600">{stateHint}</p>
       {state.error ? <p className="break-words text-sm text-red-600">{state.error}</p> : null}

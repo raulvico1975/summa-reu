@@ -26,6 +26,11 @@
 # misc
 .DS_Store
 *.pem
+.playwright-cli/
+output/
+reverent-margulis/
+public/media/hero/summareu-hero-premium.mp4
+public/media/hero/summareu-hero-premium-poster.png
 
 # debug
 npm-debug.log*

@@ -38,6 +38,10 @@
   ],
   "exclude": [
     "node_modules",
-    "functions"
+    "functions",
+    "output",
+    "reverent-margulis",
+    ".playwright-cli",
+    "test-results"
   ]
 }
