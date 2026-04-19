@@ -9,7 +9,9 @@ import {
   assertStripePayoutPaid,
   fetchStripePayout,
   fetchStripePayoutPayments,
+  getUnsupportedStripeCurrencyMessage,
   getStripeSecretKeyFromEnv,
+  isUnsupportedStripeCurrencyError,
   StripeApiError,
 } from '@/lib/stripe/payout-api';
 
@@ -19,6 +21,17 @@ interface ErrorResponse {
   error: string;
 }
 
+type StripePayoutRouteDeps = {
+  verifyIdToken: typeof verifyIdToken;
+  getAdminDb: typeof getAdminDb;
+  validateUserMembership: typeof validateUserMembership;
+  requirePermission: (...args: Parameters<typeof requirePermission>) => NextResponse | null;
+  getStripeSecretKeyFromEnv: typeof getStripeSecretKeyFromEnv;
+  fetchStripePayout: typeof fetchStripePayout;
+  assertStripePayoutPaid: typeof assertStripePayoutPaid;
+  fetchStripePayoutPayments: typeof fetchStripePayoutPayments;
+};
+
 function jsonError(code: string, error: string, status: number) {
   return NextResponse.json<ErrorResponse>(
     { success: false, code, error },
@@ -26,11 +39,23 @@ function jsonError(code: string, error: string, status: number) {
   );
 }
 
-export async function GET(
+const defaultDeps: StripePayoutRouteDeps = {
+  verifyIdToken,
+  getAdminDb,
+  validateUserMembership,
+  requirePermission,
+  getStripeSecretKeyFromEnv,
+  fetchStripePayout,
+  assertStripePayoutPaid,
+  fetchStripePayoutPayments,
+};
+
+export async function handleStripePayoutGet(
   request: NextRequest,
-  { params }: { params: Promise<{ payoutId: string }> }
+  { params }: { params: Promise<{ payoutId: string }> },
+  deps: StripePayoutRouteDeps = defaultDeps
 ) {
-  const auth = await verifyIdToken(request);
+  const auth = await deps.verifyIdToken(request);
   if (!auth) {
     return jsonError('UNAUTHORIZED', 'No autenticat', 401);
   }
@@ -47,9 +72,9 @@ export async function GET(
     return jsonError('MISSING_PAYOUT_ID', 'payoutId obligatori', 400);
   }
 
-  const db = getAdminDb();
-  const membership = await validateUserMembership(db, auth.uid, orgId);
-  const permissionResponse = requirePermission(membership, {
+  const db = deps.getAdminDb();
+  const membership = await deps.validateUserMembership(db, auth.uid, orgId);
+  const permissionResponse = deps.requirePermission(membership, {
     code: 'MOVIMENTS_EDITAR_REQUIRED',
     check: (permissions) => permissions['moviments.editar'],
   });
@@ -57,7 +82,7 @@ export async function GET(
     return permissionResponse;
   }
 
-  const secretKey = getStripeSecretKeyFromEnv();
+  const secretKey = deps.getStripeSecretKeyFromEnv();
   if (!secretKey) {
     return jsonError(
       'STRIPE_NOT_CONFIGURED',
@@ -67,19 +92,27 @@ export async function GET(
   }
 
   try {
-    const payout = await fetchStripePayout({
+    const payout = await deps.fetchStripePayout({
       secretKey,
       payoutId,
     });
-    assertStripePayoutPaid(payout);
+    deps.assertStripePayoutPaid(payout);
 
-    const payments = await fetchStripePayoutPayments({
+    const payments = await deps.fetchStripePayoutPayments({
       secretKey,
       payoutId,
     });
 
     return NextResponse.json(payments);
   } catch (error) {
+    if (isUnsupportedStripeCurrencyError(error)) {
+      return jsonError(
+        'STRIPE_UNSUPPORTED_CURRENCY',
+        getUnsupportedStripeCurrencyMessage(error.currency),
+        422
+      );
+    }
+
     if (error instanceof StripeApiError) {
       if (error.status === 404) {
         return jsonError(
@@ -119,4 +152,11 @@ export async function GET(
       500
     );
   }
+}
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ payoutId: string }> }
+) {
+  return handleStripePayoutGet(request, context);
 }

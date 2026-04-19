@@ -1,4 +1,4 @@
-import type { StripePayoutGroup, StripeRow } from '@/components/stripe-importer/useStripeImporter';
+import type { StripePayoutGroup, StripeRow } from '@/lib/stripe/types';
 
 export interface StripePayoutPayment {
   stripePaymentId: string;
@@ -30,13 +30,20 @@ const ZERO_DECIMAL_CURRENCIES = new Set([
   'xpf',
 ]);
 
-const THREE_DECIMAL_CURRENCIES = new Set([
+const UNSUPPORTED_THREE_DECIMAL_CURRENCIES = new Set([
   'bhd',
   'jod',
   'kwd',
   'omr',
   'tnd',
 ]);
+
+export class UnsupportedStripeCurrencyError extends Error {
+  constructor(readonly currency: string) {
+    super(`STRIPE_UNSUPPORTED_CURRENCY: ${currency}`);
+    this.name = 'UnsupportedStripeCurrencyError';
+  }
+}
 
 export function stripeMinorAmountToMajor(amount: number, currency: string): number {
   const normalizedCurrency = currency.trim().toLowerCase();
@@ -45,8 +52,8 @@ export function stripeMinorAmountToMajor(amount: number, currency: string): numb
     return amount;
   }
 
-  if (THREE_DECIMAL_CURRENCIES.has(normalizedCurrency)) {
-    return Number((amount / 1000).toFixed(3));
+  if (UNSUPPORTED_THREE_DECIMAL_CURRENCIES.has(normalizedCurrency)) {
+    throw new UnsupportedStripeCurrencyError(normalizedCurrency);
   }
 
   return Number((amount / 100).toFixed(2));

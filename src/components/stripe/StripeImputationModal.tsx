@@ -75,11 +75,14 @@ import {
   findAllMatchingPayoutGroups,
   groupStripeRowsByTransfer,
   parseStripeCsv,
-  type StripePayoutGroup,
 } from '@/components/stripe-importer/useStripeImporter';
 import { DonorSearchCombobox } from '@/components/donor-search-combobox';
 import { CreateQuickDonorDialog, type QuickDonorFormData } from '@/components/stripe-importer/CreateQuickDonorDialog';
 import { findExistingContact } from '@/lib/contact-matching';
+import {
+  assertStripePayoutHasNoActiveDuplicates,
+  ERR_STRIPE_PAYOUT_CONTAINS_ACTIVE_DUPLICATES,
+} from '@/lib/stripe/imputation-guard';
 import {
   buildStripeQuickDonorContactPayload,
   toLocalDonorFromStripeQuickPayload,
@@ -90,6 +93,7 @@ import {
   type StripePayoutPayment,
 } from '@/lib/stripe/payout-sync';
 import type { StripeRecentPayout } from '@/lib/stripe/payout-api';
+import type { StripePayoutGroup } from '@/lib/stripe/types';
 import { useTranslations, type TrFunction } from '@/i18n';
 
 interface BankTransactionSummary {
@@ -783,29 +787,15 @@ export function StripeImputationModal({
         parentTransactionId: parentTxId,
       });
 
-      const existingStripePaymentIds = new Set(
-        (
-          await Promise.all(
-            editableLines
-              .map((line) => line.stripePaymentId)
-              .filter((stripePaymentId): stripePaymentId is string => Boolean(stripePaymentId))
-              .map(async (stripePaymentId) => {
-                const existingDonation = await findDonationByStripePaymentId(stripePaymentId);
-                if (existingDonation && !existingDonation.archivedAt) {
-                  return stripePaymentId;
-                }
-                return null;
-              })
-          )
-        ).filter((stripePaymentId): stripePaymentId is string => Boolean(stripePaymentId))
+      await assertStripePayoutHasNoActiveDuplicates(
+        editableLines,
+        async (stripePaymentId) => {
+          const existingDonation = await findDonationByStripePaymentId(stripePaymentId);
+          return Boolean(existingDonation && !existingDonation.archivedAt);
+        }
       );
 
-      const skippedExistingCount = editableLines.filter(
-        (line) => line.stripePaymentId && existingStripePaymentIds.has(line.stripePaymentId)
-      ).length;
-
       const payments: StripePaymentInput[] = editableLines
-        .filter((line) => !line.stripePaymentId || !existingStripePaymentIds.has(line.stripePaymentId))
         .map((line) => ({
         stripePaymentId: line.stripePaymentId ?? null,
         amount: line.amountGross ?? 0,
@@ -817,20 +807,12 @@ export function StripeImputationModal({
         imputationOrigin: line.imputationOrigin === 'manual' ? 'manual' : 'csv',
       }));
 
-      if (payments.length === 0) {
-        toast({
-          title: tr('dialogs.stripeImputation.noNewPaymentsTitle', 'Cap pagament nou per imputar'),
-          description: tr('dialogs.stripeImputation.noNewPaymentsDescription', 'Tots els stripePaymentId d aquesta selecció ja existeixen. No s han creat duplicats.'),
-        });
-        return;
-      }
-
       const { donations, adjustment } = await createStripeDonations({
         parentTransactionId: parentTxId,
         payments,
         bankAmount: bankTransaction.amount,
         adjustmentDate: bankTransaction.date,
-        findDonationByStripePaymentId: async () => null,
+        findDonationByStripePaymentId,
       });
 
       await persistStripeImputationWrites({
@@ -849,10 +831,6 @@ export function StripeImputationModal({
           .replace(
             '{adjustment}',
             adjustment ? tr('dialogs.stripeImputation.completedDescriptionAdjustment', ' i 1 ajust') : ''
-          ) + (
-            skippedExistingCount > 0
-              ? ` ${tr('dialogs.stripeImputation.completedSkippedExisting', 'S han ignorat {count} pagaments ja existents.')}`.replace('{count}', String(skippedExistingCount))
-              : ''
           ),
       });
 
@@ -863,9 +841,11 @@ export function StripeImputationModal({
       let description = message;
 
       if (message === ERR_STRIPE_DUPLICATE_PAYMENT) {
-        description = tr('dialogs.stripeImputation.alreadyImputed', 'Aquest moviment ja té una imputació Stripe activa. Obre el detall i desfés-la abans de tornar-ho a provar.');
+        description = tr('dialogs.stripeImputation.duplicatePayoutPayments', 'Aquest payout conté pagaments Stripe ja imputats. Fes servir "Desfer imputació Stripe" del moviment original abans de reimputar.');
       } else if (message === ERR_STRIPE_PARENT_ALREADY_IMPUTED) {
         description = tr('dialogs.stripeImputation.alreadyImputed', 'Aquest moviment ja té una imputació Stripe activa. Obre el detall i desfés-la abans de tornar-ho a provar.');
+      } else if (message === ERR_STRIPE_PAYOUT_CONTAINS_ACTIVE_DUPLICATES) {
+        description = tr('dialogs.stripeImputation.duplicatePayoutPayments', 'Aquest payout conté pagaments Stripe ja imputats. Fes servir "Desfer imputació Stripe" del moviment original abans de reimputar.');
       } else if (message === 'AUTH_REQUIRED') {
         description = tr('dialogs.stripeImputation.authRequired', 'No s\'ha pogut validar la sessió. Torna-ho a provar.');
       }

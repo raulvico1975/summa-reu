@@ -5,9 +5,8 @@ import {
   groupStripeRowsByTransfer,
   findAllMatchingPayoutGroups,
   parseStripeAmount,
-  type StripeRow,
-  type StripePayoutGroup,
 } from '@/components/stripe-importer/useStripeImporter';
+import type { StripePayoutGroup, StripeRow } from '@/lib/stripe/types';
 
 // ═══════════════════════════════════════════════════════════════════
 // parseStripeAmount - Parsing d'imports

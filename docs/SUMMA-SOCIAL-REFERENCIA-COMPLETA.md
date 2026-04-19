@@ -3135,9 +3135,13 @@ El flux vigent de Stripe ja no tracta el payout com un split fiscal principal di
 | **Alta de donant** | Manual guiada des del mateix modal (`CreateQuickDonorDialog`) |
 | **Persistència** | `donations` + `stripeTransferId` al moviment pare |
 | **Comissions** | `feeAmount` per donació; no es crea com a norma una despesa agregada visible al ledger |
-| **Diferències** | Si banc i net calculat no quadren, es crea un `stripe_adjustment` |
+| **Diferències** | Si banc i net calculat no quadren, es crea un `stripe_adjustment` només quan tot el payout és nou |
 
 **Principi fonamental:** un moviment pare només pot tenir **una imputació Stripe activa**. Si ja existeix, primer cal obrir el detall "Stripe imputat" i usar **Desfer imputació Stripe**.
+
+**Contracte operatiu del payout:** la imputació és **tot o res** per payout complet. Si qualsevol `stripePaymentId` del payout ja existeix actiu, Summa Social rebutja tota la imputació; no filtra només les línies noves, no converteix la resta en `stripe_adjustment` i obliga a desfer la imputació original abans de reimputar.
+
+**Abast de moneda del flux actual:** aquest flux de payout Stripe només admet monedes de 2 decimals i zero-decimals suportades per Stripe. Les monedes de 3 decimals (`BHD`, `JOD`, `KWD`, `OMR`, `TND`) queden explícitament fora d'abast i la capa API les rebutja amb error 422 estable.
 
 ### 3.10.2 Flux d'ús
 

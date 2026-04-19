@@ -5,39 +5,14 @@
  * NO dependències externes (papaparse, csv-parser, etc.)
  */
 
-// ════════════════════════════════════════════════════════════════════════════
-// TIPUS
-// ════════════════════════════════════════════════════════════════════════════
+import type {
+  ParseResult,
+  StripePayoutGroup,
+  StripeRow,
+  Warning,
+} from '@/lib/stripe/types';
 
-export interface StripeRow {
-  id: string;                    // ch_xxx
-  createdDate: string;           // YYYY-MM-DD (convertit de UTC)
-  amount: number;                // Import brut (positiu)
-  fee: number;                   // Comissió Stripe
-  customerEmail: string;         // Email del client
-  status: string;                // 'succeeded'
-  transfer: string;              // po_xxx (payout)
-  description: string | null;    // Concepte opcional
-}
-
-export interface Warning {
-  code: 'WARN_REFUNDED';
-  count: number;
-  amount: number;
-}
-
-export interface ParseResult {
-  rows: StripeRow[];
-  warnings: Warning[];
-}
-
-export interface StripePayoutGroup {
-  transferId: string;
-  rows: StripeRow[];
-  gross: number;      // Σ Amount
-  fees: number;       // Σ Fee
-  net: number;        // gross - fees
-}
+export type { ParseResult, StripePayoutGroup, StripeRow, Warning } from '@/lib/stripe/types';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CONSTANTS

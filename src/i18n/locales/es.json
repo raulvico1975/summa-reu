@@ -4884,6 +4884,7 @@
   "dialogs.stripeImputation.description": "Puedes cargar un CSV de Stripe o completar la imputación manualmente. La tabla final siempre es editable antes de confirmar.",
   "dialogs.stripeImputation.descriptionStripeImport": "Puedes cargar un CSV de Stripe, importar un payout desde Stripe o completar la imputación manualmente. La tabla final siempre es editable antes de confirmar.",
   "dialogs.stripeImputation.duplicateDescription": "No se puede confirmar mientras haya `stripePaymentId` repetidos dentro de la misma imputación.",
+  "dialogs.stripeImputation.duplicatePayoutPayments": "Este payout contiene pagos Stripe ya imputados. Usa \"Deshacer imputación Stripe\" del movimiento original antes de volver a imputarlo.",
   "dialogs.stripeImputation.duplicateTitle": "Pagos Stripe duplicados",
   "dialogs.stripeImputation.detectedPayoutLabel": "Payout detectado",
   "dialogs.stripeImputation.detectedPayoutPlaceholder": "Selecciona el payout correcto",

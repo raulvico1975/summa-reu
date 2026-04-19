@@ -1,5 +1,5 @@
 import type { Donor } from '@/lib/data';
-import type { StripePayoutGroup } from '@/components/stripe-importer/useStripeImporter';
+import type { StripePayoutGroup } from '@/lib/stripe/types';
 
 export interface EditableStripeImputationLine {
   localId: string;

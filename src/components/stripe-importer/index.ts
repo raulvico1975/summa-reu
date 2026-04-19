@@ -6,4 +6,4 @@ export {
   findMatchingPayoutGroup,
   findAllMatchingPayoutGroups,
 } from './useStripeImporter';
-export type { StripeRow, Warning, ParseResult, StripePayoutGroup } from './useStripeImporter';
+export type { StripeRow, Warning, ParseResult, StripePayoutGroup } from '@/lib/stripe/types';

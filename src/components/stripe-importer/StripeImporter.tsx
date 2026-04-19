@@ -5,9 +5,6 @@ import {
   parseStripeCsv,
   groupStripeRowsByTransfer,
   findAllMatchingPayoutGroups,
-  type StripeRow,
-  type Warning,
-  type StripePayoutGroup,
 } from './useStripeImporter';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useFirebase } from '@/firebase';
@@ -15,6 +12,7 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection, doc, query, where, getDocs, getDoc } from 'firebase/firestore';
 import type { Transaction } from '@/lib/data';
 import type { Donation } from '@/lib/types/donations';
+import type { StripePayoutGroup, StripeRow, Warning } from '@/lib/stripe/types';
 import { useToast } from '@/hooks/use-toast';
 import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
 import { createStripeDonations, ERR_STRIPE_DUPLICATE_PAYMENT, ERR_STRIPE_CONTACT_REQUIRED } from '@/lib/stripe/createStripeDonations';

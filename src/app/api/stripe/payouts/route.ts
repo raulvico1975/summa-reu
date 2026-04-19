@@ -6,7 +6,9 @@ import {
 } from '@/lib/api/admin-sdk';
 import { requirePermission } from '@/lib/api/require-permission';
 import {
+  getUnsupportedStripeCurrencyMessage,
   getStripeSecretKeyFromEnv,
+  isUnsupportedStripeCurrencyError,
   listRecentPaidStripePayouts,
   StripeApiError,
 } from '@/lib/stripe/payout-api';
@@ -17,6 +19,15 @@ interface ErrorResponse {
   error: string;
 }
 
+type StripePayoutsRouteDeps = {
+  verifyIdToken: typeof verifyIdToken;
+  getAdminDb: typeof getAdminDb;
+  validateUserMembership: typeof validateUserMembership;
+  requirePermission: (...args: Parameters<typeof requirePermission>) => NextResponse | null;
+  getStripeSecretKeyFromEnv: typeof getStripeSecretKeyFromEnv;
+  listRecentPaidStripePayouts: typeof listRecentPaidStripePayouts;
+};
+
 function jsonError(code: string, error: string, status: number) {
   return NextResponse.json<ErrorResponse>(
     { success: false, code, error },
@@ -24,8 +35,20 @@ function jsonError(code: string, error: string, status: number) {
   );
 }
 
-export async function GET(request: NextRequest) {
-  const auth = await verifyIdToken(request);
+const defaultDeps: StripePayoutsRouteDeps = {
+  verifyIdToken,
+  getAdminDb,
+  validateUserMembership,
+  requirePermission,
+  getStripeSecretKeyFromEnv,
+  listRecentPaidStripePayouts,
+};
+
+export async function handleStripePayoutsGet(
+  request: NextRequest,
+  deps: StripePayoutsRouteDeps = defaultDeps
+) {
+  const auth = await deps.verifyIdToken(request);
   if (!auth) {
     return jsonError('UNAUTHORIZED', 'No autenticat', 401);
   }
@@ -35,9 +58,9 @@ export async function GET(request: NextRequest) {
     return jsonError('MISSING_ORG_ID', 'orgId obligatori', 400);
   }
 
-  const db = getAdminDb();
-  const membership = await validateUserMembership(db, auth.uid, orgId);
-  const permissionResponse = requirePermission(membership, {
+  const db = deps.getAdminDb();
+  const membership = await deps.validateUserMembership(db, auth.uid, orgId);
+  const permissionResponse = deps.requirePermission(membership, {
     code: 'MOVIMENTS_EDITAR_REQUIRED',
     check: (permissions) => permissions['moviments.editar'],
   });
@@ -45,7 +68,7 @@ export async function GET(request: NextRequest) {
     return permissionResponse;
   }
 
-  const secretKey = getStripeSecretKeyFromEnv();
+  const secretKey = deps.getStripeSecretKeyFromEnv();
   if (!secretKey) {
     return jsonError(
       'STRIPE_NOT_CONFIGURED',
@@ -55,12 +78,20 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const payouts = await listRecentPaidStripePayouts({
+    const payouts = await deps.listRecentPaidStripePayouts({
       secretKey,
     });
 
     return NextResponse.json(payouts);
   } catch (error) {
+    if (isUnsupportedStripeCurrencyError(error)) {
+      return jsonError(
+        'STRIPE_UNSUPPORTED_CURRENCY',
+        getUnsupportedStripeCurrencyMessage(error.currency),
+        422
+      );
+    }
+
     if (error instanceof StripeApiError) {
       return jsonError('STRIPE_REQUEST_FAILED', error.message, 502);
     }
@@ -85,4 +116,8 @@ export async function GET(request: NextRequest) {
       500
     );
   }
+}
+
+export async function GET(request: NextRequest) {
+  return handleStripePayoutsGet(request);
 }
