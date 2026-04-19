@@ -4,6 +4,8 @@ import {
   normalizeForMatching,
   extractNameTokens,
   findMatchingContact,
+  getForcedCategoryIdByBankDescription,
+  getForcedExpenseCategoryIdByBankDescription,
   getForcedIncomeCategoryIdByBankDescription,
 } from '../auto-match';
 import type { AnyContact, Donor, Supplier, Category } from '../data';
@@ -306,6 +308,44 @@ describe('getForcedIncomeCategoryIdByBankDescription', () => {
     assert.strictEqual(result, null);
   });
 
+  it('should detect Bizum donations using real entity categories only', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'BIZUM MARIA GARCIA',
+      categoriesCatalan
+    );
+    assert.strictEqual(result, 'cat-donations');
+  });
+
+  it('should detect grant transfers with accents normalized', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'Transferència subvenció ACCD 2026',
+      [
+        { id: 'cat-grants', name: 'Subvencions', type: 'income' },
+        { id: 'cat-donations', name: 'Donacions', type: 'income' },
+      ]
+    );
+    assert.strictEqual(result, 'cat-grants');
+  });
+
+  it('should detect Spanish grant wording like AECID or subvencion', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'TRANSFERENCIA AECID SUBVENCION PROYECTO',
+      [
+        { id: 'cat-grants', name: 'Subvenciones', type: 'income' },
+        { id: 'cat-membership', name: 'Cuotas socios', type: 'income' },
+      ]
+    );
+    assert.strictEqual(result, 'cat-grants');
+  });
+
+  it('should return null when the expected income category does not exist', () => {
+    const result = getForcedIncomeCategoryIdByBankDescription(
+      'Bizum solidari',
+      [{ id: 'cat-membership', name: 'Quotes socis', type: 'income' }]
+    );
+    assert.strictEqual(result, null);
+  });
+
   // PRIORITAT: loteria > voluntariat
   it('should prioritize lottery over volunteer if both match (edge case)', () => {
     // Si per algun motiu la descripció conté ambdues, loteria té prioritat
@@ -314,5 +354,112 @@ describe('getForcedIncomeCategoryIdByBankDescription', () => {
       categories
     );
     assert.strictEqual(result, 'cat-lottery');
+  });
+});
+
+describe('getForcedExpenseCategoryIdByBankDescription', () => {
+  const expenseCategories: Category[] = [
+    { id: 'cat-salaries', name: 'Nòmines', type: 'expense' },
+    { id: 'cat-social-security', name: 'Seguretat Social', type: 'expense' },
+    { id: 'cat-taxes', name: 'Impostos', type: 'expense' },
+    { id: 'cat-rent', name: 'Lloguer', type: 'expense' },
+    { id: 'cat-supplies', name: 'Subministraments', type: 'expense' },
+    { id: 'cat-telecom', name: 'Telecomunicacions', type: 'expense' },
+  ];
+
+  it('should detect payroll expenses', () => {
+    const result = getForcedExpenseCategoryIdByBankDescription(
+      'NOMINA MARÇ 2026',
+      expenseCategories
+    );
+    assert.strictEqual(result, 'cat-salaries');
+  });
+
+  it('should detect social security expenses', () => {
+    const result = getForcedExpenseCategoryIdByBankDescription(
+      'SEG SOCIAL AUTONOMS ABRIL',
+      expenseCategories
+    );
+    assert.strictEqual(result, 'cat-social-security');
+  });
+
+  it('should detect tax expenses from AEAT and Hacienda', () => {
+    const aeatResult = getForcedExpenseCategoryIdByBankDescription(
+      'AEAT MODELO 111',
+      expenseCategories
+    );
+    const haciendaResult = getForcedExpenseCategoryIdByBankDescription(
+      'Pago Hacienda trimestre',
+      expenseCategories
+    );
+    assert.strictEqual(aeatResult, 'cat-taxes');
+    assert.strictEqual(haciendaResult, 'cat-taxes');
+  });
+
+  it('should detect rent expenses', () => {
+    const result = getForcedExpenseCategoryIdByBankDescription(
+      'LLOGUER OFICINA ABRIL',
+      expenseCategories
+    );
+    assert.strictEqual(result, 'cat-rent');
+  });
+
+  it('should detect utility providers as supplies', () => {
+    const result = getForcedExpenseCategoryIdByBankDescription(
+      'ENDESA FACTURA LLUM',
+      expenseCategories
+    );
+    assert.strictEqual(result, 'cat-supplies');
+  });
+
+  it('should detect telecom providers', () => {
+    const result = getForcedExpenseCategoryIdByBankDescription(
+      'Recibo Vodafone fibra',
+      expenseCategories
+    );
+    assert.strictEqual(result, 'cat-telecom');
+  });
+
+  it('should return null when the expected expense category does not exist', () => {
+    const result = getForcedExpenseCategoryIdByBankDescription(
+      'AEAT MODELO 303',
+      [{ id: 'cat-rent', name: 'Lloguer', type: 'expense' }]
+    );
+    assert.strictEqual(result, null);
+  });
+});
+
+describe('getForcedCategoryIdByBankDescription', () => {
+  const categories: Category[] = [
+    { id: 'cat-donations', name: 'Donacions', type: 'income' },
+    { id: 'cat-grants', name: 'Subvencions', type: 'income' },
+    { id: 'cat-salaries', name: 'Salaris', type: 'expense' },
+  ];
+
+  it('should only apply income rules to positive amounts', () => {
+    const result = getForcedCategoryIdByBankDescription(
+      'Bizum solidari',
+      250,
+      categories
+    );
+    assert.strictEqual(result, 'cat-donations');
+  });
+
+  it('should only apply expense rules to negative amounts', () => {
+    const result = getForcedCategoryIdByBankDescription(
+      'Nomina abril',
+      -120000,
+      categories
+    );
+    assert.strictEqual(result, 'cat-salaries');
+  });
+
+  it('should return null for zero amount', () => {
+    const result = getForcedCategoryIdByBankDescription(
+      'Bizum prova',
+      0,
+      categories
+    );
+    assert.strictEqual(result, null);
   });
 });

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveGoogleGenAiApiKey } from '@/ai/config';
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import {
+  buildCategorizeTransactionPromptText,
+  finalizeCategorizationOutput,
+} from './prompt-helpers';
 
 // =============================================================================
 // SCHEMAS
@@ -32,45 +36,7 @@ const prompt = ai.definePrompt({
   name: 'categorizeTransactionPromptAPI',
   input: { schema: CategorizeTransactionInputSchema },
   output: { schema: CategorizeTransactionOutputSchema },
-  prompt: `You are an expert financial categorizer for a small/medium non-profit organization in Spain.
-Your task is operational transaction categorization, not accounting or fiscal interpretation.
-
-Given the transaction description and amount, select the most appropriate category OPTION from the provided lists.
-Do NOT infer context, entities or purposes that are not explicitly present in the transaction description.
-
-Transaction Details:
-Description: {{{description}}}
-Amount: {{{amount}}}
-
-If the amount is negative, it is an expense. You MUST choose ONE option from expenseOptions.
-If the amount is positive, it is an income. You MUST choose ONE option from incomeOptions.
-
-Expense options:
-{{#each expenseOptions}}- {{id}}: {{name}}
-{{/each}}
-
-Income options:
-{{#each incomeOptions}}- {{id}}: {{name}}
-{{/each}}
-
-Options format:
-- Each option has an id and a name.
-- You MUST return the id of the selected option exactly as provided.
-- If you cannot confidently select an option, return null.
-
-Confidence rules:
-- 0.8–1.0 = high confidence
-- 0.5–0.79 = medium confidence
-- < 0.5 = low confidence → return categoryId null
-
-If confidence would be lower than 0.5, you MUST return categoryId null.
-
-Output schema:
-{
-  categoryId: string | null,
-  confidence: number
-}
-`,
+  prompt: buildCategorizeTransactionPromptText(),
 });
 
 // =============================================================================
@@ -145,10 +111,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       });
     }
 
+    const finalOutput = finalizeCategorizationOutput(
+      output,
+      options.map((option) => option.id)
+    );
+
     return NextResponse.json({
       ok: true,
-      categoryId: output.categoryId,
-      confidence: output.confidence,
+      categoryId: finalOutput.categoryId,
+      confidence: finalOutput.confidence,
     });
   } catch (error: any) {
     console.error('[API] categorize-transaction error:', error);

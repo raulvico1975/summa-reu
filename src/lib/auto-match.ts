@@ -139,46 +139,102 @@ export function batchFindMatchingContacts(
 // i retorna la categoria forçada corresponent
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Keywords per detectar ingressos de loteria
- * Match si la descripció conté alguna d'aquestes paraules
- */
-const LOTTERY_KEYWORDS = [
-  'loteria',
-  'papeleta',
-  'papeletas',
-  'rifa',
-  'sorteo',
-  'sorteig',
+type ForcedCategoryRule = {
+  keywords: string[];
+  categoryNames: string[];
+};
+
+const INCOME_RULES: ForcedCategoryRule[] = [
+  {
+    keywords: ['loteria', 'papeleta', 'papeletas', 'rifa', 'sorteo', 'sorteig'],
+    categoryNames: ['loteria'],
+  },
+  {
+    keywords: ['voluntario', 'voluntarios', 'voluntari', 'voluntaris', 'voluntariat', 'voluntariado', 'volunfair'],
+    categoryNames: ['voluntarios', 'voluntaris', 'voluntariat', 'voluntariado'],
+  },
+  {
+    keywords: ['bizum'],
+    categoryNames: ['donacion', 'donaciones', 'donacio', 'donacions'],
+  },
+  {
+    keywords: ['subvencion', 'subvencio', 'aecid', 'accd'],
+    categoryNames: ['subvencion', 'subvenciones', 'subvencio', 'subvencions'],
+  },
 ];
 
-/**
- * Keywords per detectar ingressos de voluntariat
- */
-const VOLUNTEER_KEYWORDS = [
-  'voluntario',
-  'voluntarios',
-  'voluntari',
-  'voluntaris',
-  'voluntariat',
-  'voluntariado',
-  'volunfair',
+const EXPENSE_RULES: ForcedCategoryRule[] = [
+  {
+    keywords: ['nomina', 'salari', 'salario'],
+    categoryNames: ['nomina', 'nominas', 'nomines', 'salari', 'salaris', 'salario', 'salarios'],
+  },
+  {
+    keywords: ['seg social', 'seguretat social', 'seguridad social'],
+    categoryNames: ['seguretat social', 'seguridad social'],
+  },
+  {
+    keywords: ['hacienda', 'aeat', 'agencia tributaria'],
+    categoryNames: ['impost', 'impuestos', 'hisenda', 'hacienda'],
+  },
+  {
+    keywords: ['alquiler', 'lloguer'],
+    categoryNames: ['alquiler', 'lloguer'],
+  },
+  {
+    keywords: ['endesa', 'iberdrola', 'naturgy', 'repsol'],
+    categoryNames: ['subministrament', 'subministraments', 'suministro', 'suministros'],
+  },
+  {
+    keywords: ['vodafone', 'movistar', 'orange', 'telefonica'],
+    categoryNames: ['telecomunicacio', 'telecomunicacions', 'telecomunicacion', 'telecomunicaciones'],
+  },
 ];
 
-/**
- * Noms de categoria normalitzats que matchegen amb loteria
- */
-const LOTTERY_CATEGORY_NAMES = ['loteria'];
+function categoryMatchesNormalizedNames(category: Category, normalizedNames: string[]): boolean {
+  const searchableNames = [normalizeForMatching(category.name)];
+  return searchableNames.some((searchableName) =>
+    normalizedNames.some((normalizedName) => searchableName.includes(normalizedName))
+  );
+}
 
-/**
- * Noms de categoria normalitzats que matchegen amb voluntariat
- */
-const VOLUNTEER_CATEGORY_NAMES = [
-  'voluntarios',
-  'voluntaris',
-  'voluntariat',
-  'voluntariado',
-];
+function findCategoryIdByNormalizedNames(
+  categories: Category[],
+  type: Category['type'],
+  names: string[]
+): string | null {
+  const normalizedNames = names.map(normalizeForMatching);
+  const category = categories.find((candidate) =>
+    candidate.type === type && categoryMatchesNormalizedNames(candidate, normalizedNames)
+  );
+  return category?.id ?? null;
+}
+
+function getForcedCategoryIdFromRules(
+  description: string,
+  categories: Category[],
+  type: Category['type'],
+  rules: ForcedCategoryRule[]
+): string | null {
+  if (!description || !categories || categories.length === 0) {
+    return null;
+  }
+
+  const descNormalized = normalizeForMatching(description);
+
+  for (const rule of rules) {
+    const matchesRule = rule.keywords.some((keyword) => descNormalized.includes(keyword));
+    if (!matchesRule) {
+      continue;
+    }
+
+    const categoryId = findCategoryIdByNormalizedNames(categories, type, rule.categoryNames);
+    if (categoryId) {
+      return categoryId;
+    }
+  }
+
+  return null;
+}
 
 /**
  * Detecta si una descripció bancària correspon a un ingrés especial
@@ -196,34 +252,27 @@ export function getForcedIncomeCategoryIdByBankDescription(
   description: string,
   categories: Category[]
 ): string | null {
-  if (!description || !categories || categories.length === 0) {
-    return null;
+  return getForcedCategoryIdFromRules(description, categories, 'income', INCOME_RULES);
+}
+
+export function getForcedExpenseCategoryIdByBankDescription(
+  description: string,
+  categories: Category[]
+): string | null {
+  return getForcedCategoryIdFromRules(description, categories, 'expense', EXPENSE_RULES);
+}
+
+export function getForcedCategoryIdByBankDescription(
+  description: string,
+  amount: number,
+  categories: Category[]
+): string | null {
+  if (amount > 0) {
+    return getForcedIncomeCategoryIdByBankDescription(description, categories);
   }
 
-  const descNormalized = normalizeForMatching(description);
-
-  // 1. Comprovar si és loteria
-  const isLottery = LOTTERY_KEYWORDS.some(kw => descNormalized.includes(kw));
-  if (isLottery) {
-    const lotteryCategory = categories.find(cat => {
-      const catNameNormalized = normalizeForMatching(cat.name);
-      return LOTTERY_CATEGORY_NAMES.some(name => catNameNormalized.includes(name));
-    });
-    if (lotteryCategory) {
-      return lotteryCategory.id;
-    }
-  }
-
-  // 2. Comprovar si és voluntariat
-  const isVolunteer = VOLUNTEER_KEYWORDS.some(kw => descNormalized.includes(kw));
-  if (isVolunteer) {
-    const volunteerCategory = categories.find(cat => {
-      const catNameNormalized = normalizeForMatching(cat.name);
-      return VOLUNTEER_CATEGORY_NAMES.some(name => catNameNormalized.includes(name));
-    });
-    if (volunteerCategory) {
-      return volunteerCategory.id;
-    }
+  if (amount < 0) {
+    return getForcedExpenseCategoryIdByBankDescription(description, categories);
   }
 
   return null;
