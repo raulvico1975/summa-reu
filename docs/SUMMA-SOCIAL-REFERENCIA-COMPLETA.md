@@ -307,10 +307,18 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
 | `AI_ERROR` | Error genèric d'IA (clau invàlida, model no disponible) | Marcar com "Revisar", continuar |
 | `NETWORK` | Error de xarxa (client-side) | Aplicar backoff, continuar |
 
+**Contracte vigent de la resposta IA de categories:**
+
+- L'API separa opcions per signe: imports negatius només poden resoldre sobre `expenseOptions`; imports positius només sobre `incomeOptions`
+- Llindar mínim de confiança: `0.6`; per sota d'aquest valor la resposta es degrada a `categoryId: null`
+- Qualsevol `categoryId` fora de les opcions reals disponibles queda sanititzat a `null`
+- A la UI de Moviments, `categoryId: null` o qualsevol error controlat es persisteix com `Revisar`
+
 **Events trackUX (analytics):**
 
 | Event | Propietats | Quan |
 |-------|------------|------|
+| `ai.categorize.forced` | `{ categoryId, categoryName }` | Categoria resolta per regles de paraules clau, sense crida IA |
 | `ai.categorize.error` | `{ code, reason, model }` | Error en categorització individual |
 | `ai.bulk.run.start` | `{ count, bulkMode, sequential }` | Inici de batch |
 | `ai.bulk.run.done` | `{ processedCount, errorCount, durationMs, bulkMode, quotaExceeded, cancelled }` | Fi de batch |
@@ -328,7 +336,9 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
 
 **Fitxers relacionats:**
 - `src/app/api/ai/categorize-transaction/route.ts` — Route Handler de l'API
+- `src/app/api/ai/categorize-transaction/prompt-helpers.ts` — Contracte del prompt, llindar i sanejament de resposta
 - `src/components/transactions/hooks/useTransactionCategorization.ts` — Hook client
+- `src/lib/auto-match.ts` — Regles deterministes de categoria per descripció
 - `src/ai/genkit.ts` — Configuració Genkit
 
 ### Principi General
@@ -888,10 +898,11 @@ Els següents blocs estan **desactivats** (comentats al codi):
 **Aplicació de Categoria per Defecte:**
 - Si contacte té defaultCategoryId → s'aplica automàticament
 
-**Detecció Forçada de Categories:**
-- Loteria: patrons "loteria", "sorteig" → categoria "Loteries i sorteigs"
-- Voluntariat: patrons "voluntari", "voluntariat" → categoria "Ingressos voluntariat"
-- S'aplica a ingressos positius automàticament durant la importació
+**Detecció Forçada de Categories (categorització de Moviments):**
+- S'executa abans de cridar IA tant en categorització individual com batch
+- Ingressos (`amount > 0`): loteria, voluntariat, Bizum → donacions, ACCD/AECID/subvenció → subvencions, sempre que existeixi una categoria real compatible
+- Despeses (`amount < 0`): nòmina/salari, seguretat social, AEAT/hisenda, lloguer, Endesa/Iberdrola/Naturgy/Repsol → subministraments, Vodafone/Movistar/Orange/Telefónica → telecomunicacions, sempre que existeixi una categoria real compatible
+- Si no hi ha categoria compatible entre les opcions reals de l'entitat, la regla no força res i el flux continua pel camí normal de categorització
 
 ### 3.2.3 Taula de Moviments
 

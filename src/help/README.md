@@ -13,6 +13,17 @@ Fonts de veritat actives:
 - `docs/kb/cards/**/*.json` + `docs/kb/_fallbacks.json` per al bot
 - `docs/generated/*` no entra al runtime del bot
 
+## Manteniment pràctic del manual
+
+- La versió de treball llarga que mantenim al repo viu a:
+  - `docs/manual-usuari-summa-social.md` (CA)
+  - `docs/manual-usuari-summa-social.es.md` (ES)
+- El runtime continua servint:
+  - `public/docs/manual-usuari-summa-social.ca.md`
+  - `public/docs/manual-usuari-summa-social.es.md`
+- Després d'editar els manuals del repo, sincronitza el runtime amb:
+  - `npm run help:sync-manual`
+
 ## Com tractar aquest directori
 
 - No afegir-hi contingut nou.

@@ -35,6 +35,7 @@
     "help:validate-topics": "node --import tsx scripts/help/validate-topics.ts",
     "help:build-guides-adapter": "node --import tsx scripts/help/build-guides-adapter.ts",
     "help:build-bot-kb": "node --import tsx scripts/help/build-bot-kb.ts",
+    "help:sync-manual": "node --import tsx scripts/help/sync-manual-runtime.ts",
     "help:audit": "node --import tsx scripts/help/audit-help-layer.ts",
     "help:audit:storage": "HELP_AUDIT_STORAGE=1 node --import tsx scripts/help/audit-help-layer.ts",
     "agent:docs": "node agents/tools/docs-index.mjs",

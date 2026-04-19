@@ -39,7 +39,7 @@ Endavant!
 
 ---
 
-# 1. Primers Passos
+# 1. Primers Passos [id:1-primers-passos]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -119,7 +119,7 @@ A la part esquerra de la pantalla tens el **menú de navegació**. Aquí tens un
 
 ---
 
-## 1.4 Entendre el Dashboard
+## 1.4 Entendre el Dashboard [id:14-entendre-el-dashboard]
 
 El Dashboard és la primera pantalla que veus en entrar. Pensa-hi com el **tauler de control** de les finances de l'entitat.
 
@@ -200,9 +200,56 @@ Et recorda les dates límit dels models fiscals:
 
 El color t'indica la urgència: 🟢 Tens temps · 🟡 Prepara-ho · 🔴 Urgent
 
+## 1.5 El teu primer mes amb Summa Social
+
+### Què és normal els primers dies
+
+Els primers dies és habitual trobar:
+- moviments sense categoritzar
+- donants amb dades incompletes
+- alguna devolució pendent
+- dubtes sobre per on començar
+
+Això no vol dir que el sistema estigui malament. Vol dir que encara esteu posant ordre a dades reals.
+
+### En què centrar-te primer
+
+Ordre recomanat per a una entitat petita:
+1. Completa les dades bàsiques de l'entitat i els comptes bancaris
+2. Importa l'extracte del mes actual o de l'últim mes tancat
+3. Importa la base de donants si ja la tens en Excel
+4. Categoritza els moviments grans i els més evidents
+5. Revisa si hi ha devolucions pendents
+6. Deixa per més endavant el que no necessites avui: projectes, tancament, exports avançats
+
+### Després d'1-2 mesos
+
+Quan ja teniu rodatge, la rutina normal és:
+- importar extracte
+- revisar categoritzacions
+- dividir remeses o imputar Stripe si toca
+- revisar devolucions
+- preparar informes quan correspongui
+
+L'objectiu del manual no és que t'ho aprenguis tot ara, sinó que tinguis un lloc fiable on tornar quan et toqui cada procés.
+
+## 1.6 Flux mensual recomanat
+
+Si portes la gestió econòmica d'una entitat petita, l'ordre de treball recomanat cada mes és aquest:
+
+1. Importa l'extracte del banc
+2. Revisa moviments nous i categoritza els que no hagin quedat clars
+3. Revisa si hi ha remeses per dividir o cobraments SEPA per generar
+4. Revisa devolucions pendents
+5. Imputa Stripe si hi ha abonaments online
+6. Adjunta o ordena documents dels moviments importants
+7. Fes una última ullada al Dashboard per veure si queda alguna alerta rellevant
+
+Si treballes així, el gener no arriba amb feina acumulada: el Model 182 i la resta d'informes surten de dades ja revisades durant l'any.
+
 ---
 
-# 2. Configuració Inicial
+# 2. Configuració Inicial [id:2-configuracio-inicial]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -353,7 +400,7 @@ Punt important:
 
 ---
 
-# 3. Gestió de Donants
+# 3. Gestió de Donants [id:3-gestio-de-donants]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -617,7 +664,7 @@ Clica el nom de qualsevol donant de les llistes per obrir la seva fitxa lateral.
 
 ---
 
-# 4. Gestió de Proveïdors i Treballadors
+# 4. Gestió de Proveïdors i Treballadors [id:4-gestio-de-proveidors-i-treballadors]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -673,7 +720,7 @@ Registra el personal contractat per tenir controlats els pagaments de nòmina.
 
 ---
 
-# 5. Gestió de Moviments
+# 5. Gestió de Moviments [id:5-gestio-de-moviments]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -800,7 +847,7 @@ Clica **directament sobre qualsevol cel·la** per editar-la. Els canvis es guard
 
 ---
 
-## 5.4b Marcar una donació perquè compti al 182
+## 5.4b Marcar una donació perquè compti al 182 [id:5-4b-marcar-donacio-fiscal-182]
 
 ### Què és
 
@@ -880,7 +927,7 @@ Clicant "Revisar" es filtren automàticament. Més detalls a la secció 7.
 
 ---
 
-# 6. Divisor de Remeses
+# 6. Divisor de Remeses [id:6-divisor-de-remeses]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1041,7 +1088,7 @@ Si has processat una remesa incorrectament (fitxer equivocat, matching incorrect
 
 ---
 
-## 6.a Remeses SEPA de cobrament (domiciliacions)
+## 6.a Remeses SEPA de cobrament (domiciliacions) [id:6a-remeses-sepa-de-cobrament]
 
 Aquesta funcionalitat serveix per **generar el fitxer SEPA de cobrament (pain.008)** per cobrar quotes de socis per domiciliació bancària.
 
@@ -1116,7 +1163,7 @@ Quan el banc executa el cobrament:
 
 ---
 
-# 6b. Documents Pendents i Remeses SEPA OUT
+# 6b. Documents Pendents i Remeses SEPA OUT [id:6b-documents-pendents]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1278,7 +1325,7 @@ Si decideixes no pagar un document, pots arxivar-lo per treure'l de circulació 
 
 ---
 
-# 6c. Liquidacions de Despeses de Viatge (v1.28)
+# 6c. Liquidacions de Despeses de Viatge (v1.28) [id:6c-liquidacions-de-despeses-de-viatge]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1345,7 +1392,7 @@ El PDF inclou:
 
 ---
 
-# 7. Gestió de Devolucions Bancàries
+# 7. Gestió de Devolucions Bancàries [id:7-gestio-de-devolucions]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1513,7 +1560,7 @@ Per tenir les devolucions ben gestionades, segueix aquest flux cada mes:
 
 ---
 
-# 8. Donacions via Stripe
+# 8. Donacions via Stripe [id:8-donacions-via-stripe]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1616,7 +1663,7 @@ Si t'has equivocat, fes servir **"Desfer imputació Stripe"**. El moviment pare 
 
 ---
 
-# 9. Informes Fiscals
+# 9. Informes Fiscals [id:9-informes-fiscals]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1773,9 +1820,35 @@ També els pots enviar directament des de la mateixa pantalla de **📄 Informes
 
 > 💡 Si el total d'un donant és ≤ 0 (per devolucions), no es genera certificat.
 
+## 9.4 Tancament de mes
+
+Quan tanques un mes, el circuit recomanat és:
+
+1. Importa l'últim extracte pendent
+2. Revisa els moviments sense categoria o sense contacte
+3. Resol remeses, devolucions i Stripe pendents
+4. Comprova si hi ha documents importants sense adjuntar
+5. Revisa el Dashboard amb el període del mes tancat
+6. Si cal compartir-ho, exporta resum o prepara el paquet de tancament del període
+
+No es tracta de "bloquejar" el mes, sinó d'arribar a un punt en què les dades d'aquell període ja siguin prou fiables per govern intern, junta o gestoria.
+
+## 9.5 Tancament d'any fiscal
+
+Abans de generar el Model 182 i la resta de tancaments d'any, revisa com a mínim:
+
+1. Donants amb DNI/CIF o codi postal pendents
+2. Devolucions no assignades
+3. Stripe sense donant assignat
+4. Remeses encara sense dividir quan afecten quotes o donacions
+5. Certificats i dades de l'entitat (logo, firma, dades fiscals) si els heu d'enviar des de l'app
+6. Si necessites enviar-ho a comptabilitat, genera també el **Paquet de Tancament**
+
+La idea és arribar al gener amb la feina grossa ja revisada, no començar-la llavors.
+
 ---
 
-# 10. Projectes i Justificació de Subvencions
+# 10. Projectes i Justificació de Subvencions [id:10-projectes]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -1785,7 +1858,7 @@ Si la teva entitat no treballa amb subvencions ni necessita control per projecte
 
 ---
 
-## 10.1 Eixos d'actuació (ús bàsic)
+## 10.1 Eixos d'actuació (ús bàsic) [id:8-projectes-eixos-dactuacio]
 
 ### Quan usar-los
 
@@ -1806,7 +1879,7 @@ Edita un moviment → Columna "Projecte" → Selecciona
 
 ---
 
-## 10.2 Mòdul de Projectes (avançat)
+## 10.2 Mòdul de Projectes (avançat) [id:6-gestio-de-projectes]
 
 Per a entitats que necessiten justificar subvencions amb traçabilitat econòmica real (ACCD, Fons Català, ajuntaments, etc.).
 
@@ -1823,7 +1896,7 @@ Al menú lateral:
 1. Entra a **Projectes** (mòdul)
 2. Clica **Assignació de despeses**
 
-### Què hi trobaràs en aquesta pantalla
+### Què hi trobaràs en aquesta pantalla [id:6-assignacio-de-despeses]
 
 La safata barreja dues fonts de despesa:
 - **Seu**: despeses bancàries elegibles per projectes
@@ -2310,7 +2383,7 @@ El format europeu (coma decimal) pot fer que Excel no els reconegui com a númer
 
 ---
 
-# 11. Resolució de Problemes
+# 11. Resolució de Problemes [id:11-resolucio-de-problemes]
 
 **Aquesta secció t'ajudarà a...**
 
@@ -2413,7 +2486,7 @@ Abans de sortir de l'app, a Summa tens **tres punts d'ajuda reals**:
 
 ---
 
-# 12. Glossari
+# 12. Glossari [id:12-glossari]
 
 | Terme | Definició |
 |-------|-----------|
