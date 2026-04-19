@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { trackUX } from '@/lib/ux/trackUX';
 import type { Transaction, Category } from '@/lib/data';
-import { getForcedIncomeCategoryIdByBankDescription } from '@/lib/auto-match';
+import { getForcedCategoryIdByBankDescription } from '@/lib/auto-match';
 
 // =============================================================================
 // TYPES
@@ -257,9 +257,10 @@ export function useTransactionCategorization({
 
     setLoadingStates((prev) => ({ ...prev, [txId]: true }));
     try {
-      // 1. Comprovar si hi ha categoria forçada per descripció (loteria, voluntariat)
-      const forcedCategoryId = getForcedIncomeCategoryIdByBankDescription(
+      // 1. Comprovar si hi ha categoria forçada per descripció abans de cridar IA
+      const forcedCategoryId = getForcedCategoryIdByBankDescription(
         transaction.description,
+        transaction.amount,
         availableCategories
       );
 
@@ -415,9 +416,10 @@ export function useTransactionCategorization({
       });
 
       try {
-        // 1. Comprovar si hi ha categoria forçada per descripció (loteria, voluntariat)
-        const forcedCategoryId = getForcedIncomeCategoryIdByBankDescription(
+        // 1. Comprovar si hi ha categoria forçada per descripció abans de cridar IA
+        const forcedCategoryId = getForcedCategoryIdByBankDescription(
           tx.description,
+          tx.amount,
           availableCategories
         );
 
