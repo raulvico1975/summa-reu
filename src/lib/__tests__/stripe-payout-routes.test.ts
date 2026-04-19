@@ -3,8 +3,8 @@ import test from 'node:test';
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { handleStripePayoutGet } from '@/app/api/stripe/payout/[payoutId]/route';
-import { handleStripePayoutsGet } from '@/app/api/stripe/payouts/route';
+import { handleStripePayoutGet } from '@/app/api/stripe/payout/[payoutId]/handler';
+import { handleStripePayoutsGet } from '@/app/api/stripe/payouts/handler';
 import { UnsupportedStripeCurrencyError } from '@/lib/stripe/payout-sync';
 
 function makeRequest(url: string) {
