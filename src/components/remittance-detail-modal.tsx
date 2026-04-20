@@ -22,18 +22,17 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Search, X, ExternalLink, Calendar, Coins, User, AlertCircle, RefreshCw, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
-import { formatCurrencyEU, formatIBANDisplay } from '@/lib/normalize';
+import { formatCurrencyEU } from '@/lib/normalize';
+import { getCategoryDisplayLabel } from '@/lib/ui/display-labels';
 import { useTranslations } from '@/i18n';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, writeBatch, deleteDoc, updateDoc, getDocs, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, writeBatch, updateDoc, getDocs } from 'firebase/firestore';
 import { useOrgUrl } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
-import type { Transaction, AnyContact, Donor, RemittancePendingItem, RemittancePendingReason } from '@/lib/data';
+import type { Transaction, AnyContact, Category, Donor, RemittancePendingItem } from '@/lib/data';
 
 interface RemittanceDetailModalProps {
   open: boolean;
@@ -59,20 +58,6 @@ interface ConsistencyCheckResult {
   skipped?: boolean;
   /** Motiu pel qual s'ha saltat el check */
   skipReason?: 'OUT_REMITTANCE';
-}
-
-// Helper per traduir motius de pendent
-function getPendingReasonLabel(reason: RemittancePendingReason, t: any): string {
-  const labels: Record<RemittancePendingReason, string> = {
-    NO_TAXID: t.movements?.splitter?.pendingReasonNoTaxId ?? 'Sense DNI/CIF',
-    INVALID_DATA: t.movements?.splitter?.pendingReasonInvalidData ?? 'Dades invàlides',
-    NO_MATCH: t.movements?.splitter?.pendingReasonNoMatch ?? 'Sense coincidència',
-    DUPLICATE: t.movements?.splitter?.pendingReasonDuplicate ?? 'Duplicat',
-    // P0: Nous motius per mode IN (IBAN-first)
-    NO_IBAN_MATCH: 'IBAN no trobat a Summa',
-    AMBIGUOUS_IBAN: 'IBAN duplicat',
-  };
-  return labels[reason] || reason;
 }
 
 // Component per mostrar el resum del donant al hover
@@ -154,7 +139,6 @@ export function RemittanceDetailModal({
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [activeTab, setActiveTab] = React.useState<'quotes' | 'pending'>('quotes');
   const [isReprocessing, setIsReprocessing] = React.useState(false);
   const [pendingItems, setPendingItems] = React.useState<RemittancePendingItem[]>([]);
 
@@ -189,6 +173,12 @@ export function RemittanceDetailModal({
   );
   const { data: contacts } = useCollection<AnyContact>(contactsCollection);
 
+  const categoriesCollection = useMemoFirebase(
+    () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
+    [firestore, organizationId]
+  );
+  const { data: categories } = useCollection<Category>(categoriesCollection);
+
   // Map de contactes per ID
   const contactMap = React.useMemo(() => {
     if (!contacts) return {};
@@ -203,6 +193,15 @@ export function RemittanceDetailModal({
     () => t.categories as Record<string, string>,
     [t.categories]
   );
+
+  const getCategoryLabel = React.useCallback((categoryValue: string | null | undefined) => {
+    if (!categoryValue) return '-';
+    return getCategoryDisplayLabel(categoryValue, {
+      categories: categories ?? undefined,
+      categoryTranslations,
+      unknownCategoryLabel: '-',
+    });
+  }, [categories, categoryTranslations]);
 
   // Filtrar per cerca (i excloure arxivades)
   const filteredItems = React.useMemo(() => {
@@ -542,10 +541,10 @@ export function RemittanceDetailModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col px-4 py-4 sm:px-6">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-4 sm:px-6">
         {/* Banner d'inconsistència (només per remeses IN, no OUT/devolucions) */}
         {consistencyCheck && !consistencyCheck.consistent && !consistencyCheck.skipped && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+          <div className="mb-4 shrink-0 rounded-lg border border-red-200 bg-red-50 p-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -588,97 +587,109 @@ export function RemittanceDetailModal({
 
         {/* Loading check */}
         {isCheckingConsistency && (
-          <div className="text-sm text-muted-foreground mb-2">
+          <div className="mb-2 shrink-0 text-sm text-muted-foreground">
             Verificant consistència...
           </div>
         )}
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'quotes' | 'pending')} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid h-auto w-full grid-cols-2">
-            <TabsTrigger value="quotes" className="flex min-w-0 items-center gap-2 whitespace-normal text-center">
-              <CheckCircle2 className="h-4 w-4" />
-              {t.movements?.splitter?.quotesTab ?? 'Quotes'} ({filteredItems.length})
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="flex min-w-0 items-center gap-2 whitespace-normal text-center">
-              <AlertCircle className="h-4 w-4" />
-              {t.movements?.splitter?.pendingTab ?? 'Pendents'}
-              {hasPending && (
-                <Badge variant="destructive" className="ml-1 h-5 px-1.5">
-                  {pendingItems.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          {/* TAB: Quotes creades */}
-          <TabsContent value="quotes" className="flex-1 flex flex-col min-h-0 mt-4">
-            {/* Cercador */}
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t.movements.table.searchDonor}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-9"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
+        {hasPending && (
+          <div className="mb-4 shrink-0 rounded-lg border border-orange-200 bg-orange-50 p-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-orange-900">
+                  {typeof t.movements?.splitter?.pendingItems === 'function'
+                    ? t.movements.splitter.pendingItems(pendingItems.length)
+                    : `${pendingItems.length} pendents`
+                  } · {formatCurrencyEU(pendingTotal)}
+                </p>
+                <p className="text-sm text-orange-800">
+                  {t.movements?.splitter?.pendingExplanation ??
+                    "Aquestes línies no s'han pogut processar perquè la remesa no porta DNI/NIF vàlid i l'IBAN no coincideix amb cap donant existent."}
+                </p>
+              </div>
+              <Button
+                onClick={handleReprocess}
+                disabled={isReprocessing}
+                variant="outline"
+                size="sm"
+                className="border-orange-300 text-orange-700 hover:bg-orange-50"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isReprocessing ? 'animate-spin' : ''}`} />
+                {t.movements?.splitter?.reprocessPending ?? 'Reprocessar pendents'}
+              </Button>
             </div>
+          </div>
+        )}
 
-            {/* Taula de quotes */}
-            <div className="space-y-3 lg:hidden">
-              {filteredItems.length === 0 ? (
-                <div className="flex h-24 items-center justify-center rounded-lg border text-center text-muted-foreground">
-                  {t.movements.table.noResults}
-                </div>
-              ) : (
-                filteredItems.map((item) => {
-                  const contact = item.contactId ? contactMap[item.contactId] : null;
-                  const isDonor = item.contactType ? item.contactType === 'donor' : contact?.type === 'donor';
+        {/* Cercador */}
+        <div className="relative mb-3 shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t.movements.table.searchDonor}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
-                  return (
-                    <div key={item.id} className="rounded-lg border bg-background p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          {contact && isDonor ? (
-                            <button
-                              type="button"
-                              onClick={() => item.contactId && handleDonorClick(item.contactId)}
-                              className="flex items-center gap-1 text-left font-medium hover:text-primary hover:underline"
-                            >
-                              <span className="break-words">{contact.name}</span>
-                              <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
-                            </button>
-                          ) : (
-                            <div className="font-medium">{contact?.name || '-'}</div>
-                          )}
-                          {contact?.taxId && (
-                            <div className="mt-1 text-xs text-muted-foreground">{contact.taxId}</div>
-                          )}
-                        </div>
-                        <div className="whitespace-nowrap text-right font-medium text-green-600">
-                          {formatCurrencyEU(item.amount)}
-                        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto pb-2">
+          {/* Taula de quotes */}
+          <div className="space-y-3 lg:hidden">
+            {filteredItems.length === 0 ? (
+              <div className="flex h-24 items-center justify-center rounded-lg border text-center text-muted-foreground">
+                {t.movements.table.noResults}
+              </div>
+            ) : (
+              filteredItems.map((item) => {
+                const contact = item.contactId ? contactMap[item.contactId] : null;
+                const isDonor = item.contactType ? item.contactType === 'donor' : contact?.type === 'donor';
+
+                return (
+                  <div key={item.id} className="rounded-lg border bg-background p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        {contact && isDonor ? (
+                          <button
+                            type="button"
+                            onClick={() => item.contactId && handleDonorClick(item.contactId)}
+                            className="flex items-center gap-1 text-left font-medium hover:text-primary hover:underline"
+                          >
+                            <span className="break-words">{contact.name}</span>
+                            <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                          </button>
+                        ) : (
+                          <div className="font-medium">{contact?.name || '-'}</div>
+                        )}
+                        {contact?.taxId && (
+                          <div className="mt-1 text-xs text-muted-foreground">{contact.taxId}</div>
+                        )}
                       </div>
-                      <div className="mt-3 text-sm text-muted-foreground">
-                        {item.category ? (categoryTranslations[item.category] || item.category) : '-'}
+                      <div className="whitespace-nowrap text-right font-medium text-green-600">
+                        {formatCurrencyEU(item.amount)}
                       </div>
                     </div>
-                  );
-                })
-              )}
-            </div>
+                    <div className="mt-3 text-sm text-muted-foreground">
+                      {getCategoryLabel(item.category)}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
 
-            <div className="hidden min-h-0 flex-1 rounded-lg border lg:block">
+          <div className="hidden rounded-lg border lg:block">
+            <div className="max-w-full overflow-x-auto">
               <Table className="w-full min-w-[900px]">
-                <TableHeader>
+                <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow>
                     <TableHead>{t.movements.table.contact}</TableHead>
                     <TableHead className="w-[160px]">DNI/CIF</TableHead>
@@ -725,7 +736,7 @@ export function RemittanceDetailModal({
                           {formatCurrencyEU(item.amount)}
                         </TableCell>
                         <TableCell>
-                          {item.category ? (categoryTranslations[item.category] || item.category) : '-'}
+                          {getCategoryLabel(item.category)}
                         </TableCell>
                       </TableRow>
                     );
@@ -740,143 +751,18 @@ export function RemittanceDetailModal({
                 </TableBody>
               </Table>
             </div>
+          </div>
+        </div>
 
-            {/* Footer quotes */}
-            <div className="flex justify-between items-center pt-2 border-t mt-2">
-              <span className="text-sm text-muted-foreground">
-                {filteredItems.length} {t.movements.table.remittanceQuotes}
-              </span>
-              <span className="font-semibold text-green-600">
-                {t.movements.table.totalQuotes}: {formatCurrencyEU(total)}
-              </span>
-            </div>
-          </TabsContent>
-
-          {/* TAB: Pendents */}
-          <TabsContent value="pending" className="flex-1 flex flex-col min-h-0 mt-4">
-            {hasPending ? (
-              <>
-                {/* Explicació clara del que són els pendents */}
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
-                  <p className="text-sm text-orange-800">
-                    {t.movements?.splitter?.pendingExplanation ??
-                      "Aquestes línies no s'han pogut processar perquè la remesa no porta DNI/NIF vàlid i l'IBAN no coincideix amb cap donant existent."}
-                  </p>
-                </div>
-
-                {/* Taula de pendents */}
-                <div className="space-y-3 lg:hidden">
-                  {pendingItems.map((item) => (
-                    <div key={item.id} className="rounded-lg border bg-orange-50/50 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="font-medium">{item.nameRaw || '-'}</div>
-                          {item.taxId && (
-                            <div className="mt-1 text-xs text-muted-foreground">
-                              ID: {item.taxId} <span className="text-orange-500">(no fiscal)</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="whitespace-nowrap text-right font-medium text-orange-600">
-                          {formatCurrencyEU(item.amountCents / 100)}
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        {item.iban ? (
-                          <code className="rounded bg-slate-100 px-2 py-1 font-mono text-xs">
-                            {formatIBANDisplay(item.iban)}
-                          </code>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">-</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="hidden min-h-0 flex-1 rounded-lg border lg:block">
-                  <Table className="w-full min-w-[820px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t.movements?.splitter?.name ?? 'Nom'}</TableHead>
-                        <TableHead>{t.movements?.splitter?.pendingIbanLabel ?? 'IBAN detectat'}</TableHead>
-                        <TableHead className="w-[140px] text-right">{t.movements.table.amount}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pendingItems.map((item) => (
-                        <TableRow key={item.id} className="bg-orange-50/50">
-                          <TableCell>
-                            <div className="font-medium">{item.nameRaw || '-'}</div>
-                            {item.taxId && (
-                              <div className="mt-0.5 text-xs text-muted-foreground">
-                                ID: {item.taxId} <span className="text-orange-500">(no fiscal)</span>
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {item.iban ? (
-                              <code className="rounded bg-slate-100 px-2 py-1 font-mono text-xs">
-                                {formatIBANDisplay(item.iban)}
-                              </code>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-medium text-orange-600">
-                            {formatCurrencyEU(item.amountCents / 100)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Què pot fer l'usuari */}
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mt-3">
-                  <p className="text-sm font-medium text-slate-700 mb-2">
-                    {t.movements?.splitter?.pendingNextStepsTitle ?? 'Què pots fer ara?'}
-                  </p>
-                  <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
-                    <li>{t.movements?.splitter?.pendingStep1 ?? "Afegir l'IBAN a un donant existent (a la fitxa del donant)"}</li>
-                    <li>{t.movements?.splitter?.pendingStep2 ?? "Crear un donant nou amb aquest IBAN"}</li>
-                    <li>{t.movements?.splitter?.pendingStep3 ?? "Deixar-ho pendent i continuar (ho podràs resoldre abans del Model 182)"}</li>
-                  </ul>
-                </div>
-
-                {/* Footer pendents amb botó reprocessar */}
-                <div className="flex justify-between items-center pt-3 border-t mt-3">
-                  <span className="text-sm text-orange-600">
-                    {typeof t.movements?.splitter?.pendingItems === 'function'
-                      ? t.movements.splitter.pendingItems(pendingItems.length)
-                      : `${pendingItems.length} pendents`
-                    } · {formatCurrencyEU(pendingTotal)}
-                  </span>
-                  <Button
-                    onClick={handleReprocess}
-                    disabled={isReprocessing}
-                    variant="outline"
-                    size="sm"
-                    className="border-orange-300 text-orange-700 hover:bg-orange-50"
-                  >
-                    <RefreshCw className={`mr-2 h-4 w-4 ${isReprocessing ? 'animate-spin' : ''}`} />
-                    {t.movements?.splitter?.reprocessPending ?? 'Reprocessar pendents'}
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-                <CheckCircle2 className="h-12 w-12 text-green-500 mb-3" />
-                <p className="text-lg font-medium text-green-700">
-                  {t.movements?.splitter?.noPending ?? 'No hi ha pendents'}
-                </p>
-                <p className="text-sm">
-                  {t.movements?.splitter?.allResolved ?? 'Totes les quotes han estat processades.'}
-                </p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Footer quotes */}
+        <div className="mt-3 flex shrink-0 items-center justify-between gap-3 border-t pt-3">
+          <span className="text-sm text-muted-foreground">
+            {filteredItems.length} {t.movements.table.remittanceQuotes}
+          </span>
+          <span className="font-semibold text-green-600">
+            {t.movements.table.totalQuotes}: {formatCurrencyEU(total)}
+          </span>
+        </div>
         </div>
       </DialogContent>
     </Dialog>
