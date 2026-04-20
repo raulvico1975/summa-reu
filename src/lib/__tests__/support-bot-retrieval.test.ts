@@ -744,6 +744,11 @@ test('detectSmallTalkResponse handles greeting with punctuation', () => {
   assert.equal(response?.cardId, 'smalltalk-greeting')
 })
 
+test('detectSmallTalkResponse does not treat "si hi ha" as an english greeting', () => {
+  const response = detectSmallTalkResponse('com sap el sistema si hi ha moviments solapats?', 'ca')
+  assert.equal(response, null)
+})
+
 test('detectSmallTalkResponse handles identity question', () => {
   const response = detectSmallTalkResponse('qui ets?', 'ca')
   assert.ok(response)

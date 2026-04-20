@@ -180,10 +180,11 @@ export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTal
     phrases.some(phrase => padded.includes(` ${phrase} `))
 
   const greetingPhrases = [
-    'hola', 'bon dia', 'bona tarda', 'bona nit', 'hey', 'hi', 'hello', 'ei',
+    'hola', 'bon dia', 'bona tarda', 'bona nit', 'hey', 'hello', 'ei',
     'buenos dias', 'buenas tardes', 'buenas noches',
   ]
-  if (tokens.length <= 10 && hasAnyPhrase(greetingPhrases)) {
+  const standaloneHiGreeting = tokens[0] === 'hi' && tokens.length <= 3
+  if (tokens.length <= 10 && (hasAnyPhrase(greetingPhrases) || standaloneHiGreeting)) {
     return {
       cardId: 'smalltalk-greeting',
       answer: lang === 'es'
