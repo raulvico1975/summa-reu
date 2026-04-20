@@ -89,6 +89,7 @@ const SYNONYM_GROUPS: Array<{ canon: string; variants: string[] }> = [
   { canon: 'donacio', variants: ['donacio', 'donacio', 'donacions', 'donacion', 'donaciones', 'donativo', 'donativos'] },
   { canon: 'soci', variants: ['socis', 'socio', 'socios', 'donant', 'donants', 'donante', 'donantes'] },
   { canon: 'remesa', variants: ['remeses', 'remessa', 'remessas', 'remesas'] },
+  { canon: 'solapament', variants: ['solapat', 'solapats', 'solapament', 'solapaments', 'solapado', 'solapados', 'solapamiento', 'solapamientos', 'overlap'] },
   { canon: 'dividir', variants: ['divideixo', 'dividir', 'divido', 'divide', 'fraccionar', 'fracciono', 'repartir', 'separar', 'separo', 'desglossar', 'desglosar', 'partir'] },
   { canon: 'desfer', variants: ['desfer', 'desfaig', 'desfem', 'desfeta', 'deshacer', 'deshago', 'anullar', 'anulo', 'anular', 'undo'] },
   { canon: 'importar', variants: ['importo', 'importar', 'importacio', 'importacion', 'importat', 'importada', 'importado', 'carregar', 'carrego', 'cargar', 'cargo', 'pujar', 'pujo', 'subir', 'subo'] },
@@ -922,6 +923,18 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     )
   ) {
     return { cardId: 'howto-import-safe-duplicates', minScore: 675 }
+  }
+
+  // "Com sap el sistema si hi ha moviments solapats?"
+  if (
+    hasToken(set, 'solapament', 'solapat', 'solapats', 'solapado', 'solapados', 'solapamiento', 'overlap') &&
+    hasToken(set, 'moviment', 'moviments', 'movimiento', 'movimientos', 'extracte', 'extracto') &&
+    (
+      hasToken(set, 'sap', 'sabe', 'detecta', 'detectar', 'detecto', 'sistema') ||
+      hasToken(set, 'duplicat', 'duplicats', 'duplicado', 'duplicados', 'saldo')
+    )
+  ) {
+    return { cardId: 'ts-import-overlap', minScore: 705 }
   }
 
   // "M'han tornat uns rebuts del banc" / "Com entro devolucions?"

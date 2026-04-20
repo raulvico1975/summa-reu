@@ -8,6 +8,7 @@ import { useFirebase } from '@/firebase';
 import { collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
 import { generateUniqueSlug, reserveSlug } from '@/lib/slugs';
 import type { Organization, OrganizationRole, UserProfile, OrganizationMember } from '@/lib/data';
+import { normalizeOrganizationMember } from '@/lib/organization-member-normalization';
 import { Loader2, AlertCircle, LogOut } from 'lucide-react';
 import { User, signOut } from 'firebase/auth';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -174,8 +175,12 @@ function useOrganizationBySlug(orgSlug?: string) {
           try {
             const memberSnap = await getDoc(memberRef);
             if (memberSnap.exists()) {
-              const memberData = memberSnap.data();
-              runIfActive(() => setUserRole(memberData.role as OrganizationRole));
+              const normalizedMember = normalizeOrganizationMember(memberSnap.data(), {
+                userId: user.uid,
+                email: user.email ?? '',
+                displayName: user.displayName ?? '',
+              });
+              runIfActive(() => setUserRole(normalizedMember.role));
             } else {
               // No és membre directe, però té accés (SuperAdmin o hasOrgInProfile via rules)
               // Comportament esperat per SuperAdmins: poden accedir a qualsevol org sense membership.
@@ -232,11 +237,15 @@ function useOrganizationBySlug(orgSlug?: string) {
 
             if (!membersSnapshot.empty) {
               const memberDoc = membersSnapshot.docs[0];
-              const memberData = memberDoc.data();
+              const normalizedMember = normalizeOrganizationMember(memberDoc.data(), {
+                userId: user.uid,
+                email: user.email ?? '',
+                displayName: user.displayName ?? '',
+              });
               // Extreure l'orgId del path: organizations/{orgId}/members/{userId}
               const pathParts = memberDoc.ref.path.split('/');
               orgId = pathParts[1]; // organizations/{orgId}/members/{userId}
-              runIfActive(() => setUserRole(memberData.role as OrganizationRole));
+              runIfActive(() => setUserRole(normalizedMember.role));
             }
           }
 
@@ -283,35 +292,22 @@ function useOrganizationBySlug(orgSlug?: string) {
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) {
             const profileData = profileSnap.data();
-            const role = (profileData.role ?? 'viewer') as OrganizationRole;
-            const userOverrides =
-              profileData.userOverrides && typeof profileData.userOverrides === 'object'
-                ? profileData.userOverrides as { deny?: string[] }
-                : undefined;
-            const userGrants = Array.isArray(profileData.userGrants)
-              ? profileData.userGrants.filter((value: unknown): value is string => typeof value === 'string')
-              : undefined;
+            const normalizedMember = normalizeOrganizationMember(profileData, {
+              userId: user.uid,
+              email: user.email ?? '',
+              displayName: user.displayName ?? '',
+            });
 
             runIfActive(() => setUserProfile({
               organizationId: profileData.organizationId ?? orgId,
-              role,
-              displayName: profileData.displayName ?? user.displayName ?? '',
-              email: profileData.email ?? user.email ?? undefined,
+              role: normalizedMember.role,
+              displayName: normalizedMember.displayName,
+              email: normalizedMember.email || user.email || undefined,
               organizations: profileData.organizations,
             }));
 
-            runIfActive(() => setMember({
-              userId: profileData.userId ?? user.uid,
-              email: profileData.email ?? user.email ?? '',
-              displayName: profileData.displayName ?? user.displayName ?? '',
-              role,
-              joinedAt: profileData.joinedAt ?? '',
-              invitedBy: profileData.invitedBy,
-              invitationId: profileData.invitationId,
-              userOverrides,
-              userGrants,
-            }));
-            runIfActive(() => setUserRole(role));
+            runIfActive(() => setMember(normalizedMember));
+            runIfActive(() => setUserRole(normalizedMember.role));
           } else {
             runIfActive(() => setUserProfile(null));
             runIfActive(() => setMember(null));

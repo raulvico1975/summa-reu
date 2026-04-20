@@ -14,23 +14,29 @@
       "dates solapades",
       "l'import diu que hi ha solapament",
       "duplicats a l'importar",
-      "ja tinc aquests moviments importats"
+      "ja tinc aquests moviments importats",
+      "com sap el sistema si hi ha moviments solapats",
+      "com detecta solapaments en importar",
+      "duplicats per saldo a l extracte"
     ],
     "es": [
       "fechas solapadas",
       "la importación dice que hay solapamiento",
       "duplicados al importar",
-      "ya tengo estos movimientos importados"
+      "ya tengo estos movimientos importados",
+      "como sabe el sistema si hay movimientos solapados",
+      "como detecta solapamientos al importar",
+      "duplicados por saldo en el extracto"
     ]
   },
   "guideId": null,
   "answer": {
-    "ca": "Aquest avís apareix quan importes un extracte que cobreix dates que ja tens importades.\n\n**No cal preocupar-se:** Summa detecta i omet duplicats exactes (mateixa data, import i descripció).\n\n**Quan pot fallar:** Si el banc canvia el text descriptiu o la data valor entre descàrregues, és possible que algun moviment no es detecti com a duplicat.\n\n**Què fer:**\n1. Pots continuar amb la importació — els duplicats exactes s'ometran.\n2. Després, revisa que no hi hagi moviments repetits al llistat.\n3. Si en trobes, pots esborrar-los manualment.",
-    "es": "Este aviso aparece cuando importas un extracto que cubre fechas que ya tienes importadas.\n\n**No hay que preocuparse:** Summa detecta y omite duplicados exactos (misma fecha, importe y descripción).\n\n**Cuándo puede fallar:** Si el banco cambia el texto descriptivo o la fecha valor entre descargas, es posible que algún movimiento no se detecte como duplicado.\n\n**Qué hacer:**\n1. Puedes continuar con la importación — los duplicados exactos se omitirán.\n2. Después, revisa que no haya movimientos repetidos en el listado.\n3. Si encuentras alguno, puedes borrarlo manualmente."
+    "ca": "Summa Social detecta possibles solapaments durant la importació de l'extracte. Ho fa sempre dins del mateix compte bancari, no comparant tots els moviments de l'entitat barrejats.\n\nPrimer mira si el moviment nou coincideix amb un moviment ja existent per referència bancària. Si el fitxer porta prou informació, també compara saldo després del moviment, import i data d'operació.\n\nQuan el duplicat és clar, el sistema el tracta com a duplicat segur i el descarta. Si no és del tot clar, el marca com a candidat perquè el revisis abans d'importar.\n\nAixò serveix per evitar importar el mateix extracte dues vegades o importar un extracte que se solapa parcialment amb un altre que ja havies carregat.\n\nQuè fer:\n1. Revisa el resum pre-importació del compte seleccionat.\n2. Mira Duplicats segurs i candidats abans de confirmar.\n3. Importa només quan tinguis clar quins casos dubtosos vols incloure.",
+    "es": "Summa Social detecta posibles solapamientos durante la importación del extracto. Lo hace siempre dentro de la misma cuenta bancaria, no comparando todos los movimientos de la entidad mezclados.\n\nPrimero mira si el movimiento nuevo coincide con uno ya existente por referencia bancaria. Si el archivo trae suficiente información, también compara saldo después del movimiento, importe y fecha de operación.\n\nCuando el duplicado es claro, el sistema lo trata como duplicado seguro y lo descarta. Si no es del todo claro, lo marca como candidato para que lo revises antes de importarlo.\n\nEsto sirve para evitar importar el mismo extracto dos veces o importar un extracto que se solapa parcialmente con otro que ya habías cargado.\n\nQué hacer:\n1. Revisa el resumen preimportación de la cuenta seleccionada.\n2. Mira Duplicados seguros y candidatos antes de confirmar.\n3. Importa solo cuando tengas claro qué casos dudosos quieres incluir."
   },
   "uiPaths": ["Moviments > Importar"],
   "needsSnapshot": false,
-  "keywords": ["solapament", "duplicats", "dates", "importar", "repetits"],
+  "keywords": ["solapament", "duplicats", "dates", "importar", "repetits", "saldo", "referencia bancaria", "mateix extracte"],
   "source_faq": ["Q9"],
   "source_manual": ["5.1"],
   "source_guides": ["importMovements"],

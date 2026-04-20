@@ -172,6 +172,26 @@ test('retrieveCard resolves natural-language duplicate import phrasing', () => {
   assert.equal(es.mode, 'card')
 })
 
+test('retrieveCard resolves overlap detection phrasing without falling back', () => {
+  const ca = retrieveCard('com sap el sistema si hi ha moviments solapats?', 'ca', cards)
+  assert.equal(ca.card.id, 'ts-import-overlap')
+  assert.equal(ca.mode, 'card')
+
+  const es = retrieveCard('como sabe el sistema si hay movimientos solapados?', 'es', cards)
+  assert.equal(es.card.id, 'ts-import-overlap')
+  assert.equal(es.mode, 'card')
+})
+
+test('retrieveCard resolves duplicate-detection import phrasing to banking duplicate guidance', () => {
+  const ca = retrieveCard("com detecta duplicats a l'import bancari?", 'ca', cards)
+  assert.equal(ca.card.id, 'howto-import-safe-duplicates')
+  assert.equal(ca.mode, 'card')
+
+  const sameExtract = retrieveCard("què passa si importo el mateix extracte dues vegades?", 'ca', cards)
+  assert.equal(sameExtract.card.id, 'howto-import-safe-duplicates')
+  assert.equal(sameExtract.mode, 'card')
+})
+
 test('retrieveCard resolves natural-language bank returns phrasing', () => {
   const ca = retrieveCard("m'han tornat uns rebuts del banc, com els entro?", 'ca', cards)
   assert.equal(ca.card.id, 'howto-import-bank-returns')

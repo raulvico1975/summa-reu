@@ -14,19 +14,23 @@
       "detectar duplicats en importar",
       "he importat l extracte dues vegades",
       "duplicats extracte bancari",
-      "moviments duplicats importacio"
+      "moviments duplicats importacio",
+      "com detecta duplicats a l import bancari",
+      "què passa si importo el mateix extracte dues vegades"
     ],
     "es": [
       "detectar duplicados al importar",
       "he importado el extracto dos veces",
       "duplicados extracto bancario",
-      "movimientos duplicados importacion"
+      "movimientos duplicados importacion",
+      "como detecta duplicados en la importacion bancaria",
+      "que pasa si importo el mismo extracto dos veces"
     ]
   },
   "guideId": null,
   "answer": {
-    "ca": "Per detectar duplicats en importar:\n1. Obre la importació i mira el Resum pre-importació abans de confirmar.\n2. Revisa el bloc Duplicats segurs per veure quins moviments ja existien.\n3. Si cal, obre Veure per què per validar la coincidència detectada.\n4. Importa només quan tinguis clar que el resum separa bé nous moviments i duplicats.\n\nComprovació final: els duplicats queden fora i no es creen línies repetides.",
-    "es": "Para detectar duplicados al importar:\n1. Abre la importación y mira el Resumen preimportación antes de confirmar.\n2. Revisa el bloque Duplicados seguros para ver qué movimientos ya existían.\n3. Si hace falta, abre Ver por qué para validar la coincidencia detectada.\n4. Importa solo cuando tengas claro que el resumen separa bien movimientos nuevos y duplicados.\n\nComprobación final: los duplicados quedan fuera y no se crean líneas repetidas."
+    "ca": "Per detectar duplicats en importar:\n1. Summa compara el nou extracte només contra moviments del mateix compte bancari.\n2. Si coincideix la referència bancària, el sistema ho tracta com a duplicat clar.\n3. Si el fitxer porta prou dades, també compara saldo després del moviment, import i data d'operació per marcar duplicats segurs.\n4. Si la coincidència no és prou forta, la deixa com a candidat perquè la revisis al resum pre-importació.\n\nComprovació final: els duplicats segurs queden fora i els casos dubtosos no entren si tu no els acceptes.",
+    "es": "Para detectar duplicados al importar:\n1. Summa compara el nuevo extracto solo contra movimientos de la misma cuenta bancaria.\n2. Si coincide la referencia bancaria, el sistema lo trata como duplicado claro.\n3. Si el archivo trae suficientes datos, también compara saldo después del movimiento, importe y fecha de operación para marcar duplicados seguros.\n4. Si la coincidencia no es lo bastante fuerte, la deja como candidato para que la revises en el resumen preimportación.\n\nComprobación final: los duplicados seguros quedan fuera y los casos dudosos no entran si tú no los aceptas."
   },
   "uiPaths": [
     "Moviments > Importar extracte bancari"
@@ -37,7 +41,9 @@
     "duplicados",
     "importar",
     "extracte",
-    "resum pre-importació"
+    "resum pre-importació",
+    "saldo",
+    "mateix extracte"
   ],
   "source_faq": [
     "Q9"

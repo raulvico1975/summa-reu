@@ -1,7 +1,7 @@
 # Product Governance Charter
 
 **Govern del producte Summa Social**  
-*Versió 3.0 · intern · actualitzat el 8 març 2026*
+*Versió 3.1 · intern · actualitzat el 19 abril 2026*
 
 ## 1. Propòsit
 
@@ -74,6 +74,12 @@ També formen part del producte quan reforcen els blocs anteriors:
 - ajuda contextual, guies i support bot
 - eines internes de SuperAdmin
 - backup/export local per a suport, migració o auditoria
+
+Estat vigent d'aquest bloc:
+
+- el bot d'ajuda dins del dashboard es considera funcionalitat viva de producte, no experiment paral·lel
+- el seu criteri de valor és resoldre dubtes reals d'usuari a producció amb resposta útil i segura
+- qualsevol evolució futura del bot segueix el flux normal de producte: branca pròpia, validació, PR, `main` i producció si aporta valor clar
 
 ## 5. Criteris de priorització
 

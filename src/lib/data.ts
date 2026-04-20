@@ -590,6 +590,7 @@ export type OrganizationMember = {
   displayName: string;
   role: OrganizationRole;
   joinedAt: string;
+  capabilities?: Record<string, boolean>;
   invitedBy?: string;              // UID de qui el va convidar
   invitationId?: string;           // ID de la invitació (obligatori per self-join via regles)
   userOverrides?: {

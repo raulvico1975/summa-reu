@@ -12,6 +12,9 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ### 2026-04-19
 
+- bot d'ajuda: queda integrat i publicat com a funcionalitat viva de producte dins del dashboard
+- bot d'ajuda: benchmark top-100 consolidat amb gate `100/100` i smoke real a produccio superat a `baruma` amb `10/10` consultes resoltes de forma util
+- operativa: la validacio rellevant del bot passa a ser resposta util a dubtes reals en prod, no nomes cobertura de benchmark o deploy verd
 - Stripe/imputacio: l'anti-duplicacio passa a ser forta per payout complet; si qualsevol `stripePaymentId` del payout ja existeix actiu, es rebutja tota la reimputacio i cal fer `Desfer imputacio Stripe` del moviment original
 - Stripe/imputacio: no s'accepten imputacions parcials d'un payout i `stripe_adjustment` queda reservat nomes a diferencies reals entre banc i net calculat
 - Stripe/API: la llista de payouts paid pagina mes enlla de la primera pagina i el flux actual rebutja explicitament monedes de 3 decimals
