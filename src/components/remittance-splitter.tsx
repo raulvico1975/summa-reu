@@ -20,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Table,
   TableBody,
@@ -36,7 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { Transaction, Donor, AnyContact } from '@/lib/data';
+import type { Transaction, Donor, AnyContact, BankAccount, SepaCollectionRunRecord } from '@/lib/data';
 import { formatCurrencyEU, isValidSpanishTaxId, getSpanishTaxIdType, normalizeTaxId, formatIBANDisplay, normalizeIBAN } from '@/lib/normalize';
 import type { SpanishTaxIdType } from '@/lib/normalize';
 import {
@@ -61,11 +62,17 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFirebase } from '@/firebase';
-import { collection, writeBatch, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, writeBatch, doc, setDoc, deleteDoc, updateDoc, query, orderBy, limit } from 'firebase/firestore';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { parsePain001, isPain001File, downloadPain001, parsePain008, isPain008File } from '@/lib/sepa';
+import { summarizeSepaCollectionRunRecord } from '@/lib/sepa/pain008/run-history';
+import {
+  rankSavedRemittanceCandidates,
+  validateSavedRemittanceSelection,
+  type SavedRemittanceCandidate,
+} from '@/lib/sepa/pain008/saved-remittance-candidates';
 import { filterMatchableContacts, filterAllForIbanMatching, isNumericLikeName, maskMatchValue } from '@/lib/contacts/filterActiveContacts';
 import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
 import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
@@ -96,6 +103,7 @@ interface RemittanceSplitterProps {
 
 // Tipus de remesa: IN (donacions) o OUT (pagaments)
 type RemittanceDirection = 'IN' | 'OUT';
+type DetailSource = 'manual' | 'saved';
 
 // Configuració guardada per a un format de banc
 interface SavedMapping {
@@ -153,6 +161,7 @@ interface ParsedDonation {
 }
 
 type Step = 'upload' | 'mapping' | 'preview' | 'processing';
+type PreviewReturnStep = 'upload' | 'mapping';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // UTILITATS
@@ -360,7 +369,12 @@ export function RemittanceSplitter({
 
   // Estats de navegació
   const [step, setStep] = React.useState<Step>('upload');
+  const [previewReturnStep, setPreviewReturnStep] = React.useState<PreviewReturnStep>('mapping');
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [detailSource, setDetailSource] = React.useState<DetailSource>('manual');
+  const [selectedSavedRunId, setSelectedSavedRunId] = React.useState<string | null>(null);
+  const [loadedSavedRunCandidate, setLoadedSavedRunCandidate] = React.useState<SavedRemittanceCandidate | null>(null);
+  const [isLoadingSavedRun, setIsLoadingSavedRun] = React.useState(false);
 
   // Estats de l'arxiu
   const [rawText, setRawText] = React.useState('');
@@ -404,13 +418,66 @@ export function RemittanceSplitter({
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'bankAccounts') : null,
     [firestore, organizationId]
   );
-  const { data: bankAccounts } = useCollection<{ id: string; name: string; iban: string }>(bankAccountsQuery);
+  const { data: bankAccounts } = useCollection<BankAccount>(bankAccountsQuery);
+
+  const savedRunsQuery = useMemoFirebase(
+    () => (
+      !isPaymentRemittance && organizationId
+        ? query(
+            collection(firestore, 'organizations', organizationId, 'sepaCollectionRuns'),
+            orderBy('createdAt', 'desc'),
+            limit(30)
+          )
+        : null
+    ),
+    [firestore, isPaymentRemittance, organizationId]
+  );
+  const { data: savedSepaRuns, isLoading: isLoadingSavedRunCandidates } = useCollection<SepaCollectionRunRecord>(savedRunsQuery);
 
   // Obtenir l'IBAN del compte bancari de la transacció
   const debtorBankAccount = React.useMemo(() => {
     if (!transaction.bankAccountId || !bankAccounts) return null;
     return bankAccounts.find(ba => ba.id === transaction.bankAccountId) ?? null;
   }, [transaction.bankAccountId, bankAccounts]);
+
+  const bankAccountsById = React.useMemo(
+    () => new Map((bankAccounts ?? []).map((account) => [account.id, account])),
+    [bankAccounts]
+  );
+
+  const savedRunSummaries = React.useMemo(
+    () => (savedSepaRuns ?? []).map((run) => summarizeSepaCollectionRunRecord({ ...run, id: run.id })),
+    [savedSepaRuns]
+  );
+
+  const savedRunCandidates = React.useMemo(
+    () => rankSavedRemittanceCandidates({
+      transaction: {
+        bankAccountId: transaction.bankAccountId ?? null,
+        amount: transaction.amount,
+        date: transaction.operationDate || transaction.date || null,
+      },
+      runs: savedRunSummaries,
+    }),
+    [
+      savedRunSummaries,
+      transaction.amount,
+      transaction.bankAccountId,
+      transaction.date,
+      transaction.operationDate,
+    ]
+  );
+
+  const suggestedSavedRun = savedRunCandidates.suggested;
+  const otherSavedRuns = React.useMemo(
+    () => savedRunCandidates.possible.filter((candidate) => candidate.id !== suggestedSavedRun?.id),
+    [savedRunCandidates.possible, suggestedSavedRun?.id]
+  );
+
+  const selectedSavedRunCandidate = React.useMemo(
+    () => savedRunCandidates.possible.find((candidate) => candidate.id === selectedSavedRunId) ?? null,
+    [savedRunCandidates.possible, selectedSavedRunId]
+  );
 
   const paymentContacts = React.useMemo(
     () => [...existingSuppliers, ...existingEmployees],
@@ -440,11 +507,79 @@ export function RemittanceSplitter({
     };
   }, [paymentContacts, t.common]);
 
+  const formatSavedRunDate = React.useCallback((dateValue: string | null) => {
+    if (!dateValue) return tr('movements.splitter.savedRemittanceNoDate', 'Data no disponible');
+    const normalized = dateValue.includes('T') ? dateValue : `${dateValue}T00:00:00`;
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) return dateValue;
+    return parsed.toLocaleDateString('ca-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }, [tr]);
+
+  const getSavedRunBankAccountLabel = React.useCallback((bankAccountId: string | null) => {
+    if (!bankAccountId) {
+      return tr('movements.splitter.savedRemittanceUnknownAccount', 'Compte no disponible');
+    }
+
+    const bankAccount = bankAccountsById.get(bankAccountId);
+    if (!bankAccount) {
+      return tr('movements.splitter.savedRemittanceUnknownAccount', 'Compte no disponible');
+    }
+
+    if (bankAccount.name && bankAccount.iban) {
+      return `${bankAccount.name} · ${formatIBANDisplay(bankAccount.iban)}`;
+    }
+    return bankAccount.name || formatIBANDisplay(bankAccount.iban || '');
+  }, [bankAccountsById, tr]);
+
+  const savedSourceSummary = React.useMemo(() => {
+    if (savedRunCandidates.reason === 'missing_bank_account') {
+      return tr(
+        'movements.splitter.savedRemittanceSummaryMissingAccount',
+        'Cal poder verificar el compte bancari del moviment per usar una remesa guardada.'
+      );
+    }
+
+    if (suggestedSavedRun) {
+      return tr(
+        'movements.splitter.savedRemittanceSummarySuggestedOne',
+        'Hi ha una coincidència clara disponible.'
+      );
+    }
+
+    if (savedRunCandidates.possible.length > 1) {
+      return tr(
+        'movements.splitter.savedRemittanceSummaryMany',
+        '{count} remeses possibles per revisar.'
+      ).replace('{count}', String(savedRunCandidates.possible.length));
+    }
+
+    if (savedRunCandidates.possible.length === 1) {
+      return tr(
+        'movements.splitter.savedRemittanceSummaryOnePossible',
+        'Hi ha una remesa possible per revisar.'
+      );
+    }
+
+    return tr(
+      'movements.splitter.savedRemittanceSummaryNone',
+      'Si Summa ja conserva el detall correcte, el podràs reaprofitar des d aquí.'
+    );
+  }, [savedRunCandidates.possible.length, savedRunCandidates.reason, suggestedSavedRun, tr]);
+
   // Reset quan es tanca el diàleg
   React.useEffect(() => {
     if (!open) {
       setStep('upload');
+      setPreviewReturnStep('mapping');
       setIsProcessing(false);
+      setDetailSource('manual');
+      setSelectedSavedRunId(null);
+      setLoadedSavedRunCandidate(null);
+      setIsLoadingSavedRun(false);
       setRawText('');
       setAllRows([]);
       setParsedDonations([]);
@@ -516,11 +651,50 @@ export function RemittanceSplitter({
     };
   }, [parsedDonations, totalAmount, transaction.amount, isPaymentRemittance]);
 
+  const savedRunSelectionValidation = React.useMemo(() => {
+    if (!loadedSavedRunCandidate) {
+      return { valid: true, reason: null };
+    }
+
+    return validateSavedRemittanceSelection({
+      transactionBankAccountId: transaction.bankAccountId ?? null,
+      savedRunBankAccountId: loadedSavedRunCandidate.bankAccountId,
+      transactionAmount: transaction.amount,
+      savedRunTotalCents: loadedSavedRunCandidate.totalCents,
+    });
+  }, [loadedSavedRunCandidate, transaction.amount, transaction.bankAccountId]);
+
+  const savedRunSelectionBlockReason = React.useMemo(() => {
+    if (savedRunSelectionValidation.reason === 'missing_transaction_bank_account') {
+      return tr(
+        'movements.splitter.savedRemittanceMissingAccountReason',
+        'No es pot verificar el compte bancari del moviment. Usa la via manual.'
+      );
+    }
+
+    if (savedRunSelectionValidation.reason === 'bank_account_mismatch') {
+      return tr(
+        'movements.splitter.savedRemittanceBankMismatchReason',
+        'El compte bancari de la remesa guardada no coincideix amb aquest moviment.'
+      );
+    }
+
+    if (savedRunSelectionValidation.reason === 'amount_mismatch') {
+      return tr(
+        'movements.splitter.savedRemittanceAmountMismatchReason',
+        'L import de la remesa guardada no coincideix amb aquest moviment.'
+      );
+    }
+
+    return null;
+  }, [savedRunSelectionValidation.reason, tr]);
+
   // Validació per permetre processar: imports quadren i hi ha dades
   const canProcess = React.useMemo(() => {
     // 🛑 GUARDRAIL: No permetre processar si ja és remesa
     // El flux de recuperació és: Desfer → Processar (no hi ha "Reparar")
     if (transaction.isRemittance) return false;
+    if (!savedRunSelectionValidation.valid) return false;
     if (parsedDonations.length === 0) return false;
     // Verificar que tots els imports són vàlids (> 0)
     if (validationDetails.invalidAmounts > 0) return false;
@@ -529,13 +703,23 @@ export function RemittanceSplitter({
     // P0: Bloquejar si hi ha IBAN ambigus sense resoldre (mode IN)
     if (!isPaymentRemittance && stats.ambiguousIban > 0) return false;
     return true;
-  }, [transaction.isRemittance, parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
+  }, [
+    transaction.isRemittance,
+    savedRunSelectionValidation.valid,
+    parsedDonations.length,
+    validationDetails,
+    isPaymentRemittance,
+    stats.ambiguousIban,
+  ]);
 
   // Motiu de bloqueig per mostrar a l'usuari
   const blockReason = React.useMemo((): string | null => {
     // 🛑 GUARDRAIL: Remesa ja processada
     if (transaction.isRemittance) {
       return t.movements.splitter.alreadyProcessed;
+    }
+    if (!savedRunSelectionValidation.valid) {
+      return savedRunSelectionBlockReason;
     }
     if (parsedDonations.length === 0) return 'No hi ha dades per processar';
     if (validationDetails.invalidAmounts > 0) {
@@ -550,7 +734,16 @@ export function RemittanceSplitter({
       return `${stats.ambiguousIban} IBAN(s) ambigu(s) - cal selecció manual`;
     }
     return null;
-  }, [transaction.isRemittance, parsedDonations.length, validationDetails, isPaymentRemittance, stats.ambiguousIban]);
+  }, [
+    transaction.isRemittance,
+    savedRunSelectionBlockReason,
+    savedRunSelectionValidation.valid,
+    parsedDonations.length,
+    validationDetails,
+    isPaymentRemittance,
+    stats.ambiguousIban,
+    t.movements.splitter.alreadyProcessed,
+  ]);
 
   const remittanceDialogContentClassName =
     step === 'mapping' || step === 'preview'
@@ -612,9 +805,132 @@ export function RemittanceSplitter({
     fileInputRef.current?.click();
   };
 
+  const handleLoadSavedRun = async () => {
+    if (!selectedSavedRunCandidate?.id || !organizationId || !user) {
+      return;
+    }
+
+    const validation = validateSavedRemittanceSelection({
+      transactionBankAccountId: transaction.bankAccountId ?? null,
+      savedRunBankAccountId: selectedSavedRunCandidate.bankAccountId,
+      transactionAmount: transaction.amount,
+      savedRunTotalCents: selectedSavedRunCandidate.totalCents,
+    });
+
+    if (!validation.valid) {
+      toast({
+        variant: 'destructive',
+        title: tr('movements.splitter.savedRemittanceInvalidTitle', 'No es pot utilitzar aquesta remesa guardada'),
+        description:
+          validation.reason === 'missing_transaction_bank_account'
+            ? tr('movements.splitter.savedRemittanceInvalidMissingAccount', 'No es pot verificar el compte bancari del moviment. Usa la via manual.')
+            : validation.reason === 'bank_account_mismatch'
+              ? tr('movements.splitter.savedRemittanceInvalidBankMismatch', 'El compte bancari de la remesa guardada no coincideix amb aquest moviment.')
+              : tr('movements.splitter.savedRemittanceInvalidAmountMismatch', 'L import de la remesa guardada no coincideix amb aquest moviment.'),
+      });
+      return;
+    }
+
+    setIsLoadingSavedRun(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/remittances/in/saved-run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          parentTxId: transaction.id,
+          savedRunId: selectedSavedRunCandidate.id,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        xmlContent?: string;
+        error?: string;
+        code?: string;
+      };
+
+      if (!response.ok) {
+        if (result.code === 'REMITTANCE_ALREADY_PROCESSED') {
+          toast({
+            variant: 'destructive',
+            title: t.movements.splitter.operationBlocked,
+            description: t.movements.splitter.alreadyProcessed,
+          });
+          return;
+        }
+
+        if (result.code === 'BANK_ACCOUNT_NOT_VERIFIABLE') {
+          toast({
+            variant: 'destructive',
+            title: tr('movements.splitter.savedRemittanceInvalidTitle', 'No es pot utilitzar aquesta remesa guardada'),
+            description: tr(
+              'movements.splitter.savedRemittanceInvalidMissingAccount',
+              'No es pot verificar el compte bancari del moviment. Usa la via manual.'
+            ),
+          });
+          return;
+        }
+
+        if (result.code === 'BANK_ACCOUNT_MISMATCH') {
+          toast({
+            variant: 'destructive',
+            title: tr('movements.splitter.savedRemittanceInvalidTitle', 'No es pot utilitzar aquesta remesa guardada'),
+            description: tr(
+              'movements.splitter.savedRemittanceInvalidBankMismatch',
+              'El compte bancari de la remesa guardada no coincideix amb aquest moviment.'
+            ),
+          });
+          return;
+        }
+
+        if (result.code === 'AMOUNT_MISMATCH') {
+          toast({
+            variant: 'destructive',
+            title: tr('movements.splitter.savedRemittanceInvalidTitle', 'No es pot utilitzar aquesta remesa guardada'),
+            description: tr(
+              'movements.splitter.savedRemittanceInvalidAmountMismatch',
+              'L import de la remesa guardada no coincideix amb aquest moviment.'
+            ),
+          });
+          return;
+        }
+
+        throw new Error(result.error || `HTTP ${response.status}`);
+      }
+
+      const xmlContent = typeof result.xmlContent === 'string' ? result.xmlContent : null;
+      if (!xmlContent) {
+        throw new Error('Missing xmlContent');
+      }
+
+      setLoadedSavedRunCandidate(selectedSavedRunCandidate);
+      setPreviewReturnStep('upload');
+      parseSepaCollectionFile(xmlContent);
+    } catch (error) {
+      console.error('SAVED_SEPA_RUN_LOAD_FAILED', error);
+      toast({
+        variant: 'destructive',
+        title: tr('movements.splitter.savedRemittanceLoadErrorTitle', 'No s ha pogut carregar la remesa guardada'),
+        description: tr(
+          'movements.splitter.savedRemittanceLoadErrorDescription',
+          'Revisa que el detall guardat continuï disponible i torna-ho a provar. Si no, usa la via manual.'
+        ),
+      });
+    } finally {
+      setIsLoadingSavedRun(false);
+    }
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setLoadedSavedRunCandidate(null);
+      setPreviewReturnStep('upload');
       const fileName = file.name.toLowerCase();
       const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
       const isXml = fileName.endsWith('.xml');
@@ -720,6 +1036,7 @@ export function RemittanceSplitter({
 
       setParsedDonations(donations);
       setTotalAmount(result.totalAmount);
+      setPreviewReturnStep('upload');
       setStep('preview');
 
       toast({
@@ -771,6 +1088,7 @@ export function RemittanceSplitter({
 
       setParsedDonations(donations);
       setTotalAmount(result.totalAmount);
+      setPreviewReturnStep('upload');
       setStep('preview');
 
       toast({
@@ -894,6 +1212,7 @@ export function RemittanceSplitter({
           return;
         }
 
+        setLoadedSavedRunCandidate(null);
         setAllRows(filteredRows);
         setRawText(''); // No tenim text raw per Excel
         setDelimiter(''); // No aplica per Excel
@@ -918,6 +1237,7 @@ export function RemittanceSplitter({
   };
 
   const processRawText = (text: string) => {
+    setLoadedSavedRunCandidate(null);
     setRawText(text);
     
     // Detecta delimitador
@@ -1351,6 +1671,7 @@ export function RemittanceSplitter({
 
       setParsedDonations(donations);
       setTotalAmount(total);
+      setPreviewReturnStep('mapping');
       setStep('preview');
 
     } catch (error: any) {
@@ -1699,7 +2020,7 @@ export function RemittanceSplitter({
           items,
           ...(pendingItems.length > 0 ? { pendingItems } : {}),
           category: transaction.category || null,
-          bankAccountId: transaction.bankAccountId || null,
+          bankAccountId: loadedSavedRunCandidate?.bankAccountId || transaction.bankAccountId || null,
         }),
       });
 
@@ -1716,6 +2037,26 @@ export function RemittanceSplitter({
             variant: 'destructive',
             title: t.movements.splitter.validationError,
             description: 'La suma dels items no coincideix amb l\'import del pare. Revisa les dades.',
+            duration: 9000,
+          });
+        } else if (errorCode === 'BANK_ACCOUNT_NOT_VERIFIABLE') {
+          toast({
+            variant: 'destructive',
+            title: tr('movements.splitter.savedRemittanceInvalidTitle', 'No es pot utilitzar aquesta remesa guardada'),
+            description: tr(
+              'movements.splitter.savedRemittanceInvalidMissingAccount',
+              'No es pot verificar el compte bancari del moviment. Usa la via manual.'
+            ),
+            duration: 9000,
+          });
+        } else if (errorCode === 'BANK_ACCOUNT_MISMATCH') {
+          toast({
+            variant: 'destructive',
+            title: tr('movements.splitter.savedRemittanceInvalidTitle', 'No es pot utilitzar aquesta remesa guardada'),
+            description: tr(
+              'movements.splitter.savedRemittanceInvalidBankMismatch',
+              'El compte bancari de la remesa guardada no coincideix amb aquest moviment.'
+            ),
             duration: 9000,
           });
         } else if (errorCode === 'LOCKED_BY_OTHER') {
@@ -2052,6 +2393,58 @@ export function RemittanceSplitter({
     }
   };
 
+  const renderSavedRunOption = (candidate: SavedRemittanceCandidate) => {
+    const isSelected = selectedSavedRunId === candidate.id;
+
+    return (
+      <button
+        key={candidate.id}
+        type="button"
+        onClick={() => setSelectedSavedRunId(candidate.id ?? null)}
+        className={`w-full rounded-lg border px-4 py-3 text-left transition-colors ${
+          isSelected
+            ? 'border-primary bg-primary/5'
+            : 'border-border/80 bg-background hover:bg-muted/20'
+        }`}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              {tr('movements.splitter.savedRemittanceAmountLabel', 'Import total')}
+            </p>
+            <p className="text-sm font-semibold text-foreground">
+              {formatCurrencyEU(candidate.totalCents / 100)}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              {tr('movements.splitter.savedRemittanceDateLabel', 'Data')}
+            </p>
+            <p className="text-sm text-foreground">
+              {formatSavedRunDate(candidate.collectionDate)}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              {tr('movements.splitter.savedRemittanceAccountLabel', 'Compte bancari')}
+            </p>
+            <p className="text-sm text-foreground">
+              {getSavedRunBankAccountLabel(candidate.bankAccountId)}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              {tr('movements.splitter.savedRemittanceCountLabel', 'Cobraments')}
+            </p>
+            <p className="text-sm text-foreground">
+              {candidate.itemCount}
+            </p>
+          </div>
+        </div>
+      </button>
+    );
+  };
+
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDERITZACIÓ
@@ -2075,17 +2468,14 @@ export function RemittanceSplitter({
               <DialogDescription>
                 {isPaymentRemittance
                   ? t.movements.splitter.paymentsUploadDescription
-                  : t.movements.splitter.uploadDescription}
+                    : detailSource === 'saved'
+                    ? tr(
+                        'movements.splitter.savedRemittanceUploadDescription',
+                        'Selecciona una remesa ja generada per completar aquest ingrés bancari sense tornar a pujar el detall manualment.'
+                      )
+                    : t.movements.splitter.uploadDescription}
               </DialogDescription>
             </DialogHeader>
-
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertTitle>{t.movements.splitter.compatibleBanks}</AlertTitle>
-              <AlertDescription>
-                {t.movements.splitter.compatibleBanksDescription}
-              </AlertDescription>
-            </Alert>
 
             <input
               type="file"
@@ -2093,27 +2483,159 @@ export function RemittanceSplitter({
               onChange={handleFileChange}
               accept=".csv,.txt,.xlsx,.xls,.xml"
               className="hidden"
-              disabled={isProcessing}
+              disabled={isProcessing || isLoadingSavedRun}
             />
 
-            <div className="flex flex-col gap-2">
-              <Button onClick={handleFileClick} disabled={isProcessing} className="w-full">
-                {isProcessing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <FileUp className="mr-2 h-4 w-4" />
-                )}
-                {t.movements.splitter.selectCsvFile}
-              </Button>
+            {!isPaymentRemittance && (
+              <div className="rounded-lg border border-border/80 bg-muted/10 p-4">
+                <Label className="text-sm font-medium">
+                  {tr('movements.splitter.sourceTitle', 'Origen del detall')}
+                </Label>
+                <RadioGroup
+                  value={detailSource}
+                  onValueChange={(value) => setDetailSource(value as DetailSource)}
+                  className="mt-3 grid gap-3 sm:grid-cols-2"
+                >
+                  <Label
+                    htmlFor="remittance-source-manual"
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 transition-colors ${
+                      detailSource === 'manual'
+                        ? 'border-primary bg-background'
+                        : 'border-border/80 bg-background hover:bg-muted/20'
+                    }`}
+                  >
+                    <RadioGroupItem id="remittance-source-manual" value="manual" className="mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {tr('movements.splitter.sourceManualTitle', 'Pujar fitxer manual')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {tr(
+                          'movements.splitter.sourceManualDescription',
+                          'Carrega el detall del banc en CSV o Excel, o des d un fitxer compatible.'
+                        )}
+                      </p>
+                    </div>
+                  </Label>
 
-              {/* Botó SEPA només per mode OUT */}
-              {isPaymentRemittance && (
-                <Button onClick={handleFileClick} disabled={isProcessing} variant="outline" className="w-full">
-                  <FileCode className="mr-2 h-4 w-4" />
-                  {t.movements.splitter.importSepa}
-                </Button>
-              )}
-            </div>
+                  <Label
+                    htmlFor="remittance-source-saved"
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 transition-colors ${
+                      detailSource === 'saved'
+                        ? 'border-primary bg-background'
+                        : 'border-border/80 bg-background hover:bg-muted/20'
+                    }`}
+                  >
+                    <RadioGroupItem id="remittance-source-saved" value="saved" className="mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {tr('movements.splitter.sourceSavedTitle', 'Usar remesa guardada')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {savedSourceSummary}
+                      </p>
+                    </div>
+                  </Label>
+                </RadioGroup>
+              </div>
+            )}
+
+            {isPaymentRemittance || detailSource === 'manual' ? (
+              <>
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>{t.movements.splitter.compatibleBanks}</AlertTitle>
+                  <AlertDescription>
+                    {t.movements.splitter.compatibleBanksDescription}
+                  </AlertDescription>
+                </Alert>
+
+                <div className="flex flex-col gap-2">
+                  <Button onClick={handleFileClick} disabled={isProcessing} className="w-full">
+                    {isProcessing ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileUp className="mr-2 h-4 w-4" />
+                    )}
+                    {t.movements.splitter.selectCsvFile}
+                  </Button>
+
+                  {isPaymentRemittance && (
+                    <Button onClick={handleFileClick} disabled={isProcessing} variant="outline" className="w-full">
+                      <FileCode className="mr-2 h-4 w-4" />
+                      {t.movements.splitter.importSepa}
+                    </Button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4">
+                {isLoadingSavedRunCandidates && (
+                  <div className="rounded-lg border border-border/80 bg-muted/10 px-4 py-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {tr('movements.splitter.savedRemittanceLoading', 'Buscant remeses guardades compatibles...')}
+                    </div>
+                  </div>
+                )}
+
+                {suggestedSavedRun && (
+                  <section className="space-y-2">
+                    <p className="text-sm font-medium text-foreground">
+                      {tr('movements.splitter.savedRemittanceSuggestedTitle', 'Suggerida')}
+                    </p>
+                    {renderSavedRunOption(suggestedSavedRun)}
+                  </section>
+                )}
+
+                {otherSavedRuns.length > 0 && (
+                  <section className="space-y-2">
+                    <p className="text-sm font-medium text-foreground">
+                      {tr('movements.splitter.savedRemittanceOthersTitle', 'Altres possibles')}
+                    </p>
+                    <div className="space-y-2">
+                      {otherSavedRuns.map((candidate) => renderSavedRunOption(candidate))}
+                    </div>
+                  </section>
+                )}
+
+                {!isLoadingSavedRunCandidates && savedRunCandidates.possible.length === 0 && (
+                  <div className="rounded-lg border border-dashed border-border/80 bg-muted/10 px-4 py-4">
+                    <p className="text-sm font-medium text-foreground">
+                      {tr('movements.splitter.savedRemittanceNoClearMatchTitle', 'Cap coincidència clara')}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {savedRunCandidates.reason === 'missing_bank_account'
+                        ? tr(
+                            'movements.splitter.savedRemittanceNoClearMatchMissingAccount',
+                            'Aquest moviment no permet verificar el compte bancari. Per seguretat, usa la via manual.'
+                          )
+                        : tr(
+                            'movements.splitter.savedRemittanceNoClearMatchDescription',
+                            'Per seguretat, aquí només es mostren remeses guardades del mateix compte i amb l import coherent.'
+                          )}
+                    </p>
+                  </div>
+                )}
+
+                {selectedSavedRunCandidate && (
+                  <div className="rounded-lg border border-border/80 bg-muted/20 px-4 py-4">
+                    <p className="text-sm font-medium text-foreground">
+                      {tr(
+                        'movements.splitter.savedRemittanceConfirmTitle',
+                        'Estàs utilitzant una remesa ja generada per completar aquest ingrés bancari.'
+                      )}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {tr(
+                        'movements.splitter.savedRemittanceConfirmDescription',
+                        'Revisa que import, data i compte coincideixin.'
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <DialogFooter>
               <DialogClose asChild>
@@ -2121,6 +2643,18 @@ export function RemittanceSplitter({
                   {t.movements.splitter.cancel}
                 </Button>
               </DialogClose>
+              {!isPaymentRemittance && detailSource === 'saved' && (
+                <Button
+                  type="button"
+                  onClick={handleLoadSavedRun}
+                  disabled={!selectedSavedRunCandidate || isLoadingSavedRun}
+                >
+                  {isLoadingSavedRun ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  {tr('movements.splitter.savedRemittanceContinue', 'Continuar amb la remesa seleccionada')}
+                </Button>
+              )}
             </DialogFooter>
           </>
         )}
@@ -2463,6 +2997,16 @@ export function RemittanceSplitter({
                     ? t.movements.splitter.paymentsReviewDescription
                     : t.movements.splitter.reviewDescription}
                 </DialogDescription>
+                {loadedSavedRunCandidate && (
+                  <p className="text-xs text-muted-foreground">
+                    {tr(
+                      'movements.splitter.savedRemittancePreviewOrigin',
+                      'Origen del detall: remesa guardada del {date} · {account}'
+                    )
+                      .replace('{date}', formatSavedRunDate(loadedSavedRunCandidate.collectionDate))
+                      .replace('{account}', getSavedRunBankAccountLabel(loadedSavedRunCandidate.bankAccountId))}
+                  </p>
+                )}
                 {/* P0: Header resum compacte - Format: "314 trobades · 3 pendents · Total 4.390,00 €" */}
                 <div className="flex flex-wrap items-center gap-3">
                   {/* Mode IN: mostrar trobades per IBAN (totalFound) */}
@@ -3203,9 +3747,11 @@ export function RemittanceSplitter({
                 ) : null}
               </div>
               <DialogFooter className="gap-2 sm:justify-between sm:space-x-0">
-                <Button variant="outline" onClick={() => setStep('mapping')}>
+                <Button variant="outline" onClick={() => setStep(previewReturnStep)}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  {t.movements.splitter.backToMapping}
+                  {previewReturnStep === 'mapping'
+                    ? t.movements.splitter.backToMapping
+                    : t.movements.splitter.back}
                 </Button>
                 <Button
                   onClick={handleProcess}

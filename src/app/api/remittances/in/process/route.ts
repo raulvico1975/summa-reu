@@ -488,6 +488,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
     }
 
     const parentAmountCents = Math.round(parentData.amount * 100);
+    const parentBankAccountId =
+      typeof parentData.bankAccountId === 'string' && parentData.bankAccountId.trim()
+        ? parentData.bankAccountId
+        : null;
 
     // ─────────────────────────────────────────────────────────────────────────
     // 4b. GUARDRAIL: Rebutjar si ja és remesa processada
@@ -503,6 +507,33 @@ export async function POST(request: NextRequest): Promise<NextResponse<ProcessRe
           code: 'REMITTANCE_ALREADY_PROCESSED',
         },
         { status: 409 }
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 4c. GUARDRAIL: La remesa guardada ha de correspondre al mateix compte
+    // ─────────────────────────────────────────────────────────────────────────
+    if (bankAccountId && !parentBankAccountId) {
+      return NextResponse.json(
+        {
+          success: false,
+          idempotent: false,
+          error: 'No es pot verificar el compte bancari del moviment bancari.',
+          code: 'BANK_ACCOUNT_NOT_VERIFIABLE',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (bankAccountId && parentBankAccountId && bankAccountId !== parentBankAccountId) {
+      return NextResponse.json(
+        {
+          success: false,
+          idempotent: false,
+          error: 'El compte bancari de la remesa guardada no coincideix amb el moviment bancari.',
+          code: 'BANK_ACCOUNT_MISMATCH',
+        },
+        { status: 400 }
       );
     }
 
