@@ -63,7 +63,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFirebase } from '@/firebase';
 import { collection, writeBatch, doc, setDoc, deleteDoc, updateDoc, query, orderBy, limit } from 'firebase/firestore';
-import { getDownloadURL, ref } from 'firebase/storage';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -403,7 +402,7 @@ export function RemittanceSplitter({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { firestore, storage, user } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t, tr } = useTranslations();
 
@@ -807,7 +806,7 @@ export function RemittanceSplitter({
   };
 
   const handleLoadSavedRun = async () => {
-    if (!selectedSavedRunCandidate?.id || !selectedSavedRunCandidate.storagePath) {
+    if (!selectedSavedRunCandidate?.id || !organizationId || !user) {
       return;
     }
 
@@ -834,13 +833,81 @@ export function RemittanceSplitter({
 
     setIsLoadingSavedRun(true);
     try {
-      const downloadUrl = await getDownloadURL(ref(storage, selectedSavedRunCandidate.storagePath));
-      const response = await fetch(downloadUrl);
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/remittances/in/saved-run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          parentTxId: transaction.id,
+          savedRunId: selectedSavedRunCandidate.id,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        xmlContent?: string;
+        error?: string;
+        code?: string;
+      };
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        if (result.code === 'REMITTANCE_ALREADY_PROCESSED') {
+          toast({
+            variant: 'destructive',
+            title: t.movements.splitter.operationBlocked,
+            description: t.movements.splitter.alreadyProcessed,
+          });
+          return;
+        }
+
+        if (result.code === 'BANK_ACCOUNT_NOT_VERIFIABLE') {
+          toast({
+            variant: 'destructive',
+            title: tr('movements.splitter.savedRemittanceInvalidTitle', 'No es pot utilitzar aquesta remesa guardada'),
+            description: tr(
+              'movements.splitter.savedRemittanceInvalidMissingAccount',
+              'No es pot verificar el compte bancari del moviment. Usa la via manual.'
+            ),
+          });
+          return;
+        }
+
+        if (result.code === 'BANK_ACCOUNT_MISMATCH') {
+          toast({
+            variant: 'destructive',
+            title: tr('movements.splitter.savedRemittanceInvalidTitle', 'No es pot utilitzar aquesta remesa guardada'),
+            description: tr(
+              'movements.splitter.savedRemittanceInvalidBankMismatch',
+              'El compte bancari de la remesa guardada no coincideix amb aquest moviment.'
+            ),
+          });
+          return;
+        }
+
+        if (result.code === 'AMOUNT_MISMATCH') {
+          toast({
+            variant: 'destructive',
+            title: tr('movements.splitter.savedRemittanceInvalidTitle', 'No es pot utilitzar aquesta remesa guardada'),
+            description: tr(
+              'movements.splitter.savedRemittanceInvalidAmountMismatch',
+              'L import de la remesa guardada no coincideix amb aquest moviment.'
+            ),
+          });
+          return;
+        }
+
+        throw new Error(result.error || `HTTP ${response.status}`);
       }
 
-      const xmlContent = await response.text();
+      const xmlContent = typeof result.xmlContent === 'string' ? result.xmlContent : null;
+      if (!xmlContent) {
+        throw new Error('Missing xmlContent');
+      }
+
       setLoadedSavedRunCandidate(selectedSavedRunCandidate);
       setPreviewReturnStep('upload');
       parseSepaCollectionFile(xmlContent);
