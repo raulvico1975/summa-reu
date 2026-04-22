@@ -60,25 +60,21 @@ export function DedupeCandidateResolver({
   onCancel,
   open,
 }: DedupeCandidateResolverProps) {
-  const { t, tr } = useTranslations();
+  const { tr } = useTranslations();
   const [selectedCandidateIndexes, setSelectedCandidateIndexes] = React.useState<Set<number>>(new Set());
   const [safeDuplicatesExpanded, setSafeDuplicatesExpanded] = React.useState(false);
   const candidateCount = candidates.length;
+  const existingCount = safeDuplicates.length;
   const selectedCandidatesCount = selectedCandidateIndexes.size;
   const allCandidatesSelected = candidateCount > 0 && selectedCandidatesCount === candidateCount;
+  const extractCount = parseSummary?.parsedRowsCount ?? (newCount + existingCount + candidateCount);
+  const toImportCount = newCount + selectedCandidatesCount;
+  const hasImportableMovements = toImportCount > 0;
   const warningsLabelByCode: Record<string, string> = {
     operationDateDerived: tr('importers.transaction.preview.warning.operationDateDerived', 'Data derivada de columna alternativa'),
     debitCreditFallback: tr('importers.transaction.preview.warning.debitCreditFallback', 'Import calculat amb Debe/Haber'),
     balanceMismatch: tr('importers.transaction.preview.warning.balanceMismatch', 'Possible incoherència de saldo'),
   };
-  const movementCounts = React.useMemo(() => {
-    const detectedRows = parseSummary?.dataRowsCount ?? 0;
-    const preparedRows = parseSummary?.parsedRowsCount ?? 0;
-    return {
-      toImport: preparedRows,
-      discarded: Math.max(detectedRows - preparedRows, 0),
-    };
-  }, [parseSummary]);
   const safeReasonCounts = React.useMemo(() => {
     const counts = {
       BANK_REF: 0,
@@ -153,9 +149,15 @@ export function DedupeCandidateResolver({
     setSelectedCandidateIndexes(next);
   };
 
-  const importButtonLabel = candidateCount > 0
-    ? `Importar ${newCount} nous (${selectedCandidatesCount} candidats)`
-    : `Importar ${newCount} nous`;
+  const importButtonLabel = hasImportableMovements
+    ? tr('importers.transaction.summary.importButton', 'Importar {count} moviments').replace('{count}', String(toImportCount))
+    : tr('importers.transaction.summary.emptyButton', 'Cap moviment a importar');
+  const mainMessage = hasImportableMovements
+    ? tr('importers.transaction.summary.readyMessage', 'S’importaran {count} moviments en aquesta importació.').replace('{count}', String(toImportCount))
+    : tr(
+      'importers.transaction.summary.noneToImportMessage',
+      "No s'importarà cap moviment perquè tots ja existeixen"
+    );
 
   if (!open) return null;
 
@@ -168,134 +170,50 @@ export function DedupeCandidateResolver({
       <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-0.75rem)] max-w-[1420px] flex-col overflow-hidden p-0 sm:w-[min(calc(100vw-2rem),1420px)]">
         <DialogHeader className="border-b px-4 pb-4 pt-5 pr-10 sm:px-6 sm:pt-6">
           <DialogTitle>
-            {tr('importers.transaction.preImportSummaryTitle', 'Resum pre-importació')}
+            {tr('importers.transaction.summary.title', "Què passarà amb aquest extracte")}
           </DialogTitle>
           <DialogDescription>
-            {tr('importers.transaction.preImportSummaryDescription', 'Revisa el resum abans de confirmar la importació.')}
+            {tr(
+              'importers.transaction.summary.description',
+              "Revisa quins moviments ja hi són i quins s'incorporaran ara."
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 space-y-6 overflow-y-auto px-4 pb-4 pt-4 sm:px-6">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:items-start">
-            <div className="space-y-3 rounded-lg border border-border/80 bg-card p-4">
-              <p className="text-sm font-medium">
-                {tr('importers.transaction.preImportSummaryTitle', 'Resum pre-importació')}
-              </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded-md border p-3">
-                  <p className="text-xs text-muted-foreground">{tr('importers.transaction.preview.movementsToImport', 'Moviments a importar')}</p>
-                  <p className="text-2xl font-semibold">{movementCounts.toImport}</p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-xs text-muted-foreground">{tr('importers.transaction.preview.movementsDiscarded', 'Moviments descartats')}</p>
-                  <p className="text-2xl font-semibold">{movementCounts.discarded}</p>
-                  {movementCounts.discarded > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {tr('importers.transaction.preview.discardedReason', 'Capçalera/totals/valors buits')}
-                    </p>
-                  )}
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-xs text-muted-foreground">
-                    {tr('importers.transaction.preview.existingMovements', 'Moviments ja existents')}
-                  </p>
-                  <p className="text-2xl font-semibold">{safeDuplicates.length}</p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-xs text-muted-foreground">
-                    {tr('importers.transaction.preview.conflictsToReview', 'Conflictes a revisar')}
-                  </p>
-                  <p className="text-2xl font-semibold">{candidateCount}</p>
-                </div>
+          <div className="space-y-3 rounded-lg border border-border/80 bg-card p-4">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-md border p-4">
+                <p className="text-xs text-muted-foreground">
+                  {tr('importers.transaction.summary.extractCount', "Moviments a l'extracte")}
+                </p>
+                <p className="text-3xl font-semibold">{extractCount}</p>
+              </div>
+              <div className="rounded-md border p-4">
+                <p className="text-xs text-muted-foreground">
+                  {tr('importers.transaction.summary.existingCount', 'Moviments que ja hi ha a Summa')}
+                </p>
+                <p className="text-3xl font-semibold">{existingCount}</p>
+              </div>
+              <div className="rounded-md border p-4">
+                <p className="text-xs text-muted-foreground">
+                  {tr('importers.transaction.summary.toImportCount', "Moviments que s'importaran ara")}
+                </p>
+                <p className="text-3xl font-semibold">{toImportCount}</p>
               </div>
             </div>
 
-            {parseSummary && (
-              <div className="space-y-3 rounded-lg border border-border/80 bg-muted/20 p-4">
-                <p className="text-sm font-medium">
-                  {tr('importers.transaction.preview.statementOverview', 'Vista general de l’extracte')}
+            <div className="rounded-md border border-primary/15 bg-primary/5 px-4 py-3">
+              <p className="text-sm font-medium">{mainMessage}</p>
+              {candidateCount > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {tr(
+                    'importers.transaction.summary.reviewHint',
+                    'Tens {count} possibles duplicats a revisar abans de decidir si també els vols importar.'
+                  ).replace('{count}', String(candidateCount))}
                 </p>
-                <div className={`grid grid-cols-1 gap-3 ${hasMappedBalance ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-                  <div className="rounded-md border bg-background p-3 text-sm">
-                    <p className="font-medium">{tr('importers.transaction.preview.dateRange', 'Rang de dates de l’extracte importat')}</p>
-                    {parseSummary.dateRange ? (
-                      <div className="mt-2 space-y-2">
-                        <div className="flex items-center justify-between gap-3 text-muted-foreground">
-                          <span className="text-xs uppercase tracking-wide">
-                            {tr('importers.transaction.preview.fromDate', 'Des de')}
-                          </span>
-                          <span className="font-medium text-foreground">
-                            {formatDate(parseSummary.dateRange.from)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-3 text-muted-foreground">
-                          <span className="text-xs uppercase tracking-wide">
-                            {tr('importers.transaction.preview.toDate', 'Fins a')}
-                          </span>
-                          <span className="font-medium text-foreground">
-                            {formatDate(parseSummary.dateRange.to)}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">—</p>
-                    )}
-                  </div>
-                  <div className="rounded-md border bg-background p-3 text-sm">
-                    <p className="font-medium">{tr('importers.transaction.preview.totals', 'Totals de l’extracte importat')}</p>
-                    <div className="mt-2 space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-muted-foreground">
-                          {tr('importers.transaction.preview.income', 'Ingressos')}
-                        </span>
-                        <span className="font-medium tabular-nums text-emerald-700 dark:text-emerald-300">
-                          {formatAmount(parseSummary.totals.income)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-muted-foreground">
-                          {tr('importers.transaction.preview.expense', 'Despeses')}
-                        </span>
-                        <span className="font-medium tabular-nums text-rose-700 dark:text-rose-300">
-                          {formatAmount(-Math.abs(parseSummary.totals.expense))}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  {hasMappedBalance && parseSummary.balances && (
-                    <div className="rounded-md border bg-background p-3 text-sm">
-                      <div className="mb-2 flex items-start justify-between gap-2">
-                        <p className="font-medium">
-                          {tr('importers.transaction.preview.balanceFirstInExtract', 'Saldo del primer moviment de l’extracte importat')}
-                        </p>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className="inline-flex h-4 w-4 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                              aria-label={tr('importers.transaction.preview.balanceTooltipAria', 'Informació sobre saldos de l’extracte importat')}
-                            >
-                              <Info className="h-3.5 w-3.5" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs text-xs">
-                            {tr(
-                              'importers.transaction.preview.balanceExtractTooltip',
-                              'Aquests valors corresponen al saldo que apareix al primer i a l’últim moviment inclòs a l’extracte que has importat. No necessàriament coincideixen amb el saldo actual del compte.'
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <p className="text-muted-foreground">{formatAmount(parseSummary.balances.initial)}</p>
-                      <p className="mt-3 font-medium">
-                        {tr('importers.transaction.preview.balanceLastInExtract', 'Saldo de l’últim moviment de l’extracte importat')}
-                      </p>
-                      <p className="text-muted-foreground">{formatAmount(parseSummary.balances.final)}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {hasMappedBalance && (parseSummary?.warnings.balanceMismatchCount ?? 0) > 0 && (
@@ -307,16 +225,291 @@ export function DedupeCandidateResolver({
             </div>
           )}
 
+          {safeDuplicates.length > 0 && (
+            <div className="space-y-2">
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                {tr(
+                  'movements.import.safeDuplicates.summary',
+                  '{count} moviments ja existien i no s’importaran.'
+                ).replace('{count}', String(safeDuplicates.length))}
+              </div>
+
+              <Collapsible open={safeDuplicatesExpanded} onOpenChange={setSafeDuplicatesExpanded}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-auto w-full justify-between px-3 py-2 text-left text-sm"
+                  >
+                    <span>
+                      {safeDuplicatesExpanded
+                        ? tr('movements.import.safeDuplicates.collapse', 'Amagar moviments ja existents')
+                        : tr('movements.import.safeDuplicates.expand', 'Veure quins moviments ja existien')}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${safeDuplicatesExpanded ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-2">
+                  <div className="rounded-md border border-amber-200/70 bg-amber-50/40 px-3 py-2 text-xs text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200">
+                    <p className="opacity-90">
+                      {tr('movements.import.safeDuplicates.counts', 'Per tipus')}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-3">
+                      <span>
+                        {tr('movements.import.safeDuplicates.reason.bankRef.label', 'Referència bancària')}: {safeReasonCounts.BANK_REF}
+                      </span>
+                      <span>
+                        {tr('movements.import.safeDuplicates.reason.balanceAmountDate.label', 'Coincidència completa')}: {safeReasonCounts.BALANCE_AMOUNT_DATE}
+                      </span>
+                      <span>
+                        {tr('movements.import.safeDuplicates.reason.intraFile.label', 'Línia repetida al fitxer')}: {safeReasonCounts.INTRA_FILE}
+                      </span>
+                    </div>
+                  </div>
+
+                  <ScrollArea className="max-h-[280px] rounded-md border">
+                    <div className="min-w-[720px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[130px]">Data</TableHead>
+                          <TableHead className="w-[120px] text-right">Import</TableHead>
+                          <TableHead>
+                            {tr('movements.import.safeDuplicates.columns.message', 'Missatge')}
+                          </TableHead>
+                          <TableHead className="w-[220px]">
+                            {tr('movements.import.safeDuplicates.columns.detail', 'Detall')}
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {safeDuplicates.map((safeRow, index) => {
+                          const safeUi = getSafeDuplicateUi(safeRow.reason);
+                          const existingId = getExistingId(safeRow);
+
+                          return (
+                            <TableRow key={`safe-${safeRow.tx.description}-${safeRow.tx.date}-${index}`}>
+                              <TableCell className="whitespace-nowrap text-xs">
+                                {formatDate(safeRow.tx.operationDate ?? safeRow.tx.date)}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                                {formatAmount(safeRow.tx.amount)}
+                              </TableCell>
+                              <TableCell className="max-w-[320px] text-xs">
+                                <p className="font-medium">{tr(safeUi.mainKey, safeUi.mainFallback)}</p>
+                                <p className="break-words text-muted-foreground">{safeRow.tx.description}</p>
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                <details>
+                                  <summary className="cursor-pointer text-primary underline-offset-2 hover:underline">
+                                    {tr('movements.import.safeDuplicates.viewWhy', 'Veure per què')}
+                                  </summary>
+                                  <div className="mt-2 space-y-1">
+                                    {safeUi.detailKey && safeUi.detailFallback && (
+                                      <p>{tr(safeUi.detailKey, safeUi.detailFallback)}</p>
+                                    )}
+                                    {safeUi.showExistingId && existingId && (
+                                      <p>
+                                        {tr('movements.import.safeDuplicates.existingIdLabel', 'ID del moviment existent')}:{' '}
+                                        <span className="font-mono">{existingId}</span>
+                                      </p>
+                                    )}
+                                  </div>
+                                </details>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                    </div>
+                  </ScrollArea>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          )}
+
+          {candidateCount > 0 && (
+            <>
+              <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
+                <p className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  {tr(
+                    'importers.transaction.summary.possibleDuplicatesTitle',
+                    'Possibles duplicats a revisar'
+                  )}
+                </p>
+                <div className="mt-2 flex items-start gap-2 border-t border-blue-200/60 pt-2 dark:border-blue-800/60">
+                  <Checkbox
+                    id="select-all-candidates"
+                    checked={allCandidatesSelected}
+                    onCheckedChange={(checked) => toggleAllCandidates(checked === true)}
+                  />
+                  <label htmlFor="select-all-candidates" className="cursor-pointer text-xs leading-relaxed">
+                    {tr(
+                      'importers.transaction.summary.selectAllPossibleDuplicates',
+                      'Seleccionar tots els possibles duplicats ({count}).'
+                    ).replace('{count}', String(candidateCount))}
+                  </label>
+                </div>
+                <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                  {tr(
+                    'importers.transaction.summary.selectedPossibleDuplicates',
+                    'Seleccionats: {selected} de {count} possibles duplicats'
+                  )
+                    .replace('{selected}', String(selectedCandidatesCount))
+                    .replace('{count}', String(candidateCount))}
+                </p>
+              </div>
+
+              <ScrollArea className="max-h-[380px] rounded-md border">
+                <div className="min-w-[760px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[84px] text-center">Incloure</TableHead>
+                      <TableHead className="w-[130px]">Data</TableHead>
+                      <TableHead className="w-[120px] text-right">Import</TableHead>
+                      <TableHead className="w-[120px] text-right">Saldo (nou)</TableHead>
+                      <TableHead className="w-[120px] text-right">Saldo (existent)</TableHead>
+                      <TableHead>Descripció</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {candidates.map((candidate, index) => {
+                      const existing = candidate.matchedExisting[0];
+                      const checked = selectedCandidateIndexes.has(index);
+                      return (
+                        <TableRow key={`${candidate.tx.description}-${candidate.tx.date}-${index}`}>
+                          <TableCell className="text-center">
+                            <Checkbox
+                              id={`candidate-${index}`}
+                              checked={checked}
+                              onCheckedChange={(value) => toggleCandidate(index, value === true)}
+                            />
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-xs">
+                            {formatDate(candidate.tx.operationDate ?? candidate.tx.date)}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                            {formatAmount(candidate.tx.amount)}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                            {formatAmount(candidate.tx.balanceAfter)}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                            {formatAmount(existing?.balanceAfter)}
+                          </TableCell>
+                          <TableCell className="max-w-[320px] text-xs">
+                            <span className="break-words">{candidate.tx.description}</span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                </div>
+              </ScrollArea>
+            </>
+          )}
+
+          {parseSummary && (
+            <div className="space-y-3 rounded-lg border border-border/80 bg-muted/20 p-4">
+              <p className="text-sm font-medium">
+                {tr('importers.transaction.summary.extractDetails', "Detall de l'extracte")}
+              </p>
+              <div className={`grid grid-cols-1 gap-3 ${hasMappedBalance ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+                <div className="rounded-md border bg-background p-3 text-sm">
+                  <p className="font-medium">{tr('importers.transaction.preview.dateRange', 'Rang de dates de l’extracte importat')}</p>
+                  {parseSummary.dateRange ? (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center justify-between gap-3 text-muted-foreground">
+                        <span className="text-xs uppercase tracking-wide">
+                          {tr('importers.transaction.preview.fromDate', 'Des de')}
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {formatDate(parseSummary.dateRange.from)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-muted-foreground">
+                        <span className="text-xs uppercase tracking-wide">
+                          {tr('importers.transaction.preview.toDate', 'Fins a')}
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {formatDate(parseSummary.dateRange.to)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">—</p>
+                  )}
+                </div>
+                <div className="rounded-md border bg-background p-3 text-sm">
+                  <p className="font-medium">{tr('importers.transaction.preview.totals', 'Totals de l’extracte importat')}</p>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">
+                        {tr('importers.transaction.preview.income', 'Ingressos')}
+                      </span>
+                      <span className="font-medium tabular-nums text-emerald-700 dark:text-emerald-300">
+                        {formatAmount(parseSummary.totals.income)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground">
+                        {tr('importers.transaction.preview.expense', 'Despeses')}
+                      </span>
+                      <span className="font-medium tabular-nums text-rose-700 dark:text-rose-300">
+                        {formatAmount(-Math.abs(parseSummary.totals.expense))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {hasMappedBalance && parseSummary.balances && (
+                  <div className="rounded-md border bg-background p-3 text-sm">
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <p className="font-medium">
+                        {tr('importers.transaction.preview.balanceFirstInExtract', 'Saldo del primer moviment de l’extracte importat')}
+                      </p>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex h-4 w-4 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                            aria-label={tr('importers.transaction.preview.balanceTooltipAria', 'Informació sobre saldos de l’extracte importat')}
+                          >
+                            <Info className="h-3.5 w-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs text-xs">
+                          {tr(
+                            'importers.transaction.preview.balanceExtractTooltip',
+                            'Aquests valors corresponen al saldo que apareix al primer i a l’últim moviment inclòs a l’extracte que has importat. No necessàriament coincideixen amb el saldo actual del compte.'
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <p className="text-muted-foreground">{formatAmount(parseSummary.balances.initial)}</p>
+                    <p className="mt-3 font-medium">
+                      {tr('importers.transaction.preview.balanceLastInExtract', 'Saldo de l’últim moviment de l’extracte importat')}
+                    </p>
+                    <p className="text-muted-foreground">{formatAmount(parseSummary.balances.final)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {sampleRows.length > 0 && (
             <TooltipProvider>
               <div className="space-y-3 rounded-lg border border-border/80 bg-card p-4">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-medium">
-                      {tr('importers.transaction.preview.sampleTitle', 'Previsualització de l’extracte')}
+                      {tr('importers.transaction.summary.sampleRowsTitle', "Alguns moviments de l'extracte")}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {tr('importers.transaction.preview.sampleSubtitle', 'Primeres files detectades per validar que el fitxer s’ha interpretat bé.')}
+                      {tr('importers.transaction.summary.sampleRowsDescription', 'Mostra orientativa per comprovar que el fitxer s’ha llegit bé.')}
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -438,193 +631,14 @@ export function DedupeCandidateResolver({
               </div>
             </TooltipProvider>
           )}
-
-          {safeDuplicates.length > 0 && (
-            <div className="space-y-2">
-              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                {tr(
-                  'movements.import.safeDuplicates.summary',
-                  '{count} moviments ja existien i no s’importaran.'
-                ).replace('{count}', String(safeDuplicates.length))}
-              </div>
-
-              <Collapsible open={safeDuplicatesExpanded} onOpenChange={setSafeDuplicatesExpanded}>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-auto w-full justify-between px-3 py-2 text-left text-sm"
-                  >
-                    <span>
-                      {safeDuplicatesExpanded
-                        ? tr('movements.import.safeDuplicates.collapse', 'Amagar moviments ja existents')
-                        : tr('movements.import.safeDuplicates.expand', 'Veure quins moviments ja existien')}
-                    </span>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${safeDuplicatesExpanded ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-2">
-                  <div className="rounded-md border border-amber-200/70 bg-amber-50/40 px-3 py-2 text-xs text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-200">
-                    <p className="opacity-90">
-                      {tr('movements.import.safeDuplicates.counts', 'Per tipus')}
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-3">
-                      <span>
-                        {tr('movements.import.safeDuplicates.reason.bankRef.label', 'Referència bancària')}: {safeReasonCounts.BANK_REF}
-                      </span>
-                      <span>
-                        {tr('movements.import.safeDuplicates.reason.balanceAmountDate.label', 'Coincidència completa')}: {safeReasonCounts.BALANCE_AMOUNT_DATE}
-                      </span>
-                      <span>
-                        {tr('movements.import.safeDuplicates.reason.intraFile.label', 'Línia repetida al fitxer')}: {safeReasonCounts.INTRA_FILE}
-                      </span>
-                    </div>
-                  </div>
-
-                  <ScrollArea className="max-h-[280px] rounded-md border">
-                    <div className="min-w-[720px]">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[130px]">Data</TableHead>
-                          <TableHead className="w-[120px] text-right">Import</TableHead>
-                          <TableHead>
-                            {tr('movements.import.safeDuplicates.columns.message', 'Missatge')}
-                          </TableHead>
-                          <TableHead className="w-[220px]">
-                            {tr('movements.import.safeDuplicates.columns.detail', 'Detall')}
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {safeDuplicates.map((safeRow, index) => {
-                          const safeUi = getSafeDuplicateUi(safeRow.reason);
-                          const existingId = getExistingId(safeRow);
-
-                          return (
-                            <TableRow key={`safe-${safeRow.tx.description}-${safeRow.tx.date}-${index}`}>
-                              <TableCell className="whitespace-nowrap text-xs">
-                                {formatDate(safeRow.tx.operationDate ?? safeRow.tx.date)}
-                              </TableCell>
-                              <TableCell className="whitespace-nowrap text-right font-mono text-xs">
-                                {formatAmount(safeRow.tx.amount)}
-                              </TableCell>
-                              <TableCell className="max-w-[320px] text-xs">
-                                <p className="font-medium">{tr(safeUi.mainKey, safeUi.mainFallback)}</p>
-                                <p className="break-words text-muted-foreground">{safeRow.tx.description}</p>
-                              </TableCell>
-                              <TableCell className="text-xs">
-                                <details>
-                                  <summary className="cursor-pointer text-primary underline-offset-2 hover:underline">
-                                    {tr('movements.import.safeDuplicates.viewWhy', 'Veure per què')}
-                                  </summary>
-                                  <div className="mt-2 space-y-1">
-                                    {safeUi.detailKey && safeUi.detailFallback && (
-                                      <p>{tr(safeUi.detailKey, safeUi.detailFallback)}</p>
-                                    )}
-                                    {safeUi.showExistingId && existingId && (
-                                      <p>
-                                        {tr('movements.import.safeDuplicates.existingIdLabel', 'ID del moviment existent')}:{' '}
-                                        <span className="font-mono">{existingId}</span>
-                                      </p>
-                                    )}
-                                  </div>
-                                </details>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                    </div>
-                  </ScrollArea>
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
-          )}
-
-          {candidateCount > 0 && (
-            <>
-              <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
-                <p className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  {tr('importers.transaction.preImportConflictsHint', "S'han detectat conflictes: revisa'ls abans de continuar.")}
-                </p>
-                <div className="mt-2 flex items-start gap-2 border-t border-blue-200/60 pt-2 dark:border-blue-800/60">
-                  <Checkbox
-                    id="select-all-candidates"
-                    checked={allCandidatesSelected}
-                    onCheckedChange={(checked) => toggleAllCandidates(checked === true)}
-                  />
-                  <label htmlFor="select-all-candidates" className="cursor-pointer text-xs leading-relaxed">
-                    {`Seleccionar tots els candidats (${candidateCount}).`}
-                  </label>
-                </div>
-                <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
-                  {`Seleccionats: ${selectedCandidatesCount} de ${candidateCount} candidats`}
-                </p>
-                <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
-                  Per defecte només s’importen els moviments nous.
-                </p>
-              </div>
-
-              <ScrollArea className="max-h-[380px] rounded-md border">
-                <div className="min-w-[760px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[84px] text-center">Incloure</TableHead>
-                      <TableHead className="w-[130px]">Data</TableHead>
-                      <TableHead className="w-[120px] text-right">Import</TableHead>
-                      <TableHead className="w-[120px] text-right">Saldo (nou)</TableHead>
-                      <TableHead className="w-[120px] text-right">Saldo (existent)</TableHead>
-                      <TableHead>Descripció</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {candidates.map((candidate, index) => {
-                      const existing = candidate.matchedExisting[0];
-                      const checked = selectedCandidateIndexes.has(index);
-                      return (
-                        <TableRow key={`${candidate.tx.description}-${candidate.tx.date}-${index}`}>
-                          <TableCell className="text-center">
-                            <Checkbox
-                              id={`candidate-${index}`}
-                              checked={checked}
-                              onCheckedChange={(value) => toggleCandidate(index, value === true)}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-xs">
-                            {formatDate(candidate.tx.operationDate ?? candidate.tx.date)}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-right font-mono text-xs">
-                            {formatAmount(candidate.tx.amount)}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-right font-mono text-xs">
-                            {formatAmount(candidate.tx.balanceAfter)}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-right font-mono text-xs">
-                            {formatAmount(existing?.balanceAfter)}
-                          </TableCell>
-                          <TableCell className="max-w-[320px] text-xs">
-                            <span className="break-words">{candidate.tx.description}</span>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-                </div>
-              </ScrollArea>
-            </>
-          )}
         </div>
 
         <DialogFooter className="sticky bottom-0 z-10 border-t bg-background px-4 py-4 sm:px-6">
           <Button variant="outline" onClick={onCancel}>
-            {t.importers?.transaction?.cancel ?? 'Cancel·lar'}
+            {tr('importers.transaction.summary.close', 'Tancar')}
           </Button>
           <Button
+            disabled={!hasImportableMovements}
             onClick={() => onContinue({
               selectedCandidateIndexes: Array.from(selectedCandidateIndexes).sort((a, b) => a - b),
             })}

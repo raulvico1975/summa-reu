@@ -553,26 +553,6 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
         const classified = classifyTransactions(allParsedWithRaw, existingInRange, bankAccountId, extraFields);
 
-        const safeDupes = classified.filter(c => c.status === 'DUPLICATE_SAFE');
-        const candidates = classified.filter(c => c.status === 'DUPLICATE_CANDIDATE');
-        const newTxs = classified.filter(c => c.status === 'NEW');
-        const summary = {
-          newCount: newTxs.length,
-          safeDuplicatesCount: safeDupes.length,
-          candidateCount: candidates.length,
-          totalCount: classified.length,
-        };
-
-        const transactionsToImport = summary.newCount + summary.candidateCount;
-        if (transactionsToImport === 0) {
-          toast({
-            title: t.importers.transaction.noTransactionsFound,
-            description: t.importers.transaction.noValidTransactions,
-          });
-          setIsImporting(false);
-          return;
-        }
-
         // Mostrar sempre resum previ abans d'importar
         setClassifiedResults(classified);
         setPendingImportContext({
