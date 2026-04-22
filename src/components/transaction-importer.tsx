@@ -4,12 +4,11 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileUp, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Transaction, AnyContact, Category } from '@/lib/data';
+import type { Transaction, AnyContact, Category, ClassificationMemoryEntry } from '@/lib/data';
 import { detectReturnType } from '@/lib/data';
 import { isCategoryIdCompatibleStrict } from '@/lib/constants';
 import Papa from 'papaparse';
 import { inferContact } from '@/ai/flows/infer-contact';
-import { findMatchingContact } from '@/lib/auto-match';
 import { normalizeTransaction } from '@/lib/normalize';
 import {
   Dialog,
@@ -56,6 +55,13 @@ import {
   type BankMappingFieldId,
 } from '@/lib/importers/bank/mapping-ui';
 import { normalizeImportTransactionTypeForPersist } from '@/lib/importers/bank/normalize-import-transaction-type';
+import {
+  canAutoApplyAiCategoryDecision,
+  canAutoApplyAiContactDecision,
+  resolveAutomaticCategoryDecision,
+  resolveAutomaticContactDecision,
+} from '@/lib/transaction-classification/decision-engine';
+import { classificationMemoryCollection } from '@/lib/transaction-classification/memory';
 
 interface ImportTransactionsApiResponse {
   success: boolean;
@@ -257,6 +263,11 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     [firestore, organizationId]
   );
   const { data: availableContacts } = useCollection<AnyContact>(contactsQuery);
+  const classificationMemoryQuery = useMemoFirebase(
+    () => organizationId ? classificationMemoryCollection(firestore, organizationId) : null,
+    [firestore, organizationId]
+  );
+  const { data: classificationMemory } = useCollection<ClassificationMemoryEntry>(classificationMemoryQuery);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -592,12 +603,12 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     setIsImporting(true);
 
     const selection = buildImportSelection(classifiedResults, options.selectedCandidateIndexes);
-    const transactionsToImport = selection.transactionsToImport;
+    const rowsToImport = selection.rowsToImport;
     const stats = selection.stats;
 
-    if (transactionsToImport.length > 0) {
+    if (rowsToImport.length > 0) {
       executeImport(
-        transactionsToImport,
+        rowsToImport,
         pendingImportContext.bankAccountId,
         pendingImportContext.fileName,
         pendingImportContext.totalRawRows,
@@ -696,7 +707,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   // ═══════════════════════════════════════════════════════════════════════════════
 
   const executeImport = async (
-    transactionsToProcess: Array<Omit<Transaction, 'id'>>,
+    rowsToProcess: ClassifiedRow[],
     bankAccountId: string,
     fileName: string | null,
     totalRawRows: number,
@@ -730,103 +741,133 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     });
 
     try {
-        // ═══════════════════════════════════════════════════════════════════
-        // MATCHING PER NOM (instantani, sense IA)
-        // ═══════════════════════════════════════════════════════════════════
+        const contactAiCandidates: Array<{ tx: Omit<Transaction, 'id'>; index: number }> = [];
+        const categoryAiCandidates: Array<{ tx: Omit<Transaction, 'id'>; index: number }> = [];
 
-        let matchedCount = 0;
-        let unmatchedTransactions: Array<{ tx: any; index: number }> = [];
+        const transactionsAfterDeterministic = rowsToProcess.map((row, index) => {
+          const tx = row.tx;
+          const rawValues = Object.values(row.rawRow ?? {});
+          const contactDecision = availableContacts?.length
+            ? resolveAutomaticContactDecision({
+              description: tx.description,
+              rawValues,
+              amount: tx.amount,
+              contacts: availableContacts,
+              categories: availableCategories ?? [],
+              memoryEntries: classificationMemory,
+            })
+            : null;
 
-        const transactionsAfterNameMatch = transactionsToProcess.map((tx, index) => {
-            if (!availableContacts || availableContacts.length === 0) {
-                unmatchedTransactions.push({ tx, index });
-                return tx;
-            }
+          const resolvedContact = contactDecision
+            ? availableContacts?.find((contact) => contact.id === contactDecision.contactId) ?? null
+            : null;
 
-            const match = findMatchingContact(tx.description, availableContacts);
+          const categoryDecision = availableCategories?.length
+            ? resolveAutomaticCategoryDecision({
+              description: tx.description,
+              amount: tx.amount,
+              categories: availableCategories,
+              memoryEntries: classificationMemory,
+              confirmedContact: resolvedContact,
+            })
+            : null;
 
-            if (match) {
-                matchedCount++;
-                const contact = availableContacts.find(c => c.id === match.contactId);
-                const defaultCategory = contact?.defaultCategoryId;
-                const willAssignCategory = defaultCategory && !tx.category
-                  && availableCategories
-                  && isCategoryIdCompatibleStrict(tx.amount, defaultCategory, availableCategories);
-                return {
-                    ...tx,
-                    contactId: match.contactId,
-                    contactType: match.contactType,
-                    ...(willAssignCategory ? { category: defaultCategory } : {}),
-                };
-            } else {
-                unmatchedTransactions.push({ tx, index });
-                return tx;
-            }
+          const nextTx: Omit<Transaction, 'id'> = {
+            ...tx,
+            ...(contactDecision ? {
+              contactId: contactDecision.contactId,
+              contactType: contactDecision.contactType,
+            } : {}),
+            ...(categoryDecision ? { category: categoryDecision.categoryId } : {}),
+          };
+
+          if (!contactDecision) {
+            contactAiCandidates.push({ tx: nextTx, index });
+          }
+
+          if (!categoryDecision) {
+            categoryAiCandidates.push({ tx: nextTx, index });
+          }
+
+          return nextTx;
         });
 
-        // ═══════════════════════════════════════════════════════════════════
-        // IA com a fallback (només per les no matchejades, si són poques)
-        // ═══════════════════════════════════════════════════════════════════
         const AI_THRESHOLD = 20;
-        const useAI = unmatchedTransactions.length > 0 && unmatchedTransactions.length <= AI_THRESHOLD;
+        let transactionsWithAutomaticAssignments = [...transactionsAfterDeterministic];
 
-        let transactionsWithContacts = [...transactionsAfterNameMatch];
+        if (availableContacts?.length && contactAiCandidates.length > 0 && contactAiCandidates.length <= AI_THRESHOLD) {
+          const contactsForAI = availableContacts.map((contact) => ({ id: contact.id, name: contact.name }));
 
-        if (useAI && unmatchedTransactions.length > 0) {
-            const contactsForAI = availableContacts?.map(c => ({ id: c.id, name: c.name })) || [];
+          for (const candidate of contactAiCandidates) {
+            try {
+              const result = await inferContact({
+                description: candidate.tx.description,
+                contacts: contactsForAI,
+              });
+              if (!canAutoApplyAiContactDecision(result)) {
+                continue;
+              }
 
-            const BATCH_SIZE = 10;
-            const DELAY_MS = 60000;
-            let quotaExceeded = false;
-            let aiMatchedCount = 0;
+              const contact = availableContacts.find((item) => item.id === result.contactId);
+              if (!contact) continue;
 
-            for (let i = 0; i < unmatchedTransactions.length; i += BATCH_SIZE) {
-                if (quotaExceeded) break;
+              const categoryDecision = availableCategories?.length
+                ? resolveAutomaticCategoryDecision({
+                  description: candidate.tx.description,
+                  amount: candidate.tx.amount,
+                  categories: availableCategories,
+                  memoryEntries: classificationMemory,
+                  confirmedContact: contact,
+                })
+                : null;
 
-                const batch = unmatchedTransactions.slice(i, i + BATCH_SIZE);
+              transactionsWithAutomaticAssignments[candidate.index] = {
+                ...transactionsWithAutomaticAssignments[candidate.index],
+                contactId: contact.id,
+                contactType: contact.type,
+                ...(categoryDecision ? { category: categoryDecision.categoryId } : {}),
+              };
+            } catch (error: any) {
+              console.error('Error inferring contact:', error);
+            }
+          }
+        }
 
-                await Promise.all(batch.map(async ({ tx, index }) => {
-                    if (quotaExceeded) return;
-
-                    try {
-                        const result = await inferContact({ description: tx.description, contacts: contactsForAI });
-                        if (result.contactId) {
-                            const contact = availableContacts?.find(c => c.id === result.contactId);
-                            if (contact) {
-                                aiMatchedCount++;
-                                const defaultCategory = contact.defaultCategoryId;
-                                const willAssignCategory = defaultCategory && !tx.category
-                                  && availableCategories
-                                  && isCategoryIdCompatibleStrict(tx.amount, defaultCategory, availableCategories);
-                                transactionsWithContacts[index] = {
-                                    ...tx,
-                                    contactId: result.contactId,
-                                    contactType: contact.type,
-                                    ...(willAssignCategory ? { category: defaultCategory } : {}),
-                                };
-                            }
-                        }
-                    } catch (error: any) {
-                        console.error("Error inferring contact:", error);
-
-                        const errorMsg = error?.message || error?.toString() || '';
-                        if (!quotaExceeded && (errorMsg.includes('429') || errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('rate limit'))) {
-                            quotaExceeded = true;
-                            toast({
-                                variant: 'destructive',
-                                title: t.importers.transaction.errors.aiQuotaExceeded,
-                                description: t.importers.transaction.errors.aiQuotaExceededDescription,
-                                duration: 10000,
-                            });
-                        }
-                    }
-                }));
-
-                if (!quotaExceeded && i + BATCH_SIZE < unmatchedTransactions.length) {
-                    await new Promise(resolve => setTimeout(resolve, DELAY_MS));
-                }
+        if (availableCategories?.length && categoryAiCandidates.length > 0 && categoryAiCandidates.length <= AI_THRESHOLD) {
+          for (const candidate of categoryAiCandidates) {
+            const currentTx = transactionsWithAutomaticAssignments[candidate.index];
+            if (currentTx.category) {
+              continue;
             }
 
+            try {
+              const response = await fetch('/api/ai/categorize-transaction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  description: currentTx.description,
+                  amount: currentTx.amount,
+                  expenseOptions: availableCategories.filter((category) => category.type === 'expense').map((category) => ({ id: category.id, name: category.name })),
+                  incomeOptions: availableCategories.filter((category) => category.type === 'income').map((category) => ({ id: category.id, name: category.name })),
+                }),
+              });
+              const result = await response.json() as { ok?: boolean; categoryId?: string | null; confidence?: number };
+
+              if (!result.ok || !canAutoApplyAiCategoryDecision({
+                categoryId: result.categoryId ?? null,
+                confidence: result.confidence ?? null,
+              })) {
+                continue;
+              }
+
+              transactionsWithAutomaticAssignments[candidate.index] = {
+                ...currentTx,
+                category: result.categoryId ?? null,
+              };
+            } catch (error) {
+              console.error('Error categorizing transaction during import:', error);
+            }
+          }
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -839,7 +880,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         }
 
         const idToken = await authUser.getIdToken();
-        const normalizedTransactions = transactionsWithContacts.map((tx) => {
+        const normalizedTransactions = transactionsWithAutomaticAssignments.map((tx) => {
           const normalizedTx = normalizeTransaction(tx) as Record<string, unknown>;
           const { id: _ignored, ...withoutId } = normalizedTx as { id?: string } & Record<string, unknown>;
           const sanitizedTx = { ...withoutId };
@@ -897,7 +938,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
         // Missatge d'èxit
           const totalDuplicatesSkipped = stats.duplicateSkippedCount + (stats.candidateUserSkippedCount ?? 0);
-        const createdCount = result.createdCount ?? transactionsToProcess.length;
+        const createdCount = result.createdCount ?? rowsToProcess.length;
 
         if (result.idempotent) {
           importingToast.dismiss();

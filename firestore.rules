@@ -475,6 +475,16 @@ service cloud.firestore {
       }
 
       // ─────────────────────────────────────────────────────────────────────
+      // CLASSIFICATION MEMORY (lectura operativa; escriptura només backend)
+      // Path: /organizations/{orgId}/classificationMemory/{memoryId}
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /classificationMemory/{memoryId} {
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
+        allow create, update, delete: if false;
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
       // CONFIGURACIONS DE REMESES
       // ─────────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,5 @@
 import type { ClassifiedRow } from '@/lib/transaction-dedupe';
 
-type ImportTx = ClassifiedRow['tx'];
-
 export interface DedupeSearchRangeInput {
   date: string;
   operationDate?: string | null;
@@ -67,7 +65,7 @@ export function computeDedupeSearchRange(
 }
 
 export interface ImportSelectionResult {
-  transactionsToImport: ImportTx[];
+  rowsToImport: ClassifiedRow[];
   stats: {
     duplicateSkippedCount: number;
     candidateCount: number;
@@ -98,9 +96,9 @@ export function buildImportSelection(
   const candidatesToImport = candidates.filter((_, index) => selectedSet.has(index));
 
   return {
-    transactionsToImport: [
-      ...newTxs.map((c) => c.tx),
-      ...candidatesToImport.map((c) => c.tx),
+    rowsToImport: [
+      ...newTxs,
+      ...candidatesToImport,
     ],
     stats: {
       duplicateSkippedCount: safeDupes.length,
