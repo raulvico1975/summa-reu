@@ -52,14 +52,17 @@ interface PublishProductUpdatePayload {
   videoUrl?: string | null;
   web?: PublishProductUpdateWebPayload | null;
   locales?: Partial<Record<ProductUpdateLocalizedLocale, PublishProductUpdateLocalizedPayload>> | null;
-  sourceMeta: PublishProductUpdateSourceMeta;
-  channels: ProductUpdateChannel[];
+  sourceMeta?: PublishProductUpdateSourceMeta | null;
+  channels?: ProductUpdateChannel[];
+  isActive?: boolean;
 }
 
 type PublishProductUpdateSuccessResponse = {
   success: true;
   id: string;
   url: string | null;
+  created?: boolean;
+  alreadyExists?: boolean;
 };
 
 type PublishProductUpdateErrorResponse = {
@@ -278,7 +281,18 @@ function sanitizeRefs(value: unknown, field: string, errors: string[]): string[]
   return refs;
 }
 
-function sanitizeChannels(value: unknown, errors: string[]): ProductUpdateChannel[] {
+function sanitizeChannels(
+  value: unknown,
+  rawWeb: unknown,
+  errors: string[]
+): ProductUpdateChannel[] {
+  if (value === null || value === undefined) {
+    if (isRecord(rawWeb) && rawWeb.enabled === true) {
+      return ['app', 'web'];
+    }
+    return ['app'];
+  }
+
   if (!Array.isArray(value) || value.length === 0) {
     errors.push('channels must be a non-empty array');
     return [];
@@ -294,6 +308,19 @@ function sanitizeChannels(value: unknown, errors: string[]): ProductUpdateChanne
   }
 
   return [...valid];
+}
+
+function sanitizeOptionalBoolean(
+  value: unknown,
+  field: string,
+  errors: string[]
+): boolean | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'boolean') {
+    errors.push(`${field} must be a boolean`);
+    return null;
+  }
+  return value;
 }
 
 function sanitizeOptionalIsoString(value: unknown, field: string, errors: string[]): string | null {
@@ -512,7 +539,8 @@ function validatePublishPayload(raw: unknown): {
   const guideUrl = normalizeString(raw.guideUrl);
   const videoUrl = normalizeString(raw.videoUrl);
   const link = normalizeString(raw.link);
-  const channels = sanitizeChannels(raw.channels, errors);
+  const channels = sanitizeChannels(raw.channels, raw.web, errors);
+  const isActive = sanitizeOptionalBoolean(raw.isActive, 'isActive', errors);
 
   if (!isValidOptionalUrl(guideUrl)) {
     errors.push('guideUrl must be a valid http(s) URL');
@@ -537,7 +565,8 @@ function validatePublishPayload(raw: unknown): {
   const locales = sanitizeLocalizedMap(raw.locales, errors);
 
   const sourceMetaRaw = raw.sourceMeta;
-  if (!isRecord(sourceMetaRaw)) {
+  const hasSourceMeta = sourceMetaRaw !== null && sourceMetaRaw !== undefined;
+  if (hasSourceMeta && !isRecord(sourceMetaRaw)) {
     errors.push('sourceMeta must be an object');
   }
 
@@ -545,7 +574,7 @@ function validatePublishPayload(raw: unknown): {
     ? sanitizeStringField(sourceMetaRaw.externalId, 'sourceMeta.externalId', errors, { max: 160, required: true })
     : null;
   const system = isRecord(sourceMetaRaw) ? sourceMetaRaw.system : null;
-  if (system !== 'openclaw') {
+  if (isRecord(sourceMetaRaw) && system !== 'openclaw') {
     errors.push('sourceMeta.system must be "openclaw"');
   }
 
@@ -570,7 +599,7 @@ function validatePublishPayload(raw: unknown): {
     errors.push('sourceMeta.externalId must match externalId');
   }
 
-  if (errors.length > 0 || !externalId || !title || !description || !contentLong || !sourceMetaExternalId) {
+  if (errors.length > 0 || !externalId || !title || !description || !contentLong) {
     return { ok: false, errors };
   }
 
@@ -587,15 +616,18 @@ function validatePublishPayload(raw: unknown): {
       videoUrl,
       web: web?.enabled ? web : null,
       locales,
-      sourceMeta: {
-        system: 'openclaw',
-        externalId: sourceMetaExternalId,
-        sourceRefs,
-        evidenceRefs,
-        approvedAt,
-        approvedBy,
-      },
+      sourceMeta: isRecord(sourceMetaRaw) && sourceMetaExternalId
+        ? {
+            system: 'openclaw',
+            externalId: sourceMetaExternalId,
+            sourceRefs,
+            evidenceRefs,
+            approvedAt,
+            approvedBy,
+          }
+        : null,
       channels,
+      isActive: isActive ?? true,
     },
   };
 }
@@ -657,6 +689,8 @@ export async function handleProductUpdatesPublish(
         success: true,
         id: payload.externalId,
         url: normalizePersistedUrl(existing.data()),
+        created: false,
+        alreadyExists: true,
       });
     }
 
@@ -692,7 +726,7 @@ export async function handleProductUpdatesPublish(
       videoUrl: payload.videoUrl ?? null,
       publishedAt: now,
       createdAt: now,
-      isActive: true,
+      isActive: payload.isActive !== false,
       locales: localizedPayloads,
       web: payload.web?.enabled
         ? {
@@ -718,6 +752,8 @@ export async function handleProductUpdatesPublish(
           success: true,
           id: payload.externalId,
           url: normalizePersistedUrl(duplicateCheck.data()),
+          created: false,
+          alreadyExists: true,
         });
       }
 
@@ -734,6 +770,8 @@ export async function handleProductUpdatesPublish(
       success: true,
       id: payload.externalId,
       url: effectiveLink,
+      created: true,
+      alreadyExists: false,
     });
   } catch (error) {
     console.error('[product-updates/publish] error:', error);

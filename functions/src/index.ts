@@ -10,3 +10,4 @@ export { migrateProjectModulePaths } from "./migrations/migrateProjectModulePath
 export { sendIncidentAlert } from "./alerts/sendIncidentAlert";
 export { runWeeklyBackup } from "./backups/runWeeklyBackup";
 export { runNightlyHealthCheck } from "./health/runNightlyHealthCheck";
+export { runWeeklyProductUpdates } from "./product-updates/runWeeklyProductUpdates";

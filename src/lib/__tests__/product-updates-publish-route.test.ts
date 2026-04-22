@@ -94,6 +94,27 @@ function buildValidPayload() {
   };
 }
 
+function buildWeeklySchedulerPayload() {
+  return {
+    locale: 'ca',
+    externalId: 'weekly-product-update-2026-03-30_2026-04-05',
+    title: 'Millores setmanals a Summa Social',
+    description: 'Aquesta setmana arriben millores pràctiques en fluxos clau.',
+    link: null,
+    contentLong: 'Hem simplificat accions habituals perquè el flux sigui més clar.',
+    guideUrl: null,
+    videoUrl: null,
+    web: {
+      enabled: true,
+      slug: 'novetats-setmanals-2026-03-30-2026-04-05',
+      excerpt: 'Millores setmanals perquè treballis amb més claredat.',
+      content: 'Resum setmanal de millores útils per al dia a dia.',
+    },
+    locales: buildSpanishLocalization(),
+    isActive: false,
+  };
+}
+
 function buildSpanishLocalization() {
   return {
     es: {
@@ -171,10 +192,18 @@ test('handleProductUpdatesPublish creates product update, avoids undefined and r
   );
 
   assert.equal(response.status, 200);
-  const body = await response.json() as { success: boolean; id?: string; url?: string | null };
+  const body = await response.json() as {
+    success: boolean;
+    id?: string;
+    url?: string | null;
+    created?: boolean;
+    alreadyExists?: boolean;
+  };
   assert.equal(body.success, true);
   assert.equal(body.id, 'novetat-2026-03-26-001');
   assert.equal(body.url, 'https://summasocial.app/ca/novetats/millora-detall-cobraments');
+  assert.equal(body.created, true);
+  assert.equal(body.alreadyExists, false);
 
   const stored = store.get('productUpdates/novetat-2026-03-26-001');
   assert.ok(stored);
@@ -219,9 +248,16 @@ test('handleProductUpdatesPublish is idempotent for existing externalId', async 
   );
 
   assert.equal(response.status, 200);
-  const body = await response.json() as { success: boolean; url?: string | null };
+  const body = await response.json() as {
+    success: boolean;
+    url?: string | null;
+    created?: boolean;
+    alreadyExists?: boolean;
+  };
   assert.equal(body.success, true);
   assert.equal(body.url, 'https://summasocial.app/ca/novetats/millora-detall-cobraments');
+  assert.equal(body.created, false);
+  assert.equal(body.alreadyExists, true);
 });
 
 test('handleProductUpdatesPublish rejects duplicate slug from another doc', async () => {
@@ -251,4 +287,32 @@ test('handleProductUpdatesPublish rejects duplicate slug from another doc', asyn
   const body = await response.json() as { success: boolean; error?: string };
   assert.equal(body.success, false);
   assert.equal(body.error, 'duplicate_slug');
+});
+
+test('handleProductUpdatesPublish accepta payload mínim del scheduler sense sourceMeta ni channels', async () => {
+  const store = new Map<string, DocData>();
+
+  const response = await handleProductUpdatesPublish(
+    createRequest(buildWeeklySchedulerPayload()),
+    {
+      getAdminDbFn: () => new FakeDb(store) as never,
+      nowTimestampFn: () => 'now',
+      getPublishSecretFn: () => 'top-secret',
+      getPublicBaseUrlFn: () => 'https://summasocial.app',
+      getPublicLocalesFn: () => ['ca', 'es'],
+      localizeProductUpdateFn: async (payload) => payload.locales ?? null,
+      revalidatePathsFn: async () => {},
+    }
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json() as { success: boolean; id?: string };
+  assert.equal(body.success, true);
+  assert.equal(body.id, 'weekly-product-update-2026-03-30_2026-04-05');
+
+  const stored = store.get('productUpdates/weekly-product-update-2026-03-30_2026-04-05');
+  assert.ok(stored);
+  assert.equal(stored?.isActive, false);
+  assert.equal((stored?.web as { slug?: string } | null)?.slug, 'novetats-setmanals-2026-03-30-2026-04-05');
+  assert.equal('sourceMeta' in (stored ?? {}), false);
 });

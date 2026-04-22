@@ -74,6 +74,10 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import { useTranslations } from '@/i18n';
 
 import { stripUndefined, stripUndefinedDeep } from '@/lib/firestore-utils';
+import {
+  buildPublishedUpdatePatch,
+  createPublishedUpdateEditState,
+} from '@/lib/product-updates/published-update-edit';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipus IA
@@ -263,10 +267,16 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   // Estat (sempre declarar hooks abans de qualsevol early return!)
   const [isImporting, setIsImporting] = React.useState(false);
   const [editingDraft, setEditingDraft] = React.useState<DraftItem | null>(null);
+  const [editingPublished, setEditingPublished] = React.useState<PublishedUpdate | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editTitle, setEditTitle] = React.useState('');
   const [editDescription, setEditDescription] = React.useState('');
   const [editLink, setEditLink] = React.useState('');
+  const [editContentLong, setEditContentLong] = React.useState('');
+  const [editWebExcerpt, setEditWebExcerpt] = React.useState('');
+  const [editWebContent, setEditWebContent] = React.useState('');
+  const [editWebEnabled, setEditWebEnabled] = React.useState(false);
+  const [editIsActive, setEditIsActive] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
   const [isPublishing, setIsPublishing] = React.useState<string | null>(null);
   const [isDiscarding, setIsDiscarding] = React.useState<string | null>(null);
@@ -431,18 +441,60 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     }
   };
 
+  const resetEditDialogState = () => {
+    setEditingDraft(null);
+    setEditingPublished(null);
+    setEditTitle('');
+    setEditDescription('');
+    setEditLink('');
+    setEditContentLong('');
+    setEditWebExcerpt('');
+    setEditWebContent('');
+    setEditWebEnabled(false);
+    setEditIsActive(true);
+  };
+
+  const closeEditDialog = (open: boolean) => {
+    setIsEditDialogOpen(open);
+    if (!open) {
+      resetEditDialogState();
+    }
+  };
+
   // Handler obrir editar
   const handleEditDraft = (draft: DraftItem) => {
+    setEditingPublished(null);
     setEditingDraft(draft);
     setEditTitle(draft.title);
     setEditDescription(draft.description);
     setEditLink(draft.link || '');
+    setEditContentLong('');
+    setEditWebExcerpt('');
+    setEditWebContent('');
+    setEditWebEnabled(false);
+    setEditIsActive(true);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditPublished = (update: PublishedUpdate) => {
+    const nextState = createPublishedUpdateEditState(update);
+
+    setEditingDraft(null);
+    setEditingPublished(update);
+    setEditTitle(nextState.title);
+    setEditDescription(nextState.description);
+    setEditLink(nextState.link);
+    setEditContentLong(nextState.contentLong);
+    setEditWebExcerpt(nextState.webExcerpt);
+    setEditWebContent(nextState.webContent);
+    setEditWebEnabled(nextState.webEnabled);
+    setEditIsActive(nextState.isActive);
     setIsEditDialogOpen(true);
   };
 
   // Handler guardar edició
   const handleSaveEdit = async () => {
-    if (!editingDraft) return;
+    if (!editingDraft && !editingPublished) return;
     const db = getReadyFirestore();
     if (!db) return;
 
@@ -463,20 +515,40 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.descriptionMax', 'La descripció ha de tenir màxim 140 caràcters.') });
       return;
     }
+    if (editWebExcerpt.length > 160) {
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.descriptionMax', 'L’extracte web ha de tenir màxim 160 caràcters.') });
+      return;
+    }
 
     setIsSaving(true);
     try {
-      await updateDoc(doc(db, 'productUpdateDrafts', editingDraft.id), {
-        title: editTitle.trim(),
-        description: editDescription.trim(),
-        link: editLink.trim() || null,
-      });
+      if (editingDraft) {
+        await updateDoc(doc(db, 'productUpdateDrafts', editingDraft.id), {
+          title: editTitle.trim(),
+          description: editDescription.trim(),
+          link: editLink.trim() || null,
+        });
 
-      toast({ title: tr('admin.productUpdates.toast.draftUpdated', 'Esborrany actualitzat') });
-      setIsEditDialogOpen(false);
-      setEditingDraft(null);
+        toast({ title: tr('admin.productUpdates.toast.draftUpdated', 'Esborrany actualitzat') });
+      } else if (editingPublished) {
+        const patch = stripUndefinedDeep(buildPublishedUpdatePatch(editingPublished, {
+          title: editTitle,
+          description: editDescription,
+          link: editLink,
+          contentLong: editContentLong,
+          webExcerpt: editWebExcerpt,
+          webContent: editWebContent,
+          webEnabled: editWebEnabled,
+          isActive: editIsActive,
+        }));
+
+        await updateDoc(doc(db, 'productUpdates', editingPublished.id), patch);
+        toast({ title: tr('admin.productUpdates.save', 'Guardar'), description: tr('admin.productUpdates.toast.draftUpdated', 'Novetat actualitzada') });
+      }
+
+      closeEditDialog(false);
     } catch (error) {
-      console.error('Error guardar esborrany:', error);
+      console.error('Error guardar novetat:', error);
       toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.saveError', 'No s’ha pogut guardar.') });
     } finally {
       setIsSaving(false);
@@ -962,7 +1034,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                     <TableHead>{tr('admin.productUpdates.table.title', 'Títol')}</TableHead>
                     <TableHead>{tr('admin.productUpdates.table.description', 'Descripció')}</TableHead>
                     <TableHead>{tr('admin.productUpdates.table.publishedAt', 'Publicada')}</TableHead>
-                    <TableHead className="w-[80px]"></TableHead>
+                    <TableHead className="w-[120px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -992,20 +1064,30 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                           : '-'}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleUnpublish(update)}
-                          disabled={isUnpublishing === update.id}
-                          className="text-muted-foreground hover:text-foreground"
-                          title={tr('admin.productUpdates.unpublish', 'Despublicar')}
-                        >
-                          {isUnpublishing === update.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditPublished(update)}
+                            title={tr('admin.productUpdates.edit', 'Editar')}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleUnpublish(update)}
+                            disabled={isUnpublishing === update.id}
+                            className="text-muted-foreground hover:text-foreground"
+                            title={tr('admin.productUpdates.unpublish', 'Despublicar')}
+                          >
+                            {isUnpublishing === update.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <EyeOff className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1356,12 +1438,18 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       </CardContent>
 
       {/* Dialog editar esborrany */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={closeEditDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{tr('admin.productUpdates.editDialogTitle', 'Editar esborrany')}</DialogTitle>
+            <DialogTitle>
+              {editingPublished
+                ? tr('admin.productUpdates.edit', 'Editar')
+                : tr('admin.productUpdates.editDialogTitle', 'Editar esborrany')}
+            </DialogTitle>
             <DialogDescription>
-              {tr('admin.productUpdates.editDialogDescription', 'Ajusta el títol i la descripció abans de publicar.')}
+              {editingPublished
+                ? tr('admin.productUpdates.description', 'Gestiona les novetats visibles per als usuaris')
+                : tr('admin.productUpdates.editDialogDescription', 'Ajusta el títol i la descripció abans de publicar.')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1403,9 +1491,80 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                 placeholder={tr('admin.productUpdates.placeholders.editLink', '/dashboard/movimientos o URL completa')}
               />
             </div>
+            {editingPublished ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-content-long">
+                    {tr('admin.productUpdates.previewTabs.app', 'App')}
+                  </Label>
+                  <Textarea
+                    id="edit-content-long"
+                    value={editContentLong}
+                    onChange={(e) => setEditContentLong(e.target.value)}
+                    rows={5}
+                    placeholder={tr('admin.productUpdates.emptyAiPreviewHint', 'El contingut generat apareixerà aquí per revisar')}
+                  />
+                </div>
+                <div className="space-y-3 rounded-lg border p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="edit-web-enabled">{tr('admin.productUpdates.webToggle', 'Publicar al web')}</Label>
+                      <p className="text-xs text-muted-foreground">
+                        {editingPublished.web?.slug
+                          ? tr('admin.productUpdates.webToggleHint', 'Genera contingut per /novetats')
+                          : tr('admin.productUpdates.toast.noWebUpdatesDescription', 'Activa web.enabled i slug a les novetats que vulguis publicar.')}
+                      </p>
+                    </div>
+                    <Switch
+                      id="edit-web-enabled"
+                      checked={editWebEnabled}
+                      disabled={!editingPublished.web?.slug}
+                      onCheckedChange={setEditWebEnabled}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-web-excerpt">
+                      {tr('admin.productUpdates.fields.shortDescription', 'Descripció breu')}
+                    </Label>
+                    <Textarea
+                      id="edit-web-excerpt"
+                      value={editWebExcerpt}
+                      onChange={(e) => setEditWebExcerpt(e.target.value)}
+                      maxLength={160}
+                      rows={2}
+                      placeholder={tr('admin.productUpdates.placeholders.shortDescription', 'Descripció que apareixerà a la campaneta')}
+                    />
+                    <p className="text-xs text-muted-foreground text-right">{editWebExcerpt.length}/160</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-web-content">{tr('admin.productUpdates.previewTabs.web', 'Web')}</Label>
+                    <Textarea
+                      id="edit-web-content"
+                      value={editWebContent}
+                      onChange={(e) => setEditWebContent(e.target.value)}
+                      rows={6}
+                      placeholder={tr('admin.productUpdates.copyLabels.webContent', 'Contingut web')}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <Label htmlFor="edit-is-active">{tr('admin.productUpdates.tabs.published', 'Publicades')}</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {tr('admin.productUpdates.toast.unpublishedDescription', 'Els usuaris ja no la veuran.')}
+                    </p>
+                  </div>
+                  <Switch
+                    id="edit-is-active"
+                    checked={editIsActive}
+                    onCheckedChange={setEditIsActive}
+                  />
+                </div>
+              </>
+            ) : null}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => closeEditDialog(false)}>
               {tr('admin.productUpdates.cancel', 'Cancel·lar')}
             </Button>
             <Button onClick={handleSaveEdit} disabled={isSaving}>
