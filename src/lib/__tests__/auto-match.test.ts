@@ -166,7 +166,7 @@ describe('findMatchingContact', () => {
     assert.strictEqual(result, null);
   });
 
-  it('should prefer higher token matches', () => {
+  it('should return null when more than one contact remains plausible', () => {
     const similarContacts: AnyContact[] = [
       createDonor('1', 'Maria Garcia'),
       createDonor('2', 'Maria Garcia Lopez Fernandez'),
@@ -175,8 +175,7 @@ describe('findMatchingContact', () => {
       'TRANSFERENCIA MARIA GARCIA LOPEZ FERNANDEZ',
       similarContacts
     );
-    assert.ok(result);
-    assert.strictEqual(result!.contactId, '2'); // More tokens match
+    assert.strictEqual(result, null);
   });
 
   it('should require minimum 2 tokens for long names', () => {

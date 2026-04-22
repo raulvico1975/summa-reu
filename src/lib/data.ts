@@ -243,6 +243,15 @@ export type Transaction = {
   archivedFromAction?: 'user_delete' | 'superadmin_cleanup' | null;
 };
 
+export type ClassificationMemoryEntry = {
+  id: string;
+  normalizedDescription: string;
+  contactId?: string | null;
+  categoryId?: string | null;
+  usageCount: number;
+  lastUsedAt: string;
+};
+
 export type Category = {
   id: string;
   name: string;

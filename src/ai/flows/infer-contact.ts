@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { CONTACT_AI_CONFIDENCE_THRESHOLD } from '@/lib/transaction-classification/decision-engine';
 
 const InferContactInputSchema = z.object({
   description: z.string().describe('The description of the transaction.'),
@@ -23,13 +24,14 @@ export type InferContactInput = z.infer<typeof InferContactInputSchema>;
 
 const InferContactOutputSchema = z.object({
   contactId: z.string().nullable().describe('The ID of the most likely contact, or null if no clear match is found.'),
+  confidence: z.number().describe('Confidence level between 0 and 1. If confidence is low, contactId must be null.'),
 });
 export type InferContactOutput = z.infer<typeof InferContactOutputSchema>;
 
 export async function inferContact(input: InferContactInput): Promise<InferContactOutput> {
   // If there are no contacts, we can't infer anything.
   if (input.contacts.length === 0) {
-    return { contactId: null };
+    return { contactId: null, confidence: 0 };
   }
   return inferContactFlow(input);
 }
@@ -53,7 +55,12 @@ Analyze the transaction description and determine the most plausible contact. Th
 If the description looks like a transfer between individuals (e.g., "Transferencia de Alejandro Romero") and there is no matching contact, you should return null.
 For business-related transactions (e.g., receipts, purchases), be more proactive in finding a match.
 
-If you find a plausible match, return the corresponding contact ID. If there is no reasonable match, or if you are unsure, return null. Only return the ID of one contact.
+Decision rules:
+- Only return a contactId when the match is strong and unique.
+- If there are multiple plausible contacts, return null.
+- If confidence would be lower than ${CONTACT_AI_CONFIDENCE_THRESHOLD}, you MUST return contactId null.
+
+If you find a plausible match, return the corresponding contact ID and confidence. If there is no reasonable match, or if you are unsure, return null. Only return the ID of one contact.
 `,
 });
 
@@ -65,6 +72,20 @@ const inferContactFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output) {
+      return {
+        contactId: null,
+        confidence: 0,
+      };
+    }
+
+    if (output.confidence < CONTACT_AI_CONFIDENCE_THRESHOLD) {
+      return {
+        contactId: null,
+        confidence: output.confidence,
+      };
+    }
+
+    return output;
   }
 );

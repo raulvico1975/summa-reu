@@ -73,8 +73,8 @@ describe('transaction dedupe real life scenarios', () => {
     assert.equal(classified[1].status, 'NEW');
 
     const selection = buildImportSelection(classified, []);
-    assert.equal(selection.transactionsToImport.length, 1);
-    assert.equal(selection.transactionsToImport[0].description, 'Donació puntual');
+    assert.equal(selection.rowsToImport.length, 1);
+    assert.equal(selection.rowsToImport[0].tx.description, 'Donació puntual');
     assert.equal(selection.stats.candidateCount, 1);
     assert.equal(selection.stats.candidateUserImportedCount, 0);
     assert.equal(selection.stats.candidateUserSkippedCount, 1);

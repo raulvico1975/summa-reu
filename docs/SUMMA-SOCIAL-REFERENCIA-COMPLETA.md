@@ -676,6 +676,14 @@ organizations/
       │       ├── createdAt: timestamp
       │       └── updatedAt: timestamp
       │
+      ├── classificationMemory/
+      │   └── {memoryId}/
+      │       ├── normalizedDescription: string
+      │       ├── contactId: string | null
+      │       ├── categoryId: string | null
+      │       ├── usageCount: number
+      │       └── lastUsedAt: string (ISO)
+      │
       └── projects/
           └── {projectId}/
               ├── name: string
@@ -884,19 +892,21 @@ Els següents blocs estan **desactivats** (comentats al codi):
 
 ### 3.2.2 Sistema d'Auto-Assignació Intel·ligent
 
-**FASE 1: Matching per Nom (instantani)**
-- Cerca el nom de cada contacte a la descripció
-- ~70% dels moviments assignats automàticament
-
-**FASE 2: IA amb Gemini (si cal)**
-- Envia descripció a Gemini
-- Suggereix contacte més probable
-- ~16% addicional
-
-> **Blindatge:** La classificació suggerida per IA no s'aplica automàticament. L'usuari sempre ha de validar o confirmar l'assignació proposada.
+**Ordre de decisió únic (importació i categorització):**
+1. Evidència dura (`IBAN`, `NIF/DNI`, `email`) si el match és exacte i únic
+2. Memòria confirmada per l'usuari (`classificationMemory`) si el patró normalitzat s'ha confirmat diverses vegades
+3. Regles deterministes clares (matching de nom únic o paraules clau de categoria)
+4. IA només com a últim recurs i amb llindar alt (`>= 0.85`)
+5. Si no hi ha prou certesa, es deixa el camp buit
 
 **Aplicació de Categoria per Defecte:**
-- Si contacte té defaultCategoryId → s'aplica automàticament
+- Si el contacte ha quedat confirmat amb criteri fort i té `defaultCategoryId` compatible → s'aplica automàticament
+
+**Memòria per entitat (`classificationMemory`):**
+- Es guarda per organització
+- Només s'alimenta des de correccions manuals confirmades per l'usuari
+- No s'alimenta amb decisions automàtiques del sistema
+- S'escriu via `POST /api/transactions/classification-memory`
 
 **Detecció Forçada de Categories (categorització de Moviments):**
 - S'executa abans de cridar IA tant en categorització individual com batch

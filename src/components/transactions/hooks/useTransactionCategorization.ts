@@ -7,8 +7,8 @@ import { updateDocumentNonBlocking } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { trackUX } from '@/lib/ux/trackUX';
-import type { Transaction, Category } from '@/lib/data';
-import { getForcedCategoryIdByBankDescription } from '@/lib/auto-match';
+import type { Transaction, Category, ClassificationMemoryEntry } from '@/lib/data';
+import { resolveAutomaticCategoryDecision } from '@/lib/transaction-classification/decision-engine';
 
 // =============================================================================
 // TYPES
@@ -18,6 +18,7 @@ interface UseTransactionCategorizationParams {
   transactionsCollection: CollectionReference | null;
   transactions: Transaction[] | null;
   availableCategories: Category[] | null;
+  classificationMemory?: ClassificationMemoryEntry[] | null;
   getCategoryDisplayName: (categoryId: string) => string;
   bulkMode?: boolean;
   onQuotaExceeded?: () => void;
@@ -196,6 +197,7 @@ export function useTransactionCategorization({
   transactionsCollection,
   transactions,
   availableCategories,
+  classificationMemory,
   getCategoryDisplayName,
   bulkMode = false,
   onQuotaExceeded,
@@ -257,28 +259,30 @@ export function useTransactionCategorization({
 
     setLoadingStates((prev) => ({ ...prev, [txId]: true }));
     try {
-      // 1. Comprovar si hi ha categoria forçada per descripció abans de cridar IA
-      const forcedCategoryId = getForcedCategoryIdByBankDescription(
-        transaction.description,
-        transaction.amount,
-        availableCategories
-      );
+      const automaticDecision = resolveAutomaticCategoryDecision({
+        description: transaction.description,
+        amount: transaction.amount,
+        categories: availableCategories,
+        memoryEntries: classificationMemory,
+      });
 
-      if (forcedCategoryId) {
-        // Categoria forçada - no cal cridar IA
-        updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: forcedCategoryId });
-        const categoryName = getCategoryDisplayName(forcedCategoryId);
+      if (automaticDecision) {
+        updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: automaticDecision.categoryId });
+        const categoryName = getCategoryDisplayName(automaticDecision.categoryId);
         toast({
           title: language === 'ca' ? 'Categoria assignada' : 'Categoría asignada',
           description: language === 'ca'
-            ? `Transacció classificada com "${categoryName}" per paraules clau.`
-            : `Transacción clasificada como "${categoryName}" por palabras clave.`,
+            ? `Transacció classificada com "${categoryName}" per criteri conservador.`
+            : `Transacción clasificada como "${categoryName}" con criterio conservador.`,
         });
-        trackUX('ai.categorize.forced', { categoryId: forcedCategoryId, categoryName });
+        trackUX('ai.categorize.forced', {
+          categoryId: automaticDecision.categoryId,
+          categoryName,
+          source: automaticDecision.source,
+        });
         return;
       }
 
-      // 2. Si no hi ha categoria forçada, cridar IA
       const result = await callCategorizationAPI({
         description: transaction.description,
         amount: transaction.amount,
@@ -287,10 +291,8 @@ export function useTransactionCategorization({
       });
 
       if (!result.ok) {
-        // Error controlat - marcar com Revisar
-        updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: 'Revisar' });
+        updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: null });
 
-        // Missatge d'error traduït
         const errorMsg = getErrorMessage(result.code, errorLang);
         toast({
           variant: 'destructive',
@@ -302,11 +304,10 @@ export function useTransactionCategorization({
         return;
       }
 
-      // Si categoryId és null, marcar com Revisar
-      const categoryToSave = result.categoryId ?? 'Revisar';
+      const categoryToSave = result.categoryId ?? null;
       updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: categoryToSave });
 
-      const categoryName = result.categoryId ? getCategoryDisplayName(result.categoryId) : 'Revisar';
+      const categoryName = result.categoryId ? getCategoryDisplayName(result.categoryId) : (language === 'ca' ? 'sense categoria' : 'sin categoría');
       toast({
         title: language === 'ca' ? 'Categorització Automàtica' : 'Categorización Automática',
         description: language === 'ca'
@@ -314,9 +315,8 @@ export function useTransactionCategorization({
           : `Transacción clasificada como "${categoryName}" con una confianza del ${Math.round(result.confidence * 100)}%.`,
       });
     } catch (error) {
-      // Error de xarxa - marcar com Revisar
       console.error('Error categorizing transaction:', error);
-      updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: 'Revisar' });
+      updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: null });
 
       const errorMsg = getErrorMessage('AI_ERROR', errorLang);
       toast({
@@ -331,6 +331,7 @@ export function useTransactionCategorization({
   }, [
     transactions,
     availableCategories,
+    classificationMemory,
     transactionsCollection,
     expenseOptions,
     incomeOptions,
@@ -416,16 +417,15 @@ export function useTransactionCategorization({
       });
 
       try {
-        // 1. Comprovar si hi ha categoria forçada per descripció abans de cridar IA
-        const forcedCategoryId = getForcedCategoryIdByBankDescription(
-          tx.description,
-          tx.amount,
-          availableCategories
-        );
+        const automaticDecision = resolveAutomaticCategoryDecision({
+          description: tx.description,
+          amount: tx.amount,
+          categories: availableCategories,
+          memoryEntries: classificationMemory,
+        });
 
-        if (forcedCategoryId) {
-          // Categoria forçada - no cal cridar IA
-          updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: forcedCategoryId });
+        if (automaticDecision) {
+          updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: automaticDecision.categoryId });
           successCount++;
           setBatchStatus({
             phase: 'applying',
@@ -434,15 +434,14 @@ export function useTransactionCategorization({
             appliedCount: successCount,
             reviewCount: errorCount,
             currentDescription: tx.description,
-            suggestedCategoryName: getCategoryDisplayName(forcedCategoryId),
+            suggestedCategoryName: getCategoryDisplayName(automaticDecision.categoryId),
             optionCount,
             delayMs: currentDelay,
-            source: 'rules',
+            source: automaticDecision.source === 'ai' ? 'ai' : 'rules',
           });
-          continue; // No cal delay, no hem cridat l'API
+          continue;
         }
 
-        // 2. Si no hi ha categoria forçada, cridar IA
         const result = await callCategorizationAPI({
           description: tx.description,
           amount: tx.amount,
@@ -451,11 +450,9 @@ export function useTransactionCategorization({
         });
 
         if (!result.ok) {
-          // Error controlat de l'API
           errorCount++;
 
-          // Marcar com Revisar
-          updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: 'Revisar' });
+          updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: null });
           setBatchStatus({
             phase: 'applying',
             current: i + 1,
@@ -463,13 +460,12 @@ export function useTransactionCategorization({
             appliedCount: successCount,
             reviewCount: errorCount,
             currentDescription: tx.description,
-            suggestedCategoryName: 'Revisar',
+            suggestedCategoryName: language === 'ca' ? 'sense categoria' : 'sin categoría',
             optionCount,
             delayMs: currentDelay,
             source: 'ai',
           });
 
-          // Manejar segons tipus d'error
           if (result.code === 'QUOTA_EXCEEDED') {
             quotaExceeded = true;
             onQuotaExceeded?.();
@@ -477,16 +473,13 @@ export function useTransactionCategorization({
           }
 
           if (result.code === 'RATE_LIMITED' || result.code === 'TRANSIENT') {
-            // Backoff adaptatiu
             currentDelay = Math.min(currentDelay * BACKOFF_MULTIPLIER, MAX_DELAY_MS);
           }
 
-          // Continuar amb la següent
           continue;
         }
 
-        // Èxit - Si categoryId és null, marcar com Revisar
-        const categoryToSave = result.categoryId ?? 'Revisar';
+        const categoryToSave = result.categoryId ?? null;
         updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: categoryToSave });
         successCount++;
         setBatchStatus({
@@ -496,22 +489,18 @@ export function useTransactionCategorization({
           appliedCount: successCount,
           reviewCount: errorCount,
           currentDescription: tx.description,
-          suggestedCategoryName: getCategoryDisplayName(categoryToSave),
+          suggestedCategoryName: categoryToSave
+            ? getCategoryDisplayName(categoryToSave)
+            : (language === 'ca' ? 'sense categoria' : 'sin categoría'),
           optionCount,
           delayMs: currentDelay,
           source: 'ai',
         });
-
-        // Reset delay si èxit (opcional: podríem mantenir-lo)
-        // currentDelay = bulkMode ? BASE_DELAY_BULK_MS : BASE_DELAY_NORMAL_MS;
-
       } catch (error: unknown) {
-        // Error de xarxa o inesperada
         console.error('Error categorizing transaction:', error);
         errorCount++;
 
-        // Marcar com Revisar
-        updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: 'Revisar' });
+        updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: null });
         setBatchStatus({
           phase: 'applying',
           current: i + 1,
@@ -519,13 +508,12 @@ export function useTransactionCategorization({
           appliedCount: successCount,
           reviewCount: errorCount,
           currentDescription: tx.description,
-          suggestedCategoryName: 'Revisar',
+          suggestedCategoryName: language === 'ca' ? 'sense categoria' : 'sin categoría',
           optionCount,
           delayMs: currentDelay,
           source: 'ai',
         });
 
-        // Backoff per errors de xarxa
         currentDelay = Math.min(currentDelay * BACKOFF_MULTIPLIER, MAX_DELAY_MS);
       }
 
@@ -587,6 +575,7 @@ export function useTransactionCategorization({
   }, [
     transactions,
     availableCategories,
+    classificationMemory,
     transactionsCollection,
     expenseOptions,
     incomeOptions,
