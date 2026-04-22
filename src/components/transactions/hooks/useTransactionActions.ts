@@ -14,6 +14,7 @@ import { buildDocumentFilename } from '@/lib/build-document-filename';
 import { attachDocumentToTransaction } from '@/lib/files/attach-document';
 import { handleTransactionDelete, isFiscallyRelevantTransaction } from '@/lib/fiscal/softDeleteTransaction';
 import { isCategoryIdCompatibleStrict } from '@/lib/constants';
+import { confirmClassificationMemory } from '@/lib/transaction-classification/client-memory';
 
 // =============================================================================
 // TYPES
@@ -46,6 +47,7 @@ interface UseTransactionActionsParams {
   availableCategories?: Category[] | null;
   firestore?: Firestore | null;
   userId?: string | null;
+  authUser?: { getIdToken: () => Promise<string> } | null;
   canEditMovements?: boolean;
 }
 
@@ -153,6 +155,7 @@ export function useTransactionActions({
   availableCategories,
   firestore,
   userId,
+  authUser,
   canEditMovements = true,
 }: UseTransactionActionsParams): UseTransactionActionsReturn {
   const { toast } = useToast();
@@ -221,8 +224,8 @@ export function useTransactionActions({
       return;
     }
 
-    const tx = transactions?.find(tr => tr.id === txId);
-    if (tx && !isCategoryIdCompatibleStrict(tx.amount, categoryId, availableCategories)) {
+    const currentTx = transactions?.find(tr => tr.id === txId);
+    if (currentTx && !isCategoryIdCompatibleStrict(currentTx.amount, categoryId, availableCategories)) {
       toast({
         variant: 'destructive',
         title: t.movements?.table?.categoryTypeMismatch?.title ?? 'Tipus incompatible',
@@ -232,7 +235,16 @@ export function useTransactionActions({
     }
 
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: categoryId });
-  }, [ensureCanEdit, transactionsCollection, transactions, availableCategories, toast, t]);
+    if (organizationId && currentTx) {
+      void confirmClassificationMemory(authUser, {
+        orgId: organizationId,
+        description: currentTx.description,
+        categoryId,
+      }).catch((error) => {
+        console.warn('[classification-memory] Error remembering category confirmation', error);
+      });
+    }
+  }, [ensureCanEdit, transactionsCollection, transactions, availableCategories, organizationId, authUser, toast, t]);
 
   const handleSetContact = React.useCallback((txId: string, newContactId: string | null, contactType: ContactType | null) => {
     if (!ensureCanEdit()) return;
@@ -256,7 +268,17 @@ export function useTransactionActions({
     }
 
     updateDocumentNonBlocking(doc(transactionsCollection, txId), updates);
-  }, [ensureCanEdit, transactionsCollection, availableContacts, availableCategories, transactions]);
+    const txDescription = transactions?.find((transaction) => transaction.id === txId)?.description;
+    if (organizationId && txDescription && newContactId) {
+      void confirmClassificationMemory(authUser, {
+        orgId: organizationId,
+        description: txDescription,
+        contactId: newContactId,
+      }).catch((error) => {
+        console.warn('[classification-memory] Error remembering contact confirmation', error);
+      });
+    }
+  }, [ensureCanEdit, transactionsCollection, availableContacts, availableCategories, transactions, organizationId, authUser]);
 
   const handleSetProject = React.useCallback((txId: string, newProjectId: string | null) => {
     if (!ensureCanEdit()) return;
@@ -566,10 +588,20 @@ export function useTransactionActions({
       projectId: formData.projectId,
     });
 
+    if (organizationId && formData.contactId && formData.contactId !== editingTransaction.contactId) {
+      void confirmClassificationMemory(authUser, {
+        orgId: organizationId,
+        description: formData.description,
+        contactId: formData.contactId,
+      }).catch((error) => {
+        console.warn('[classification-memory] Error remembering edit dialog confirmation', error);
+      });
+    }
+
     toast({ title: t.movements.table.transactionUpdated });
     setIsEditDialogOpen(false);
     setEditingTransaction(null);
-  }, [ensureCanEdit, editingTransaction, transactionsCollection, toast, t]);
+  }, [ensureCanEdit, editingTransaction, transactionsCollection, organizationId, authUser, toast, t]);
 
   const handleCloseEditDialog = React.useCallback(() => {
     setIsEditDialogOpen(false);

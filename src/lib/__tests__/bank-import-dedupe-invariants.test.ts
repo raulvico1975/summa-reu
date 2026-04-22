@@ -78,7 +78,7 @@ describe('bank import dedupe invariants', () => {
 
     const selection = buildImportSelection(classified, []);
 
-    assert.equal(selection.transactionsToImport.length, 0);
+    assert.equal(selection.rowsToImport.length, 0);
     assert.equal(selection.stats.candidateCount, 1);
     assert.equal(selection.stats.candidateUserImportedCount, 0);
     assert.equal(selection.stats.candidateUserSkippedCount, 1);
@@ -94,9 +94,9 @@ describe('bank import dedupe invariants', () => {
 
     const selection = buildImportSelection(classified, [1]);
 
-    assert.equal(selection.transactionsToImport.length, 2);
-    assert.equal(selection.transactionsToImport[0].description, 'Nou-1');
-    assert.equal(selection.transactionsToImport[1].description, 'Cand-2');
+    assert.equal(selection.rowsToImport.length, 2);
+    assert.equal(selection.rowsToImport[0].tx.description, 'Nou-1');
+    assert.equal(selection.rowsToImport[1].tx.description, 'Cand-2');
     assert.equal(selection.stats.candidateCount, 3);
     assert.equal(selection.stats.candidateUserImportedCount, 1);
     assert.equal(selection.stats.candidateUserSkippedCount, 2);

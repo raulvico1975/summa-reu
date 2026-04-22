@@ -5,17 +5,19 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import type { AnyContact, Category } from './data';
+import {
+  normalizeDecisionDescription,
+  normalizeDecisionText,
+  tokenizeDecisionDescription,
+} from '@/lib/transaction-classification/normalize';
 
 /**
  * Normalitza un text per a comparació (minúscules, sense accents, sense caràcters especials)
  */
 export function normalizeForMatching(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Elimina accents
-    .replace(/[^a-z0-9\s]/g, ' ')    // Substitueix caràcters especials per espais
-    .replace(/\s+/g, ' ')            // Normalitza espais múltiples
+  return normalizeDecisionText(text)
+    .replace(/[@.]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -34,10 +36,6 @@ export function extractNameTokens(name: string): string[] {
 /**
  * Calcula quants tokens del nom apareixen a la descripció
  */
-function countMatchingTokens(nameTokens: string[], descriptionNormalized: string): number {
-  return nameTokens.filter(token => descriptionNormalized.includes(token)).length;
-}
-
 /**
  * Resultat del matching
  */
@@ -72,10 +70,9 @@ export function findMatchingContact(
     return null;
   }
 
-  const descNormalized = normalizeForMatching(description);
-
-  let bestMatch: MatchResult | null = null;
-  let bestScore = 0;
+  const descNormalized = normalizeDecisionDescription(description);
+  const descriptionTokens = new Set(tokenizeDecisionDescription(description));
+  const candidates: MatchResult[] = [];
 
   for (const contact of contacts) {
     if (!contact.name) continue;
@@ -83,34 +80,35 @@ export function findMatchingContact(
     const nameTokens = extractNameTokens(contact.name);
     if (nameTokens.length === 0) continue;
 
-    // Per noms d'un sol token (ex: "Amazon"), baixem el llindar
-    const effectiveMinTokens = Math.min(minTokensRequired, nameTokens.length);
-
+    const normalizedName = normalizeForMatching(contact.name);
     const matchedTokens = nameTokens.filter(token => descNormalized.includes(token));
     const matchCount = matchedTokens.length;
+    const fullPhraseMatch = normalizedName.length >= 6 && descNormalized.includes(normalizedName);
+    const effectiveMinTokens = Math.min(minTokensRequired, nameTokens.length);
+    const hasAllTokens = nameTokens.length >= 2 && matchCount === nameTokens.length;
+    const singleTokenStrong = nameTokens.length === 1
+      && nameTokens[0].length >= 5
+      && descriptionTokens.has(nameTokens[0]);
 
-    // Si no arriba al mínim, saltar
-    if (matchCount < effectiveMinTokens) continue;
-
-    // Calcular confiança: % de tokens que coincideixen
-    const confidence = matchCount / nameTokens.length;
-
-    // Prioritzar per: més tokens coincidits, després per major confiança
-    const score = matchCount * 100 + confidence * 10;
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = {
-        contactId: contact.id,
-        contactType: contact.type as 'donor' | 'supplier' | 'employee',
-        contactName: contact.name,
-        confidence,
-        matchedTokens,
-      };
+    if (!fullPhraseMatch && !hasAllTokens && !singleTokenStrong) {
+      continue;
     }
+
+    if (!fullPhraseMatch && matchCount < effectiveMinTokens) {
+      continue;
+    }
+
+    const confidence = matchCount / nameTokens.length;
+    candidates.push({
+      contactId: contact.id,
+      contactType: contact.type as 'donor' | 'supplier' | 'employee',
+      contactName: contact.name,
+      confidence,
+      matchedTokens,
+    });
   }
 
-  return bestMatch;
+  return candidates.length === 1 ? candidates[0] : null;
 }
 
 /**

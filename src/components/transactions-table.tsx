@@ -58,7 +58,7 @@ import {
   X,
   Trash2,
 } from 'lucide-react';
-import type { Transaction, Category, Project, AnyContact, Donor, ContactType } from '@/lib/data';
+import type { Transaction, Category, Project, AnyContact, Donor, ContactType, ClassificationMemoryEntry } from '@/lib/data';
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { trackUX } from '@/lib/ux/trackUX';
@@ -129,6 +129,8 @@ import {
 } from '@/lib/transactions/inline-update-state';
 import { hasEffectiveContactRole } from '@/lib/contacts/contact-role-options';
 import type { Donation } from '@/lib/types/donations';
+import { classificationMemoryCollection } from '@/lib/transaction-classification/memory';
+import { confirmClassificationMemory } from '@/lib/transaction-classification/client-memory';
 import {
   summarizeActiveStripeImputationsByParent,
   type StripeImputationSummary,
@@ -377,11 +379,16 @@ export function TransactionsTable({
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'projects') : null,
     [firestore, organizationId]
   );
+  const classificationMemoryRef = useMemoFirebase(
+    () => organizationId ? classificationMemoryCollection(firestore, organizationId) : null,
+    [firestore, organizationId]
+  );
   
   const { data: availableCategories } = useCollection<Category>(categoriesCollection);
   const { data: availableContacts } = useCollection<AnyContact>(contactsCollection);
   const { data: stripeDonations } = useCollection<Donation>(stripeDonationsQuery, [organizationId]);
   const { data: availableProjects } = useCollection<Project>(projectsCollection);
+  const { data: classificationMemory } = useCollection<ClassificationMemoryEntry>(classificationMemoryRef);
 
   const missionTransferCategoryId = React.useMemo(
     () => availableCategories ? findSystemCategoryId(availableCategories, 'missionTransfers') : null,
@@ -798,6 +805,7 @@ export function TransactionsTable({
     transactionsCollection,
     transactions,
     availableCategories,
+    classificationMemory,
     getCategoryDisplayName,
     bulkMode: isBulkMode,
     onQuotaExceeded: handleQuotaExceeded,
@@ -848,6 +856,7 @@ export function TransactionsTable({
     availableCategories,
     firestore,
     userId: user?.uid,
+    authUser: user,
     canEditMovements,
   });
 
@@ -908,6 +917,28 @@ export function TransactionsTable({
       });
 
       await Promise.race([writePromise, timeoutPromise]);
+
+      if (organizationId) {
+        if (kind === 'contact' && typeof remoteUpdate.contactId === 'string') {
+          void confirmClassificationMemory(user, {
+            orgId: organizationId,
+            description: previousTx.description,
+            contactId: remoteUpdate.contactId,
+          }).catch((error) => {
+            console.warn('[classification-memory] Error remembering inline contact confirmation', error);
+          });
+        }
+
+        if (kind === 'category' && typeof remoteUpdate.category === 'string') {
+          void confirmClassificationMemory(user, {
+            orgId: organizationId,
+            description: previousTx.description,
+            categoryId: remoteUpdate.category,
+          }).catch((error) => {
+            console.warn('[classification-memory] Error remembering inline category confirmation', error);
+          });
+        }
+      }
     } catch (error) {
       rollbackInlineTransaction(previousTx);
 

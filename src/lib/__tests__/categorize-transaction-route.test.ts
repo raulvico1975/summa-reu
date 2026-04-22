@@ -9,14 +9,14 @@ import {
 } from '@/app/api/ai/categorize-transaction/prompt-helpers';
 
 test('categorize transaction route uses the raised confidence threshold', () => {
-  assert.equal(CATEGORIZE_TRANSACTION_CONFIDENCE_THRESHOLD, 0.6);
+  assert.equal(CATEGORIZE_TRANSACTION_CONFIDENCE_THRESHOLD, 0.85);
   assert.deepEqual(
-    applyCategorizationConfidenceThreshold({ categoryId: 'cat-1', confidence: 0.59 }),
-    { categoryId: null, confidence: 0.59 }
+    applyCategorizationConfidenceThreshold({ categoryId: 'cat-1', confidence: 0.84 }),
+    { categoryId: null, confidence: 0.84 }
   );
   assert.deepEqual(
-    applyCategorizationConfidenceThreshold({ categoryId: 'cat-1', confidence: 0.6 }),
-    { categoryId: 'cat-1', confidence: 0.6 }
+    applyCategorizationConfidenceThreshold({ categoryId: 'cat-1', confidence: 0.85 }),
+    { categoryId: 'cat-1', confidence: 0.85 }
   );
   assert.deepEqual(
     finalizeCategorizationOutput(
@@ -40,5 +40,5 @@ test('categorize transaction prompt hardens nonprofit Spain constraints and bili
   assert.match(prompt, /Vodafone/i);
   assert.match(prompt, /only from the provided options/i);
   assert.match(prompt, /return categoryId null/i);
-  assert.match(prompt, /0\.6/i);
+  assert.match(prompt, /0\.85/i);
 });

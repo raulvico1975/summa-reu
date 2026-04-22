@@ -5,7 +5,7 @@ const CategorizeTransactionOutputSchema = z.object({
   confidence: z.number(),
 });
 
-export const CATEGORIZE_TRANSACTION_CONFIDENCE_THRESHOLD = 0.6;
+export const CATEGORIZE_TRANSACTION_CONFIDENCE_THRESHOLD = 0.85;
 
 export type CategorizeTransactionOutput = z.infer<typeof CategorizeTransactionOutputSchema>;
 
