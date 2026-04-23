@@ -18,6 +18,8 @@ import { getFirestore, FieldValue, type Firestore } from 'firebase-admin/firesto
 import { getStorage } from 'firebase-admin/storage';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import type { Bucket } from '@google-cloud/storage';
+import { validateUserMembership } from '@/lib/api/admin-sdk';
+import { requireOperationalAccess } from '@/lib/api/require-operational-access';
 import { safeUpdate, SafeWriteValidationError } from '@/lib/safe-write';
 
 // =============================================================================
@@ -144,29 +146,13 @@ interface RelinkDocumentDeps {
   verifyIdTokenFn?: (request: NextRequest) => Promise<AuthResult | null>;
   getAdminDbFn?: () => Firestore;
   getAdminStorageFn?: () => Bucket;
+  validateUserMembershipFn?: typeof validateUserMembership;
+  requireOperationalAccessFn?: typeof requireOperationalAccess;
 }
 
 function getOrganizationStoragePrefix(orgId: string): string {
   return `organizations/${orgId}/`;
 }
-
-// =============================================================================
-// HELPER: Validar membership
-// =============================================================================
-
-async function validateUserMembership(
-  db: Firestore,
-  uid: string,
-  orgId: string
-): Promise<boolean> {
-  const memberRef = db.doc(`organizations/${orgId}/members/${uid}`);
-  const memberSnap = await memberRef.get();
-  return memberSnap.exists;
-}
-
-// =============================================================================
-// HANDLER PRINCIPAL
-// =============================================================================
 
 export async function handleRelinkDocumentPost(
   request: NextRequest,
@@ -176,6 +162,8 @@ export async function handleRelinkDocumentPost(
   const verifyIdTokenFn = deps.verifyIdTokenFn ?? verifyIdToken;
   const getAdminDbFn = deps.getAdminDbFn ?? getAdminDb;
   const getAdminStorageFn = deps.getAdminStorageFn ?? getAdminStorage;
+  const validateUserMembershipFn = deps.validateUserMembershipFn ?? validateUserMembership;
+  const requireOperationalAccessFn = deps.requireOperationalAccessFn ?? requireOperationalAccess;
 
   // 1. Autenticació
   const authResult = await verifyIdTokenFn(request);
@@ -211,14 +199,10 @@ export async function handleRelinkDocumentPost(
     );
   }
 
-  // 4. Validar membership
-  const isMember = await validateUserMembership(db, uid, orgId);
-  if (!isMember) {
-    return NextResponse.json(
-      { success: false, error: 'No ets membre d\'aquesta organització', code: 'NOT_MEMBER' },
-      { status: 403 }
-    );
-  }
+  // 4. Validar membership + accés operatiu (admin/user)
+  const membership = await validateUserMembershipFn(db, uid, orgId);
+  const accessError = requireOperationalAccessFn(membership);
+  if (accessError) return accessError;
 
   // 5. Carregar pending document
   const pendingRef = db.doc(`organizations/${orgId}/pendingDocuments/${pendingId}`);
