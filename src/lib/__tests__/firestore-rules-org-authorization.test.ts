@@ -38,11 +38,11 @@ test('firestore rules require canonical membership for organization and members 
   );
 });
 
-test('firestore rules require canonical membership for backup integrations reads', () => {
+test('firestore rules reserve backup integrations reads to superadmin only', () => {
   const rules = readFileSync(rulesPath, 'utf8');
 
   assert.match(
     rules,
-    /match \/integrations\/\{integrationId\}\s*\{[\s\S]*allow read: if isSuperAdmin\(\) \|\| isMemberOf\(orgId\);[\s\S]*match \/backupOAuthRequests\/\{requestId\}\s*\{[\s\S]*allow read: if isSuperAdmin\(\) \|\| isMemberOf\(orgId\);/m,
+    /match \/integrations\/\{integrationId\}\s*\{[\s\S]*allow read: if isSuperAdmin\(\);[\s\S]*match \/backupOAuthRequests\/\{requestId\}\s*\{[\s\S]*allow read: if isSuperAdmin\(\);/m,
   );
 });

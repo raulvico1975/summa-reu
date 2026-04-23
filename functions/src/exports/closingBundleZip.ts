@@ -122,7 +122,8 @@ export const exportClosingBundleZip = functions
     }
 
     const { orgId, dateFrom, dateTo } = body;
-    const mode: ClosingBundleMode = body.mode === 'full' ? 'full' : 'user';
+    // Guardrail server-side: aquest endpoint només exposa el mode segur d'usuari.
+    const mode: ClosingBundleMode = 'user';
 
     // Validar camps
     if (!orgId || typeof orgId !== 'string') {

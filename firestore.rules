@@ -611,14 +611,14 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /integrations/{integrationId} {
-        // Read general: només membre real o superadmin
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
+        // Read: documents sensibles (tokens / config d'integració) només per SuperAdmin
+        allow read: if isSuperAdmin();
         // Write: només admin de l'org o superadmin
         allow create, update, delete: if isSuperAdmin() || isAdminOf(orgId);
 
         // Subcol·lecció per OAuth requests
         match /backupOAuthRequests/{requestId} {
-          allow read: if isSuperAdmin() || isMemberOf(orgId);
+          allow read: if isSuperAdmin();
           allow create, update, delete: if isSuperAdmin() || isAdminOf(orgId);
         }
       }

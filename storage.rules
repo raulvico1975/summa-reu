@@ -21,6 +21,21 @@ service firebase.storage {
         && firestore.exists(/databases/(default)/documents/organizations/$(orgId)/members/$(request.auth.uid));
     }
 
+    function getMemberRole(orgId) {
+      return firestore.get(
+        /databases/(default)/documents/organizations/$(orgId)/members/$(request.auth.uid)
+      ).data.role;
+    }
+
+    function hasOperationalOrgAccess(orgId) {
+      return isOrgMember(orgId)
+        && (getMemberRole(orgId) == 'admin' || getMemberRole(orgId) == 'user');
+    }
+
+    function isOrgAdmin(orgId) {
+      return isOrgMember(orgId) && getMemberRole(orgId) == 'admin';
+    }
+
     // ════════════════════════════════════════════════════════════════════════════
     // i18n translations - SuperAdmin can write, everyone can read
     // ════════════════════════════════════════════════════════════════════════════
@@ -43,14 +58,50 @@ service firebase.storage {
       allow write: if isSuperAdmin();
     }
 
+    // Uploads client confirmats: configuració d'org (admin-only)
+    match /organizations/{orgId}/logo {
+      allow write: if isSuperAdmin() || isOrgAdmin(orgId);
+    }
+
+    match /organizations/{orgId}/signature {
+      allow write: if isSuperAdmin() || isOrgAdmin(orgId);
+    }
+
+    // Uploads client confirmats: operativa d'org (admin/user)
+    match /organizations/{orgId}/pendingDocuments/{allPaths=**} {
+      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    }
+
+    match /organizations/{orgId}/documents/{allPaths=**} {
+      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    }
+
+    match /organizations/{orgId}/transactions/{allPaths=**} {
+      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    }
+
+    match /organizations/{orgId}/offBankExpenses/{allPaths=**} {
+      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    }
+
+    match /organizations/{orgId}/expenseReports/{allPaths=**} {
+      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    }
+
+    match /organizations/{orgId}/prebankRemittances/{allPaths=**} {
+      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    }
+
+    match /organizations/{orgId}/sepaCollectionRuns/{allPaths=**} {
+      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    }
+
     // ════════════════════════════════════════════════════════════════════════════
-    // Organitzacions - Regla unificada per a TOTS els paths d'org
-    // Inclou: pendingDocuments, logo, signature, transactions/attachments,
-    //         expenseReports, projectExpenses, prebankRemittances
-    // P0 FIX: Restringit a membres de l'org o SuperAdmin (abans permetia cross-org)
+    // Organitzacions - lectura per membres reals; sense write blanket
     // ════════════════════════════════════════════════════════════════════════════
     match /organizations/{orgId}/{allPaths=**} {
-      allow read, write: if isSuperAdmin() || isOrgMember(orgId);
+      allow read: if isSuperAdmin() || isOrgMember(orgId);
+      allow write: if false;
     }
 
     // ════════════════════════════════════════════════════════════════════════════
