@@ -61,6 +61,10 @@ function toMillisIfValid(raw: unknown): number | null {
   return null;
 }
 
+function normalizeEmail(value: unknown): string {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
 export async function handleInvitationAccept(
   request: NextRequest,
   deps: AcceptInvitationDeps = DEFAULT_DEPS
@@ -78,6 +82,9 @@ export async function handleInvitationAccept(
   }
 
   const { invitationId, organizationId, displayName, email, role } = body;
+  const authenticatedEmail = typeof authResult.email === 'string' ? authResult.email.trim() : '';
+  const normalizedAuthenticatedEmail = normalizeEmail(authenticatedEmail);
+  const normalizedBodyEmail = normalizeEmail(email);
 
   if (!invitationId || !organizationId || !displayName || !email || !role) {
     return NextResponse.json({ success: false, error: 'missing_fields' }, { status: 400 });
@@ -110,7 +117,12 @@ export async function handleInvitationAccept(
       return NextResponse.json({ success: false, error: 'org_mismatch' }, { status: 403 });
     }
 
-    if (invData.email?.toLowerCase() !== email.toLowerCase()) {
+    const normalizedInvitationEmail = normalizeEmail(invData.email);
+    if (
+      !normalizedAuthenticatedEmail ||
+      normalizedInvitationEmail !== normalizedAuthenticatedEmail ||
+      normalizedBodyEmail !== normalizedAuthenticatedEmail
+    ) {
       return NextResponse.json({ success: false, error: 'email_mismatch' }, { status: 403 });
     }
 
@@ -153,7 +165,7 @@ export async function handleInvitationAccept(
 
     const memberPayload: Record<string, unknown> = {
       userId: authResult.uid,
-      email,
+      email: authenticatedEmail,
       displayName,
       role: invitationRole,
       joinedAt: deps.nowIsoFn(),
@@ -186,7 +198,7 @@ export async function handleInvitationAccept(
         organizationId,
         role: invitationRole,
         displayName,
-        email,
+        email: authenticatedEmail,
       });
     }
 

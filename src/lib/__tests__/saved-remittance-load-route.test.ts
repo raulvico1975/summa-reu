@@ -171,3 +171,44 @@ test('POST /api/remittances/in/saved-run bloqueja si el compte bancari de la rem
     code: 'BANK_ACCOUNT_MISMATCH',
   });
 });
+
+test('POST /api/remittances/in/saved-run bloqueja si la remesa guardada apunta a un fitxer d una altra organitzacio', async () => {
+  const response = await handleSavedRemittanceLoadPost(
+    makeRequest({
+      orgId: 'org-1',
+      parentTxId: 'tx-1',
+      savedRunId: 'run-cross-org',
+    }),
+    makeDeps({
+      docs: {
+        'organizations/org-1/transactions/tx-1': {
+          amount: 125,
+          bankAccountId: 'bank-1',
+          isRemittance: false,
+        },
+        'organizations/org-1/sepaCollectionRuns/run-cross-org': {
+          bankAccountId: 'bank-1',
+          collectionDate: '2026-04-20',
+          totalCents: 12500,
+          itemCount: 4,
+          messageId: 'MSG-X',
+          sepaFile: {
+            storagePath: 'organizations/org-2/sepaCollectionRuns/run-secret/remesa.xml',
+            filename: 'remesa.xml',
+            messageId: 'MSG-X',
+          },
+        },
+      },
+      files: {
+        'organizations/org-2/sepaCollectionRuns/run-secret/remesa.xml': '<Document>secret</Document>',
+      },
+    })
+  );
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), {
+    success: false,
+    error: 'El fitxer de la remesa guardada no pertany a aquesta organització.',
+    code: 'SAVED_RUN_FILE_FORBIDDEN',
+  });
+});

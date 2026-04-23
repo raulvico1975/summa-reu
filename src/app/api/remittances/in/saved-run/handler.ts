@@ -36,6 +36,10 @@ function getStorageBucket(): Bucket {
   return getStorage(getAdminApp()).bucket();
 }
 
+function getOrganizationStoragePrefix(orgId: string): string {
+  return `organizations/${orgId}/`;
+}
+
 function validateRequest(body: unknown):
   | { valid: true; data: LoadSavedRemittanceRequest }
   | { valid: false; error: string; code: string } {
@@ -185,6 +189,18 @@ export async function handleSavedRemittanceLoadPost(
           code: 'SAVED_RUN_FILE_UNAVAILABLE',
         },
         { status: 409 }
+      );
+    }
+
+    const orgStoragePrefix = getOrganizationStoragePrefix(orgId);
+    if (!savedRunSummary.storagePath.startsWith(orgStoragePrefix)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'El fitxer de la remesa guardada no pertany a aquesta organització.',
+          code: 'SAVED_RUN_FILE_FORBIDDEN',
+        },
+        { status: 403 }
       );
     }
 

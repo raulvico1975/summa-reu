@@ -273,3 +273,34 @@ test('POST /api/invitations/accept returns already_member and does not consume i
   assert.equal(store.get('invitations/inv-5')?.usedAt, undefined);
   assert.equal((store.get('organizations/org-5/members/uid-5')?.role as string), 'viewer');
 });
+
+test('POST /api/invitations/accept rejects invitation when token email does not match invitation email', async () => {
+  const store = new Map<string, DocData>();
+  store.set('invitations/inv-6', {
+    organizationId: 'org-6',
+    email: 'victim@test.com',
+    role: 'user',
+  });
+
+  const response = await handleInvitationAccept(
+    createRequest({
+      invitationId: 'inv-6',
+      organizationId: 'org-6',
+      displayName: 'Attacker',
+      email: 'victim@test.com',
+      role: 'user',
+    }),
+    {
+      verifyIdTokenFn: async () => ({ uid: 'uid-6', email: 'attacker@test.com' }),
+      getAdminDbFn: () => new FakeDb(store) as any,
+      nowIsoFn: () => '2026-03-05T12:00:00.000Z',
+    }
+  );
+
+  assert.equal(response.status, 403);
+  const body = await response.json() as { success: boolean; error?: string };
+  assert.equal(body.success, false);
+  assert.equal(body.error, 'email_mismatch');
+  assert.equal(store.get('organizations/org-6/members/uid-6'), undefined);
+  assert.equal(store.get('invitations/inv-6')?.usedAt, undefined);
+});

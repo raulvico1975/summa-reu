@@ -13,3 +13,12 @@ test('firestore rules expose donations read behind moviments.read capability', (
     /match \/donations\/\{donationId\}\s*\{[\s\S]*allow read: if isSuperAdmin\(\) \|\| hasCapability\(orgId, 'moviments\.read'\);/m,
   );
 });
+
+test('firestore rules gate transactions update behind moviments.editar capability', () => {
+  const rules = readFileSync(rulesPath, 'utf8');
+
+  assert.match(
+    rules,
+    /match \/transactions\/\{transactionId\}\s*\{[\s\S]*allow update: if isSuperAdmin\(\)\s*\|\|\s*\(hasCapability\(orgId, 'moviments\.editar'\)[\s\S]*request\.resource\.data\.amount is number[\s\S]*\);/m,
+  );
+});

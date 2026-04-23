@@ -294,10 +294,10 @@ service cloud.firestore {
               // VALIDACIÓ: amount no pot ser NaN (implícit amb is number)
           );
 
-        // Update: més permissiu per no trencar edicions parcials
-        // Però validem que amount segueixi sent number si es modifica
+        // Update: enforcem moviments.editar a capa de dades
+        // Manté validació mínima d'amount per no trencar edicions parcials
         allow update: if isSuperAdmin()
-          || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']
+          || (hasCapability(orgId, 'moviments.editar')
               // Si s'actualitza amount, ha de ser number
               && (!('amount' in request.resource.data) || request.resource.data.amount is number)
           );
