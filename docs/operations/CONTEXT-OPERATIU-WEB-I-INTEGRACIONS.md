@@ -147,13 +147,16 @@ En resum:
 
 ## 6. Runtime extern de correu comercial
 
+> Estat VPS verificat el 2026-04-24: no existeix `/srv/openclaw/summa-mail` a `summa-prod`. Existeix `/srv/openclaw-platform/bots/summa-mail` com a codi/runbook de plataforma. Per tant, les referencies a runtime live de `summa-mail` son arquitectura objectiu o pendent de desplegar, no estat actiu verificat.
+
 ### 6.1 Separació respecte el producte
 
 El correu comercial automatitzat NO viu dins `summa-social`.
 
-Viu en un runtime separat d'OpenClaw:
+Ha de viure en un runtime separat d'OpenClaw:
 
-- root live: `/srv/openclaw/summa-mail`
+- codi/runbook verificat: `/srv/openclaw-platform/bots/summa-mail`
+- root live esperat si es desplega: `/srv/openclaw/summa-mail`
 
 Objectiu del runtime:
 
@@ -199,9 +202,9 @@ Quan hi hagi dubtes d'operativa, l'ordre correcte és:
 
 1. Contracte i mapa del producte: aquest document i `docs/operations/SUMMA-MAIL-OPERATIVA-RAPIDA.md`
 2. Web públic i formulari: codi de `summa-social`
-3. Inbox comercial: Gmail de Raül i runtime `summa-mail`
+3. Inbox comercial: Gmail de Raül i runtime `summa-mail` si esta desplegat
 4. Enviaments automatitzats: dashboard de `Resend`
-5. Automatització comercial: runtime live `/srv/openclaw/summa-mail`
+5. Automatització comercial: codi/runbook `/srv/openclaw-platform/bots/summa-mail`; runtime live `/srv/openclaw/summa-mail` nomes si existeix
 
 El que NO s'ha d'assumir:
 

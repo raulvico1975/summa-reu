@@ -1,6 +1,8 @@
 # Summa Inbound Funnel
 
-Data de tall: 2026-03-25
+Data de tall: 2026-04-24
+
+> Estat VPS verificat: en aquesta VPS (`summa-prod`) no existeixen els runtimes live `/srv/openclaw/summa-mail` ni `/srv/openclaw/octavi`. Existeixen com a codi/runbooks dins `/srv/openclaw-platform/bots/summa-mail` i `/srv/openclaw-platform/bots/octavi`. Per tant, aquest document descriu el contracte objectiu del funnel, no un servei live actiu verificat avui.
 
 ## 1. Objectiu
 
@@ -15,13 +17,14 @@ La idea central es aquesta:
 
 ## 2. Arquitectura
 
-El funnel inbound viu fora del repo del producte, dins del runtime operatiu d'OpenClaw.
+El funnel inbound ha de viure fora del repo del producte, dins del runtime operatiu d'OpenClaw. A data de verificacio, no s'ha trobat materialitzat com a runtime live a `/srv/openclaw`.
 
 Peces:
 
-- runtime de correu: `/srv/openclaw/summa-mail`
-- coordinador: `/srv/openclaw/octavi`
-- estat inbound: `/srv/openclaw/octavi/sales/inbound`
+- codi/runtime objectiu de correu: `/srv/openclaw-platform/bots/summa-mail`
+- codi/runtime objectiu coordinador: `/srv/openclaw-platform/bots/octavi`
+- path live esperat si es desplega: `/srv/openclaw/summa-mail` i `/srv/openclaw/octavi`
+- estat inbound objectiu: `/srv/openclaw/octavi/sales/inbound`
 
 El repo `summa-social` nomes documenta el contracte operatiu.
 

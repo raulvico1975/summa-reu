@@ -43,6 +43,7 @@ Exemples:
 ### Carpetes amb sentit actual
 
 - `docs/operations/` - runbooks manuals i operativa no automatica
+  - `docs/operations/Mapa_Canonic_Bots_I_Subagents.md` - mapa actual de bot de suport, OpenClaw, Octavi editorial i prompts/subagents
   - `docs/operations/CONTEXT-OPERATIU-WEB-I-INTEGRACIONS.md` - web public, contacte, WhatsApp, correu del domini i runtime extern d'OpenClaw
   - `docs/operations/SUMMA-MAIL-OPERATIVA-RAPIDA.md` - on es veu l'inbox de `hola@`, on es veuen els enviats i com no perdre's amb el runtime comercial
   - `docs/operations/SUMMA-INBOUND-FUNNEL.md` - com `Octavi` detecta, briefa i acompanya els contactes entrants de `hola@summasocial.app`

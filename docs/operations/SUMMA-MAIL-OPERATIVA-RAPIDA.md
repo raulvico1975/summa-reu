@@ -1,6 +1,8 @@
 # Summa Mail - Operativa Rapida
 
-Data de tall: 2026-03-25
+Data de tall: 2026-04-24
+
+> Estat VPS verificat: `summa-mail` no esta desplegat com a runtime live a `/srv/openclaw/summa-mail` en aquesta VPS. El codi i runbook existeixen a `/srv/openclaw-platform/bots/summa-mail`. Aquesta guia descriu el model objectiu i els punts de control si es desplega, no un servei actiu avui.
 
 ## 1. Objectiu
 
@@ -15,16 +17,16 @@ Si nomes recordes una idea, que sigui aquesta:
 
 ## 2. Arquitectura real avui
 
-El sistema actiu es hibrid:
+El sistema operatiu confirmat avui es:
 
 - **entrada**: reenviament del domini cap al Gmail de Raul
-- **lectura automatitzada**: runtime extern `summa-mail`, filtrant els correus dirigits a `hola@summasocial.app`
-- **sortida automatitzada**: `Resend`, enviant des de `hola@summasocial.app`
-- **confirmacio humana**: obligatoria abans d'enviar qualsevol correu des del runtime
+- **sortida del web public**: `Resend` des de les rutes del producte
+- **runtime `summa-mail`**: no verificat com a servei live en aquesta VPS
 
-El runtime comercial viu fora del repo:
+El runtime comercial, si es desplega, viu fora del repo:
 
-- root live: `/srv/openclaw/summa-mail`
+- codi/runbook verificat: `/srv/openclaw-platform/bots/summa-mail`
+- root live esperat: `/srv/openclaw/summa-mail`
 
 ## 3. On mirar cada cosa
 
@@ -33,7 +35,7 @@ El runtime comercial viu fora del repo:
 Fonts de veritat:
 
 - Gmail de Raul, perque es on arriba el reenviament
-- runtime `summa-mail`, quan cal llegir des de l'operativa d'OpenClaw
+- runtime `summa-mail`, nomes quan estigui desplegat a OpenClaw
 
 No s'ha d'assumir:
 
@@ -93,7 +95,7 @@ Al dashboard de `Resend` i al registre local del runtime.
 
 ### "On veig els entrants de `hola@`?"
 
-Al Gmail de Raul i al runtime `summa-mail` quan el llegeixes des d'OpenClaw.
+Al Gmail de Raul. Tambe al runtime `summa-mail` si s'ha desplegat i esta llegint des d'OpenClaw.
 
 ### "El repo `summa-social` guarda correus?"
 
@@ -103,7 +105,8 @@ No. Guarda el contracte i la documentacio operativa, pero no l'inbox comercial n
 
 - `docs/operations/CONTEXT-OPERATIU-WEB-I-INTEGRACIONS.md`
 - `docs/operations/SUMMA-INBOUND-FUNNEL.md` si el dubte es sobre contactes entrants
-- el runtime live `/srv/openclaw/summa-mail`
+- el codi/runbook `/srv/openclaw-platform/bots/summa-mail`
+- el runtime live `/srv/openclaw/summa-mail`, nomes si existeix desplegat
 - el dashboard de `Resend`
 
 ## 7. Coses que no has d'oblidar
