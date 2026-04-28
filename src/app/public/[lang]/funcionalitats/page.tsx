@@ -792,14 +792,14 @@ export default async function FeaturesPage({ params }: PageProps) {
       title: copy.sections.projects.title,
       description: copy.sections.projects.description,
       items: [
-        buildStaticItem({
-          id: 'projects-budget',
-          title: copy.sections.projects.items!.budget.title,
-          description: copy.sections.projects.items!.budget.description,
-          image: visuals.projects,
-          href: `/${detailLocale}/gestio-projectes-justificacio`,
+        buildLandingItem({
+          slug: 'gestio-projectes-justificacio',
+          previewLocale: locale,
+          detailLocale,
+          fallbackImage: visuals.projects,
           ctaLabel: copy.detailCta,
-          badgeLabel: copy.landingBadge,
+          demoBadge: copy.demoBadge,
+          landingBadge: copy.landingBadge,
         }),
         buildStaticItem({
           id: 'projects-grants',
@@ -827,14 +827,14 @@ export default async function FeaturesPage({ params }: PageProps) {
       title: copy.sections.control.title,
       description: copy.sections.control.description,
       items: [
-        buildStaticItem({
-          id: 'control-overview',
-          title: copy.sections.control.title,
-          description: copy.sections.control.description,
-          image: visuals.dashboard,
-          href: `/${detailLocale}/control-visibilitat-entitats`,
+        buildLandingItem({
+          slug: 'control-visibilitat-entitats',
+          previewLocale: locale,
+          detailLocale,
+          fallbackImage: visuals.dashboard,
           ctaLabel: copy.detailCta,
-          badgeLabel: copy.landingBadge,
+          demoBadge: copy.demoBadge,
+          landingBadge: copy.landingBadge,
         }),
         buildStaticItem({
           id: 'control-metrics',

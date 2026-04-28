@@ -1,24 +1,24 @@
 # Rollback Plan (auto) — Summa Social
 
-Generat: 2026-04-27 17:30
-Risc: BAIX
+Generat: 2026-04-28 12:04
+Risc: MITJA
 Backup curt: NO_REQUIRED
-SHA prod abans de publicar: a099804b
-SHA branca a publicar (codex/weekly-product-updates-20260427): f60b6140
+SHA prod abans de publicar: 348cb2791
+SHA branca a publicar (main): 9ba87a6b9
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
-git checkout codex/weekly-product-updates-20260427
-git revert f60b6140 --no-edit
-git push origin codex/weekly-product-updates-20260427
-bash scripts/deploy.sh codex/weekly-product-updates-20260427
+git checkout main
+git revert 9ba87a6b9 --no-edit
+git push origin main
+bash scripts/deploy.sh main
 ```
 
 Emergencia critica (nomes si la produccio cau i no hi ha alternativa):
 ```bash
 git checkout prod
-git reset --hard a099804b
+git reset --hard 348cb2791
 git push origin prod --force-with-lease
 ```
