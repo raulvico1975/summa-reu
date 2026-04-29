@@ -10,7 +10,7 @@ import { PUBLIC_SHELL_X, PUBLIC_WIDE_SHELL } from '@/components/public/public-sh
 import { RotatingHeroPhrase } from '@/components/public/RotatingHeroPhrase';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle2, Upload, Settings, FileCheck, Download } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Download, FileCheck, Network, Settings, ShieldCheck, Upload } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -101,16 +101,15 @@ const LANDING_COPY: Record<
       },
     },
     trust: {
-      eyebrow: 'Què canvia quan entreu a Summa',
-      title: 'Deixeu de perseguir dades disperses i passeu a treballar amb criteri operatiu.',
+      eyebrow: 'Trajectòria',
+      title: 'Una eina nova dins d’una trajectòria consolidada.',
       description:
-        'No és només fer menys feina manual. És saber què està pendent, què està conciliat i què ja està llest per tancar.',
+        'Summa Social forma part de l’ecosistema de Semilla de Software Libre, amb experiència en el desenvolupament d’eines digitals per a entitats socials.',
       panelLead:
-        "Primer s'ordena la base econòmica. Després tot l'equip treballa sobre el mateix estat de la informació.",
+        'Aquesta trajectòria inclou GONG i també dona context a Summa Social: una aplicació enfocada a la gestió bancària, fiscal, documental i de donants.',
       points: [
-        'Cada cobrament, quota o donació queda connectat amb el seu moviment i document.',
-        'L’equip veu el mateix estat de la informació, sense versions paral·leles.',
-        'Quan arriba fiscalitat o una justificació, la base ja està preparada.',
+        'El focus és en entitats amb base social, donants, subvencions i justificacions econòmiques.',
+        'La IA ajuda a reduir feina manual sense substituir el criteri de l’entitat.',
       ],
     },
     howWeWorkLead:
@@ -154,16 +153,15 @@ const LANDING_COPY: Record<
       },
     },
     trust: {
-      eyebrow: 'Qué cambia cuando entráis en Summa',
-      title: 'Dejáis de perseguir datos dispersos y pasáis a trabajar con criterio operativo.',
+      eyebrow: 'Trayectoria',
+      title: 'Una herramienta nueva dentro de una trayectoria consolidada.',
       description:
-        'No es solo hacer menos trabajo manual. Es saber qué está pendiente, qué está conciliado y qué ya está listo para cerrar.',
+        'Summa Social forma parte del ecosistema de Semilla de Software Libre, con experiencia en el desarrollo de herramientas digitales para entidades sociales.',
       panelLead:
-        'Primero se ordena la base económica. Después todo el equipo trabaja sobre el mismo estado de la información.',
+        'Esta trayectoria incluye GONG y también da contexto a Summa Social: una aplicación enfocada en la gestión bancaria, fiscal, documental y de donantes.',
       points: [
-        'Cada cobro, cuota o donación queda conectado con su movimiento y documento.',
-        'El equipo ve el mismo estado de la información, sin versiones paralelas.',
-        'Cuando llega fiscalidad o una justificación, la base ya está preparada.',
+        'El foco está en entidades con base social, donantes, subvenciones y justificaciones económicas.',
+        'La IA ayuda a reducir trabajo manual sin sustituir el criterio de la entidad.',
       ],
     },
     howWeWorkLead:
@@ -206,16 +204,15 @@ const LANDING_COPY: Record<
       },
     },
     trust: {
-      eyebrow: 'Ce qui change quand vous passez sur Summa',
-      title: 'Vous cessez de courir après des données dispersées et gagnez un cadre opérationnel partagé.',
+      eyebrow: 'Trajectoire',
+      title: 'Un nouvel outil dans une trajectoire consolidée.',
       description:
-        'Ce n’est pas seulement moins de travail manuel. C’est savoir ce qui est en attente, rapproché ou prêt à être clôturé.',
+        'Summa Social fait partie de l’écosystème de Semilla de Software Libre, avec une expérience dans le développement d’outils numériques pour les organisations sociales.',
       panelLead:
-        'D’abord, la base économique est mise en ordre. Ensuite, toute l’équipe travaille sur le même état de l’information.',
+        'Cette trajectoire inclut GONG et donne aussi du contexte à Summa Social : une application centrée sur la gestion bancaire, fiscale, documentaire et des donateurs.',
       points: [
-        'Chaque encaissement, cotisation ou don reste lié à son mouvement et à son justificatif.',
-        'L’équipe voit le même état de l’information, sans versions parallèles.',
-        'Quand arrive la fiscalité ou une justification, la base est déjà prête.',
+        'Le focus est mis sur les organisations avec membres, donateurs, subventions et justificatifs économiques.',
+        'L’IA aide à réduire le travail manuel sans remplacer le discernement de l’organisation.',
       ],
     },
     howWeWorkLead:
@@ -258,16 +255,15 @@ const LANDING_COPY: Record<
       },
     },
     trust: {
-      eyebrow: 'O que muda quando entram no Summa',
-      title: 'Deixam de perseguir dados dispersos e passam a trabalhar com critério operativo.',
+      eyebrow: 'Trajetória',
+      title: 'Uma ferramenta nova dentro de uma trajetória consolidada.',
       description:
-        'Não é só fazer menos trabalho manual. É saber o que está pendente, conciliado e pronto para fechar.',
+        'O Summa Social faz parte do ecossistema da Semilla de Software Libre, com experiência no desenvolvimento de ferramentas digitais para entidades sociais.',
       panelLead:
-        'Primeiro organiza-se a base económica. Depois toda a equipa trabalha sobre o mesmo estado da informação.',
+        'Esta trajetória inclui o GONG e também dá contexto ao Summa Social: uma aplicação focada na gestão bancária, fiscal, documental e de doadores.',
       points: [
-        'Cada cobrança, quota ou doação fica ligada ao seu movimento e comprovativo.',
-        'A equipa vê o mesmo estado da informação, sem versões paralelas.',
-        'Quando chega a fiscalidade ou uma justificação, a base já está preparada.',
+        'O foco está em entidades com base social, doadores, subsídios e justificações económicas.',
+        'A IA ajuda a reduzir trabalho manual sem substituir o critério da entidade.',
       ],
     },
     howWeWorkLead:
@@ -292,27 +288,32 @@ const FOOTER_COPY: Record<
     sitemap: string;
     socials: string;
     socialsNote: string;
+    institutional: string;
   }
 > = {
   ca: {
     sitemap: 'Mapa del web',
     socials: 'Xarxes',
     socialsNote: 'LinkedIn i Instagram aviat.',
+    institutional: 'Desenvolupada dins l’ecosistema de Semilla de Software Libre.',
   },
   es: {
     sitemap: 'Mapa del sitio',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram pronto.',
+    institutional: 'Desarrollada dentro del ecosistema de Semilla de Software Libre.',
   },
   fr: {
     sitemap: 'Plan du site',
     socials: 'Réseaux',
     socialsNote: 'LinkedIn et Instagram bientôt.',
+    institutional: 'Développée au sein de l’écosystème de Semilla de Software Libre.',
   },
   pt: {
     sitemap: 'Mapa do site',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram em breve.',
+    institutional: 'Desenvolvida dentro do ecossistema da Semilla de Software Libre.',
   },
 };
 
@@ -1465,6 +1466,7 @@ export default async function HomePage({ params }: PageProps) {
   const copy = HOME_REFRESH_COPY[locale];
   const featuresHref = getPublicFeaturesHref(locale);
   const contactHref = `/${locale}/contact`;
+  const aboutHref = `/${locale}/qui-som`;
   const howWeWorkHref = `/${locale}#how-we-work`;
   const updatesHref = `/${locale}/novetats`;
   const headlineParts = splitTextAroundPhrase(t.home.heroTagline, HERO_ROTATING_SEGMENTS[locale]);
@@ -1911,6 +1913,49 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
+      <section className={`border-y border-slate-200/70 bg-slate-50/80 py-14 lg:py-16 ${PUBLIC_SHELL_X}`}>
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
+              {landingCopy.trust.eyebrow}
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-[2.2rem]">
+              {landingCopy.trust.title}
+            </h2>
+            <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
+              {landingCopy.trust.description}
+            </p>
+            <Button asChild variant="outline" className="mt-6 rounded-full bg-white px-5">
+              <Link href={aboutHref}>
+                {t.common.about}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+
+          <div className="rounded-[1.75rem] border border-slate-200/80 bg-white/92 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.26)] sm:p-7">
+            <div className="flex gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-50 text-primary">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold leading-6 text-foreground">
+                  {landingCopy.trust.panelLead}
+                </p>
+                <div className="mt-4 grid gap-3">
+                  {landingCopy.trust.points.map((point) => (
+                    <div key={point} className="flex gap-3 text-sm leading-6 text-slate-600">
+                      <Network className="mt-0.5 h-4 w-4 shrink-0 text-primary/75" />
+                      <span>{point}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className={`py-16 lg:py-20 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl space-y-4">
@@ -2016,6 +2061,9 @@ export default async function HomePage({ params }: PageProps) {
               {t.common.appName}
             </Link>
             <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t.common.tagline}</p>
+            <p className="max-w-sm text-xs leading-5 text-muted-foreground">
+              {FOOTER_COPY[locale].institutional}
+            </p>
           </div>
 
           <div className="space-y-4">
@@ -2025,6 +2073,9 @@ export default async function HomePage({ params }: PageProps) {
             <nav className="grid gap-3 text-sm text-muted-foreground">
               <Link href={featuresHref} className="hover:text-foreground hover:underline">
                 {t.common.features}
+              </Link>
+              <Link href={aboutHref} className="hover:text-foreground hover:underline">
+                {t.common.about}
               </Link>
               <Link href={howWeWorkHref} className="hover:text-foreground hover:underline">
                 {t.home.howWeWork.title}

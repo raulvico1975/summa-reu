@@ -1348,10 +1348,10 @@ const ca: PublicTranslations = {
     },
     whoWeAre: {
       title: 'Qui som',
-      lead: 'Aquesta secció està en construcció.',
+      lead: 'Summa Social neix de la gestió real de les entitats.',
       description:
-        'Ben aviat explicarem millor qui hi ha darrere de Summa Social, com pensem el producte i com acompanyem les entitats en la seva organització econòmica.',
-      status: 'En construcció',
+        'És una aplicació desenvolupada dins l’ecosistema de Semilla de Software Libre, a partir d’experiència directa amb organitzacions socials, gestió econòmica, donants, subvencions i justificacions.',
+      status: 'Origen i trajectòria',
     },
     howWeWork: {
       title: 'Com treballem',
@@ -1942,10 +1942,10 @@ const es: PublicTranslations = {
     },
     whoWeAre: {
       title: 'Quiénes somos',
-      lead: 'Esta sección está en construcción.',
+      lead: 'Summa Social nace de la gestión real de las entidades.',
       description:
-        'Muy pronto explicaremos mejor quién hay detrás de Summa Social, cómo pensamos el producto y cómo acompañamos a las entidades en su organización económica.',
-      status: 'En construcción',
+        'Es una aplicación desarrollada dentro del ecosistema de Semilla de Software Libre, a partir de experiencia directa con organizaciones sociales, gestión económica, donantes, subvenciones y justificaciones.',
+      status: 'Origen y trayectoria',
     },
     howWeWork: {
       title: 'Cómo trabajamos',
@@ -2538,10 +2538,10 @@ const fr: PublicTranslations = {
     },
     whoWeAre: {
       title: 'Qui nous sommes',
-      lead: 'Cette section est en construction.',
+      lead: 'Summa Social naît de la gestion réelle des organisations.',
       description:
-        "Bientôt, nous expliquerons mieux qui se trouve derrière Summa Social, comment nous pensons le produit et comment nous accompagnons les organisations dans leur gestion économique.",
-      status: 'En construction',
+        'C’est une application développée au sein de l’écosystème de Semilla de Software Libre, à partir d’une expérience directe avec des organisations sociales, la gestion économique, les donateurs, les subventions et les justificatifs.',
+      status: 'Origine et trajectoire',
     },
     howWeWork: {
       title: 'Comment nous travaillons',
@@ -3133,10 +3133,10 @@ const pt: PublicTranslations = {
     },
     whoWeAre: {
       title: 'Quem somos',
-      lead: 'Esta secção está em construção.',
+      lead: 'O Summa Social nasce da gestão real das entidades.',
       description:
-        'Em breve explicaremos melhor quem está por trás da Summa Social, como pensamos o produto e como acompanhamos as entidades na sua organização económica.',
-      status: 'Em construção',
+        'É uma aplicação desenvolvida dentro do ecossistema da Semilla de Software Libre, a partir de experiência direta com organizações sociais, gestão económica, doadores, subsídios e justificações.',
+      status: 'Origem e trajetória',
     },
     howWeWork: {
       title: 'Como trabalhamos',
