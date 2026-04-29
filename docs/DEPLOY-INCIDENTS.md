@@ -76,3 +76,4 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 - Estat final: `resolt`, `desplegat`, `verificat en produccio`
 | 2026-04-17 14:52 | Capturar revisio App Hosting abans de publicar | MITJA | 6ff56fe09 | 080ac3761 | BLOCKED_SAFE | gcloud no disponible per verificar la revisio efectiva d'App Hosting. | Pendent |
 | 2026-04-20 12:32 | Capturar revisio App Hosting abans de publicar | ALT | 5673a6b20 | 41b63a206 | BLOCKED_SAFE | gcloud no disponible per verificar la revisio efectiva d'App Hosting. | Pendent |
+| 2026-04-29 19:21 | Materialitzar rollout d'App Hosting | MITJA | a24c255e3 | 6514ea516 | RESOLT | Firebase CLI ha quedat obert durant el rollout; App Hosting ha materialitzat el backend i el contingut s'ha verificat en produccio. | Resolt |
