@@ -6028,8 +6028,8 @@ if (matchingTx) {
 | "Matching exacte" | IBAN/DNI/Nom idèntic | Fuzzy, aproximat |
 | "Remesa parcial" | Algunes devolucions pendents | Remesa incompleta per error |
 | "Payout Stripe" | Liquidació de Stripe al banc (po_xxx) | Donació individual |
-| "Comissió Stripe" | Despesa agregada per payout | Cost per donació |
-| "Remesa Stripe" | Payout dividit en donacions individuals | Connexió API Stripe |
+| "Comissió Stripe" | `feeAmount` de cada donació Stripe | Despesa agregada visible al ledger |
+| "Remesa Stripe" | Terme antic d'usuari per referir-se a una imputació Stripe | Connexió API Stripe automàtica |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
