@@ -135,7 +135,7 @@ export function PendingDocumentsUploadModal({
   contacts = [],
   initialFiles,
 }: PendingDocumentsUploadModalProps) {
-  const { firestore, storage } = useFirebase();
+  const { firestore, storage, auth } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { toast } = useToast();
   const { t } = useTranslations();
@@ -398,7 +398,11 @@ export function PendingDocumentsUploadModal({
         updateFileStatus(item.id, { status: 'extracting', progress: 95 });
 
         try {
-          await extractImageData(storage, firestore, organizationId, fullDoc);
+          const authUser = auth.currentUser;
+          if (!authUser) {
+            throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
+          }
+          await extractImageData(storage, firestore, organizationId, fullDoc, await authUser.getIdToken());
         } catch (extractError) {
           // L'extracció pot fallar sense bloquejar l'upload
           console.warn('[processFile] Image extraction error (non-blocking):', extractError);
@@ -427,7 +431,7 @@ export function PendingDocumentsUploadModal({
       updateFileStatus(item.id, { status: 'error', error: errorMessage });
       return false;
     }
-  }, [organizationId, organization, firestore, storage, updateFileStatus, checkDuplicate, contacts, t]);
+  }, [organizationId, organization, firestore, storage, auth, updateFileStatus, checkDuplicate, contacts, t]);
 
   // Iniciar upload de tots els fitxers
   const startUpload = React.useCallback(async () => {

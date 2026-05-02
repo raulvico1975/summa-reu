@@ -6,6 +6,8 @@ import {
   buildCategorizeTransactionPromptText,
   finalizeCategorizationOutput,
 } from './prompt-helpers';
+import { checkRateLimit } from '@/lib/api/rate-limit';
+import { requireOrgMembership, type ApiGuardCode } from '@/lib/api/request-guards';
 
 // =============================================================================
 // SCHEMAS
@@ -17,11 +19,14 @@ const CategoryOptionSchema = z.object({
 });
 
 const CategorizeTransactionInputSchema = z.object({
+  orgId: z.string().min(1).describe('The organization ID that owns this categorization request.'),
   description: z.string().describe('The description of the transaction.'),
   amount: z.number().describe('The amount of the transaction. Positive for income, negative for expenses.'),
   expenseOptions: z.array(CategoryOptionSchema).describe('List of available expense category options.'),
   incomeOptions: z.array(CategoryOptionSchema).describe('List of available income category options.'),
 });
+
+const CategorizeTransactionPromptInputSchema = CategorizeTransactionInputSchema.omit({ orgId: true });
 
 const CategorizeTransactionOutputSchema = z.object({
   categoryId: z.string().nullable().describe('The ID of the selected category, or null if no match.'),
@@ -34,7 +39,7 @@ const CategorizeTransactionOutputSchema = z.object({
 
 const prompt = ai.definePrompt({
   name: 'categorizeTransactionPromptAPI',
-  input: { schema: CategorizeTransactionInputSchema },
+  input: { schema: CategorizeTransactionPromptInputSchema },
   output: { schema: CategorizeTransactionOutputSchema },
   prompt: buildCategorizeTransactionPromptText(),
 });
@@ -51,7 +56,7 @@ type SuccessResponse = {
 
 type ErrorResponse = {
   ok: false;
-  code: 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'TRANSIENT' | 'INVALID_INPUT' | 'AI_ERROR';
+  code: 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'TRANSIENT' | 'INVALID_INPUT' | 'AI_ERROR' | ApiGuardCode;
   message: string;
 };
 
@@ -87,6 +92,30 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const input = parseResult.data;
+    const guard = await requireOrgMembership(request, input.orgId);
+    if (!guard.ok) {
+      return NextResponse.json({
+        ok: false,
+        code: guard.code,
+        message: guard.message,
+      }, { status: guard.status });
+    }
+
+    const rateLimit = checkRateLimit({
+      key: `ai:categorize-transaction:${guard.auth.uid}:${input.orgId}`,
+      limit: 60,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({
+        ok: false,
+        code: 'RATE_LIMITED',
+        message: 'Rate limited. Please slow down requests.',
+      }, {
+        status: 429,
+        headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+      });
+    }
 
     // Guard: si no hi ha opcions, retornar null directament
     const options = input.amount < 0 ? input.expenseOptions : input.incomeOptions;
@@ -101,7 +130,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     console.log('[API] Calling AI with description:', input.description.substring(0, 50));
 
     // Call AI
-    const { output } = await prompt(input);
+    const { orgId: _orgId, ...aiInput } = input;
+    const { output } = await prompt(aiInput);
 
     if (!output) {
       return NextResponse.json({

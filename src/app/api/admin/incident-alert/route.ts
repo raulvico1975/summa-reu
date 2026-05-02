@@ -2,6 +2,9 @@
 // Endpoint per enviar alertes d'incidents crítics per email
 
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/api/rate-limit';
+import { requireSuperAdminRequest } from '@/lib/api/request-guards';
+import { escapeHtml } from '@/lib/security/html';
 
 interface IncidentAlertRequest {
   incidentId: string;
@@ -18,6 +21,26 @@ const ADMIN_EMAIL = 'raul.vico.ferre@gmail.com';
 
 export async function POST(request: NextRequest) {
   try {
+    const guard = await requireSuperAdminRequest(request);
+    if (!guard.ok) {
+      return NextResponse.json({ sent: false, error: guard.message }, { status: guard.status });
+    }
+
+    const rateLimit = checkRateLimit({
+      key: `admin:incident-alert:${guard.auth.uid}`,
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { sent: false, error: 'Rate limited. Espera uns segons.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+        }
+      );
+    }
+
     const body: IncidentAlertRequest = await request.json();
 
     const { incidentId, title, type, severity, impact, route, message, count } = body;
@@ -34,7 +57,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Construir email
-    const subject = `[ALERTA] Incident crític a Summa Social: ${title}`;
+    const safeTitle = String(title ?? '').slice(0, 120);
+    const safeType = String(type ?? '').slice(0, 80);
+    const safeSeverity = String(severity ?? '').slice(0, 40);
+    const rawMessage = String(message ?? '');
+    const safeMessage = rawMessage.slice(0, 500);
+    const safeRoute = route ? String(route).slice(0, 200) : 'N/A';
+    const safeCount = Number.isFinite(count) ? count : 0;
+    const subject = `[ALERTA] Incident crític a Summa Social: ${safeTitle}`;
 
     const html = `
 <!DOCTYPE html>
@@ -64,11 +94,11 @@ export async function POST(request: NextRequest) {
     <div class="content">
       <div class="field">
         <span class="label">Tipus:</span>
-        <span class="value">${type}</span>
+        <span class="value">${escapeHtml(safeType)}</span>
       </div>
       <div class="field">
         <span class="label">Severitat:</span>
-        <span class="value">${severity}</span>
+        <span class="value">${escapeHtml(safeSeverity)}</span>
       </div>
       <div class="field">
         <span class="label">Impacte:</span>
@@ -76,15 +106,15 @@ export async function POST(request: NextRequest) {
       </div>
       <div class="field">
         <span class="label">Ruta afectada:</span>
-        <span class="value">${route || 'N/A'}</span>
+        <span class="value">${escapeHtml(safeRoute)}</span>
       </div>
       <div class="field">
         <span class="label">Repeticions:</span>
-        <span class="value">${count}</span>
+        <span class="value">${escapeHtml(safeCount)}</span>
       </div>
 
       <div class="message">
-        <pre>${message.slice(0, 500)}${message.length > 500 ? '...' : ''}</pre>
+        <pre>${escapeHtml(safeMessage)}${rawMessage.length > 500 ? '...' : ''}</pre>
       </div>
 
       <a href="https://summasocial.app/admin#salut" class="button">
@@ -102,14 +132,14 @@ export async function POST(request: NextRequest) {
     const text = `
 INCIDENT CRÍTIC - SUMMA SOCIAL
 
-Tipus: ${type}
-Severitat: ${severity}
+Tipus: ${safeType}
+Severitat: ${safeSeverity}
 Impacte: BLOQUEJA
-Ruta: ${route || 'N/A'}
-Repeticions: ${count}
+Ruta: ${safeRoute}
+Repeticions: ${safeCount}
 
 Missatge:
-${message.slice(0, 500)}
+${safeMessage}
 
 ---
 Veure incident: https://summasocial.app/admin#salut

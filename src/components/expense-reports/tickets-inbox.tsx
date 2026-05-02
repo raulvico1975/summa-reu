@@ -79,6 +79,7 @@ import {
   Camera,
 } from 'lucide-react';
 import { PendingDocumentsUploadModal } from '@/components/pending-documents/pending-documents-upload-modal';
+import { useFirebase } from '@/firebase';
 
 // =============================================================================
 // TYPES
@@ -122,6 +123,7 @@ export function TicketsInbox({
 }: TicketsInboxProps) {
   const { t } = useTranslations();
   const { toast } = useToast();
+  const { auth } = useFirebase();
 
   // Estats
   const [tickets, setTickets] = React.useState<PendingDocument[]>([]);
@@ -583,16 +585,22 @@ export function TicketsInbox({
     setProcessingTicketId(ticket.id);
 
     try {
-      // Obtenir URL del fitxer
-      const storageRef = ref(storage, ticket.file.storagePath);
-      const fileUrl = await getDownloadURL(storageRef);
+      const authUser = auth.currentUser;
+      if (!authUser) {
+        throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
+      }
+      const idToken = await authUser.getIdToken();
 
       // Cridar endpoint IA
       const response = await fetch('/api/ai/extract-ticket', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify({
-          fileUrl,
+          orgId: organizationId,
+          storagePath: ticket.file.storagePath,
           docId: ticket.id,
         }),
       });
@@ -724,7 +732,11 @@ export function TicketsInbox({
       };
 
       try {
-        await extractImageData(storage, firestore, organizationId, fullDoc);
+        const authUser = auth.currentUser;
+        if (!authUser) {
+          throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
+        }
+        await extractImageData(storage, firestore, organizationId, fullDoc, await authUser.getIdToken());
       } catch (extractError) {
         // L'extracció pot fallar sense bloquejar l'upload
         console.warn('[handleTicketImageUpload] Image extraction error (non-blocking):', extractError);

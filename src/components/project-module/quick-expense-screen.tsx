@@ -9,7 +9,7 @@
 import * as React from 'react';
 import { useState, useRef, useCallback } from 'react';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { useStorage } from '@/firebase/provider';
+import { useFirebase } from '@/firebase/provider';
 import { useSaveOffBankExpense, useUpdateOffBankExpense } from '@/hooks/use-project-module';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
@@ -105,7 +105,7 @@ function buildAttachmentsFromUploads(entries: PendingUpload[]): OffBankAttachmen
 // =============================================================================
 
 export function QuickExpenseScreen({ organizationId, isLandingMode = false }: QuickExpenseScreenProps) {
-  const storage = useStorage();
+  const { storage, auth } = useFirebase();
   const { save, isSaving } = useSaveOffBankExpense();
   const { update, isUpdating } = useUpdateOffBankExpense();
   const { toast } = useToast();
@@ -233,10 +233,18 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
     setAIState('extracting');
 
     try {
+      const authUser = auth.currentUser;
+      if (!authUser) {
+        throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
+      }
+
       const response = await fetch('/api/ai/extract-ticket', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileUrl, storagePath }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await authUser.getIdToken()}`,
+        },
+        body: JSON.stringify({ orgId: organizationId, storagePath }),
       });
 
       if (!response.ok) {
@@ -289,7 +297,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       console.error('[QuickExpense] AI extraction error:', error);
       setAIState('error');
     }
-  }, [date, amountEUR, amountOriginal, concept]);
+  }, [date, amountEUR, amountOriginal, concept, organizationId, auth]);
 
   const handleRetryAI = useCallback(() => {
     if (!lastAIAttempt || aiState === 'extracting') return;

@@ -806,6 +806,7 @@ export function TransactionsTable({
     transactions,
     availableCategories,
     classificationMemory,
+    organizationId,
     getCategoryDisplayName,
     bulkMode: isBulkMode,
     onQuotaExceeded: handleQuotaExceeded,

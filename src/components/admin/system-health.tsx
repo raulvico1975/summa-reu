@@ -1013,9 +1013,16 @@ export function SystemHealth() {
       // Si es marca com "blocker", enviar alerta per email
       if (newImpact === 'blocker' && incident.impact !== 'blocker') {
         try {
+          if (!user) {
+            throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
+          }
+
           await fetch('/api/admin/incident-alert', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${await user.getIdToken()}`,
+            },
             body: JSON.stringify({
               incidentId: incident.id,
               title: incident.message.slice(0, 80),

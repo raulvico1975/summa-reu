@@ -49,7 +49,8 @@ export async function extractImageData(
   storage: FirebaseStorage,
   firestore: Firestore,
   orgId: string,
-  doc: PendingDocument
+  doc: PendingDocument,
+  idToken: string
 ): Promise<ExtractImageResult> {
   try {
     // Verificar que és una imatge
@@ -59,16 +60,20 @@ export async function extractImageData(
       return { success: true, extracted: false };
     }
 
-    // Obtenir URL de descàrrega
+    // Validem que el fitxer existeix, però el backend només rep el path intern.
     const storageRef = ref(storage, doc.file.storagePath);
-    const downloadUrl = await getDownloadURL(storageRef);
+    await getDownloadURL(storageRef);
 
     // Cridar l'API endpoint d'extracció de tickets
     const response = await fetch('/api/ai/extract-ticket', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
       body: JSON.stringify({
-        fileUrl: downloadUrl,
+        orgId,
+        storagePath: doc.file.storagePath,
         docId: doc.id,
       }),
     });

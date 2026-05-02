@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ref, getDownloadURL } from 'firebase/storage';
-import { getStorage } from 'firebase/storage';
-import { getApp } from 'firebase/app';
+import { getStorage } from 'firebase-admin/storage';
 import { resolveGoogleGenAiApiKey } from '@/ai/config';
 import { extractTicketImage, type ExtractTicketImageOutput } from '@/ai/flows/extract-ticket-image';
+import { checkRateLimit } from '@/lib/api/rate-limit';
+import { requireOrgMembership, type ApiGuardCode } from '@/lib/api/request-guards';
+import { getAdminApp } from '@/lib/api/admin-sdk';
+import {
+  MAX_AI_IMAGE_BYTES,
+  isExpectedFirebaseStorageBucket,
+  isOrgStoragePath,
+  parseFirebaseStorageDownloadUrl,
+} from '@/lib/security/storage-url';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 interface ExtractTicketRequest {
+  /** ID de l'organització propietària */
+  orgId?: string;
   /** URL directa de la imatge (signada o pública) */
   fileUrl?: string;
   /** Path a Firebase Storage (alternativa a fileUrl) */
@@ -30,7 +39,7 @@ type SuccessResponse = {
 
 type ErrorResponse = {
   ok: false;
-  code: 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'TRANSIENT' | 'INVALID_INPUT' | 'AI_ERROR' | 'FETCH_ERROR';
+  code: 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'TRANSIENT' | 'INVALID_INPUT' | 'AI_ERROR' | 'FETCH_ERROR' | ApiGuardCode;
   message: string;
 };
 
@@ -50,6 +59,10 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
+  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
 }
 
 /**
@@ -122,6 +135,30 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const body: ExtractTicketRequest = await request.json();
+    const guard = await requireOrgMembership(request, body.orgId);
+    if (!guard.ok) {
+      return NextResponse.json({
+        ok: false,
+        code: guard.code,
+        message: guard.message,
+      }, { status: guard.status });
+    }
+
+    const rateLimit = checkRateLimit({
+      key: `ai:extract-ticket:${guard.auth.uid}:${guard.orgId}`,
+      limit: 30,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({
+        ok: false,
+        code: 'RATE_LIMITED',
+        message: 'Rate limited. Espera uns segons.',
+      }, {
+        status: 429,
+        headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+      });
+    }
 
     // Validate input: necessitem fileUrl o storagePath
     if (!body.fileUrl && !body.storagePath) {
@@ -132,18 +169,68 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       });
     }
 
-    // Obtenir URL de descàrrega
-    let downloadUrl: string;
+    let arrayBuffer: ArrayBuffer;
 
     if (body.fileUrl) {
-      downloadUrl = body.fileUrl;
+      const parsedUrl = parseFirebaseStorageDownloadUrl(body.fileUrl);
+      if (
+        !parsedUrl ||
+        !isExpectedFirebaseStorageBucket(parsedUrl.bucket) ||
+        !isOrgStoragePath(parsedUrl.storagePath, guard.orgId)
+      ) {
+        return NextResponse.json({
+          ok: false,
+          code: 'INVALID_INPUT',
+          message: 'fileUrl ha de ser una URL de Firebase Storage de la mateixa organització',
+        }, { status: 400 });
+      }
+      // Descarregar la imatge
+      console.log('[extract-ticket] Fetching image:', body.fileUrl.substring(0, 80));
+      const response = await fetch(body.fileUrl, { signal: AbortSignal.timeout(10_000) });
+
+      if (!response.ok) {
+        console.error('[extract-ticket] Fetch failed:', response.status);
+        return NextResponse.json({
+          ok: false,
+          code: 'FETCH_ERROR',
+          message: `Error descarregant imatge: ${response.status}`,
+        });
+      }
+
+      const contentLength = response.headers.get('content-length');
+      if (contentLength && Number(contentLength) > MAX_AI_IMAGE_BYTES) {
+        return NextResponse.json({
+          ok: false,
+          code: 'INVALID_INPUT',
+          message: 'La imatge supera la mida màxima permesa',
+        }, { status: 400 });
+      }
+
+      arrayBuffer = await response.arrayBuffer();
     } else {
-      // Obtenir URL signada de Storage
+      if (!isOrgStoragePath(body.storagePath, guard.orgId)) {
+        return NextResponse.json({
+          ok: false,
+          code: 'INVALID_INPUT',
+          message: 'storagePath no pertany a aquesta organització',
+        }, { status: 400 });
+      }
+
       try {
-        const app = getApp();
-        const storage = getStorage(app);
-        const storageRef = ref(storage, body.storagePath);
-        downloadUrl = await getDownloadURL(storageRef);
+        const bucket = getStorage(getAdminApp()).bucket();
+        const file = bucket.file(body.storagePath);
+        const [metadata] = await file.getMetadata();
+        const size = typeof metadata.size === 'string' ? Number(metadata.size) : Number(metadata.size ?? 0);
+        if (size > MAX_AI_IMAGE_BYTES) {
+          return NextResponse.json({
+            ok: false,
+            code: 'INVALID_INPUT',
+            message: 'La imatge supera la mida màxima permesa',
+          }, { status: 400 });
+        }
+
+        const [buffer] = await file.download();
+        arrayBuffer = bufferToArrayBuffer(buffer);
       } catch (storageError) {
         console.error('[extract-ticket] Storage error:', storageError);
         return NextResponse.json({
@@ -154,20 +241,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       }
     }
 
-    // Descarregar la imatge
-    console.log('[extract-ticket] Fetching image:', downloadUrl.substring(0, 80));
-    const response = await fetch(downloadUrl);
-
-    if (!response.ok) {
-      console.error('[extract-ticket] Fetch failed:', response.status);
+    if (arrayBuffer.byteLength > MAX_AI_IMAGE_BYTES) {
       return NextResponse.json({
         ok: false,
-        code: 'FETCH_ERROR',
-        message: `Error descarregant imatge: ${response.status}`,
-      });
+        code: 'INVALID_INPUT',
+        message: 'La imatge supera la mida màxima permesa',
+      }, { status: 400 });
     }
-
-    const arrayBuffer = await response.arrayBuffer();
 
     // Detectar tipus MIME
     const mimeType = detectMimeType(arrayBuffer);

@@ -245,7 +245,7 @@ interface ProductUpdatesSectionProps {
 }
 
 export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSectionProps) {
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { tr, language } = useTranslations();
@@ -638,9 +638,16 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     setGeneratedContent(null);
 
     try {
+      if (!user) {
+        throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
+      }
+
       const response = await fetch('/api/ai/generate-product-update', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await user.getIdToken()}`,
+        },
         body: JSON.stringify({
           title: aiTitle.trim(),
           description: aiDescription.trim(),
