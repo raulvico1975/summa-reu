@@ -246,11 +246,11 @@
 
 ## 5. Riscos tècnics
 
-- Dates amb component horària poden quedar fora del rang superior del bundle si no es corregeix la comparació `dateTo`. Evidència: `functions/src/exports/closing-bundle/build-closing-data.ts:283-287`
-- La validació de mida usa bucket per defecte i la descàrrega usa bucket resolt explícitament. Evidència: `functions/src/exports/closing-bundle/build-closing-data.ts:486-497`; `functions/src/exports/closingBundleZip.ts:194-206`
-- El contracte d'error route/client ja està desalineat i no s'ha d'empitjorar. Evidència: `src/lib/api/require-permission.ts:22-34`; `src/components/reports/closing-bundle-dialog.tsx:121-138`
-- El flux documental continua sent seqüencial i sensible a cost/timeout. Evidència: `functions/src/exports/closingBundleZip.ts:66-69`; `functions/src/exports/closingBundleZip.ts:240-298`
-- Els permisos actuals estan dividits entre model efectiu de la route i rol simple a la Function. Evidència: `src/app/api/exports/closing-bundle-zip/route.ts:45-52`; `functions/src/exports/closingBundleZip.ts:137-150`
+- Dates amb component horària poden quedar fora del rang superior del bundle si no es corregeix la comparació `dateTo`. Evidència: `functions/src/exports/closing-bundle/build-closing-data.ts`
+- La validació de mida usa bucket per defecte i la descàrrega usa bucket resolt explícitament. Evidència: `functions/src/exports/closing-bundle/build-closing-data.ts`; `functions/src/exports/closingBundleZip.ts`
+- El contracte d'error route/client ja està desalineat i no s'ha d'empitjorar. Evidència: `src/lib/api/require-permission.ts`; `src/components/reports/closing-bundle-dialog.tsx`
+- El flux documental continua sent seqüencial i sensible a cost/timeout. Evidència: `functions/src/exports/closingBundleZip.ts`
+- Els permisos actuals estan dividits entre model efectiu de la route i rol simple a la Function. Evidència: `src/app/api/exports/closing-bundle-zip/route.ts`; `functions/src/exports/closingBundleZip.ts`
 
 ## 6. Criteri de DONE
 
