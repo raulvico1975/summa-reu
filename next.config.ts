@@ -8,7 +8,7 @@ const buildDate = new Date().toISOString();
 
 const nextConfig: NextConfig = {
   /* config options here */
-  productionBrowserSourceMaps: true,
+  productionBrowserSourceMaps: false,
   outputFileTracingRoot: process.cwd(),
   serverExternalPackages: [
     'genkit',
@@ -24,12 +24,6 @@ const nextConfig: NextConfig = {
     // Exposed to client as NEXT_PUBLIC_ equivalent via env object
     BUILD_ID: buildId,
     BUILD_DATE: buildDate,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   images: {
     remotePatterns: [
