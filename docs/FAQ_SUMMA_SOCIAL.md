@@ -1008,8 +1008,10 @@ Amb qualsevol de les dues, podràs saber exactament quant heu pagat a aquell pro
 4. Confirma quan et demani
 
 **Quan el sistema NO et deixarà eliminar-lo:**
-- Si és el moviment pare d'una remesa o d'un payout Stripe ja desglossat
-- Si és una línia filla creada a partir d'una remesa o d'un desglossament Stripe
+- Si és el moviment pare d'una remesa ja processada
+- Si és el moviment pare d'un payout Stripe ja imputat
+- Si és una línia filla creada a partir d'una remesa
+- Si és una donació creada per una imputació Stripe
 
 En aquests casos és normal que ho bloquegi: és un guardrail per evitar trencar la traçabilitat fiscal.
 
@@ -1021,7 +1023,8 @@ En aquests casos és normal que ho bloquegi: és un guardrail per evitar trencar
 **Quan NO hauries d'eliminar-lo:**
 - Si és un moviment real del banc, encara que no sàpigues què és
 - Si vols "amagar-lo" dels informes (millor categoritza'l correctament)
-- Si forma part d'una remesa o d'un desglossament Stripe (en aquest cas, fes servir **"Desfer remesa"**)
+- Si forma part d'una remesa, fes servir **"Desfer remesa"**
+- Si forma part d'una imputació Stripe, fes servir **"Desfer imputació Stripe"**
 
 ---
 
@@ -1590,15 +1593,15 @@ El sistema de verificació de consistència (el banner que diu "Hi ha problemes 
 
 ---
 
-### 62. Rebem donacions per Stripe però al banc només veig un ingrés. Com ho desgloso?
+### 62. Rebem donacions per Stripe però al banc només veig un ingrés. Com ho imputo?
 
-**Entenc la confusió!** És exactament el mateix problema que amb les remeses de quotes — Stripe agrupa diverses donacions i us envia un sol pagament (el "payout"). Per saber qui ha donat i quant, cal "dividir" aquest ingrés.
+**Entenc la confusió!** És semblant al problema de les remeses de quotes: Stripe agrupa diverses donacions i us envia un sol pagament (el "payout"). Per saber qui ha donat i quant, cal imputar aquest ingrés de Stripe.
 
 Però no et preocupis, el procés és més senzill del que sembla:
 
 1. **Localitza el moviment de Stripe** a la secció Moviments (busca "STRIPE" o "STRIPE PAYMENTS" a la descripció)
 
-2. **Obre el divisor:** Clica el menú ⋮ de la fila i selecciona "Dividir remesa Stripe"
+2. **Obre la imputació:** Clica el menú ⋮ de la fila i selecciona **"Imputar Stripe"**
 
 3. **Descarrega el CSV de Stripe** des del teu compte de Stripe (ara t'explico com a la pregunta 64)
 
@@ -1612,11 +1615,11 @@ Però no et preocupis, el procés és més senzill del que sembla:
 
 7. **Comprova que quadra:** L'import net ha de coincidir amb l'ingrés del banc
 
-8. **Processa:** Primer veuràs una confirmació final. Quan la confirmis, es crearan les donacions individuals i una despesa agregada per les comissions de Stripe
+8. **Confirma la imputació:** Primer veuràs una confirmació final. Quan la confirmis, es crearan les donacions individuals a la font fiscal `donations` i el moviment pare quedarà marcat com a Stripe imputat.
 
-**I voilà!** Ja tens cada donació assignada al seu donant, llesta per al Model 182.
+Ja tens cada donació assignada al seu donant, llesta per al Model 182.
 
-**Detall important:** El moviment original del banc no desapareix. Es conserva com a **pare** del payout, queda marcat com a processat i serveix per mantenir la traçabilitat. Si un dia t'equivoques, el correcte és **desfer** el processament i tornar-lo a fer, no pas eliminar-lo.
+**Detall important:** El moviment original del banc no desapareix. Es conserva com a **pare** del payout, queda marcat com a imputat i serveix per mantenir la traçabilitat. Si un dia t'equivoques, el correcte és **desfer la imputació Stripe** i tornar-la a fer, no pas eliminar el moviment.
 
 ---
 
@@ -1634,12 +1637,12 @@ Però no et preocupis, el procés és més senzill del que sembla:
 1. Ves a Donants
 2. Crea'l amb l'email que mostra Stripe
 3. Afegeix les altres dades que tinguis (nom, DNI per al Model 182...)
-4. Si ja l'havies processat malament, fes **"Desfer remesa"** i torna'l a processar
+4. Si ja l'havies imputat malament, fes **"Desfer imputació Stripe"** i torna'l a imputar
 
 **Si és un donant existent amb email diferent:**
 1. Cerca el donant pel nom a Summa Social
 2. Edita'l i afegeix l'email de Stripe (o actualitza'l)
-3. Si cal, fes **"Desfer remesa"** i torna'l a processar
+3. Si cal, fes **"Desfer imputació Stripe"** i torna'l a imputar
 
 ---
 
@@ -1664,7 +1667,7 @@ Si el CSV encara no conté cap payout perquè Stripe no ha generat la transferè
 
 ### 65. Les comissions de Stripe on queden registrades?
 
-**Quan processeu un payout de Stripe, el sistema crea automàticament tot el necessari** — tu no has de fer res especial.
+**Quan imputeu un payout de Stripe, el sistema crea automàticament les donacions fiscals necessàries** — tu no has de fer cap càlcul manual.
 
 Imagina que heu rebut tres donacions:
 - Donant A: 50€ (comissió Stripe: 1,45€)
@@ -1677,11 +1680,12 @@ Comissions:        2,90€
 Payout al banc:   97,10€
 ```
 
-**Summa Social crearà automàticament:**
-- 3 ingressos de 50€, 30€ i 20€ (assignats als donants respectius)
-- 1 despesa de 2,90€ (comissions Stripe agregades)
+**Summa Social guardarà automàticament:**
+- 3 donacions brutes de 50€, 30€ i 20€ assignades als donants respectius
+- la comissió de cada pagament dins la donació corresponent
+- si cal, un ajust Stripe per quadrar el net del payout amb l'import ingressat al banc
 
-**Tot quadra automàticament.** Les comissions queden registrades com a despesa financera i no et cal fer cap càlcul manual.
+**Tot queda traçat dins la imputació.** El total net és el brut menys comissions, i s'ha de revisar abans de confirmar.
 
 ---
 
