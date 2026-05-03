@@ -36,6 +36,42 @@ service firebase.storage {
       return isOrgMember(orgId) && getMemberRole(orgId) == 'admin';
     }
 
+    function isAtMost(maxBytes) {
+      return request.resource.size <= maxBytes;
+    }
+
+    function isAllowedImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|gif|webp)');
+    }
+
+    function isPdf() {
+      return request.resource.contentType == 'application/pdf';
+    }
+
+    function isXml() {
+      return request.resource.contentType.matches('application/xml(;.*)?') ||
+        request.resource.contentType.matches('text/xml(;.*)?');
+    }
+
+    function isOfficeDocument() {
+      return request.resource.contentType == 'application/msword' ||
+        request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        request.resource.contentType == 'application/vnd.ms-excel' ||
+        request.resource.contentType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
+
+    function isAttachableDocument() {
+      return isAllowedImage() || isPdf() || isXml() || isOfficeDocument();
+    }
+
+    function isReceiptDocument() {
+      return isAllowedImage() || isPdf() || isXml();
+    }
+
+    function isPlainText() {
+      return request.resource.contentType.matches('text/plain(;.*)?');
+    }
+
     // ════════════════════════════════════════════════════════════════════════════
     // i18n translations - SuperAdmin can write, everyone can read
     // ════════════════════════════════════════════════════════════════════════════
@@ -60,40 +96,69 @@ service firebase.storage {
 
     // Uploads client confirmats: configuració d'org (admin-only)
     match /organizations/{orgId}/logo {
-      allow write: if isSuperAdmin() || isOrgAdmin(orgId);
+      allow create, update: if (isSuperAdmin() || isOrgAdmin(orgId))
+        && isAllowedImage()
+        && isAtMost(2 * 1024 * 1024);
+      allow delete: if isSuperAdmin() || isOrgAdmin(orgId);
     }
 
     match /organizations/{orgId}/signature {
-      allow write: if isSuperAdmin() || isOrgAdmin(orgId);
+      allow create, update: if (isSuperAdmin() || isOrgAdmin(orgId))
+        && isAllowedImage()
+        && isAtMost(1 * 1024 * 1024);
+      allow delete: if isSuperAdmin() || isOrgAdmin(orgId);
     }
 
     // Uploads client confirmats: operativa d'org (admin/user)
-    match /organizations/{orgId}/pendingDocuments/{allPaths=**} {
-      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    match /organizations/{orgId}/pendingDocuments/{docId}/{fileName} {
+      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+        && (
+          (isReceiptDocument() && isAtMost(15 * 1024 * 1024)) ||
+          (docId == '_healthcheck' && fileName.matches('[0-9]+\\.txt') && isPlainText() && isAtMost(1024))
+        );
+      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
     }
 
-    match /organizations/{orgId}/documents/{allPaths=**} {
-      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    match /organizations/{orgId}/documents/{transactionId}/{fileName} {
+      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+        && isAttachableDocument()
+        && isAtMost(15 * 1024 * 1024);
+      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
     }
 
-    match /organizations/{orgId}/transactions/{allPaths=**} {
-      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    match /organizations/{orgId}/transactions/{transactionId}/{fileName} {
+      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+        && isAttachableDocument()
+        && isAtMost(15 * 1024 * 1024);
+      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
     }
 
-    match /organizations/{orgId}/offBankExpenses/{allPaths=**} {
-      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    match /organizations/{orgId}/offBankExpenses/{expenseId}/{fileName} {
+      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+        && isAttachableDocument()
+        && isAtMost(15 * 1024 * 1024);
+      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
     }
 
-    match /organizations/{orgId}/expenseReports/{allPaths=**} {
-      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    match /organizations/{orgId}/expenseReports/{reportId}/{fileName} {
+      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+        && isPdf()
+        && isAtMost(15 * 1024 * 1024);
+      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
     }
 
-    match /organizations/{orgId}/prebankRemittances/{allPaths=**} {
-      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    match /organizations/{orgId}/prebankRemittances/{remittanceId}/{fileName} {
+      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+        && isXml()
+        && isAtMost(2 * 1024 * 1024);
+      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
     }
 
-    match /organizations/{orgId}/sepaCollectionRuns/{allPaths=**} {
-      allow write: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+    match /organizations/{orgId}/sepaCollectionRuns/{runId}/{fileName} {
+      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+        && isXml()
+        && isAtMost(2 * 1024 * 1024);
+      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
     }
 
     // ════════════════════════════════════════════════════════════════════════════
