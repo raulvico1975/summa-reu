@@ -123,17 +123,6 @@ function detectMimeType(buffer: ArrayBuffer): 'image/jpeg' | 'image/png' | 'imag
  */
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
-    // Verify API key is available
-    const apiKey = resolveGoogleGenAiApiKey();
-    if (!apiKey) {
-      console.error('[extract-ticket] No API key found');
-      return NextResponse.json({
-        ok: false,
-        code: 'AI_ERROR',
-        message: 'API key not configured',
-      });
-    }
-
     const body: ExtractTicketRequest = await request.json();
     const guard = await requireOrgMembership(request, body.orgId);
     if (!guard.ok) {
@@ -142,6 +131,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         code: guard.code,
         message: guard.message,
       }, { status: guard.status });
+    }
+
+    // Verify API key is available only after the request is authenticated.
+    const apiKey = resolveGoogleGenAiApiKey();
+    if (!apiKey) {
+      console.error('[extract-ticket] No API key found');
+      return NextResponse.json({
+        ok: false,
+        code: 'AI_ERROR',
+        message: 'API key not configured',
+      });
     }
 
     const rateLimit = checkRateLimit({

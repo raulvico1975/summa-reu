@@ -68,17 +68,6 @@ type ApiResponse = SuccessResponse | ErrorResponse;
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
-    // Verify API key is available
-    const apiKey = resolveGoogleGenAiApiKey();
-    if (!apiKey) {
-      console.error('[API] No API key found. Check GOOGLE_API_KEY, GOOGLE_GENAI_API_KEY or GEMINI_API_KEY');
-      return NextResponse.json({
-        ok: false,
-        code: 'AI_ERROR',
-        message: 'API key not configured',
-      });
-    }
-
     const body = await request.json();
 
     // Validate input
@@ -99,6 +88,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         code: guard.code,
         message: guard.message,
       }, { status: guard.status });
+    }
+
+    // Verify API key is available only after the request is authenticated.
+    const apiKey = resolveGoogleGenAiApiKey();
+    if (!apiKey) {
+      console.error('[API] No API key found. Check GOOGLE_API_KEY, GOOGLE_GENAI_API_KEY or GEMINI_API_KEY');
+      return NextResponse.json({
+        ok: false,
+        code: 'AI_ERROR',
+        message: 'API key not configured',
+      });
     }
 
     const rateLimit = checkRateLimit({

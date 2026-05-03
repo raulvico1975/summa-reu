@@ -42,5 +42,5 @@ export function isExpectedFirebaseStorageBucket(bucket: string): boolean {
     process.env.FIREBASE_STORAGE_BUCKET ||
     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
 
-  return !expectedBucket || bucket === expectedBucket;
+  return Boolean(expectedBucket) && bucket === expectedBucket;
 }

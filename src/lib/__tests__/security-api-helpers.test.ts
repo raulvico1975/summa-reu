@@ -7,6 +7,7 @@ import {
 } from '@/lib/api/rate-limit';
 import { escapeHtml } from '@/lib/security/html';
 import {
+  isExpectedFirebaseStorageBucket,
   isOrgStoragePath,
   parseFirebaseStorageDownloadUrl,
 } from '@/lib/security/storage-url';
@@ -43,4 +44,31 @@ test('Firebase Storage URL parsing only accepts canonical download URLs', () => 
   assert.equal(isOrgStoragePath(parsed?.storagePath, 'org-1'), true);
   assert.equal(isOrgStoragePath(parsed?.storagePath, 'org-2'), false);
   assert.equal(parseFirebaseStorageDownloadUrl('http://127.0.0.1:8080/private.png'), null);
+});
+
+test('Firebase Storage bucket validation requires the configured project bucket', () => {
+  const previousPrivate = process.env.FIREBASE_STORAGE_BUCKET;
+  const previousPublic = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+
+  try {
+    delete process.env.FIREBASE_STORAGE_BUCKET;
+    delete process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    assert.equal(isExpectedFirebaseStorageBucket('summa.appspot.com'), false);
+
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET = 'summa.appspot.com';
+    assert.equal(isExpectedFirebaseStorageBucket('summa.appspot.com'), true);
+    assert.equal(isExpectedFirebaseStorageBucket('other.appspot.com'), false);
+  } finally {
+    if (previousPrivate === undefined) {
+      delete process.env.FIREBASE_STORAGE_BUCKET;
+    } else {
+      process.env.FIREBASE_STORAGE_BUCKET = previousPrivate;
+    }
+
+    if (previousPublic === undefined) {
+      delete process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    } else {
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET = previousPublic;
+    }
+  }
 });

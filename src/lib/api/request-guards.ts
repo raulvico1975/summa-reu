@@ -45,6 +45,9 @@ export async function requireOrgMembership(
   request: NextRequest,
   orgId: unknown
 ): Promise<ApiGuardResult<{ auth: AuthResult; membership: MembershipValidation; orgId: string }>> {
+  const authGuard = await requireAuthenticatedRequest(request);
+  if (!authGuard.ok) return authGuard;
+
   if (typeof orgId !== 'string' || !orgId.trim()) {
     return {
       ok: false,
@@ -53,9 +56,6 @@ export async function requireOrgMembership(
       message: 'orgId és obligatori.',
     };
   }
-
-  const authGuard = await requireAuthenticatedRequest(request);
-  if (!authGuard.ok) return authGuard;
 
   const db = getAdminDb();
   const membership = await validateUserMembership(db, authGuard.auth.uid, orgId);
