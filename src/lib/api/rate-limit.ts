@@ -31,6 +31,14 @@ function getRateLimitState(): RateLimitState {
   return globalThis.__summaApiRateLimitState;
 }
 
+function pruneExpiredRateLimitBuckets(state: RateLimitState, nowMs: number): void {
+  for (const [bucketKey, bucket] of state) {
+    if (bucket.resetAt <= nowMs) {
+      state.delete(bucketKey);
+    }
+  }
+}
+
 export function checkRateLimit({
   key,
   limit,
@@ -38,6 +46,7 @@ export function checkRateLimit({
   nowMs = Date.now(),
 }: RateLimitOptions): RateLimitResult {
   const state = getRateLimitState();
+  pruneExpiredRateLimitBuckets(state, nowMs);
   const existing = state.get(key);
 
   if (!existing || existing.resetAt <= nowMs) {

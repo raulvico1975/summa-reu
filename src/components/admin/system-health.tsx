@@ -1017,7 +1017,7 @@ export function SystemHealth() {
             throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
           }
 
-          await fetch('/api/admin/incident-alert', {
+          const alertResponse = await fetch('/api/admin/incident-alert', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1034,12 +1034,21 @@ export function SystemHealth() {
               count: incident.count,
             }),
           });
+          const alertResult = await alertResponse.json().catch(() => null) as { error?: string; reason?: string } | null;
+          if (!alertResponse.ok) {
+            throw new Error(alertResult?.error || alertResult?.reason || `HTTP ${alertResponse.status}`);
+          }
           toast({
             title: tr('admin.health.toasts.alertSentTitle', 'Alerta enviada'),
             description: tr('admin.health.toasts.alertSentDescription', 'S’ha enviat un email d’alerta per aquest incident crític.'),
           });
         } catch (emailErr) {
-
+          console.warn('[SystemHealth] Incident alert email failed:', emailErr);
+          toast({
+            title: tr('admin.health.toasts.alertErrorTitle', 'Alerta no enviada'),
+            description: tr('admin.health.toasts.alertErrorDescription', 'L’incident s’ha actualitzat, però no s’ha pogut enviar l’email d’alerta.'),
+            variant: 'destructive',
+          });
         }
       }
 

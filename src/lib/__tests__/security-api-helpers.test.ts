@@ -25,6 +25,17 @@ test('rate limit blocks requests after the configured window allowance', () => {
   assert.equal(checkRateLimit({ key: 'user:ai', limit: 2, windowMs: 1000, nowMs: 1200 }).allowed, true);
 });
 
+test('rate limit evicts expired buckets before adding new requests', () => {
+  clearRateLimitStateForTests();
+
+  checkRateLimit({ key: 'user:old', limit: 1, windowMs: 1000, nowMs: 100 });
+  checkRateLimit({ key: 'user:new', limit: 1, windowMs: 1000, nowMs: 1200 });
+
+  const state = globalThis.__summaApiRateLimitState;
+  assert.equal(state?.has('user:old'), false);
+  assert.equal(state?.has('user:new'), true);
+});
+
 test('HTML escaping protects incident alert content from injection', () => {
   assert.equal(
     escapeHtml('<img src=x onerror="alert(1)"> & test'),

@@ -333,6 +333,8 @@
   "admin.health.report.summary": "Resumo",
   "admin.health.report.title": "Relatório Semáforo de Produção",
   "admin.health.report.warning": "Warning",
+  "admin.health.toasts.alertErrorDescription": "O incidente foi atualizado, mas não foi possível enviar o email de alerta.",
+  "admin.health.toasts.alertErrorTitle": "Alerta não enviada",
   "admin.health.toasts.alertSentDescription": "Foi enviado um email de alerta para este incidente crítico.",
   "admin.health.toasts.alertSentTitle": "Alerta enviada",
   "admin.health.toasts.closeIncidentError": "Não foi possível fechar o incidente.",

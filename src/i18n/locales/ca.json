@@ -432,6 +432,8 @@
   "admin.health.report.summary": "Resum",
   "admin.health.report.title": "Informe Semàfor de Producció",
   "admin.health.report.warning": "Warning",
+  "admin.health.toasts.alertErrorDescription": "L'incident s'ha actualitzat, però no s'ha pogut enviar l'email d'alerta.",
+  "admin.health.toasts.alertErrorTitle": "Alerta no enviada",
   "admin.health.toasts.alertSentDescription": "S'ha enviat un email d'alerta per aquest incident crític.",
   "admin.health.toasts.alertSentTitle": "Alerta enviada",
   "admin.health.toasts.closeIncidentError": "No s'ha pogut tancar l'incident.",
