@@ -432,6 +432,8 @@
   "admin.health.report.summary": "Résumé",
   "admin.health.report.title": "Rapport Sémaphore de Production",
   "admin.health.report.warning": "Warning",
+  "admin.health.toasts.alertErrorDescription": "L'incident a été mis à jour, mais l'email d'alerte n'a pas pu être envoyé.",
+  "admin.health.toasts.alertErrorTitle": "Alerte non envoyée",
   "admin.health.toasts.alertSentDescription": "Un email d'alerte a été envoyé pour cet incident critique.",
   "admin.health.toasts.alertSentTitle": "Alerte envoyée",
   "admin.health.toasts.closeIncidentError": "Impossible de fermer l'incident.",

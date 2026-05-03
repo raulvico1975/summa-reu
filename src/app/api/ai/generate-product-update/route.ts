@@ -7,9 +7,31 @@ import {
   generateProductUpdateContent,
   type GenerateProductUpdateRequest,
 } from '@/lib/product-updates/generate-product-update';
+import { checkRateLimit } from '@/lib/api/rate-limit';
+import { requireSuperAdminRequest } from '@/lib/api/request-guards';
 
 export async function POST(request: NextRequest) {
   try {
+    const guard = await requireSuperAdminRequest(request);
+    if (!guard.ok) {
+      return NextResponse.json({ error: guard.message }, { status: guard.status });
+    }
+
+    const rateLimit = checkRateLimit({
+      key: `ai:generate-product-update:${guard.auth.uid}`,
+      limit: 20,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limited. Espera uns segons.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+        }
+      );
+    }
+
     const body = await request.json() as GenerateProductUpdateRequest;
     const generated = await generateProductUpdateContent(body);
     return NextResponse.json(generated);

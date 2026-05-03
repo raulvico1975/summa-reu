@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { DEFAULT_GOOGLE_GENAI_MODEL_LABEL } from '@/ai/config';
 import { doc, CollectionReference } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase';
+import { updateDocumentNonBlocking, useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { trackUX } from '@/lib/ux/trackUX';
@@ -19,6 +19,7 @@ interface UseTransactionCategorizationParams {
   transactions: Transaction[] | null;
   availableCategories: Category[] | null;
   classificationMemory?: ClassificationMemoryEntry[] | null;
+  organizationId?: string | null;
   getCategoryDisplayName: (categoryId: string) => string;
   bulkMode?: boolean;
   onQuotaExceeded?: () => void;
@@ -57,7 +58,7 @@ type ApiSuccessResponse = {
 
 type ApiErrorResponse = {
   ok: false;
-  code: 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'TRANSIENT' | 'INVALID_INPUT' | 'AI_ERROR';
+  code: 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'TRANSIENT' | 'INVALID_INPUT' | 'AI_ERROR' | 'UNAUTHORIZED' | 'FORBIDDEN';
   message: string;
 };
 
@@ -89,15 +90,21 @@ const BACKOFF_MULTIPLIER = 2;
 // =============================================================================
 
 async function callCategorizationAPI(input: {
+  orgId: string;
+  idToken: string;
   description: string;
   amount: number;
   expenseOptions: CategoryOption[];
   incomeOptions: CategoryOption[];
 }): Promise<ApiResponse> {
+  const { idToken, ...body } = input;
   const response = await fetch('/api/ai/categorize-transaction', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: JSON.stringify(body),
   });
 
   // Parse JSON - Route Handler always returns 200 with ok field
@@ -170,6 +177,34 @@ function getErrorMessage(code: ApiErrorResponse['code'], language: 'ca' | 'es' |
         description: "Les données de la transaction ne sont pas valides.",
       },
     },
+    UNAUTHORIZED: {
+      ca: {
+        title: "Sessió no vàlida",
+        description: "Torna a iniciar sessió per utilitzar la IA.",
+      },
+      es: {
+        title: "Sesión no válida",
+        description: "Vuelve a iniciar sesión para utilizar la IA.",
+      },
+      fr: {
+        title: "Session non valide",
+        description: "Reconnectez-vous pour utiliser l'IA.",
+      },
+    },
+    FORBIDDEN: {
+      ca: {
+        title: "Permisos insuficients",
+        description: "No tens permisos per utilitzar la IA en aquesta organització.",
+      },
+      es: {
+        title: "Permisos insuficientes",
+        description: "No tienes permisos para utilizar la IA en esta organización.",
+      },
+      fr: {
+        title: "Autorisations insuffisantes",
+        description: "Vous n'avez pas les autorisations nécessaires pour utiliser l'IA dans cette organisation.",
+      },
+    },
     AI_ERROR: {
       ca: {
         title: "IA no disponible",
@@ -198,11 +233,13 @@ export function useTransactionCategorization({
   transactions,
   availableCategories,
   classificationMemory,
+  organizationId,
   getCategoryDisplayName,
   bulkMode = false,
   onQuotaExceeded,
 }: UseTransactionCategorizationParams): UseTransactionCategorizationReturn {
   const { toast } = useToast();
+  const { user } = useFirebase();
   const { t, language } = useTranslations();
   // pt fa fallback a ca per missatges d'error (getErrorMessage només té ca/es/fr)
   const errorLang = language === 'pt' ? 'ca' : language;
@@ -283,7 +320,14 @@ export function useTransactionCategorization({
         return;
       }
 
+      if (!organizationId || !user) {
+        throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
+      }
+
+      const idToken = await user.getIdToken();
       const result = await callCategorizationAPI({
+        orgId: organizationId,
+        idToken,
         description: transaction.description,
         amount: transaction.amount,
         expenseOptions,
@@ -333,6 +377,8 @@ export function useTransactionCategorization({
     availableCategories,
     classificationMemory,
     transactionsCollection,
+    organizationId,
+    user,
     expenseOptions,
     incomeOptions,
     getCategoryDisplayName,
@@ -351,7 +397,7 @@ export function useTransactionCategorization({
       return;
     }
 
-    if (!transactions || !availableCategories || !transactionsCollection) {
+    if (!transactions || !availableCategories || !transactionsCollection || !organizationId || !user) {
       toast({ title: t.movements.table.dataUnavailable, description: t.movements.table.dataLoadError });
       return;
     }
@@ -389,6 +435,7 @@ export function useTransactionCategorization({
     let errorCount = 0;
     let quotaExceeded = false;
     let cancelled = false;
+    const idToken = await user.getIdToken();
 
     // PROCESSAMENT SEQÜENCIAL: una transacció alhora
     for (let i = 0; i < transactionsToCategorize.length; i++) {
@@ -443,6 +490,8 @@ export function useTransactionCategorization({
         }
 
         const result = await callCategorizationAPI({
+          orgId: organizationId,
+          idToken,
           description: tx.description,
           amount: tx.amount,
           expenseOptions,
@@ -577,6 +626,8 @@ export function useTransactionCategorization({
     availableCategories,
     classificationMemory,
     transactionsCollection,
+    organizationId,
+    user,
     expenseOptions,
     incomeOptions,
     getCategoryDisplayName,

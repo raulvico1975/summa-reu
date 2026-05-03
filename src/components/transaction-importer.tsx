@@ -834,6 +834,12 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         }
 
         if (availableCategories?.length && categoryAiCandidates.length > 0 && categoryAiCandidates.length <= AI_THRESHOLD) {
+          const aiAuthUser = auth.currentUser;
+          if (!aiAuthUser) {
+            throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
+          }
+          const aiIdToken = await aiAuthUser.getIdToken();
+
           for (const candidate of categoryAiCandidates) {
             const currentTx = transactionsWithAutomaticAssignments[candidate.index];
             if (currentTx.category) {
@@ -843,8 +849,12 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
             try {
               const response = await fetch('/api/ai/categorize-transaction', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${aiIdToken}`,
+                },
                 body: JSON.stringify({
+                  orgId: organizationId,
                   description: currentTx.description,
                   amount: currentTx.amount,
                   expenseOptions: availableCategories.filter((category) => category.type === 'expense').map((category) => ({ id: category.id, name: category.name })),
