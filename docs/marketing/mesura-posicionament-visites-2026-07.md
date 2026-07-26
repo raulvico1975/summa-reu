@@ -75,7 +75,7 @@ Variables:
 ```bash
 export GOOGLE_MARKETING_ACCESS_TOKEN="<token OAuth temporal>"
 export SEARCH_CONSOLE_SITE_URL="sc-domain:summasocial.app"
-export GA4_PROPERTY_ID="<id numèric>"
+export GA4_PROPERTY_ID="547126832"
 ```
 
 El token necessita els àmbits de només lectura:
@@ -85,16 +85,24 @@ El token necessita els àmbits de només lectura:
 
 No s’ha de guardar el token al repositori ni als artefactes.
 
-## Posada en marxa pendent d’autorització
+## Estat de posada en marxa
 
-1. Crear o seleccionar una propietat GA4 de Summa Social.
-2. Crear el flux web per `https://summasocial.app`.
-3. Activar la mesura millorada del flux, inclosos els canvis de pàgina.
-4. Marcar `generate_lead` com a esdeveniment clau.
-5. Afegir `NEXT_PUBLIC_GA_MEASUREMENT_ID` a `apphosting.yaml`.
-6. Validar en local que rebutjar no genera cap petició a Google.
-7. Validar amb DebugView que acceptar registra una sola visita i que el formulari només genera el lead després d’un `2xx`.
-8. Seguir el protocol `npm run acabat` → `npm run integra` → autorització explícita → `npm run publica`.
+Configuració creada el 27 de juliol de 2026:
+
+- compte GA4 `Summa Social` (`402384810`);
+- propietat `Summa Social – Web` (`547126832`);
+- flux `Summa Social – Web públic` (`15329958834`);
+- ID de mesura `G-C5NJMM8S5P`;
+- zona horària d’Espanya, moneda euro i retenció d’esdeveniments de 14 mesos;
+- mesura millorada activa;
+- `generate_lead` creat amb codi i marcat com a esdeveniment clau, sense valor monetari predeterminat.
+
+Passos de publicació i validació:
+
+1. [x] Afegir `NEXT_PUBLIC_GA_MEASUREMENT_ID` a `apphosting.yaml`.
+2. [x] Validar en local que rebutjar no genera cap petició a Google.
+3. [ ] Obtenir autorització explícita de desplegament i executar `npm run publica`.
+4. [ ] Validar amb DebugView que acceptar registra una sola visita i que el formulari només genera el lead després d’un `2xx`.
 
 ## Línia base verificada
 
