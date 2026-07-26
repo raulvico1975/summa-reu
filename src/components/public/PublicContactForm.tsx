@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { trackPublicAnalyticsEvent } from '@/lib/public-analytics';
 
 const NAME_MIN_LENGTH = 2;
 const MESSAGE_MIN_LENGTH = 10;
@@ -104,6 +105,10 @@ export function PublicContactForm({ locale, labels, initialMessage = '' }: Publi
         throw new Error(`CONTACT_FORM_FAILED_${response.status}`);
       }
 
+      trackPublicAnalyticsEvent('generate_lead', {
+        form_id: 'public_contact',
+        locale,
+      });
       setStatus('success');
       setFeedback(labels.success);
       setName('');

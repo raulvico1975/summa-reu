@@ -1029,7 +1029,7 @@ const ca: PublicTranslations = {
   },
   privacy: {
     title: 'Política de Privacitat',
-    updatedAt: 'Març 2026',
+    updatedAt: 'Juliol 2026',
     sections: {
       whoWeAre: {
         title: '1. Qui som',
@@ -1715,7 +1715,7 @@ const es: PublicTranslations = {
   },
   privacy: {
     title: 'Política de Privacidad',
-    updatedAt: 'Marzo 2026',
+    updatedAt: 'Julio 2026',
     sections: {
       whoWeAre: {
         title: '1. Quiénes somos',
@@ -2401,7 +2401,7 @@ const fr: PublicTranslations = {
   },
   privacy: {
     title: 'Politique de Confidentialité',
-    updatedAt: 'Mars 2026',
+    updatedAt: 'Juillet 2026',
     sections: {
       whoWeAre: {
         title: '1. Qui sommes-nous',
@@ -3086,7 +3086,7 @@ const pt: PublicTranslations = {
   },
   privacy: {
     title: 'Política de Privacidade',
-    updatedAt: 'Março 2026',
+    updatedAt: 'Julho 2026',
     sections: {
       whoWeAre: {
         title: '1. Quem somos',
