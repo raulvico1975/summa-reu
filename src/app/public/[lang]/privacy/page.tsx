@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Logo } from '@/components/logo';
+import { PublicAnalyticsPreferencesButton } from '@/components/public/PublicAnalyticsPreferencesButton';
 import { Mail } from 'lucide-react';
 import { SUPPORT_EMAIL } from '@/lib/constants';
 import {
@@ -17,6 +18,72 @@ import { getPublicTranslations } from '@/i18n/public';
 interface PageProps {
   params: Promise<{ lang: string }>;
 }
+
+const ANALYTICS_PRIVACY_COPY: Record<
+  PublicLocale,
+  {
+    title: string;
+    intro: string;
+    provider: string;
+    data: string;
+    consent: string;
+    noFormData: string;
+    preferences: string;
+  }
+> = {
+  ca: {
+    title: '10. Analítica del web públic',
+    intro:
+      'Quan està configurada, Summa Social utilitza Google Analytics 4 per entendre l’ús del web públic i l’origen de les visites.',
+    provider: 'Proveïdor: Google Analytics 4.',
+    data:
+      'Mesura pàgines visitades, sessions, procedència aproximada i accions de contacte.',
+    consent:
+      'L’etiqueta d’analítica no es carrega fins que la persona visitant l’accepta expressament.',
+    noFormData:
+      'No s’envien a l’analítica el nom, el correu, l’organització ni el missatge escrit als formularis.',
+    preferences: 'Canviar preferències d’analítica',
+  },
+  es: {
+    title: '10. Analítica de la web pública',
+    intro:
+      'Cuando está configurada, Summa Social utiliza Google Analytics 4 para entender el uso de la web pública y el origen de las visitas.',
+    provider: 'Proveedor: Google Analytics 4.',
+    data:
+      'Mide páginas visitadas, sesiones, procedencia aproximada y acciones de contacto.',
+    consent:
+      'La etiqueta de analítica no se carga hasta que la persona visitante la acepta expresamente.',
+    noFormData:
+      'No se envían a la analítica el nombre, el correo, la organización ni el mensaje escrito en los formularios.',
+    preferences: 'Cambiar preferencias de analítica',
+  },
+  fr: {
+    title: '10. Analyse du site public',
+    intro:
+      'Lorsqu’il est configuré, Summa Social utilise Google Analytics 4 pour comprendre l’utilisation du site public et l’origine des visites.',
+    provider: 'Prestataire : Google Analytics 4.',
+    data:
+      'Le système mesure les pages consultées, les sessions, la provenance approximative et les actions de contact.',
+    consent:
+      'La balise d’analyse ne se charge qu’après l’acceptation explicite de la personne qui visite le site.',
+    noFormData:
+      'Le nom, l’adresse e-mail, l’organisation et le message saisis dans les formulaires ne sont pas envoyés.',
+    preferences: 'Modifier les préférences d’analyse',
+  },
+  pt: {
+    title: '10. Analítica do site público',
+    intro:
+      'Quando está configurado, o Summa Social utiliza o Google Analytics 4 para compreender a utilização do site público e a origem das visitas.',
+    provider: 'Fornecedor: Google Analytics 4.',
+    data:
+      'Mede páginas visitadas, sessões, proveniência aproximada e ações de contacto.',
+    consent:
+      'A etiqueta de analítica só é carregada depois da aceitação expressa da pessoa visitante.',
+    noFormData:
+      'O nome, o email, a organização e a mensagem introduzidos nos formulários não são enviados.',
+    preferences: 'Alterar preferências de analítica',
+  },
+};
 
 export function generateStaticParams() {
   return PUBLIC_LOCALES.map((lang) => ({ lang }));
@@ -48,6 +115,8 @@ export default async function PrivacyPage({ params }: PageProps) {
   const locale = lang as PublicLocale;
   const t = getPublicTranslations(locale);
   const p = t.privacy.sections;
+  const analyticsCopy = ANALYTICS_PRIVACY_COPY[locale];
+  const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '';
 
   return (
     <main className="min-h-screen bg-background py-8 px-4">
@@ -358,6 +427,24 @@ export default async function PrivacyPage({ params }: PageProps) {
                   {p.contact.dpoNote.split(':').slice(1).join(':')}
                 </p>
               </div>
+            </section>
+
+            <hr className="my-6" />
+
+            {/* 10. Analítica web */}
+            <section id="analitica-web" className="mb-4 scroll-mt-24">
+              <h2 className="text-xl font-semibold mb-4">{analyticsCopy.title}</h2>
+              <p className="text-muted-foreground mb-3">{analyticsCopy.intro}</p>
+              <ul className="list-disc list-inside text-muted-foreground space-y-2 mb-5">
+                <li>{analyticsCopy.provider}</li>
+                <li>{analyticsCopy.data}</li>
+                <li>{analyticsCopy.consent}</li>
+                <li>{analyticsCopy.noFormData}</li>
+              </ul>
+              <PublicAnalyticsPreferencesButton
+                label={analyticsCopy.preferences}
+                measurementId={measurementId}
+              />
             </section>
           </CardContent>
         </Card>
