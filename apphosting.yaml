@@ -20,6 +20,9 @@ env:
     value: "469685881071"
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
     value: 1:469685881071:web:97483f2003df7c2407731a
+  # Analytics pública: afegir NEXT_PUBLIC_GA_MEASUREMENT_ID amb el valor G-...
+  # només després de crear i revisar la propietat GA4. Sense aquesta variable,
+  # la captura i el bàner de consentiment queden completament inactius.
 
   # Secrets (reference from Cloud Secret Manager)
   - variable: GOOGLE_API_KEY
