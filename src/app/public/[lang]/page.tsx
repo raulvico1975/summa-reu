@@ -20,7 +20,11 @@ import {
 import { SUPPORT_EMAIL } from '@/lib/constants';
 import { getPublicTranslations } from '@/i18n/public';
 import { type PublicLandingHeroMedia } from '@/lib/public-landings';
-import { getPublicFeaturesHref, getPublicPricingHref } from '@/lib/public-site-paths';
+import {
+  getPublicFeaturesHref,
+  getPublicHomeFeatureHref,
+  getPublicPricingHref,
+} from '@/lib/public-site-paths';
 import {
   listPublicProductUpdates,
   type PublicProductUpdate,
@@ -67,6 +71,29 @@ const HERO_ROTATING_PHRASES: Record<PublicLocale, string[]> = {
   fr: ['dons', 'cotisations', 'rapports fiscaux'],
   pt: ['doações', 'quotas', 'relatórios fiscais'],
 };
+
+const HOME_PRIORITY_LINKS_COPY = {
+  ca: {
+    label: 'Solucions concretes',
+    links: [
+      { label: 'Certificats de donació', slug: 'certificats-donacio' },
+      { label: 'Model 182 per a ONG', slug: 'model-182' },
+      { label: 'Remeses SEPA de quotes', slug: 'remeses-sepa' },
+      { label: 'Gestió de donants', slug: 'gestio-donants' },
+      { label: 'Devolucions de rebuts', slug: 'devolucions-rebuts-socis' },
+    ],
+  },
+  es: {
+    label: 'Soluciones concretas',
+    links: [
+      { label: 'Certificados de donación', slug: 'certificats-donacio' },
+      { label: 'Modelo 182 para ONG', slug: 'model-182' },
+      { label: 'Remesas SEPA de cuotas', slug: 'remeses-sepa' },
+      { label: 'Gestión de donantes', slug: 'gestio-donants' },
+      { label: 'Devoluciones de recibos', slug: 'devolucions-rebuts-socis' },
+    ],
+  },
+} as const;
 
 const LANDING_COPY: Record<
   PublicLocale,
@@ -1622,12 +1649,12 @@ export default async function HomePage({ params }: PageProps) {
   ] as const;
   type HomeBlockKey = (typeof BLOCK_ORDER)[number];
   const functionalityHrefs: Record<HomeBlockKey, string> = {
-    conciliation: `/${locale}/conciliacio-bancaria-ong`,
-    donorsMembers: `/${locale}/gestio-donants`,
-    payments: `/${locale}/remeses-sepa`,
-    fiscal: `/${locale}/model-182`,
-    projects: `/${locale}/gestio-projectes-justificacio`,
-    control: `/${locale}/control-visibilitat-entitats`,
+    conciliation: getPublicHomeFeatureHref(locale, 'conciliation'),
+    donorsMembers: getPublicHomeFeatureHref(locale, 'donorsMembers'),
+    payments: getPublicHomeFeatureHref(locale, 'payments'),
+    fiscal: getPublicHomeFeatureHref(locale, 'fiscal'),
+    projects: getPublicHomeFeatureHref(locale, 'projects'),
+    control: getPublicHomeFeatureHref(locale, 'control'),
   };
   const BLOCK_CARDS: Record<HomeBlockKey, readonly string[]> = {
     conciliation: ['importStatements', 'autoClassification', 'contactAssignment', 'multiBankAccount'],
@@ -1839,7 +1866,6 @@ export default async function HomePage({ params }: PageProps) {
   const homeFeatureExplorerSections: PublicFeaturesExplorerSection[] = [
     ...BLOCK_ORDER.map((blockKey) => {
       const block = t.home.blocks[blockKey];
-      const readMoreHref = functionalityHrefs[blockKey];
       const items = BLOCK_CARDS[blockKey].reduce<PublicFeaturesExplorerSection['items']>(
         (accumulator, cardKey) => {
           const card = block.cards[cardKey];
@@ -1853,7 +1879,7 @@ export default async function HomePage({ params }: PageProps) {
             id: `${blockKey}.${cardKey}`,
             title: card.title,
             description: card.description,
-            href: readMoreHref,
+            href: getPublicHomeFeatureHref(locale, blockKey, `${blockKey}.${cardKey}`),
             ctaLabel: copy.functionality.cta,
             media:
               CARD_VIDEO_OVERRIDES[`${blockKey}.${cardKey}`] ??
@@ -2012,6 +2038,26 @@ export default async function HomePage({ params }: PageProps) {
               );
             })}
           </div>
+
+          {locale === 'ca' || locale === 'es' ? (
+            <nav
+              aria-label={HOME_PRIORITY_LINKS_COPY[locale].label}
+              className="mt-7 flex flex-wrap items-center gap-2.5"
+            >
+              <span className="mr-1 text-sm font-semibold text-slate-700">
+                {HOME_PRIORITY_LINKS_COPY[locale].label}:
+              </span>
+              {HOME_PRIORITY_LINKS_COPY[locale].links.map((item) => (
+                <Link
+                  key={item.slug}
+                  href={`/${locale}/${item.slug}`}
+                  className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-sky-200 hover:text-primary"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          ) : null}
         </div>
       </section>
 
