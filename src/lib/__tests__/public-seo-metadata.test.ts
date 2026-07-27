@@ -7,7 +7,9 @@ import {
   getPublicLandingContent,
   getPublicLandingIndexedLocales,
   getPublicLandingMetadata,
+  getPublicLandingSitemapEntries,
 } from '@/lib/public-landings';
+import { getPublicHomeFeatureHref } from '@/lib/public-site-paths';
 import { generateMetadata as generateFloresCaseMetadata } from '@/app/public/[lang]/casos/flores-de-kiskeya/page';
 import { generateMetadata as generateTrustMetadata } from '@/app/public/[lang]/confianza/page';
 
@@ -102,4 +104,74 @@ test('Catalan and Spanish public marketing sources avoid error-free guarantees',
     publicMarketingSources,
     /sense esforç|sin esfuerzo|tot validat|todo validado|control absolut|control absoluto/i
   );
+});
+
+test('homepage feature cards link to their specific CA/ES commercial landing', () => {
+  assert.equal(
+    getPublicHomeFeatureHref('ca', 'fiscal', 'fiscal.donationCertificates'),
+    '/ca/certificats-donacio'
+  );
+  assert.equal(
+    getPublicHomeFeatureHref('es', 'payments', 'payments.bankReturns'),
+    '/es/devolucions-rebuts-socis'
+  );
+  assert.equal(
+    getPublicHomeFeatureHref('ca', 'conciliation', 'conciliation.importStatements'),
+    '/ca/importar-extracte-bancari'
+  );
+  assert.equal(
+    getPublicHomeFeatureHref('fr', 'payments', 'payments.remittanceSplitter'),
+    '/es/remeses-sepa'
+  );
+  assert.equal(
+    getPublicHomeFeatureHref('pt', 'donorsMembers'),
+    '/es/gestio-donants'
+  );
+});
+
+test('priority landing metadata is concise and aligned with observed search intent', () => {
+  const expectedTitles = {
+    'certificats-donacio': {
+      ca: 'Certificats de donació per a ONG i associacions | Summa Social',
+      es: 'Certificados de donación para ONG y asociaciones | Summa Social',
+    },
+    'gestio-donants': {
+      ca: 'Programa de gestió de donants per a ONG | Summa Social',
+      es: 'Programa de gestión de donantes para ONG | Summa Social',
+    },
+    'devolucions-rebuts-socis': {
+      ca: 'Devolucions de rebuts en associacions: com gestionar-les | Summa Social',
+      es: 'Devoluciones de recibos en asociaciones: cómo gestionarlas | Summa Social',
+    },
+  } as const;
+
+  for (const [slug, titles] of Object.entries(expectedTitles)) {
+    const landing = getPublicLandingBySlug(slug);
+    assert.ok(landing);
+
+    for (const locale of ['ca', 'es'] as const) {
+      const metadata = getPublicLandingMetadata(landing, locale);
+      assert.equal(metadata.title, titles[locale]);
+      assert.ok(metadata.title.length <= 75);
+      assert.ok(metadata.description.length >= 100);
+      assert.ok(metadata.description.length <= 165);
+    }
+  }
+});
+
+test('commercial landing sitemap stays limited to Catalan and Spanish', () => {
+  const sitemapEntries = getPublicLandingSitemapEntries();
+
+  assert.ok(sitemapEntries.length > 0);
+  assert.deepEqual(
+    [...new Set(sitemapEntries.map((entry) => entry.locale))].sort(),
+    ['ca', 'es']
+  );
+});
+
+test('subtitle files are explicitly excluded from search results', () => {
+  const nextConfig = readFileSync('next.config.ts', 'utf8');
+
+  assert.match(nextConfig, /source:\s*'\/media\/:path\*\.vtt'/);
+  assert.match(nextConfig, /key:\s*'X-Robots-Tag'[\s\S]*?value:\s*'noindex'/);
 });

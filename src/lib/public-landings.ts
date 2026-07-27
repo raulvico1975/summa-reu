@@ -644,12 +644,12 @@ const MODEL_182_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
 
 const DONATION_CERTIFICATES_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
-    title: 'Certificats de donació per a ONG | Software de gestió per a entitats | Summa Social',
+    title: 'Certificats de donació per a ONG i associacions | Summa Social',
     description:
       'Genera i envia certificats de donació amb un procés guiat, menys feina manual i més control abans de l’enviament.',
   },
   es: {
-    title: 'Certificados de donación para ONG | Software de gestión para entidades | Summa Social',
+    title: 'Certificados de donación para ONG y asociaciones | Summa Social',
     description:
       'Genera y envía certificados de donación con un proceso guiado, menos trabajo manual y más control antes del envío.',
   },
@@ -1439,11 +1439,13 @@ const BANK_STATEMENT_IMPORT_CONTENT_ES: PublicLandingContent = {
 const BANK_RECONCILIATION_ONG_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: 'Conciliació bancària per ONG | Summa Social',
-    description: "Com controlar els moviments bancaris d'una ONG i classificar ingressos i despeses sense Excel.",
+    description:
+      "Importa extractes i classifica ingressos, despeses, quotes i donacions amb una conciliació bancària pensada per a ONG i associacions.",
   },
   es: {
     title: 'Conciliación bancaria para ONG | Summa Social',
-    description: 'Cómo controlar los movimientos bancarios de una ONG y clasificar ingresos y gastos sin Excel.',
+    description:
+      'Importa extractos y clasifica ingresos, gastos, cuotas y donaciones con una conciliación bancaria pensada para ONG y asociaciones.',
   },
   fr: {
     title: 'Conciliation bancaire pour associations | Summa Social',
@@ -1697,12 +1699,14 @@ const BANK_RECONCILIATION_ONG_CONTENT_ES: PublicLandingContent = {
 
 const DONATIONS_CONTROL_ONG_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
-    title: 'Control de donacions per ONG | Summa Social',
-    description: "Com controlar les donacions d'una ONG i tenir una base clara de donants i aportacions.",
+    title: 'Control de donacions i donants per a ONG | Summa Social',
+    description:
+      'Centralitza aportacions, donants i devolucions per saber qui dona, quant dona i quina base fiscal té l’entitat.',
   },
   es: {
-    title: 'Control de donaciones para ONG | Summa Social',
-    description: 'Cómo controlar las donaciones de una ONG y tener una base clara de donantes y aportaciones.',
+    title: 'Control de donaciones y donantes para ONG | Summa Social',
+    description:
+      'Centraliza aportaciones, donantes y devoluciones para saber quién dona, cuánto dona y qué base fiscal tiene la entidad.',
   },
   fr: {
     title: 'Controle des dons pour associations | Summa Social',
@@ -2470,12 +2474,12 @@ const ASSOCIATIONS_PROGRAM_CONTENT_ES: PublicLandingContent = {
 
 const DONOR_MANAGEMENT_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
-    title: 'Gestió de donants per a entitats socials | Software de gestió | Summa Social',
+    title: 'Programa de gestió de donants per a ONG | Summa Social',
     description:
       "Centralitza socis i donants en una base clara, amb historial d'aportacions i suport per a certificats i Model 182.",
   },
   es: {
-    title: 'Gestión de donantes para entidades sociales | Software de gestión | Summa Social',
+    title: 'Programa de gestión de donantes para ONG | Summa Social',
     description:
       'Centraliza socios y donantes en una base clara, con historial de aportaciones y soporte para certificados y Modelo 182.',
   },
@@ -2984,14 +2988,14 @@ const MODEL_347_ONG_CONTENT_ES: PublicLandingContent = {
 
 const RETURNED_RECEIPTS_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
-    title: 'Devolucions de rebuts de socis | Software de gestió per a entitats | Summa Social',
+    title: 'Devolucions de rebuts en associacions: com gestionar-les | Summa Social',
     description:
-      'Gestiona rebuts retornats i devolucions bancàries sense perdre el fil fiscal. Assigna cada devolució al soci correcte dins de Summa Social.',
+      'Com registrar rebuts retornats, relacionar-los amb cada soci i mantenir ben revisades les quotes, remeses i dades fiscals.',
   },
   es: {
-    title: 'Devoluciones de recibos de socios | Software de gestión para entidades | Summa Social',
+    title: 'Devoluciones de recibos en asociaciones: cómo gestionarlas | Summa Social',
     description:
-      'Gestiona recibos devueltos y devoluciones bancarias sin perder el hilo fiscal. Asigna cada devolución al socio correcto dentro de Summa Social.',
+      'Cómo registrar recibos devueltos, relacionarlos con cada socio y mantener bien revisadas las cuotas, remesas y datos fiscales.',
   },
   fr: {
     title: 'Rejets de recus de membres | Summa Social',

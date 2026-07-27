@@ -28,6 +28,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: '/media/:path*.vtt',
+        headers: [
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex',
+          },
+        ],
+      },
+      {
         source: '/:path*',
         headers: [
           {
