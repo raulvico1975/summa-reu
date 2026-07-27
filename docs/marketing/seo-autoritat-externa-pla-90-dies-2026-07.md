@@ -10,6 +10,14 @@ Durant els pròxims 90 dies l’objectiu no és prometre primers llocs, sinó co
 2. pàgines comercials clares i prudents, amb confiança verificable;
 3. distribució sectorial basada en relacions reals i contingut útil.
 
+## Lectura actual de Search Console
+
+La revisió del 27 de juliol de 2026 confirma que el web ja té senyals inicials, però encara poc volum: 275 impressions, 11 clics, un CTR del 4% i una posició mitjana de 8,8 en els darrers tres mesos.
+
+La primera oportunitat no és una consulta genèrica de software. La landing castellana de certificats de donació acumula 54 impressions i 3 clics, mentre que un article sobre devolucions de rebuts acumula 52 impressions i cap clic. Per tant, el primer paquet d’optimització ha de reforçar certificats, donants, remeses i devolucions abans de crear noves URL.
+
+Search Console també mostra 42 URL rastrejades però no indexades. La majoria de landings comercials ja limiten correctament la indexació a CA/ES; cal reforçar els enllaços interns cap a aquestes versions i evitar que els recursos auxiliars, com els subtítols `.vtt`, apareguin com a candidats de contingut.
+
 ## Mercat i intencions prioritàries
 
 El focus comercial és Catalunya i Espanya. Les pàgines catalanes i castellanes han de respondre problemes concrets de responsables d’administració, coordinació i tresoreria d’entitats socials.
