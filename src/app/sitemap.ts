@@ -6,6 +6,10 @@ import { getPublicLandingSitemapEntries } from '@/lib/public-landings';
 
 const BASE_URL = 'https://summasocial.app';
 const CONTENT_LOCALES: PublicLocale[] = ['ca', 'es'];
+const PUBLIC_RESOURCE_ROUTES: Array<{ locale: PublicLocale; path: string }> = [
+  { locale: 'ca', path: '/recursos/plantilla-conciliacio-bancaria' },
+  { locale: 'es', path: '/recursos/plantilla-conciliacion-bancaria' },
+];
 const PUBLIC_STATIC_ROUTES: Array<{
   path: string;
   locales: PublicLocale[];
@@ -42,6 +46,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${BASE_URL}/${entry.locale}/${entry.slug}`,
     changeFrequency: 'monthly',
     priority: entry.locale === 'ca' ? 0.82 : 0.74,
+  }));
+  const resourceEntries: MetadataRoute.Sitemap = PUBLIC_RESOURCE_ROUTES.map((entry) => ({
+    url: `${BASE_URL}/${entry.locale}${entry.path}`,
+    changeFrequency: 'monthly',
+    priority: 0.78,
   }));
 
   let updatesByLocale: Array<{
@@ -92,5 +101,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
   });
 
-  return [...staticEntries, ...landingEntries, ...updateEntries, ...localizedBlogEntries];
+  return [
+    ...staticEntries,
+    ...landingEntries,
+    ...resourceEntries,
+    ...updateEntries,
+    ...localizedBlogEntries,
+  ];
 }

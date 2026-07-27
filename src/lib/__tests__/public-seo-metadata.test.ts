@@ -12,6 +12,7 @@ import {
 import { getPublicHomeFeatureHref } from '@/lib/public-site-paths';
 import { generateMetadata as generateFloresCaseMetadata } from '@/app/public/[lang]/casos/flores-de-kiskeya/page';
 import { generateMetadata as generateTrustMetadata } from '@/app/public/[lang]/confianza/page';
+import { generateMetadata as generateBankResourceMetadata } from '@/app/public/[lang]/recursos/[resourceSlug]/page';
 
 test('public metadata limits hreflang and canonical to publishable locales', () => {
   const metadata = generatePublicPageMetadata('fr', '/model-182', {
@@ -72,6 +73,36 @@ test('Flores case and trust pages publish only Catalan and Spanish alternates', 
     es: 'https://summasocial.app/es/confianza',
     'x-default': 'https://summasocial.app/ca/confianza',
   });
+});
+
+test('free bank reconciliation resource uses localized canonical URLs', async () => {
+  const caMetadata = await generateBankResourceMetadata({
+    params: Promise.resolve({
+      lang: 'ca',
+      resourceSlug: 'plantilla-conciliacio-bancaria',
+    }),
+  });
+  const esMetadata = await generateBankResourceMetadata({
+    params: Promise.resolve({
+      lang: 'es',
+      resourceSlug: 'plantilla-conciliacion-bancaria',
+    }),
+  });
+
+  assert.equal(
+    caMetadata.alternates?.canonical,
+    'https://summasocial.app/ca/recursos/plantilla-conciliacio-bancaria'
+  );
+  assert.equal(
+    esMetadata.alternates?.canonical,
+    'https://summasocial.app/es/recursos/plantilla-conciliacion-bancaria'
+  );
+  assert.deepEqual(caMetadata.alternates?.languages, {
+    ca: 'https://summasocial.app/ca/recursos/plantilla-conciliacio-bancaria',
+    es: 'https://summasocial.app/es/recursos/plantilla-conciliacion-bancaria',
+    'x-default': 'https://summasocial.app/ca/recursos/plantilla-conciliacio-bancaria',
+  });
+  assert.deepEqual(caMetadata.robots, { index: true, follow: true });
 });
 
 test('certificate and Model 182 copy avoids absolute error-free or automatic claims', () => {

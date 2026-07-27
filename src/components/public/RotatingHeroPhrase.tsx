@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 type RotatingHeroPhraseProps = {
@@ -25,8 +25,8 @@ export function RotatingHeroPhrase({
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const activeIndexRef = useRef(0);
 
-  const longestItem = useMemo(
-    () => items.reduce((longest, item) => (item.length > longest.length ? item : longest), items[0] ?? ''),
+  const reservedWidth = useMemo(
+    () => Math.max(...items.map((item) => Array.from(item).length), 0),
     [items]
   );
 
@@ -93,35 +93,37 @@ export function RotatingHeroPhrase({
   }
 
   const currentItem = items[activeIndex] ?? '';
+  const leavingItem = leavingIndex === null ? null : items[leavingIndex] ?? null;
 
   return (
-    <span className={cn('relative inline-grid px-1 align-baseline', className)}>
-      <span className="sr-only">{currentItem}</span>
-      <span aria-hidden="true" className="invisible col-start-1 row-start-1 whitespace-nowrap">
-        {longestItem}
-      </span>
-      <span aria-hidden="true" className="relative col-start-1 row-start-1 inline-grid overflow-hidden whitespace-nowrap">
-        {items.map((item, index) => {
-          const isActive = index === activeIndex;
-          const isLeaving = index === leavingIndex;
-
-          return (
-            <span
-              key={`${item}-${index}`}
-              className={cn(
-                'relative z-10 col-start-1 row-start-1 whitespace-nowrap transition-[transform,opacity] duration-500 ease-out',
-                isActive
-                  ? 'translate-y-0 opacity-100'
-                  : isLeaving
-                    ? '-translate-y-[0.7em] opacity-0'
-                    : 'translate-y-[0.7em] opacity-0',
-                itemClassName
-              )}
-            >
-              {item}
-            </span>
-          );
-        })}
+    <span
+      className={cn(
+        'relative inline-grid max-w-full px-1 align-baseline max-sm:text-[0.88em]',
+        className
+      )}
+      style={{ width: `min(${reservedWidth}ch, 100%)` }}
+    >
+      <span className="relative col-start-1 row-start-1 inline-grid overflow-hidden whitespace-nowrap">
+        {leavingItem ? (
+          <span
+            aria-hidden="true"
+            className={cn(
+              'relative z-10 col-start-1 row-start-1 -translate-y-[0.7em] whitespace-nowrap opacity-0 transition-[transform,opacity] duration-500 ease-out',
+              itemClassName
+            )}
+          >
+            {leavingItem}
+          </span>
+        ) : null}
+        <span
+          key={`${currentItem}-${activeIndex}`}
+          className={cn(
+            'summa-hero-phrase-enter relative z-10 col-start-1 row-start-1 whitespace-nowrap',
+            itemClassName
+          )}
+        >
+          {currentItem}
+        </span>
         <span className="pointer-events-none absolute inset-0 z-0">
           <span className="summa-hero-focus-wash absolute left-[4%] top-[0.04em] h-[0.92em] w-[84%] rounded-[999px]" />
         </span>

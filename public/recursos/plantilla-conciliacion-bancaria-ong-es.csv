@@ -1,0 +1,2 @@
+fecha_movimiento;cuenta;referencia_bancaria;concepto;importe_bancario;importe_registro_interno;diferencia;estado;persona_responsable;fecha_revision;observaciones
+2026-01-15;Cuenta principal;EJEMPLO-001;Cuota socio enero;50,00;50,00;0,00;Conciliado;Nombre revisor/a;2026-01-31;Fila de ejemplo: elimínala antes de empezar

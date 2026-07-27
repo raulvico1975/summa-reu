@@ -1704,6 +1704,25 @@ reconcile_postdeploy_result() {
   echo ""
 }
 
+notify_indexnow_after_deploy() {
+  CURRENT_PHASE="Avisar IndexNow"
+  echo "[8e/9] Avisant IndexNow..."
+  echo ""
+
+  if [ "$DEPLOY_RESULT" != "OK" ]; then
+    echo "  IndexNow omès perquè el desplegament encara no està confirmat."
+    echo ""
+    return
+  fi
+
+  if NODE_ENV=production node --import tsx "$SCRIPT_DIR/marketing/submit-indexnow.ts" --from-sitemap; then
+    echo "  IndexNow notificat. És un avís de descobriment, no una garantia d’indexació."
+  else
+    echo "  AVÍS: IndexNow no s’ha pogut notificar. El desplegament continua sent vàlid."
+  fi
+  echo ""
+}
+
 # ============================================================
 # PAS 9 — Deploy log
 # ============================================================
@@ -1925,6 +1944,7 @@ main() {
   post_production_3min_check
   run_fiscal_oracle_postdeploy_monitor
   reconcile_postdeploy_result
+  notify_indexnow_after_deploy
   prepare_rollback_plan
   append_deploy_log          # Pas 9
   commit_deploy_logs_if_needed

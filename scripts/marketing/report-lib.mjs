@@ -5,6 +5,14 @@ const PUBLIC_PATH_PATTERN = /^\/(?:$|(?:ca|es|fr|pt|blog)(?:\/|$))/;
 const ASSET_PATH_PATTERN =
   /(?:\/_next\/|\/api\/|\/__|\.(?:js|css|png|jpe?g|webp|svg|ico|woff2?|map|json|xml|txt|mp4|vtt|pdf)$)/i;
 
+const AI_CRAWLERS = [
+  { id: 'oai-searchbot', label: 'OAI-SearchBot', pattern: /OAI-SearchBot/i },
+  { id: 'chatgpt-user', label: 'ChatGPT-User', pattern: /ChatGPT-User/i },
+  { id: 'gptbot', label: 'GPTBot', pattern: /GPTBot/i },
+  { id: 'claudebot', label: 'ClaudeBot', pattern: /ClaudeBot/i },
+  { id: 'perplexitybot', label: 'PerplexityBot', pattern: /PerplexityBot/i },
+];
+
 function parseIsoDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new Error(`Data invàlida: ${value}. Format esperat: YYYY-MM-DD.`);
@@ -77,10 +85,60 @@ export function mapSearchConsoleRows(response, dimension) {
   }));
 }
 
-export function summarizeHostingEntries(entries, { limit = 50_000 } = {}) {
+function ipv4ToInteger(value) {
+  const parts = String(value).trim().split('.');
+  if (parts.length !== 4) return null;
+
+  let integer = 0;
+  for (const part of parts) {
+    if (!/^\d{1,3}$/.test(part)) return null;
+    const octet = Number(part);
+    if (octet < 0 || octet > 255) return null;
+    integer = ((integer << 8) | octet) >>> 0;
+  }
+  return integer;
+}
+
+export function isIpv4InCidr(ip, cidr) {
+  const [networkValue, prefixValue] = String(cidr).split('/');
+  const ipInteger = ipv4ToInteger(ip);
+  const networkInteger = ipv4ToInteger(networkValue);
+  const prefix = Number(prefixValue);
+
+  if (
+    ipInteger === null ||
+    networkInteger === null ||
+    !Number.isInteger(prefix) ||
+    prefix < 0 ||
+    prefix > 32
+  ) {
+    return false;
+  }
+
+  const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+  return ((ipInteger & mask) >>> 0) === ((networkInteger & mask) >>> 0);
+}
+
+export function summarizeHostingEntries(
+  entries,
+  { limit = 50_000, openAiSearchBotPrefixes = [] } = {}
+) {
   const uniqueIpDays = new Set();
   const uniqueIps = new Set();
   const topPages = new Map();
+  const aiCrawlerStats = new Map(
+    AI_CRAWLERS.map((crawler) => [
+      crawler.id,
+      {
+        crawler: crawler.id,
+        label: crawler.label,
+        declaredRequests: 0,
+        successfulRequests: 0,
+        verifiedRequests: 0,
+        uniquePaths: new Set(),
+      },
+    ])
+  );
   let obviousBotRequests = 0;
   let publicPageRequests = 0;
 
@@ -100,6 +158,22 @@ export function summarizeHostingEntries(entries, { limit = 50_000 } = {}) {
 
     const isBot = BOT_PATTERN.test(userAgent);
     if (isBot) obviousBotRequests += 1;
+
+    const aiCrawler = AI_CRAWLERS.find((candidate) => candidate.pattern.test(userAgent));
+    if (aiCrawler) {
+      const stats = aiCrawlerStats.get(aiCrawler.id);
+      stats.declaredRequests += 1;
+      if (status > 0 && status < 400) stats.successfulRequests += 1;
+      stats.uniquePaths.add(url.pathname);
+
+      const remoteIp = String(request.remoteIp || '');
+      if (
+        aiCrawler.id === 'oai-searchbot' &&
+        openAiSearchBotPrefixes.some((prefix) => isIpv4InCidr(remoteIp, prefix))
+      ) {
+        stats.verifiedRequests += 1;
+      }
+    }
 
     const isPublicDocument =
       PUBLIC_PATH_PATTERN.test(url.pathname) &&
@@ -130,6 +204,21 @@ export function summarizeHostingEntries(entries, { limit = 50_000 } = {}) {
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .slice(0, 10)
       .map(([page, requests]) => ({ page, requests })),
+    aiCrawlers: [...aiCrawlerStats.values()]
+      .filter((stats) => stats.declaredRequests > 0)
+      .sort(
+        (a, b) =>
+          b.declaredRequests - a.declaredRequests ||
+          a.label.localeCompare(b.label)
+      )
+      .map((stats) => ({
+        crawler: stats.crawler,
+        label: stats.label,
+        declaredRequests: stats.declaredRequests,
+        successfulRequests: stats.successfulRequests,
+        verifiedRequests: stats.verifiedRequests,
+        uniquePaths: stats.uniquePaths.size,
+      })),
   };
 }
 
@@ -201,6 +290,48 @@ export function renderMarketingMarkdown(report) {
       `| Intencions de contacte | ${formatNumber(report.ga4.events.contact_intent || 0)} | — | — |`,
       ''
     );
+
+    const aiReferrals = report.ga4.aiReferrals;
+    if (aiReferrals?.status === 'ok') {
+      const aiCurrent = aiReferrals.current;
+      const aiPrevious = aiReferrals.previous;
+      lines.push(
+        '## Visites procedents d’assistents d’IA',
+        '',
+        '| Mètrica | Actual | Anterior | Canvi |',
+        '|---|---:|---:|---:|',
+        `| Sessions atribuïdes | ${formatNumber(aiCurrent.sessions)} | ${formatNumber(aiPrevious.sessions)} | ${renderDelta(aiCurrent.sessions, aiPrevious.sessions)} |`,
+        `| Usuaris actius | ${formatNumber(aiCurrent.activeUsers)} | ${formatNumber(aiPrevious.activeUsers)} | ${renderDelta(aiCurrent.activeUsers, aiPrevious.activeUsers)} |`,
+        ''
+      );
+
+      const topAiLandings = aiReferrals.topLandingPages || [];
+      if (topAiLandings.length > 0) {
+        lines.push(
+          '| Assistent/font | Pàgina d’entrada | Sessions | Usuaris |',
+          '|---|---|---:|---:|',
+          ...topAiLandings.map(
+            (row) =>
+              `| ${row.source} | ${row.landingPage || '/'} | ${formatNumber(row.sessions)} | ${formatNumber(row.activeUsers)} |`
+          ),
+          ''
+        );
+      } else {
+        lines.push(
+          '- No hi ha sessions atribuïdes a les fonts d’IA monitorades en aquest període.',
+          '- Zero sessions atribuïdes no significa necessàriament zero mencions o citacions.',
+          ''
+        );
+      }
+    } else if (aiReferrals?.status === 'unavailable') {
+      lines.push(
+        '## Visites procedents d’assistents d’IA',
+        '',
+        `- No disponibles en aquest informe: ${aiReferrals.reason || 'motiu desconegut'}.`,
+        '- La resta de mètriques de GA4 continuen sent vàlides.',
+        ''
+      );
+    }
   }
 
   if (report.hosting?.status === 'ok') {
@@ -217,6 +348,26 @@ export function renderMarketingMarkdown(report) {
         : '',
       ''
     );
+
+    const aiCrawlers = report.hosting.current.aiCrawlers || [];
+    if (aiCrawlers.length > 0) {
+      lines.push(
+        '## Rastreig declarat per assistents d’IA',
+        '',
+        '| Rastrejador declarat | Peticions | Resposta < 400 | IP verificada | Rutes úniques |',
+        '|---|---:|---:|---:|---:|',
+        ...aiCrawlers.map(
+          (crawler) =>
+            `| ${crawler.label} | ${formatNumber(crawler.declaredRequests)} | ${formatNumber(crawler.successfulRequests)} | ${crawler.crawler === 'oai-searchbot' ? formatNumber(crawler.verifiedRequests) : 'No disponible'} | ${formatNumber(crawler.uniquePaths)} |`
+        ),
+        '',
+        report.hosting.openAiVerification?.status === 'ok'
+          ? '- OAI-SearchBot es contrasta amb els rangs IP oficials d’OpenAI vigents en el moment de l’informe.'
+          : `- No s’han pogut carregar els rangs IP oficials d’OpenAI: ${report.hosting.openAiVerification?.reason || 'motiu desconegut'}.`,
+        '- Per als altres rastrejadors, el nom del User-Agent és només una declaració i no prova la identitat.',
+        ''
+      );
+    }
   }
 
   lines.push(

@@ -13,6 +13,17 @@ import {
 
 const DEFAULT_SITE_URL = 'sc-domain:summasocial.app';
 const LOG_LIMIT = 50_000;
+const OPENAI_SEARCHBOT_IP_RANGES_URL = 'https://openai.com/searchbot.json';
+const AI_REFERRAL_SOURCE_PARTS = [
+  'chatgpt.com',
+  'chat.openai.com',
+  'perplexity.ai',
+  'claude.ai',
+  'gemini.google.com',
+  'copilot.microsoft.com',
+  'chat.mistral.ai',
+  'poe.com',
+];
 
 function parseArgs(argv) {
   const options = {
@@ -134,6 +145,32 @@ function mapGa4MetricRow(response) {
   );
 }
 
+function mapGa4AiReferralRows(response) {
+  return (response?.rows || []).map((row) => ({
+    source: row.dimensionValues?.[0]?.value || '(desconeguda)',
+    landingPage: row.dimensionValues?.[1]?.value || '/',
+    sessions: Number(row.metricValues?.[0]?.value || 0),
+    activeUsers: Number(row.metricValues?.[1]?.value || 0),
+  }));
+}
+
+function buildAiReferralFilter() {
+  return {
+    orGroup: {
+      expressions: AI_REFERRAL_SOURCE_PARTS.map((value) => ({
+        filter: {
+          fieldName: 'sessionSource',
+          stringFilter: {
+            matchType: 'CONTAINS',
+            value,
+            caseSensitive: false,
+          },
+        },
+      })),
+    },
+  };
+}
+
 async function queryGa4(accessToken, propertyId, body) {
   return fetchJson(
     `https://analyticsdata.googleapis.com/v1beta/properties/${encodeURIComponent(propertyId)}:runReport`,
@@ -199,6 +236,41 @@ async function readGa4(accessToken, propertyId, periods) {
       sessions: Number(row.metricValues?.[0]?.value || 0),
       activeUsers: Number(row.metricValues?.[1]?.value || 0),
     }));
+    let aiReferrals;
+    try {
+      const [currentAiSummary, previousAiSummary, currentAiDetail] = await Promise.all([
+        queryGa4(accessToken, propertyId, {
+          dateRanges: [periods.current],
+          metrics: [{ name: 'sessions' }, { name: 'activeUsers' }],
+          dimensionFilter: buildAiReferralFilter(),
+        }),
+        queryGa4(accessToken, propertyId, {
+          dateRanges: [periods.previous],
+          metrics: [{ name: 'sessions' }, { name: 'activeUsers' }],
+          dimensionFilter: buildAiReferralFilter(),
+        }),
+        queryGa4(accessToken, propertyId, {
+          dateRanges: [periods.current],
+          dimensions: [{ name: 'sessionSource' }, { name: 'landingPagePlusQueryString' }],
+          metrics: [{ name: 'sessions' }, { name: 'activeUsers' }],
+          dimensionFilter: buildAiReferralFilter(),
+          orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+          limit: 100,
+        }),
+      ]);
+
+      aiReferrals = {
+        status: 'ok',
+        current: mapGa4MetricRow(currentAiSummary),
+        previous: mapGa4MetricRow(previousAiSummary),
+        topLandingPages: mapGa4AiReferralRows(currentAiDetail).slice(0, 10),
+      };
+    } catch (error) {
+      aiReferrals = {
+        status: 'unavailable',
+        reason: error instanceof Error ? error.message : String(error),
+      };
+    }
 
     return {
       status: 'ok',
@@ -206,13 +278,14 @@ async function readGa4(accessToken, propertyId, periods) {
       previous: mapGa4MetricRow(previousResponse),
       events,
       landingPages,
+      aiReferrals,
     };
   } catch (error) {
     return { status: 'unavailable', reason: error instanceof Error ? error.message : String(error) };
   }
 }
 
-function queryHostingPeriod(period) {
+function queryHostingPeriodEntries(period) {
   const exclusiveEnd = new Date(`${period.endDate}T00:00:00Z`);
   exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1);
   const endTimestamp = exclusiveEnd.toISOString();
@@ -244,17 +317,62 @@ function queryHostingPeriod(period) {
     }
   );
 
-  return summarizeHostingEntries(JSON.parse(output || '[]'), { limit: LOG_LIMIT });
+  return JSON.parse(output || '[]');
 }
 
-function readHosting(periods, includeHosting) {
+async function readOpenAiSearchBotPrefixes() {
+  try {
+    const payload = await fetchJson(
+      OPENAI_SEARCHBOT_IP_RANGES_URL,
+      {},
+      'Rangs IP oficials d’OAI-SearchBot'
+    );
+    const prefixes = (payload?.prefixes || [])
+      .map((entry) => entry?.ipv4Prefix)
+      .filter((value) => typeof value === 'string' && value.includes('/'));
+
+    if (prefixes.length === 0) {
+      throw new Error('la resposta oficial no conté rangs IPv4');
+    }
+
+    return {
+      status: 'ok',
+      source: OPENAI_SEARCHBOT_IP_RANGES_URL,
+      creationTime: payload.creationTime || null,
+      prefixes,
+    };
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      source: OPENAI_SEARCHBOT_IP_RANGES_URL,
+      reason: error instanceof Error ? error.message : String(error),
+      prefixes: [],
+    };
+  }
+}
+
+async function readHosting(periods, includeHosting) {
   if (!includeHosting) return { status: 'unavailable', reason: 'omès amb --no-hosting' };
 
   try {
+    const openAiVerification = await readOpenAiSearchBotPrefixes();
+    const currentEntries = queryHostingPeriodEntries(periods.current);
+    const previousEntries = queryHostingPeriodEntries(periods.previous);
+    const summarizeOptions = {
+      limit: LOG_LIMIT,
+      openAiSearchBotPrefixes: openAiVerification.prefixes,
+    };
+
     return {
       status: 'ok',
-      current: queryHostingPeriod(periods.current),
-      previous: queryHostingPeriod(periods.previous),
+      openAiVerification: {
+        status: openAiVerification.status,
+        source: openAiVerification.source,
+        creationTime: openAiVerification.creationTime ?? null,
+        reason: openAiVerification.reason ?? null,
+      },
+      current: summarizeHostingEntries(currentEntries, summarizeOptions),
+      previous: summarizeHostingEntries(previousEntries, summarizeOptions),
     };
   } catch (error) {
     return { status: 'unavailable', reason: error instanceof Error ? error.message : String(error) };
@@ -268,11 +386,11 @@ async function main() {
   const siteUrl = process.env.SEARCH_CONSOLE_SITE_URL || DEFAULT_SITE_URL;
   const propertyId = process.env.GA4_PROPERTY_ID || '';
 
-  const [searchConsole, ga4] = await Promise.all([
+  const [searchConsole, ga4, hosting] = await Promise.all([
     readSearchConsole(accessToken, siteUrl, periods),
     readGa4(accessToken, propertyId, periods),
+    readHosting(periods, options.includeHosting),
   ]);
-  const hosting = readHosting(periods, options.includeHosting);
   const report = {
     generatedAt: new Date().toISOString(),
     periods,
