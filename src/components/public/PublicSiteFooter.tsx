@@ -14,6 +14,7 @@ const FOOTER_COPY: Record<
     trust: string
     socials: string
     socialsNote: string
+    bankTemplate: string
   }
 > = {
   ca: {
@@ -23,6 +24,7 @@ const FOOTER_COPY: Record<
     trust: 'Confiança i dades',
     socials: 'Xarxes',
     socialsNote: 'LinkedIn i Instagram ben aviat.',
+    bankTemplate: 'Plantilla de conciliació bancària',
   },
   es: {
     sitemap: 'Mapa del sitio',
@@ -31,6 +33,7 @@ const FOOTER_COPY: Record<
     trust: 'Confianza y datos',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram, muy pronto.',
+    bankTemplate: 'Plantilla de conciliación bancaria',
   },
   fr: {
     sitemap: 'Plan du site',
@@ -39,6 +42,7 @@ const FOOTER_COPY: Record<
     trust: 'Confiance et données',
     socials: 'Réseaux',
     socialsNote: 'LinkedIn et Instagram arrivent bientôt.',
+    bankTemplate: 'Modèle de rapprochement bancaire',
   },
   pt: {
     sitemap: 'Mapa do site',
@@ -47,6 +51,7 @@ const FOOTER_COPY: Record<
     trust: 'Confiança e dados',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram em breve.',
+    bankTemplate: 'Modelo de conciliação bancária',
   },
 }
 
@@ -62,6 +67,10 @@ export function PublicSiteFooter({ locale }: PublicSiteFooterProps) {
   const blogHref = `/${locale}/blog`
   const hasPublicManual = locale === 'ca' || locale === 'es'
   const hasPublicProofPages = locale === 'ca' || locale === 'es'
+  const bankTemplateHref =
+    locale === 'ca'
+      ? '/ca/recursos/plantilla-conciliacio-bancaria'
+      : '/es/recursos/plantilla-conciliacion-bancaria'
 
   return (
     <footer className="border-t bg-muted/20 py-12">
@@ -94,9 +103,14 @@ export function PublicSiteFooter({ locale }: PublicSiteFooterProps) {
               {t.common.blog}
             </Link>
             {hasPublicManual && (
-              <Link href={`/${locale}/manual`} className="hover:text-foreground hover:underline">
-                {FOOTER_COPY[locale].manual}
-              </Link>
+              <>
+                <Link href={`/${locale}/manual`} className="hover:text-foreground hover:underline">
+                  {FOOTER_COPY[locale].manual}
+                </Link>
+                <Link href={bankTemplateHref} className="hover:text-foreground hover:underline">
+                  {FOOTER_COPY[locale].bankTemplate}
+                </Link>
+              </>
             )}
             {hasPublicProofPages && (
               <>

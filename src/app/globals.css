@@ -251,6 +251,10 @@
   animation-delay: 0.12s;
 }
 
+.summa-hero-phrase-enter {
+  animation: summa-hero-phrase-enter 0.46s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .summa-editorial-mark-path {
   fill: none;
   stroke: rgba(14, 165, 233, 0.54);
@@ -368,7 +372,23 @@
   }
 }
 
+@keyframes summa-hero-phrase-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.7em);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .summa-hero-phrase-enter {
+    animation: none;
+  }
+
   .summa-hero-focus-wash {
     animation: none;
   }

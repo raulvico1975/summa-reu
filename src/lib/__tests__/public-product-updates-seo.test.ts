@@ -7,6 +7,11 @@ import {
   buildPublicProductUpdateJsonLd,
   buildPublicUpdatesCollectionJsonLd,
 } from '@/lib/public-seo';
+import {
+  getPublicLandingBySlug,
+  getPublicLandingIndexedLocales,
+  getPublicLandingSlugs,
+} from '@/lib/public-landings';
 
 function request(url: string, method = 'GET', forwardedHost?: string): NextRequest {
   const parsed = new URL(url);
@@ -29,6 +34,27 @@ test('legacy and internal updates paths resolve to one localized public URL', ()
     '/es/novetats/millora-setmanal'
   );
   assert.equal(resolveCanonicalPublicPath('/ca/novetats'), '/ca/novetats');
+});
+
+test('French and Portuguese placeholder landings permanently consolidate into Spanish', () => {
+  for (const slug of getPublicLandingSlugs()) {
+    const landing = getPublicLandingBySlug(slug);
+    assert.ok(landing);
+    assert.deepEqual(getPublicLandingIndexedLocales(landing).sort(), ['ca', 'es']);
+
+    assert.equal(resolveCanonicalPublicPath(`/fr/${slug}`), `/es/${slug}`);
+    assert.equal(resolveCanonicalPublicPath(`/pt/${slug}`), `/es/${slug}`);
+    assert.equal(resolveCanonicalPublicPath(`/public/fr/${slug}`), `/es/${slug}`);
+  }
+
+  const response = middleware(
+    request('https://summasocial.app/pt/model-182?utm_source=legacy')
+  );
+  assert.equal(response.status, 308);
+  assert.equal(
+    response.headers.get('location'),
+    'https://summasocial.app/es/model-182?utm_source=legacy'
+  );
 });
 
 test('middleware permanently redirects the unlocalized updates route and preserves query params', () => {

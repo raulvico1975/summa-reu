@@ -41,6 +41,22 @@ const LEGACY_PUBLIC_PATHS = new Map<string, string>([
   ['/es/novedades', '/es/novetats'],
 ]);
 
+const CA_ES_ONLY_LANDING_SLUGS = new Set([
+  'model-182',
+  'certificats-donacio',
+  'model-347-ong',
+  'remeses-sepa',
+  'devolucions-rebuts-socis',
+  'conciliacio-bancaria-ong',
+  'importar-extracte-bancari',
+  'gestio-donants',
+  'control-donacions-ong',
+  'gestio-projectes-justificacio',
+  'control-visibilitat-entitats',
+  'software-gestion-ong',
+  'programa-associacions',
+]);
+
 function normalizeHost(host: string): string {
   return host.trim().toLowerCase().replace(/:\d+$/, '');
 }
@@ -59,11 +75,19 @@ function isLocalDevelopmentHost(host: string): boolean {
  */
 export function resolveCanonicalPublicPath(pathname: string): string {
   const internalPublicMatch = pathname.match(/^\/public\/(ca|es|fr|pt)(\/.*)?$/);
-  if (internalPublicMatch) {
-    return `/${internalPublicMatch[1]}${internalPublicMatch[2] ?? ''}`;
+  const externalPathname = internalPublicMatch
+    ? `/${internalPublicMatch[1]}${internalPublicMatch[2] ?? ''}`
+    : pathname;
+  const unsupportedLandingMatch = externalPathname.match(/^\/(fr|pt)\/([^/]+)\/?$/);
+
+  if (
+    unsupportedLandingMatch &&
+    CA_ES_ONLY_LANDING_SLUGS.has(unsupportedLandingMatch[2])
+  ) {
+    return `/es/${unsupportedLandingMatch[2]}`;
   }
 
-  return LEGACY_PUBLIC_PATHS.get(pathname) ?? pathname;
+  return LEGACY_PUBLIC_PATHS.get(externalPathname) ?? externalPathname;
 }
 
 export function middleware(request: NextRequest) {

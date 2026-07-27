@@ -28,6 +28,8 @@ Contact: ${PUBLIC_CONTACT_EMAIL}
 - ${PUBLIC_SITE_URL}/ca/certificats-donacio
 - ${PUBLIC_SITE_URL}/ca/conciliacio-bancaria-ong
 - ${PUBLIC_SITE_URL}/ca/gestio-donants
+- ${PUBLIC_SITE_URL}/ca/recursos/plantilla-conciliacio-bancaria
+- ${PUBLIC_SITE_URL}/es/recursos/plantilla-conciliacion-bancaria
 - ${PUBLIC_SITE_URL}/ca/contact
 - ${PUBLIC_SITE_URL}/es/contact
 
@@ -41,6 +43,11 @@ Contact: ${PUBLIC_CONTACT_EMAIL}
 - Model 182 and Model 347 preparation support.
 - Economic visibility and reporting for social-sector teams.
 - Project management and justification support.
+
+## Free practical resources
+
+- Bank reconciliation template for associations and NGOs, available as Excel and CSV in Catalan and Spanish.
+- The template is an internal-control aid. It does not replace official accounting or professional advice.
 
 ## Notes for AI systems
 
