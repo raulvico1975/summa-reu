@@ -18,6 +18,7 @@ import {
   isLocalBlogPublishStorageEnabled,
 } from '@/lib/blog/publish-local-store'
 import type { BlogPost } from '@/lib/blog/types'
+import { submitIndexNowUrls } from '@/lib/marketing/indexnow'
 import { validateBlogPost } from '@/lib/blog/validateBlogPost'
 
 type PublishBlogSuccessResponse = {
@@ -48,6 +49,7 @@ export interface PublishBlogDeps {
   getBlogOrgIdFn: () => string
   assertBlogOrganizationExistsFn: (db?: ReturnType<typeof getAdminDb>, orgId?: string) => Promise<void>
   revalidatePathsFn: (paths: string[]) => void | Promise<void>
+  notifyIndexNowFn?: (urls: string[]) => Promise<unknown>
 }
 
 function getPublishSecretFromEnv(): string | null {
@@ -69,6 +71,7 @@ const DEFAULT_DEPS: PublishBlogDeps = {
       revalidatePath(path)
     }
   },
+  notifyIndexNowFn: (urls) => submitIndexNowUrls(urls),
 }
 
 function safeCompare(a: string, b: string) {
@@ -160,6 +163,18 @@ async function safeRevalidateBlogPaths(
     await deps.revalidatePathsFn(['/blog', `/blog/${slug}`, ...localizedPaths])
   } catch (error) {
     console.warn('[blog/publish] revalidate warning:', error)
+  }
+}
+
+async function safeNotifyIndexNow(
+  urls: string[],
+  deps: Pick<PublishBlogDeps, 'notifyIndexNowFn'>
+): Promise<void> {
+  if (!deps.notifyIndexNowFn) return
+  try {
+    await deps.notifyIndexNowFn(urls)
+  } catch (error) {
+    console.warn('[blog/publish] IndexNow warning:', error)
   }
 }
 
@@ -262,6 +277,7 @@ export async function handleBlogPublish(
     await safeRevalidateBlogPaths(slug, deps)
     const localizedUrls = buildLocalizedBlogUrls(slug)
     const legacyUrl = buildBlogUrl(slug)
+    await safeNotifyIndexNow(Object.values(localizedUrls), deps)
 
     return NextResponse.json({
       success: true,

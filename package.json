@@ -68,6 +68,8 @@
     "perf:deps-audit": "node scripts/performance/bundle-deps-audit.mjs --out tmp/performance/deps-audit-latest.json",
     "perf:monthly": "node scripts/performance/monthly-performance-check.mjs",
     "marketing:report": "node scripts/marketing/marketing-report.mjs",
+    "marketing:templates": "node scripts/marketing/generate-bank-reconciliation-template.mjs",
+    "marketing:indexnow": "node --import tsx scripts/marketing/submit-indexnow.ts",
     "migrate:capabilities": "node scripts/migrations/backfill-member-capabilities.mjs",
     "images:landings:optimize": "node scripts/images/optimize-landing-assets.mjs"
     ,

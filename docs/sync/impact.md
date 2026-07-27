@@ -1,24 +1,23 @@
 # Impacte funcional i sincronitzacio documental
 
 ## Metadata
-- date: 2026-07-21
-- change_scope: reforcar la comunicacio, conversio, claredat d'URL i posicionament de les novetats dins de l'app i al web public
+- date: 2026-07-27
+- change_scope: reforcar el posicionament organic de Summa Social en cercadors i assistents d'IA
 
 ## Declaracio obligatoria
-- help_topics_updated: ["novetats del producte"]
+- help_topics_updated: []
 - manual_updated: no
 - manual_sections: []
-- faq_updated: yes
-- faq_questions: ["7¾. Com em puc assabentar de les novetats i millores de Summa Social?"]
-- justification_if_no_change: null
+- faq_updated: no
+- faq_questions: []
+- justification_if_no_change: canvi exclusiu del web public, dels actius descarregables i de la mesura de captacio; no altera l'operativa de l'aplicacio ni requereix instruccions d'usuari
 
 ## Notes
 
-- El generador setmanal prioritza resultats i benefici, amb seccions concretes en catala i castella.
-- Les rutes reconegudes poden afegir fins a dues accions segures dins de Summa; els canvis desconeguts no inventen botons.
-- Obrir el detall intern marca la novetat com a llegida i manté la lectura web com a accio secundaria.
-- La home publica mostra les dues novetats mes recents amb fallback segur, i el detall public incorpora CTA a demo i funcionalitats.
-- Les URLs oficials son `/ca/novetats` i `/es/novetats`; els accessos antics, interns o des del domini tecnic redirigeixen permanentment al domini public i a la ruta neta.
-- El llistat i el detall incorporen copy SEO mes descriptiu, navegacio publica completa i dades estructurades per explicar a cercadors que son actualitzacions de Summa Social.
-- Les novetats anteriors continuen sent compatibles sense migracio.
+- La home publica exposa un unic H1 semantic sense perdre l'animacio visual ni l'espai reservat entre frases.
+- Les landings comercials incompletes en frances i portugues redirigeixen permanentment a la versio castellana equivalent, conservant els parametres de campanya.
+- S'afegeix una plantilla gratuïta de conciliacio bancaria en catala i castella, en formats Excel i CSV, amb pagina indexable, dades estructurades i enllacos des del footer, el sitemap i `llms.txt`.
+- IndexNow queda integrat com a notificacio no bloquejant despres d'una publicacio o actualitzacio de blog i d'un deploy validat. No s'envia res en entorns locals o de prova.
+- L'informe de marketing separa les visites procedents de ChatGPT, Perplexity, Claude, Gemini i Copilot, i resumeix els rastrejadors d'IA declarats sense confondre'ls amb visites humanes.
+- OAI-SearchBot es contrasta amb els rangs IPv4 oficials publicats per OpenAI; la resta de rastrejadors queden etiquetats nomes com a declarats.
 - No hi ha dependencies noves, migracions ni canvis destructius de Firestore; tampoc s'escriu `undefined`.

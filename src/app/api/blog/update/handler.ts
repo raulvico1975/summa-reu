@@ -23,6 +23,7 @@ import {
 } from '@/lib/blog/validateBlogPostUpdate'
 import { validateBlogPost, type BlogPostPublishInput } from '@/lib/blog/validateBlogPost'
 import { PUBLIC_LOCALES } from '@/lib/public-locale'
+import { submitIndexNowUrls } from '@/lib/marketing/indexnow'
 
 type UpdateBlogSuccessResponse = {
   success: true
@@ -65,6 +66,7 @@ export interface UpdateBlogDeps {
   getBlogOrgIdFn: () => string
   assertBlogOrganizationExistsFn: (db?: ReturnType<typeof getAdminDb>, orgId?: string) => Promise<void>
   revalidatePathsFn: (paths: string[]) => void | Promise<void>
+  notifyIndexNowFn?: (urls: string[]) => Promise<unknown>
 }
 
 function getPublishSecretFromEnv(): string | null {
@@ -86,6 +88,7 @@ const DEFAULT_DEPS: UpdateBlogDeps = {
       revalidatePath(path)
     }
   },
+  notifyIndexNowFn: (urls) => submitIndexNowUrls(urls),
 }
 
 function safeCompare(a: string, b: string) {
@@ -408,6 +411,18 @@ async function safeRevalidateBlogPaths(
   }
 }
 
+async function safeNotifyIndexNow(
+  urls: string[],
+  deps: Pick<UpdateBlogDeps, 'notifyIndexNowFn'>
+): Promise<void> {
+  if (!deps.notifyIndexNowFn) return
+  try {
+    await deps.notifyIndexNowFn(urls)
+  } catch (error) {
+    console.warn('[blog/update] IndexNow warning:', error)
+  }
+}
+
 export async function handleBlogUpdate(
   request: RequestLike,
   deps: UpdateBlogDeps = DEFAULT_DEPS
@@ -514,6 +529,7 @@ export async function handleBlogUpdate(
     await safeRevalidateBlogPaths(slug, deps)
     const localizedUrls = buildLocalizedBlogUrls(slug)
     const legacyUrl = buildBlogUrl(slug)
+    await safeNotifyIndexNow(Object.values(localizedUrls), deps)
 
     return NextResponse.json({
       success: true,
