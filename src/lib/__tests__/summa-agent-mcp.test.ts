@@ -5,7 +5,10 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import * as XLSX from 'xlsx';
 import { SummaPrivateIntegrationClient } from '@/lib/summa-agent-mcp/client';
-import { SummaAgentMcpServer } from '@/lib/summa-agent-mcp/server';
+import {
+  parseEnabledToolNames,
+  SummaAgentMcpServer,
+} from '@/lib/summa-agent-mcp/server';
 import {
   MAX_BANK_STATEMENT_BYTES,
   parseBankStatementFile,
@@ -44,6 +47,50 @@ test('MCP lists the private Summa Agent tools', async () => {
     'link_pending_document_to_transaction',
     'get_entity_operational_summary',
   ]);
+});
+
+test('MCP allowlist exposes and dispatches only the three prepare-only tools', async () => {
+  const calls: string[] = [];
+  const client = new SummaPrivateIntegrationClient({
+    baseUrl: 'http://summa.local',
+    token: 'token-a',
+    defaultOrgId: 'org-a',
+    fetchFn: async (url) => {
+      calls.push(String(url));
+      return jsonResponse({ success: true, preparation: { prepared: false } });
+    },
+  });
+  const enabled = parseEnabledToolNames([
+    'preview_bank_statement_import',
+    'prepare_donation_classification',
+    'prepare_individual_donation_certificate',
+  ].join(','));
+  const server = new SummaAgentMcpServer(client, enabled);
+
+  const listResponse = await server.handle({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+  const tools = (listResponse?.result as { tools: Array<{ name: string }> }).tools;
+  assert.deepEqual(tools.map((tool) => tool.name), [
+    'preview_bank_statement_import',
+    'prepare_donation_classification',
+    'prepare_individual_donation_certificate',
+  ]);
+
+  const blockedResponse = await server.handle({
+    jsonrpc: '2.0',
+    id: 2,
+    method: 'tools/call',
+    params: { name: 'search_contacts', arguments: { q: 'tipsa' } },
+  });
+  assert.equal(blockedResponse?.error && (blockedResponse.error as { message: string }).message,
+    'Tool not enabled: search_contacts');
+  assert.deepEqual(calls, []);
+});
+
+test('MCP allowlist rejects unknown tool names', () => {
+  assert.throws(
+    () => parseEnabledToolNames('preview_bank_statement_import,generate_certificate'),
+    /Unknown SUMMA_MCP_ENABLED_TOOLS: generate_certificate/
+  );
 });
 
 test('bank statement local reader rejects missing, unsupported and oversized files', async () => {

@@ -48,7 +48,12 @@ SUMMA_BASE_URL=http://localhost:9002
 SUMMA_PRIVATE_INTEGRATION_TOKEN=...
 SUMMA_ORG_ID=...
 SUMMA_SOURCE_REPO=summa-agent-mcp
+SUMMA_MCP_ENABLED_TOOLS=preview_bank_statement_import,prepare_donation_classification,prepare_individual_donation_certificate
 ```
+
+Per al pilot de Flores, el wrapper `scripts/integrations/run-flores-prepare-only-mcp.sh`
+valida l'organització activa, recupera el token exclusivament del Mac Keychain i exposa
+només les tres eines de Fase A. El secret no s'escriu al repositori ni a la configuració MCP.
 
 Arrencada:
 
