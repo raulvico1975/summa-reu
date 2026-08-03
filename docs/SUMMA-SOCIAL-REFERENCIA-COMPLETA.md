@@ -5326,8 +5326,9 @@ Les integracions privades v1 existeixen per connectar eines controlades de l'eco
 - Token sempre lligat a una sola organització
 - Scopes explícits i granulars
 - Auditoria de cada crida a `integrationAuditLogs`
-- Escriptures limitades a preparació documental i vinculació comprovada
+- Escriptures de negoci limitades a preparació documental i vinculació comprovada
 - Cap write directe sobre imports, dates, fiscalitat, remeses, donants o categories
+- Les rutes MCP `prepare-only` només poden actualitzar `lastUsedAt` i afegir auditoria de seguretat; no muten negoci
 
 **Fora d'abast v1:**
 - API pública per tercers no controlats
@@ -5353,6 +5354,9 @@ Les integracions privades v1 existeixen per connectar eines controlades de l'eco
 |-------|--------|
 | `contacts.read` | Cercar contactes dins l'organització |
 | `transactions.read` | Cercar moviments dins l'organització |
+| `bank_import.preview` | Previsualitzar un extracte estructurat sense importar-lo |
+| `donation_classification.prepare` | Validar i preparar la classificació d'un moviment, sense aplicar-la |
+| `certificates.prepare` | Validar i preparar dades d'un certificat individual, sense generar-lo |
 | `pending_documents.write` | Pujar un document pendent en mode controlat |
 | `pending_documents.link` | Vincular un document pendent existent a un moviment compatible |
 
@@ -5362,8 +5366,13 @@ Les integracions privades v1 existeixen per connectar eines controlades de l'eco
 |----------|--------|-------|--------|
 | `/api/integrations/private/contacts/search` | GET | `contacts.read` | Cerca contactes per text, NIF/CIF o email |
 | `/api/integrations/private/transactions/search` | GET | `transactions.read` | Cerca moviments acotats per text, data, import i estat documental |
+| `/api/integrations/private/bank-import/preview` | POST | `bank_import.preview` | Valida compte, hash, files i duplicats; retorna estat `prepared` |
+| `/api/integrations/private/donations/classification/prepare` | POST | `donation_classification.prepare` | Retorna patch i precondició, sense modificar el moviment |
+| `/api/integrations/private/certificates/individual/prepare` | POST | `certificates.prepare` | Retorna elegibilitat i dades font, sense generar PDF |
 | `/api/integrations/private/pending-documents/upload` | POST | `pending_documents.write` | Pujar un fitxer a la safata de documents pendents |
 | `/api/integrations/private/pending-documents/link-transaction` | POST | `pending_documents.link` | Vincular un document pendent a un moviment |
+
+Les tres rutes de preparació formen la Fase A del MCP privat. No existeixen encara eines `commit_bank_statement_import`, `apply_donation_classification` ni `generate_individual_donation_certificate`.
 
 ### 3.14.4 Pujada de documents pendents per integració
 
