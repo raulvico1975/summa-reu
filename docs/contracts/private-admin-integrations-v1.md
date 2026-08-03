@@ -1,6 +1,6 @@
 # Integracions privades administratives (v1)
 
-Estat actual: **CONSOLIDAT + MCP PRIVAT FASE A PREPARE-ONLY**.
+Estat actual: **CONSOLIDAT + MCP PRIVAT FASE A + B1/B2/B3 + C1 INDIVIDUAL CONVERSACIONAL LOCAL**.
 
 La v1 existeix per donar entrada controlada a agents propis com `baruma-admin-agent` o `flores-admin-agent` sense reutilitzar autenticacio d'usuari ni exposar col.leccions sensibles.
 
@@ -12,9 +12,16 @@ Scopes disponibles:
 
 - `contacts.read`
 - `transactions.read`
+- `bank_accounts.search`
+- `contacts.search`
+- `transactions.search`
 - `bank_import.preview`
+- `bank_import.prepare`
+- `bank_import.commit`
 - `donation_classification.prepare`
+- `donation_classification.apply`
 - `certificates.prepare`
+- `certificates.generate`
 - `pending_documents.write`
 - `pending_documents.link`
 
@@ -22,9 +29,18 @@ Rutes disponibles:
 
 - `GET /api/integrations/private/contacts/search`
 - `GET /api/integrations/private/transactions/search`
+- `GET /api/integrations/private/conversational-search/bank-accounts`
+- `GET /api/integrations/private/conversational-search/contacts`
+- `GET /api/integrations/private/conversational-search/transactions`
 - `POST /api/integrations/private/bank-import/preview`
+- `POST /api/integrations/private/bank-import/plan`
+- `POST /api/integrations/private/bank-import/commit`
 - `POST /api/integrations/private/donations/classification/prepare`
+- `POST /api/integrations/private/donations/classification/plan`
+- `POST /api/integrations/private/donations/classification/apply`
 - `POST /api/integrations/private/certificates/individual/prepare`
+- `POST /api/integrations/private/certificates/individual/plan`
+- `POST /api/integrations/private/certificates/individual/generate`
 - `POST /api/integrations/private/pending-documents/upload`
 - `POST /api/integrations/private/pending-documents/link-transaction`
 
@@ -39,7 +55,7 @@ Fora d'abast en aquesta fase:
 - cap `Claude`/`Codex MCP` directe
 - cap endpoint nou "per si de cas": `link-transaction` existeix nomes pel cas validat document pendent + moviment
 - cap refactor global d'API en aquesta fase
-- cap `commit` d'importació, `apply` de classificació, generació PDF o enviament de certificat
+- fora dels fluxos B2 i B3 amb pla confirmat, cap `commit` d'importació ni `apply` de classificació; cap generació PDF o enviament de certificat
 
 ### Contracte Fase A
 
@@ -53,6 +69,40 @@ Les tres rutes `preview`/`prepare` no modifiquen col·leccions de negoci. Només
 `prepare_donation_classification` exigeix moviment i donant explícits, comprova organització, estat, signe i conflictes, i retorna el patch proposat i una precondició determinista. La resposta és `prepared`, mai `classified`.
 
 `prepare_individual_donation_certificate` aplica el criteri fiscal actual de Summa sobre l'estat persistent o sobre la classificació proposada. La resposta és `prepared`, mai `generated`, `stored`, `downloaded` o `sent`.
+
+### Contracte C1 de certificat individual canònic
+
+`prepare_individual_donation_certificate` crea un pla persistent de 15 minuts només quan una única transacció ja consta com a donació positiva, activa i vinculada a un donant existent amb dades fiscals, i quan l'organització té les dades institucionals mínimes. El pla queda lligat al token, organització, moviment, donant i snapshot fiscal/institucional.
+
+`generate_individual_donation_certificate` exigeix el mateix pla i la confirmació exacta. El servidor rellegeix organització, donant i moviment, bloqueja qualsevol drift i genera el PDF mitjançant el mateix builder canònic que usa la descàrrega individual de la UI. El client MCP verifica mida i SHA-256 i desa el PDF amb creació exclusiva dins `SUMMA_MCP_OUTPUT_DIR`.
+
+C1 no genera certificats anuals o massius, no envia correus, no escriu a Storage, no marca res com enviat i no modifica cap dada de negoci o fiscal.
+
+### Contracte B1 conversacional
+
+Les tres rutes B1 són estrictament de lectura i exigeixen scopes independents. Retornen `candidates`, `matchReasons`, `confidence` i un estat de resolució; fins i tot amb un sol resultat, la decisió queda marcada com `candidate_only` i requereix selecció humana abans de qualsevol acció posterior.
+
+- `search_bank_accounts`: nom, banc o fragment d'IBAN; IBAN sempre emmascarat.
+- `search_contacts`: nom, alias, email o NIF/CIF; email i identificador fiscal emmascarats.
+- `search_transactions`: concepte, import i tolerància, dates, compte i direcció; exigeix almenys un filtre per evitar consultes no acotades.
+
+Les respostes declaren `effects.businessDataMutated=false`. Les úniques escriptures comunes són `integrationTokens.lastUsedAt` i l'auditoria sanitzada a `integrationAuditLogs`.
+
+### Contracte B2 d'importació bancària controlada
+
+`prepare_bank_statement_import_plan` exigeix una selecció explícita de files classificades com `NEW`, persisteix un pla server-side lligat al token, organització, compte, SHA-256 del fitxer, `inputHash` i selecció, i caduca als 15 minuts. El pla no importa moviments.
+
+`commit_bank_statement_import` exigeix el mateix `planId`, bindings, selecció i el `confirmationText` exacte després d'una confirmació humana. El servidor consumeix el pla una sola vegada, torna a calcular els duplicats contra l'estat actual i bloqueja qualsevol drift abans d'escriure.
+
+El commit reutilitza el motor canònic compartit amb la ruta UI: normalització, IDs deterministes, idempotència per `inputHash`, lock, `safeSet`/`safeUpdate`, `importJobs`, `importRuns` i batches de màxim 50. No importa files duplicades, candidates o no seleccionades.
+
+### Contracte B3 de classificació controlada d'una donació
+
+`prepare_donation_classification_plan` exigeix un únic moviment positiu existent i un únic donant actiu existent. Persisteix durant 15 minuts un pla lligat al token, organització, moviment, donant i precondició. No modifica el moviment.
+
+`apply_donation_classification` exigeix el mateix `planId`, moviment, donant, precondició i el text de confirmació exacte després d'una confirmació humana. Dins d'una única transacció, el servidor torna a llegir moviment i donant, repeteix les validacions canòniques i bloqueja qualsevol canvi d'estat abans d'escriure.
+
+L'únic patch permès sobre el moviment és `contactId`, `contactType='donor'`, `transactionType='donation'` i `fiscalKind='donation'`. El pla és d'un sol ús. No crea donants, no importa extractes, no modifica altres camps i no genera certificats.
 
 ## Validacio real en produccio (2026-04-16)
 
@@ -129,9 +179,16 @@ npm run integrations:token:create -- \
   --source-repo baruma-admin-agent \
   --scope contacts.read \
   --scope transactions.read \
+  --scope bank_accounts.search \
+  --scope contacts.search \
+  --scope transactions.search \
   --scope bank_import.preview \
+  --scope bank_import.prepare \
+  --scope bank_import.commit \
   --scope donation_classification.prepare \
+  --scope donation_classification.apply \
   --scope certificates.prepare \
+  --scope certificates.generate \
   --scope pending_documents.write \
   --scope pending_documents.link
 ```

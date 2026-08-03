@@ -137,6 +137,7 @@ function donor(overrides: Partial<AnyContact> = {}): AnyContact {
     createdAt: '2026-01-01',
     donorType: 'company',
     membershipType: 'one-time',
+    address: 'Calle Mayor, 2',
     ...overrides,
   } as AnyContact;
 }
