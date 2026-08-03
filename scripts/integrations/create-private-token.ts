@@ -11,6 +11,9 @@ import {
 const VALID_SCOPES: IntegrationScope[] = [
   'contacts.read',
   'transactions.read',
+  'bank_import.preview',
+  'donation_classification.prepare',
+  'certificates.prepare',
   'pending_documents.write',
   'pending_documents.link',
 ];

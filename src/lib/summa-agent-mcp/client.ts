@@ -1,5 +1,6 @@
 import { basename } from 'node:path';
 import { readFile, stat } from 'node:fs/promises';
+import { parseBankStatementFile } from './bank-statement-file';
 
 export interface SummaAgentMcpConfig {
   baseUrl: string;
@@ -58,6 +59,23 @@ export interface OperationalSummaryInput {
   dateTo?: string;
   contactQuery?: string;
   limit?: number;
+}
+
+export interface PreviewBankStatementImportInput {
+  orgId?: string;
+  bankAccountId: string;
+  filePath: string;
+}
+
+export interface PrepareDonationClassificationInput {
+  orgId?: string;
+  transactionId: string;
+  donorId: string;
+}
+
+export interface PrepareIndividualDonationCertificateInput
+  extends PrepareDonationClassificationInput {
+  useProposedClassification?: boolean;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -172,6 +190,58 @@ export class SummaPrivateIntegrationClient {
       }
     );
 
+    return parseJsonResponse(response);
+  }
+
+  async previewBankStatementImport(input: PreviewBankStatementImportInput): Promise<JsonObject> {
+    const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
+    const bankAccountId = input.bankAccountId.trim();
+    if (!bankAccountId) throw new Error('bankAccountId is required');
+    const parsed = await parseBankStatementFile(input.filePath, bankAccountId);
+    return this.postJson('/api/integrations/private/bank-import/preview', {
+      orgId,
+      bankAccountId,
+      file: parsed.file,
+      rows: parsed.rows,
+    });
+  }
+
+  async prepareDonationClassification(input: PrepareDonationClassificationInput): Promise<JsonObject> {
+    const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
+    const transactionId = input.transactionId.trim();
+    const donorId = input.donorId.trim();
+    if (!transactionId || !donorId) throw new Error('transactionId and donorId are required');
+    return this.postJson('/api/integrations/private/donations/classification/prepare', {
+      orgId,
+      transactionId,
+      donorId,
+    });
+  }
+
+  async prepareIndividualDonationCertificate(
+    input: PrepareIndividualDonationCertificateInput
+  ): Promise<JsonObject> {
+    const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
+    const transactionId = input.transactionId.trim();
+    const donorId = input.donorId.trim();
+    if (!transactionId || !donorId) throw new Error('transactionId and donorId are required');
+    return this.postJson('/api/integrations/private/certificates/individual/prepare', {
+      orgId,
+      transactionId,
+      donorId,
+      useProposedClassification: input.useProposedClassification === true,
+    });
+  }
+
+  private async postJson(path: string, body: JsonObject): Promise<JsonObject> {
+    const response = await this.fetchFn(`${this.baseUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
     return parseJsonResponse(response);
   }
 
