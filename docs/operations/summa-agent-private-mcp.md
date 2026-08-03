@@ -1,6 +1,6 @@
 # MCP privat per Summa Agent
 
-Estat: local v0.1.
+Estat: local v0.2, Fase A `prepare-only`.
 
 Aquest adaptador exposa a Summa Agent una capa MCP privada sobre la `private integration API v1` existent de Summa Social. No és una funcionalitat pública per clients i no amplia permisos.
 
@@ -10,20 +10,33 @@ Eines exposades:
 
 - `search_contacts`: lectura de contactes.
 - `search_transactions`: lectura de moviments.
+- `preview_bank_statement_import`: llegeix un `filePath` local absolut i explícit, calcula el SHA-256, parseja l'extracte i consulta duplicats; no importa.
+- `prepare_donation_classification`: valida un moviment i un donant explícits i retorna el canvi proposat i una precondició; no aplica.
+- `prepare_individual_donation_certificate`: valida les dades fiscals persistents o la classificació proposada; no genera cap PDF.
 - `upload_pending_document`: pujada idempotent de document pendent per revisió humana.
 - `link_pending_document_to_transaction`: vinculació d'un document pendent amb un moviment concret, només amb OK granular i validacions estrictes.
 - `get_entity_operational_summary`: resum curt derivat de moviments recents i, opcionalment, cerca de contactes.
 
 Límit explícit: `get_entity_operational_summary` no llegeix documents pendents perquè la v1 no exposa `pending_documents.read`.
 
+## Frontera `prepare-only`
+
+Les rutes de Fase A poden actualitzar només metadades de seguretat ja existents:
+
+- `integrationTokens.lastUsedAt`;
+- un registre sanititzat a `integrationAuditLogs`.
+
+No es considera una preparació completada com una importació, una classificació ni un certificat generat.
+
 ## Prohibicions
 
-- No modifica imports, dates ni classificació de moviments bancaris.
+- No crea ni importa moviments i no modifica imports, dates ni classificació.
 - No toca remeses.
-- No toca Model 182, Model 347 ni certificats.
+- No toca Model 182 ni Model 347, no genera/desa certificats i no envia correus.
 - No escriu directament a Firestore.
 - No crea donants automàticament.
 - No fa matching fiscal automàtic.
+- No invoca l'endpoint real d'importació, cap operació `commit`/`apply`, Storage ni cap generador PDF.
 - No fa lots: la vinculació document-moviment és d'un sol cas per crida.
 
 ## Configuració local
@@ -60,10 +73,16 @@ Cobertura afegida:
 - resum operatiu sense endpoints fiscals, remeses ni lectura no autoritzada de pending documents;
 - upload amb `Idempotency-Key` i sense tocar ledger.
 - vinculació document-moviment amb scope dedicat, hash del document, import/data esperats i bloqueig si el moviment ja té document.
+- `filePath` bancari absolut, SHA-256 i parseig CSV/XLS/XLSX sense importació;
+- scopes separats, aïllament multi-organització, compte actiu i deduplicació;
+- moviment/donant/fiscalitat i preparació del certificat sobre estat proposat;
+- absència de mutacions de negoci, PDF, Storage i correu.
 
 ## Validació real controlada
 
 La validació real no s'executa si no hi ha tokens explícits a l'entorn. No crea tokens ni desa secrets.
+
+La Fase A v0.2 només s'ha de validar amb fixtures/mocks fins que Raül autoritzi separadament un token real o una prova productiva.
 
 Variables requerides:
 

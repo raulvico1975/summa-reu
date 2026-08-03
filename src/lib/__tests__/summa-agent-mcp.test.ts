@@ -3,8 +3,13 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import * as XLSX from 'xlsx';
 import { SummaPrivateIntegrationClient } from '@/lib/summa-agent-mcp/client';
 import { SummaAgentMcpServer } from '@/lib/summa-agent-mcp/server';
+import {
+  MAX_BANK_STATEMENT_BYTES,
+  parseBankStatementFile,
+} from '@/lib/summa-agent-mcp/bank-statement-file';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -32,10 +37,154 @@ test('MCP lists the private Summa Agent tools', async () => {
   assert.deepEqual(tools.map((tool) => tool.name), [
     'search_contacts',
     'search_transactions',
+    'preview_bank_statement_import',
+    'prepare_donation_classification',
+    'prepare_individual_donation_certificate',
     'upload_pending_document',
     'link_pending_document_to_transaction',
     'get_entity_operational_summary',
   ]);
+});
+
+test('bank statement local reader rejects missing, unsupported and oversized files', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'summa-mcp-bank-invalid-'));
+  const unsupported = join(dir, 'extracte.txt');
+  const oversized = join(dir, 'extracte.csv');
+  await writeFile(unsupported, 'data');
+  await writeFile(oversized, Buffer.alloc(MAX_BANK_STATEMENT_BYTES + 1));
+
+  try {
+    await assert.rejects(
+      () => parseBankStatementFile(join(dir, 'missing.csv'), 'bank-a'),
+      /ENOENT/
+    );
+    await assert.rejects(
+      () => parseBankStatementFile(unsupported, 'bank-a'),
+      /UNSUPPORTED_BANK_STATEMENT_FILE_TYPE/
+    );
+    await assert.rejects(
+      () => parseBankStatementFile(oversized, 'bank-a'),
+      /BANK_STATEMENT_FILE_TOO_LARGE/
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('bank statement local reader parses an Excel workbook and reports the selected sheet', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'summa-mcp-bank-xlsx-'));
+  const filePath = join(dir, 'extracte.xlsx');
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(
+    workbook,
+    XLSX.utils.aoa_to_sheet([
+      ['Fecha operación', 'Concepto', 'Importe', 'Saldo'],
+      ['01/08/2026', 'Fundacion Tipsa', 20_000, 25_000],
+    ]),
+    'Movimientos'
+  );
+  await writeFile(filePath, XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }));
+
+  try {
+    const parsed = await parseBankStatementFile(filePath, 'bank-a');
+    assert.equal(parsed.file.source, 'xlsx');
+    assert.equal(parsed.file.sheetName, 'Movimientos');
+    assert.equal(parsed.rows.length, 1);
+    assert.equal(parsed.rows[0].tx.amount, 20_000);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('bank statement preview requires one absolute file, parses it locally and calls only the prepare endpoint', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'summa-mcp-bank-'));
+  const filePath = join(dir, 'extracte.csv');
+  await writeFile(filePath, [
+    'Fecha operación;Concepto;Importe;Saldo',
+    '01/08/2026;Fundacion Tipsa;20000,00;25000,00',
+  ].join('\n'));
+
+  try {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const client = new SummaPrivateIntegrationClient({
+      baseUrl: 'http://summa.local',
+      token: 'token-a',
+      defaultOrgId: 'org-a',
+      fetchFn: async (url, init) => {
+        calls.push({ url: String(url), init });
+        return jsonResponse({ success: true, preview: { prepared: true } });
+      },
+    });
+
+    await client.previewBankStatementImport({ bankAccountId: 'bank-a', filePath });
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'http://summa.local/api/integrations/private/bank-import/preview');
+    assert.doesNotMatch(calls[0].url, /transactions\/import|commit|apply|generate|send/);
+    const body = JSON.parse(String(calls[0].init?.body)) as {
+      orgId: string;
+      bankAccountId: string;
+      file: { name: string; sha256: string; sheetName: string };
+      rows: Array<{ tx: { amount: number; bankAccountId: string } }>;
+    };
+    assert.equal(body.orgId, 'org-a');
+    assert.equal(body.bankAccountId, 'bank-a');
+    assert.equal(body.file.name, 'extracte.csv');
+    assert.match(body.file.sha256, /^[a-f0-9]{64}$/);
+    assert.equal(body.rows.length, 1);
+    assert.equal(body.rows[0].tx.amount, 20_000);
+    assert.equal(body.rows[0].tx.bankAccountId, 'bank-a');
+
+    await assert.rejects(
+      () => parseBankStatementFile('extracte.csv', 'bank-a'),
+      /absolute path/
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('prepare tool dispatch calls only classification and certificate prepare endpoints', async () => {
+  const calls: string[] = [];
+  const client = new SummaPrivateIntegrationClient({
+    baseUrl: 'http://summa.local',
+    token: 'token-a',
+    defaultOrgId: 'org-a',
+    fetchFn: async (url) => {
+      calls.push(String(url));
+      return jsonResponse({ success: true, preparation: { prepared: true } });
+    },
+  });
+  const server = new SummaAgentMcpServer(client);
+
+  await server.handle({
+    jsonrpc: '2.0',
+    id: 2,
+    method: 'tools/call',
+    params: {
+      name: 'prepare_donation_classification',
+      arguments: { transactionId: 'tx-a', donorId: 'donor-a' },
+    },
+  });
+  await server.handle({
+    jsonrpc: '2.0',
+    id: 3,
+    method: 'tools/call',
+    params: {
+      name: 'prepare_individual_donation_certificate',
+      arguments: {
+        transactionId: 'tx-a',
+        donorId: 'donor-a',
+        useProposedClassification: true,
+      },
+    },
+  });
+
+  assert.deepEqual(calls, [
+    'http://summa.local/api/integrations/private/donations/classification/prepare',
+    'http://summa.local/api/integrations/private/certificates/individual/prepare',
+  ]);
+  assert.equal(calls.some((url) => /commit|apply|generate|send|transactions\/import/.test(url)), false);
 });
 
 test('search tools call only the private integration API with org isolation headers', async () => {

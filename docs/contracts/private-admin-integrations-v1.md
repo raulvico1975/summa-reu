@@ -1,6 +1,6 @@
 # Integracions privades administratives (v1)
 
-Estat actual: **CONSOLIDAT + PILOT CONTROLAT DE VINCULACIO DOCUMENTAL**.
+Estat actual: **CONSOLIDAT + MCP PRIVAT FASE A PREPARE-ONLY**.
 
 La v1 existeix per donar entrada controlada a agents propis com `baruma-admin-agent` o `flores-admin-agent` sense reutilitzar autenticacio d'usuari ni exposar col.leccions sensibles.
 
@@ -12,6 +12,9 @@ Scopes disponibles:
 
 - `contacts.read`
 - `transactions.read`
+- `bank_import.preview`
+- `donation_classification.prepare`
+- `certificates.prepare`
 - `pending_documents.write`
 - `pending_documents.link`
 
@@ -19,6 +22,9 @@ Rutes disponibles:
 
 - `GET /api/integrations/private/contacts/search`
 - `GET /api/integrations/private/transactions/search`
+- `POST /api/integrations/private/bank-import/preview`
+- `POST /api/integrations/private/donations/classification/prepare`
+- `POST /api/integrations/private/certificates/individual/prepare`
 - `POST /api/integrations/private/pending-documents/upload`
 - `POST /api/integrations/private/pending-documents/link-transaction`
 
@@ -28,11 +34,25 @@ Fora d'abast en aquesta fase:
 - cap escriptura directa a ledger, fiscalitat o remeses
 - cap consola d'administracio d'integracions
 - cap accés directe al ledger
-- cap canvi sobre fiscalitat
+- cap canvi persistent sobre fiscalitat
 - cap API publica
 - cap `Claude`/`Codex MCP` directe
 - cap endpoint nou "per si de cas": `link-transaction` existeix nomes pel cas validat document pendent + moviment
 - cap refactor global d'API en aquesta fase
+- cap `commit` d'importació, `apply` de classificació, generació PDF o enviament de certificat
+
+### Contracte Fase A
+
+Les tres rutes `preview`/`prepare` no modifiquen col·leccions de negoci. Només es mantenen les dues escriptures de seguretat comunes a la private integration API:
+
+- actualització de `integrationTokens.lastUsedAt`;
+- alta sanitzada a `integrationAuditLogs`.
+
+`preview_bank_statement_import` exigeix organització, compte bancari i `filePath` absolut explícits al client MCP. El fitxer es parseja localment i només s'envien dades estructurades, hash i metadades a la ruta privada. La resposta és `prepared`, mai `imported`.
+
+`prepare_donation_classification` exigeix moviment i donant explícits, comprova organització, estat, signe i conflictes, i retorna el patch proposat i una precondició determinista. La resposta és `prepared`, mai `classified`.
+
+`prepare_individual_donation_certificate` aplica el criteri fiscal actual de Summa sobre l'estat persistent o sobre la classificació proposada. La resposta és `prepared`, mai `generated`, `stored`, `downloaded` o `sent`.
 
 ## Validacio real en produccio (2026-04-16)
 
@@ -109,6 +129,9 @@ npm run integrations:token:create -- \
   --source-repo baruma-admin-agent \
   --scope contacts.read \
   --scope transactions.read \
+  --scope bank_import.preview \
+  --scope donation_classification.prepare \
+  --scope certificates.prepare \
   --scope pending_documents.write \
   --scope pending_documents.link
 ```

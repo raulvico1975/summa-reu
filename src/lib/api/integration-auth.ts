@@ -9,6 +9,9 @@ export const PRIVATE_INTEGRATION_TOKEN_TYPE = 'private_integration';
 export type IntegrationScope =
   | 'contacts.read'
   | 'transactions.read'
+  | 'bank_import.preview'
+  | 'donation_classification.prepare'
+  | 'certificates.prepare'
   | 'pending_documents.write'
   | 'pending_documents.link';
 
@@ -113,6 +116,9 @@ function normalizeScopes(value: unknown): IntegrationScope[] {
     (scope): scope is IntegrationScope =>
       scope === 'contacts.read' ||
       scope === 'transactions.read' ||
+      scope === 'bank_import.preview' ||
+      scope === 'donation_classification.prepare' ||
+      scope === 'certificates.prepare' ||
       scope === 'pending_documents.write' ||
       scope === 'pending_documents.link'
   );

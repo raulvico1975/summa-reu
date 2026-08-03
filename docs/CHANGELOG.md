@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-08-03
+
+- MCP privat: afegida la Fase A `prepare-only` per previsualitzar un extracte bancari explícit, preparar la classificació d'una donació i preparar les dades d'un certificat individual.
+- seguretat: scopes independents, aïllament per organització i compte/recursos explícits; les úniques escriptures són `lastUsedAt` i auditoria, sense mutacions de negoci.
+- fiscalitat: la preparació valida moviment, donant i NIF/CIF i pot avaluar la classificació proposada sense aplicar-la; no genera PDF ni envia correu.
+- operativa: implementació local en branca aïllada, sense token real, prova productiva, push, merge ni deploy.
+
 ### 2026-07-21
 
 - SEO i claredat pública: les novetats tenen una URL oficial inequívoca (`/ca/novetats` i `/es/novetats`), les rutes antigues o internes hi redirigeixen permanentment i el llistat i el detall reforcen títols, copy, navegació i dades estructurades per a cercadors.
