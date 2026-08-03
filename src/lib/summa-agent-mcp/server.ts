@@ -2,11 +2,16 @@ import { createInterface } from 'node:readline';
 import { stdin as input, stdout as output } from 'node:process';
 import {
   createClientFromEnv,
+  type GenerateIndividualDonationCertificateInput,
+  type ApplyDonationClassificationInput,
   type LinkPendingDocumentToTransactionInput,
   type OperationalSummaryInput,
+  type CommitBankStatementImportInput,
   type PrepareDonationClassificationInput,
   type PrepareIndividualDonationCertificateInput,
   type PreviewBankStatementImportInput,
+  type PrepareBankStatementImportPlanInput,
+  type SearchBankAccountsInput,
   type SearchContactsInput,
   type SearchTransactionsInput,
   type SummaPrivateIntegrationClient,
@@ -30,24 +35,45 @@ interface ToolDefinition {
 }
 
 export type SummaAgentMcpToolName =
+  | 'search_bank_accounts'
   | 'search_contacts'
   | 'search_transactions'
   | 'preview_bank_statement_import'
+  | 'prepare_bank_statement_import_plan'
+  | 'commit_bank_statement_import'
   | 'prepare_donation_classification'
+  | 'prepare_donation_classification_plan'
+  | 'apply_donation_classification'
   | 'prepare_individual_donation_certificate'
+  | 'generate_individual_donation_certificate'
   | 'upload_pending_document'
   | 'link_pending_document_to_transaction'
   | 'get_entity_operational_summary';
 
 const TOOLS: Array<ToolDefinition & { name: SummaAgentMcpToolName }> = [
   {
-    name: 'search_contacts',
-    description: 'Cerca contactes de Summa Social per nom, email, NIF/CIF o fragments. Nomes lectura.',
+    name: 'search_bank_accounts',
+    description: 'Cerca comptes bancaris de l organitzacio per nom, banc o fragment d IBAN. Nomes retorna candidats emmascarats; no selecciona ni modifica res.',
     inputSchema: {
       type: 'object',
       properties: {
         orgId: { type: 'string' },
         q: { type: 'string', minLength: 2 },
+        limit: { type: 'number', minimum: 1, maximum: 50 },
+        includeArchived: { type: 'boolean' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'search_contacts',
+    description: 'Cerca contactes de Summa Social per nom, alias, email o NIF/CIF. Retorna dades minimitzades i candidats; mai decideix ni crea contactes.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        orgId: { type: 'string' },
+        q: { type: 'string', minLength: 2 },
+        role: { type: 'string', enum: ['donor', 'supplier', 'employee', 'any'] },
         limit: { type: 'number', minimum: 1, maximum: 50 },
         includeArchived: { type: 'boolean' },
       },
@@ -57,18 +83,19 @@ const TOOLS: Array<ToolDefinition & { name: SummaAgentMcpToolName }> = [
   },
   {
     name: 'search_transactions',
-    description: 'Cerca moviments de Summa Social. Nomes lectura; no modifica ledger, fiscalitat ni remeses.',
+    description: 'Cerca moviments per concepte, import, dates, compte i direccio. Retorna candidats minimitzats; no selecciona ni modifica el ledger.',
     inputSchema: {
       type: 'object',
       properties: {
         orgId: { type: 'string' },
-        q: { type: 'string' },
-        contactId: { type: 'string' },
+        q: { type: 'string', minLength: 2 },
+        amount: { type: 'number' },
+        amountTolerance: { type: 'number', minimum: 0, maximum: 1000000 },
         bankAccountId: { type: 'string' },
         dateFrom: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
         dateTo: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
-        cursor: { type: 'string' },
-        limit: { type: 'number', minimum: 1, maximum: 100 },
+        direction: { type: 'string', enum: ['income', 'expense', 'any'] },
+        limit: { type: 'number', minimum: 1, maximum: 50 },
         includeArchived: { type: 'boolean' },
       },
       additionalProperties: false,
@@ -89,6 +116,40 @@ const TOOLS: Array<ToolDefinition & { name: SummaAgentMcpToolName }> = [
     },
   },
   {
+    name: 'prepare_bank_statement_import_plan',
+    description: 'Crea un pla server-side de 15 minuts per importar nomes les files NEW seleccionades explicitament. Persisteix el pla, pero encara no importa cap moviment.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        orgId: { type: 'string' },
+        bankAccountId: { type: 'string', minLength: 1 },
+        filePath: { type: 'string', minLength: 1 },
+        selectedRowIndexes: { type: 'array', minItems: 1, maxItems: 2000, items: { type: 'integer', minimum: 1 }, uniqueItems: true },
+      },
+      required: ['bankAccountId', 'filePath', 'selectedRowIndexes'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'commit_bank_statement_import',
+    description: 'IMPORTA moviments reals. Nomes es pot cridar despres que la persona hagi vist el resum del pla i hagi confirmat explicitament el confirmationText exacte. Revalida pla, token, organitzacio, compte, hashes, seleccio i duplicats abans d escriure.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        orgId: { type: 'string' },
+        planId: { type: 'string', minLength: 1 },
+        bankAccountId: { type: 'string', minLength: 1 },
+        fileSha256: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+        inputHash: { type: 'string', pattern: '^[a-f0-9]{64}$' },
+        selectedRowIndexes: { type: 'array', minItems: 1, maxItems: 2000, items: { type: 'integer', minimum: 1 }, uniqueItems: true },
+        confirmationText: { type: 'string', minLength: 1 },
+        humanConfirmed: { type: 'boolean', const: true },
+      },
+      required: ['planId', 'bankAccountId', 'fileSha256', 'inputHash', 'selectedRowIndexes', 'confirmationText', 'humanConfirmed'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'prepare_donation_classification',
     description: 'Prepara la classificacio d un moviment com a donacio d un donant existent. No aplica cap canvi.',
     inputSchema: {
@@ -103,17 +164,63 @@ const TOOLS: Array<ToolDefinition & { name: SummaAgentMcpToolName }> = [
     },
   },
   {
-    name: 'prepare_individual_donation_certificate',
-    description: 'Prepara i valida les dades d un certificat individual. No genera PDF, no desa i no envia.',
+    name: 'prepare_donation_classification_plan',
+    description: 'Crea un pla server-side de 15 minuts per classificar un unic moviment com a donacio d un donant existent. No modifica el moviment.',
     inputSchema: {
       type: 'object',
       properties: {
         orgId: { type: 'string' },
         transactionId: { type: 'string', minLength: 1 },
         donorId: { type: 'string', minLength: 1 },
-        useProposedClassification: { type: 'boolean' },
       },
       required: ['transactionId', 'donorId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'apply_donation_classification',
+    description: 'CLASSIFICA un moviment real com a donacio. Nomes es pot cridar despres que la persona hagi vist el resum del pla i confirmat exactament el text. Revalida moviment, donant i precondicio i escriu nomes quatre camps.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        orgId: { type: 'string' },
+        planId: { type: 'string', minLength: 1 },
+        transactionId: { type: 'string', minLength: 1 },
+        donorId: { type: 'string', minLength: 1 },
+        preconditionToken: { type: 'string', minLength: 1 },
+        confirmationText: { type: 'string', minLength: 1 },
+        humanConfirmed: { type: 'boolean', const: true },
+      },
+      required: ['planId', 'transactionId', 'donorId', 'preconditionToken', 'confirmationText', 'humanConfirmed'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'prepare_individual_donation_certificate',
+    description: 'Prepara un pla de 15 minuts per generar el certificat canonic d una unica donacio ja classificada. No genera PDF, no desa i no envia.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        orgId: { type: 'string' },
+        transactionId: { type: 'string', minLength: 1 },
+        donorId: { type: 'string', minLength: 1 },
+      },
+      required: ['transactionId', 'donorId'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'generate_individual_donation_certificate',
+    description: 'GENERA un unic certificat PDF canonic de Summa despres de confirmacio exacta. El desa nomes en una ruta local .pdf nova dins SUMMA_MCP_OUTPUT_DIR; no envia correu ni escriu a Storage.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        orgId: { type: 'string' }, planId: { type: 'string', minLength: 1 }, transactionId: { type: 'string', minLength: 1 },
+        donorId: { type: 'string', minLength: 1 }, preconditionToken: { type: 'string', minLength: 1 },
+        confirmationText: { type: 'string', minLength: 1 }, humanConfirmed: { type: 'boolean', const: true },
+        outputPath: { type: 'string', minLength: 1 },
+      },
+      required: ['planId', 'transactionId', 'donorId', 'preconditionToken', 'confirmationText', 'humanConfirmed', 'outputPath'],
       additionalProperties: false,
     },
   },
@@ -248,7 +355,7 @@ export class SummaAgentMcpServer {
             },
             serverInfo: {
               name: 'summa-agent-private-mcp',
-              version: '0.2.0',
+              version: '0.6.0',
             },
           },
         };
@@ -299,16 +406,28 @@ export class SummaAgentMcpServer {
     }
 
     switch (name) {
+      case 'search_bank_accounts':
+        return textResult(await this.client.searchBankAccounts(args as SearchBankAccountsInput));
       case 'search_contacts':
         return textResult(await this.client.searchContacts(args as unknown as SearchContactsInput));
       case 'search_transactions':
         return textResult(await this.client.searchTransactions(args as SearchTransactionsInput));
       case 'preview_bank_statement_import':
         return textResult(await this.client.previewBankStatementImport(args as unknown as PreviewBankStatementImportInput));
+      case 'prepare_bank_statement_import_plan':
+        return textResult(await this.client.prepareBankStatementImportPlan(args as unknown as PrepareBankStatementImportPlanInput));
+      case 'commit_bank_statement_import':
+        return textResult(await this.client.commitBankStatementImport(args as unknown as CommitBankStatementImportInput));
       case 'prepare_donation_classification':
         return textResult(await this.client.prepareDonationClassification(args as unknown as PrepareDonationClassificationInput));
+      case 'prepare_donation_classification_plan':
+        return textResult(await this.client.prepareDonationClassificationPlan(args as unknown as PrepareDonationClassificationInput));
+      case 'apply_donation_classification':
+        return textResult(await this.client.applyDonationClassification(args as unknown as ApplyDonationClassificationInput));
       case 'prepare_individual_donation_certificate':
         return textResult(await this.client.prepareIndividualDonationCertificate(args as unknown as PrepareIndividualDonationCertificateInput));
+      case 'generate_individual_donation_certificate':
+        return textResult(await this.client.generateIndividualDonationCertificate(args as unknown as GenerateIndividualDonationCertificateInput));
       case 'upload_pending_document':
         return textResult(await this.client.uploadPendingDocument(args as unknown as UploadPendingDocumentInput));
       case 'link_pending_document_to_transaction':

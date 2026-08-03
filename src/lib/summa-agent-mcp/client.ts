@@ -1,5 +1,6 @@
-import { basename } from 'node:path';
-import { readFile, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { basename, dirname, extname, isAbsolute, relative, resolve } from 'node:path';
+import { open, readFile, realpath, stat } from 'node:fs/promises';
 import { parseBankStatementFile } from './bank-statement-file';
 
 export interface SummaAgentMcpConfig {
@@ -8,11 +9,20 @@ export interface SummaAgentMcpConfig {
   defaultOrgId?: string;
   sourceRepo?: string;
   fetchFn?: typeof fetch;
+  outputDir?: string;
 }
 
 export interface SearchContactsInput {
   orgId?: string;
   q: string;
+  role?: 'donor' | 'supplier' | 'employee' | 'any';
+  limit?: number;
+  includeArchived?: boolean;
+}
+
+export interface SearchBankAccountsInput {
+  orgId?: string;
+  q?: string;
   limit?: number;
   includeArchived?: boolean;
 }
@@ -20,11 +30,12 @@ export interface SearchContactsInput {
 export interface SearchTransactionsInput {
   orgId?: string;
   q?: string;
-  contactId?: string;
+  amount?: number;
+  amountTolerance?: number;
   bankAccountId?: string;
   dateFrom?: string;
   dateTo?: string;
-  cursor?: string;
+  direction?: 'income' | 'expense' | 'any';
   limit?: number;
   includeArchived?: boolean;
 }
@@ -67,15 +78,45 @@ export interface PreviewBankStatementImportInput {
   filePath: string;
 }
 
+export interface PrepareBankStatementImportPlanInput extends PreviewBankStatementImportInput {
+  selectedRowIndexes: number[];
+}
+
+export interface CommitBankStatementImportInput {
+  orgId?: string;
+  planId: string;
+  bankAccountId: string;
+  fileSha256: string;
+  inputHash: string;
+  selectedRowIndexes: number[];
+  confirmationText: string;
+  humanConfirmed: true;
+}
+
 export interface PrepareDonationClassificationInput {
   orgId?: string;
   transactionId: string;
   donorId: string;
 }
 
+export interface ApplyDonationClassificationInput extends PrepareDonationClassificationInput {
+  planId: string;
+  preconditionToken: string;
+  confirmationText: string;
+  humanConfirmed: true;
+}
+
 export interface PrepareIndividualDonationCertificateInput
   extends PrepareDonationClassificationInput {
   useProposedClassification?: boolean;
+}
+
+export interface GenerateIndividualDonationCertificateInput extends PrepareDonationClassificationInput {
+  planId: string;
+  preconditionToken: string;
+  confirmationText: string;
+  humanConfirmed: true;
+  outputPath: string;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -136,6 +177,7 @@ export class SummaPrivateIntegrationClient {
   private readonly defaultOrgId?: string;
   private readonly sourceRepo?: string;
   private readonly fetchFn: typeof fetch;
+  private readonly outputDir: string;
 
   constructor(config: SummaAgentMcpConfig) {
     this.baseUrl = cleanBaseUrl(config.baseUrl);
@@ -143,6 +185,29 @@ export class SummaPrivateIntegrationClient {
     this.defaultOrgId = config.defaultOrgId;
     this.sourceRepo = config.sourceRepo;
     this.fetchFn = config.fetchFn ?? fetch;
+    this.outputDir = resolve(config.outputDir ?? process.cwd());
+  }
+
+  async searchBankAccounts(input: SearchBankAccountsInput = {}): Promise<JsonObject> {
+    const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
+    const q = input.q?.trim() ?? '';
+    if (q && q.length < 2) throw new Error('q must contain at least 2 characters');
+
+    const params = new URLSearchParams({ orgId });
+    appendOptional(params, 'q', q);
+    appendOptional(params, 'limit', input.limit);
+    appendOptional(params, 'includeArchived', input.includeArchived === true ? 'true' : undefined);
+
+    const response = await this.fetchFn(
+      `${this.baseUrl}/api/integrations/private/conversational-search/bank-accounts?${params.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+        },
+      }
+    );
+
+    return parseJsonResponse(response);
   }
 
   async searchContacts(input: SearchContactsInput): Promise<JsonObject> {
@@ -151,11 +216,12 @@ export class SummaPrivateIntegrationClient {
     if (q.length < 2) throw new Error('q must contain at least 2 characters');
 
     const params = new URLSearchParams({ orgId, q });
+    appendOptional(params, 'role', input.role && input.role !== 'any' ? input.role : undefined);
     appendOptional(params, 'limit', input.limit);
     appendOptional(params, 'includeArchived', input.includeArchived === true ? 'true' : undefined);
 
     const response = await this.fetchFn(
-      `${this.baseUrl}/api/integrations/private/contacts/search?${params.toString()}`,
+      `${this.baseUrl}/api/integrations/private/conversational-search/contacts?${params.toString()}`,
       {
         headers: {
           Authorization: `Bearer ${this.token}`,
@@ -173,16 +239,17 @@ export class SummaPrivateIntegrationClient {
 
     const params = new URLSearchParams({ orgId });
     appendOptional(params, 'q', input.q?.trim());
-    appendOptional(params, 'contactId', input.contactId?.trim());
+    appendOptional(params, 'amount', input.amount);
+    appendOptional(params, 'amountTolerance', input.amountTolerance);
     appendOptional(params, 'bankAccountId', input.bankAccountId?.trim());
     appendOptional(params, 'dateFrom', input.dateFrom);
     appendOptional(params, 'dateTo', input.dateTo);
-    appendOptional(params, 'cursor', input.cursor);
+    appendOptional(params, 'direction', input.direction && input.direction !== 'any' ? input.direction : undefined);
     appendOptional(params, 'limit', input.limit);
     appendOptional(params, 'includeArchived', input.includeArchived === true ? 'true' : undefined);
 
     const response = await this.fetchFn(
-      `${this.baseUrl}/api/integrations/private/transactions/search?${params.toString()}`,
+      `${this.baseUrl}/api/integrations/private/conversational-search/transactions?${params.toString()}`,
       {
         headers: {
           Authorization: `Bearer ${this.token}`,
@@ -206,6 +273,44 @@ export class SummaPrivateIntegrationClient {
     });
   }
 
+  async prepareBankStatementImportPlan(input: PrepareBankStatementImportPlanInput): Promise<JsonObject> {
+    const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
+    const bankAccountId = input.bankAccountId.trim();
+    if (!bankAccountId) throw new Error('bankAccountId is required');
+    if (!Array.isArray(input.selectedRowIndexes) || input.selectedRowIndexes.length === 0) {
+      throw new Error('selectedRowIndexes must contain the exact rows explicitly selected');
+    }
+    const parsed = await parseBankStatementFile(input.filePath, bankAccountId);
+    return this.postJson('/api/integrations/private/bank-import/plan', {
+      orgId,
+      bankAccountId,
+      file: parsed.file,
+      rows: parsed.rows,
+      selectedRowIndexes: input.selectedRowIndexes,
+    });
+  }
+
+  async commitBankStatementImport(input: CommitBankStatementImportInput): Promise<JsonObject> {
+    const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
+    if (input.humanConfirmed !== true) throw new Error('humanConfirmed must be true after explicit user confirmation');
+    if (!input.planId.trim() || !input.bankAccountId.trim()) {
+      throw new Error('planId and bankAccountId are required');
+    }
+    if (!Array.isArray(input.selectedRowIndexes) || input.selectedRowIndexes.length === 0) {
+      throw new Error('selectedRowIndexes must contain the exact confirmed rows');
+    }
+    return this.postJson('/api/integrations/private/bank-import/commit', {
+      orgId,
+      planId: input.planId.trim(),
+      bankAccountId: input.bankAccountId.trim(),
+      fileSha256: input.fileSha256.trim(),
+      inputHash: input.inputHash.trim(),
+      selectedRowIndexes: input.selectedRowIndexes,
+      confirmationText: input.confirmationText,
+      humanConfirmed: true,
+    });
+  }
+
   async prepareDonationClassification(input: PrepareDonationClassificationInput): Promise<JsonObject> {
     const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
     const transactionId = input.transactionId.trim();
@@ -218,6 +323,33 @@ export class SummaPrivateIntegrationClient {
     });
   }
 
+  async prepareDonationClassificationPlan(input: PrepareDonationClassificationInput): Promise<JsonObject> {
+    const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
+    const transactionId = input.transactionId.trim();
+    const donorId = input.donorId.trim();
+    if (!transactionId || !donorId) throw new Error('transactionId and donorId are required');
+    return this.postJson('/api/integrations/private/donations/classification/plan', {
+      orgId, transactionId, donorId,
+    });
+  }
+
+  async applyDonationClassification(input: ApplyDonationClassificationInput): Promise<JsonObject> {
+    const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
+    if (input.humanConfirmed !== true) throw new Error('humanConfirmed must be true after explicit user confirmation');
+    if (!input.planId.trim() || !input.transactionId.trim() || !input.donorId.trim() || !input.preconditionToken.trim()) {
+      throw new Error('planId, transactionId, donorId and preconditionToken are required');
+    }
+    return this.postJson('/api/integrations/private/donations/classification/apply', {
+      orgId,
+      planId: input.planId.trim(),
+      transactionId: input.transactionId.trim(),
+      donorId: input.donorId.trim(),
+      preconditionToken: input.preconditionToken.trim(),
+      confirmationText: input.confirmationText,
+      humanConfirmed: true,
+    });
+  }
+
   async prepareIndividualDonationCertificate(
     input: PrepareIndividualDonationCertificateInput
   ): Promise<JsonObject> {
@@ -225,12 +357,50 @@ export class SummaPrivateIntegrationClient {
     const transactionId = input.transactionId.trim();
     const donorId = input.donorId.trim();
     if (!transactionId || !donorId) throw new Error('transactionId and donorId are required');
-    return this.postJson('/api/integrations/private/certificates/individual/prepare', {
+    if (input.useProposedClassification === true) {
+      throw new Error('certificate generation requires the donation classification to be applied first');
+    }
+    return this.postJson('/api/integrations/private/certificates/individual/plan', {
       orgId,
       transactionId,
       donorId,
-      useProposedClassification: input.useProposedClassification === true,
     });
+  }
+
+  async generateIndividualDonationCertificate(input: GenerateIndividualDonationCertificateInput): Promise<JsonObject> {
+    const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
+    if (input.humanConfirmed !== true) throw new Error('humanConfirmed must be true after explicit user confirmation');
+    const outputPath = input.outputPath.trim();
+    if (!isAbsolute(outputPath) || extname(outputPath).toLowerCase() !== '.pdf') {
+      throw new Error('outputPath must be an absolute .pdf path');
+    }
+    const resolvedPath = resolve(outputPath);
+    const parent = dirname(resolvedPath);
+    const parentInfo = await stat(parent).catch(() => null);
+    if (!parentInfo?.isDirectory()) throw new Error('outputPath parent directory must already exist');
+    const [canonicalRoot, canonicalParent] = await Promise.all([realpath(this.outputDir), realpath(parent)]);
+    const canonicalRelative = relative(canonicalRoot, canonicalParent);
+    if (canonicalRelative.startsWith('..') || isAbsolute(canonicalRelative)) {
+      throw new Error('outputPath must be a new file inside SUMMA_MCP_OUTPUT_DIR');
+    }
+    if (await stat(resolvedPath).then(() => true).catch(() => false)) throw new Error('OUTPUT_FILE_ALREADY_EXISTS');
+    if (!input.planId.trim() || !input.transactionId.trim() || !input.donorId.trim() || !input.preconditionToken.trim()) {
+      throw new Error('planId, transactionId, donorId and preconditionToken are required');
+    }
+    const response = await this.postJson('/api/integrations/private/certificates/individual/generate', {
+      orgId, planId: input.planId.trim(), transactionId: input.transactionId.trim(), donorId: input.donorId.trim(),
+      preconditionToken: input.preconditionToken.trim(), confirmationText: input.confirmationText, humanConfirmed: true,
+    });
+    if (typeof response.pdfBase64 !== 'string' || typeof response.pdfSha256 !== 'string' || typeof response.pdfSizeBytes !== 'number') {
+      throw new Error('INVALID_PDF_RESPONSE');
+    }
+    const bytes = Buffer.from(response.pdfBase64, 'base64');
+    const digest = createHash('sha256').update(bytes).digest('hex');
+    if (bytes.byteLength !== response.pdfSizeBytes || digest !== response.pdfSha256) throw new Error('PDF_INTEGRITY_MISMATCH');
+    const handle = await open(resolvedPath, 'wx');
+    try { await handle.writeFile(bytes); } finally { await handle.close(); }
+    const { pdfBase64: _omitted, ...safeResponse } = response;
+    return { ...safeResponse, outputPath: resolvedPath, filename: basename(resolvedPath), locallyStored: true };
   }
 
   private async postJson(path: string, body: JsonObject): Promise<JsonObject> {
@@ -323,12 +493,14 @@ export class SummaPrivateIntegrationClient {
   async getEntityOperationalSummary(input: OperationalSummaryInput): Promise<JsonObject> {
     const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
     const limit = Math.min(Math.max(input.limit ?? DEFAULT_RECENT_LIMIT, 1), 50);
-    const transactionsBody = await this.searchTransactions({
-      orgId,
-      dateFrom: input.dateFrom,
-      dateTo: input.dateTo,
-      limit,
-    });
+    const transactionParams = new URLSearchParams({ orgId, limit: String(limit) });
+    appendOptional(transactionParams, 'dateFrom', input.dateFrom);
+    appendOptional(transactionParams, 'dateTo', input.dateTo);
+    const transactionsResponse = await this.fetchFn(
+      `${this.baseUrl}/api/integrations/private/transactions/search?${transactionParams.toString()}`,
+      { headers: { Authorization: `Bearer ${this.token}` } }
+    );
+    const transactionsBody = await parseJsonResponse(transactionsResponse);
 
     const transactions = Array.isArray(transactionsBody.transactions)
       ? transactionsBody.transactions as Array<Record<string, unknown>>
@@ -363,11 +535,16 @@ export class SummaPrivateIntegrationClient {
     };
 
     if (input.contactQuery && input.contactQuery.trim().length >= 2) {
-      const contactsBody = await this.searchContacts({
+      const contactParams = new URLSearchParams({
         orgId,
-        q: input.contactQuery,
-        limit: 10,
+        q: input.contactQuery.trim(),
+        limit: '10',
       });
+      const contactsResponse = await this.fetchFn(
+        `${this.baseUrl}/api/integrations/private/contacts/search?${contactParams.toString()}`,
+        { headers: { Authorization: `Bearer ${this.token}` } }
+      );
+      const contactsBody = await parseJsonResponse(contactsResponse);
       summary.contacts = {
         query: input.contactQuery,
         count: Array.isArray(contactsBody.contacts) ? contactsBody.contacts.length : 0,
@@ -385,5 +562,6 @@ export function createClientFromEnv(env: NodeJS.ProcessEnv = process.env): Summa
     token: env.SUMMA_PRIVATE_INTEGRATION_TOKEN ?? '',
     defaultOrgId: env.SUMMA_ORG_ID,
     sourceRepo: env.SUMMA_SOURCE_REPO ?? 'summa-agent-mcp',
+    outputDir: env.SUMMA_MCP_OUTPUT_DIR,
   });
 }

@@ -16,7 +16,12 @@ export SUMMA_BASE_URL="https://studio--summa-social.us-central1.hosted.app"
 export SUMMA_ORG_ID="SkQjWvCRDJhSf1OeJAw9"
 export SUMMA_MCP_EXPECTED_ORG_NAME="Fundación Flores de Kiskeya"
 export SUMMA_SOURCE_REPO="codex-summa-mcp-flores"
-export SUMMA_MCP_ENABLED_TOOLS="preview_bank_statement_import,prepare_donation_classification,prepare_individual_donation_certificate"
+export SUMMA_MCP_OUTPUT_DIR="${SUMMA_MCP_OUTPUT_DIR:-/Users/raulvico/Downloads/Summa-Certificats}"
+export SUMMA_MCP_ENABLED_TOOLS="search_bank_accounts,search_transactions,search_contacts,preview_bank_statement_import,prepare_bank_statement_import_plan,commit_bank_statement_import,prepare_donation_classification,prepare_donation_classification_plan,apply_donation_classification,prepare_individual_donation_certificate,generate_individual_donation_certificate"
+if [[ ! -d "$SUMMA_MCP_OUTPUT_DIR" ]]; then
+  echo "Crea primer la carpeta segura de certificats: $SUMMA_MCP_OUTPUT_DIR" >&2
+  exit 1
+fi
 unset SUMMA_PRIVATE_INTEGRATION_TOKEN
 
 node --import tsx scripts/integrations/verify-private-mcp-organization.ts

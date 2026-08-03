@@ -23,6 +23,12 @@ export type PrepareOnlyBlocker =
   | 'DONOR_ARCHIVED'
   | 'CONTACT_NOT_DONOR'
   | 'ORGANIZATION_NOT_FOUND'
+  | 'ORGANIZATION_INACTIVE'
+  | 'MISSING_ORGANIZATION_TAX_ID'
+  | 'MISSING_ORGANIZATION_ADDRESS'
+  | 'MISSING_SIGNATORY_NAME'
+  | 'MISSING_SIGNATORY_ROLE'
+  | 'MISSING_DONOR_ADDRESS'
   | 'MISSING_TAX_ID'
   | 'NOT_DONATION';
 
@@ -257,6 +263,14 @@ export async function prepareDonationClassification(
     dataSource.getTransaction(input.orgId, input.transactionId),
     dataSource.getContact(input.orgId, input.donorId),
   ]);
+  return buildDonationClassificationPreparation(input, transaction, donor);
+}
+
+export function buildDonationClassificationPreparation(
+  input: PrepareDonationClassificationInput,
+  transaction: Transaction | null,
+  donor: AnyContact | null
+) {
   const blockers = classificationBlockers(transaction, donor, input.donorId);
   if (!transaction || !donor) {
     return { prepared: false, blockers };
@@ -317,11 +331,30 @@ export async function prepareIndividualDonationCertificate(
     dataSource.getTransaction(input.orgId, input.transactionId),
     dataSource.getContact(input.orgId, input.donorId),
   ]);
+  return buildIndividualDonationCertificatePreparation(input, organization, transaction, donor);
+}
+
+export function buildIndividualDonationCertificatePreparation(
+  input: PrepareIndividualCertificateInput,
+  organization: Organization | null,
+  transaction: Transaction | null,
+  donor: AnyContact | null
+) {
   const blockers = classificationBlockers(transaction, donor, input.donorId);
   if (!organization) blockers.unshift('ORGANIZATION_NOT_FOUND');
   if (!organization || !transaction || !donor) {
     return { prepared: false, blockers };
   }
+
+  if (organization.status !== 'active') blockers.push('ORGANIZATION_INACTIVE');
+  if (!organization.taxId?.trim()) blockers.push('MISSING_ORGANIZATION_TAX_ID');
+  if (!organization.address?.trim() || !organization.zipCode?.trim() || !organization.city?.trim()) {
+    blockers.push('MISSING_ORGANIZATION_ADDRESS');
+  }
+  if (!organization.signatoryName?.trim()) blockers.push('MISSING_SIGNATORY_NAME');
+  if (!organization.signatoryRole?.trim()) blockers.push('MISSING_SIGNATORY_ROLE');
+  const donorAddress = 'address' in donor ? donor.address?.trim() : '';
+  if (!donorAddress || !donor.zipCode?.trim()) blockers.push('MISSING_DONOR_ADDRESS');
 
   const useProposedClassification = input.useProposedClassification === true;
   if (!useProposedClassification && transaction.contactId !== input.donorId) {

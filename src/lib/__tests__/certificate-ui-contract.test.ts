@@ -24,3 +24,12 @@ test('donor drawer does not subscribe to movement history for certificate-only p
   assert.equal(source.includes('if (!canReadMovements)'), true);
   assert.equal(source.includes('loadRestrictedAnnualCertificateScope'), true);
 });
+
+test('individual certificate UI and private generator use the same canonical PDF builder', () => {
+  const drawer = readProjectFile('src/components/donor-detail-drawer.tsx');
+  const privateGenerator = readProjectFile('src/lib/private-integrations/firestore-individual-certificate.ts');
+  assert.equal(drawer.includes("from '@/lib/fiscal/individual-donation-certificate-pdf'"), true);
+  assert.equal(drawer.includes('buildIndividualDonationCertificatePdf(input).save'), true);
+  assert.equal(privateGenerator.includes("from '@/lib/fiscal/individual-donation-certificate-pdf'"), true);
+  assert.equal(privateGenerator.includes('individualDonationCertificatePdfBytes(pdfInput)'), true);
+});
