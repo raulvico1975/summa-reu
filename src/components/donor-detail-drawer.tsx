@@ -26,6 +26,10 @@ import {
   getIndividualDonationCertificateBlockMessage,
   getIndividualDonationCertificateBlockReason,
 } from '@/lib/fiscal/individual-donation-certificate';
+import {
+  buildIndividualDonationCertificatePdf,
+  individualDonationCertificateFilename,
+} from '@/lib/fiscal/individual-donation-certificate-pdf';
 import type { CertificateDonorSummary } from '@/lib/fiscal/certificate-summaries';
 
 // UI Components
@@ -382,8 +386,47 @@ export function DonorDetailDrawer({
     });
   };
 
-  // Generar certificat individual
+  // Builder canònic compartit amb la generació privada MCP.
   const generateCertificate = async (tx: Transaction) => {
+    if (!donor || !organization) return;
+    const blockedMessage = getIndividualCertificateBlockMessage(tx, 'download');
+    if (blockedMessage) {
+      toast({ variant: 'destructive', title: t.common.error, description: blockedMessage });
+      return;
+    }
+    setIsGeneratingPdf(true);
+    try {
+      const [logoDataUrl, signatureDataUrl] = await Promise.all([
+        organization.logoUrl ? loadImageAsBase64(organization.logoUrl) : null,
+        organization.signatureUrl ? loadImageAsBase64(organization.signatureUrl) : null,
+      ]);
+      const languageCode = language === 'ca' ? 'ca' : 'es';
+      const input = {
+        language: languageCode,
+        issueDate: new Date(),
+        organization: {
+          name: organization.name, taxId: organization.taxId, address: organization.address ?? '',
+          zipCode: organization.zipCode ?? '', city: organization.city ?? '', province: organization.province ?? null,
+          signatoryName: organization.signatoryName ?? '[Representant]', signatoryRole: organization.signatoryRole ?? '',
+        },
+        donor: {
+          name: donor.name, taxId: donor.taxId, address: donor.address ?? null, zipCode: donor.zipCode,
+          city: donor.city ?? null, province: donor.province ?? null, donorType: donor.donorType,
+        },
+        movement: { date: tx.date, amount: tx.amount }, logoDataUrl, signatureDataUrl,
+      } as const;
+      buildIndividualDonationCertificatePdf(input).save(individualDonationCertificateFilename(input));
+      toast({ title: t.donorDetail.certificate.generated, description: individualDonationCertificateFilename(input) });
+    } catch (error) {
+      console.error('Error generating certificate:', error);
+      toast({ variant: 'destructive', title: t.common.error, description: t.donorDetail.certificate.error });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  // Implementació històrica conservada temporalment per comparar la paritat visual.
+  const generateLegacyCertificatePdf = async (tx: Transaction) => {
     if (!donor || !organization) return;
     const blockedMessage = getIndividualCertificateBlockMessage(tx, 'download');
     if (blockedMessage) {

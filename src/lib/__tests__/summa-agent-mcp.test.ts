@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import * as XLSX from 'xlsx';
@@ -38,11 +38,17 @@ test('MCP lists the private Summa Agent tools', async () => {
 
   const tools = (response?.result as { tools: Array<{ name: string }> }).tools;
   assert.deepEqual(tools.map((tool) => tool.name), [
+    'search_bank_accounts',
     'search_contacts',
     'search_transactions',
     'preview_bank_statement_import',
+    'prepare_bank_statement_import_plan',
+    'commit_bank_statement_import',
     'prepare_donation_classification',
+    'prepare_donation_classification_plan',
+    'apply_donation_classification',
     'prepare_individual_donation_certificate',
+    'generate_individual_donation_certificate',
     'upload_pending_document',
     'link_pending_document_to_transaction',
     'get_entity_operational_summary',
@@ -191,6 +197,62 @@ test('bank statement preview requires one absolute file, parses it locally and c
   }
 });
 
+test('bank import plan and commit use separate endpoints and require exact human confirmation', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'summa-mcp-bank-plan-'));
+  const filePath = join(dir, 'extracte.csv');
+  await writeFile(filePath, [
+    'Fecha operación;Concepto;Importe;Saldo',
+    '01/08/2026;Fundacion Tipsa;20000,00;25000,00',
+  ].join('\n'));
+  try {
+    const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+    const client = new SummaPrivateIntegrationClient({
+      baseUrl: 'http://summa.local',
+      token: 'token-a',
+      defaultOrgId: 'org-a',
+      fetchFn: async (url, init) => {
+        calls.push({ url: String(url), body: JSON.parse(String(init?.body)) as Record<string, unknown> });
+        return jsonResponse({ success: true });
+      },
+    });
+    await client.prepareBankStatementImportPlan({
+      bankAccountId: 'bank-a',
+      filePath,
+      selectedRowIndexes: [2],
+    });
+    await assert.rejects(
+      () => client.commitBankStatementImport({
+        planId: 'plan-a',
+        bankAccountId: 'bank-a',
+        fileSha256: 'a'.repeat(64),
+        inputHash: 'b'.repeat(64),
+        selectedRowIndexes: [2],
+        confirmationText: 'CONFIRMO',
+        humanConfirmed: false as never,
+      }),
+      /humanConfirmed must be true/
+    );
+    await client.commitBankStatementImport({
+      planId: 'plan-a',
+      bankAccountId: 'bank-a',
+      fileSha256: 'a'.repeat(64),
+      inputHash: 'b'.repeat(64),
+      selectedRowIndexes: [2],
+      confirmationText: 'CONFIRMO',
+      humanConfirmed: true,
+    });
+
+    assert.equal(calls.length, 2);
+    assert.equal(calls[0].url, 'http://summa.local/api/integrations/private/bank-import/plan');
+    assert.deepEqual(calls[0].body.selectedRowIndexes, [2]);
+    assert.equal(calls[1].url, 'http://summa.local/api/integrations/private/bank-import/commit');
+    assert.equal(calls[1].body.humanConfirmed, true);
+    assert.equal(calls[1].body.confirmationText, 'CONFIRMO');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('prepare tool dispatch calls only classification and certificate prepare endpoints', async () => {
   const calls: string[] = [];
   const client = new SummaPrivateIntegrationClient({
@@ -222,16 +284,72 @@ test('prepare tool dispatch calls only classification and certificate prepare en
       arguments: {
         transactionId: 'tx-a',
         donorId: 'donor-a',
-        useProposedClassification: true,
       },
     },
   });
 
   assert.deepEqual(calls, [
     'http://summa.local/api/integrations/private/donations/classification/prepare',
-    'http://summa.local/api/integrations/private/certificates/individual/prepare',
+    'http://summa.local/api/integrations/private/certificates/individual/plan',
   ]);
   assert.equal(calls.some((url) => /commit|apply|generate|send|transactions\/import/.test(url)), false);
+});
+
+test('individual certificate generate requires confirmation and writes one new verified PDF inside the configured directory', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'summa-mcp-cert-'));
+  const outputPath = join(dir, 'tipsa.pdf');
+  const pdfBytes = Buffer.from('%PDF-1.3 canonical summa test');
+  const { createHash } = await import('node:crypto');
+  const pdfSha256 = createHash('sha256').update(pdfBytes).digest('hex');
+  const calls: string[] = [];
+  try {
+    const client = new SummaPrivateIntegrationClient({
+      baseUrl: 'http://summa.local', token: 'token-a', defaultOrgId: 'org-a', outputDir: dir,
+      fetchFn: async (url) => {
+        calls.push(String(url));
+        return jsonResponse({ success: true, generated: true, filename: 'canonical.pdf', pdfBase64: pdfBytes.toString('base64'), pdfSha256, pdfSizeBytes: pdfBytes.length, warnings: [] });
+      },
+    });
+    const base = { planId: 'plan-a', transactionId: 'tx-a', donorId: 'donor-a', preconditionToken: 'pre-a', confirmationText: 'CONFIRMO', outputPath };
+    await assert.rejects(() => client.generateIndividualDonationCertificate({ ...base, humanConfirmed: false as never }), /humanConfirmed must be true/);
+    const result = await client.generateIndividualDonationCertificate({ ...base, humanConfirmed: true });
+    assert.equal(calls[0], 'http://summa.local/api/integrations/private/certificates/individual/generate');
+    assert.equal(result.outputPath, outputPath);
+    assert.equal(result.pdfSha256, pdfSha256);
+    assert.equal(await readFile(outputPath, 'utf8'), pdfBytes.toString());
+    await assert.rejects(() => client.generateIndividualDonationCertificate({ ...base, humanConfirmed: true }), /OUTPUT_FILE_ALREADY_EXISTS/);
+    await assert.rejects(() => client.generateIndividualDonationCertificate({ ...base, humanConfirmed: true, outputPath: join(tmpdir(), 'outside.pdf') }), /SUMMA_MCP_OUTPUT_DIR/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('donation classification plan and apply are separate and apply requires confirmation', async () => {
+  const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+  const client = new SummaPrivateIntegrationClient({
+    baseUrl: 'http://summa.local', token: 'token-a', defaultOrgId: 'org-a',
+    fetchFn: async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body)) as Record<string, unknown> });
+      return jsonResponse({ success: true });
+    },
+  });
+  await client.prepareDonationClassificationPlan({ transactionId: 'tx-a', donorId: 'donor-a' });
+  await assert.rejects(
+    () => client.applyDonationClassification({
+      planId: 'plan-a', transactionId: 'tx-a', donorId: 'donor-a',
+      preconditionToken: 'pre-a', confirmationText: 'CONFIRMO', humanConfirmed: false as never,
+    }),
+    /humanConfirmed must be true/
+  );
+  await client.applyDonationClassification({
+    planId: 'plan-a', transactionId: 'tx-a', donorId: 'donor-a',
+    preconditionToken: 'pre-a', confirmationText: 'CONFIRMO', humanConfirmed: true,
+  });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].url, 'http://summa.local/api/integrations/private/donations/classification/plan');
+  assert.equal(calls[1].url, 'http://summa.local/api/integrations/private/donations/classification/apply');
+  assert.equal(calls[1].body.humanConfirmed, true);
+  assert.equal(calls[1].body.preconditionToken, 'pre-a');
 });
 
 test('search tools call only the private integration API with org isolation headers', async () => {
@@ -242,17 +360,27 @@ test('search tools call only the private integration API with org isolation head
     defaultOrgId: 'org-a',
     fetchFn: async (url, init) => {
       calls.push({ url: String(url), init });
-      return jsonResponse({ success: true, contacts: [] });
+      return jsonResponse({ success: true, candidates: [] });
     },
   });
 
+  await client.searchBankAccounts({ q: 'caixa', limit: 5 });
   await client.searchContacts({ q: 'alpha', limit: 5 });
+  await client.searchTransactions({ q: 'tipsa', amount: 20_000, limit: 5 });
 
-  assert.equal(calls.length, 1);
-  assert.match(calls[0].url, /\/api\/integrations\/private\/contacts\/search\?/);
-  assert.match(calls[0].url, /orgId=org-a/);
-  assert.match(calls[0].url, /q=alpha/);
-  assert.equal((calls[0].init?.headers as Record<string, string>).Authorization, 'Bearer token-a');
+  assert.equal(calls.length, 3);
+  assert.match(calls[0].url, /\/api\/integrations\/private\/conversational-search\/bank-accounts\?/);
+  assert.match(calls[0].url, /q=caixa/);
+  assert.match(calls[1].url, /\/api\/integrations\/private\/conversational-search\/contacts\?/);
+  assert.match(calls[1].url, /q=alpha/);
+  assert.match(calls[2].url, /\/api\/integrations\/private\/conversational-search\/transactions\?/);
+  assert.match(calls[2].url, /q=tipsa/);
+  assert.match(calls[2].url, /amount=20000/);
+  for (const call of calls) {
+    assert.match(call.url, /orgId=org-a/);
+    assert.equal((call.init?.headers as Record<string, string>).Authorization, 'Bearer token-a');
+    assert.doesNotMatch(call.url, /commit|apply|generate|send|import/);
+  }
 });
 
 test('operational summary does not use pending documents read or fiscal endpoints', async () => {

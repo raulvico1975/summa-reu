@@ -9,9 +9,16 @@ export const PRIVATE_INTEGRATION_TOKEN_TYPE = 'private_integration';
 export type IntegrationScope =
   | 'contacts.read'
   | 'transactions.read'
+  | 'bank_accounts.search'
+  | 'transactions.search'
+  | 'contacts.search'
   | 'bank_import.preview'
+  | 'bank_import.prepare'
+  | 'bank_import.commit'
   | 'donation_classification.prepare'
+  | 'donation_classification.apply'
   | 'certificates.prepare'
+  | 'certificates.generate'
   | 'pending_documents.write'
   | 'pending_documents.link';
 
@@ -116,9 +123,16 @@ function normalizeScopes(value: unknown): IntegrationScope[] {
     (scope): scope is IntegrationScope =>
       scope === 'contacts.read' ||
       scope === 'transactions.read' ||
+      scope === 'bank_accounts.search' ||
+      scope === 'transactions.search' ||
+      scope === 'contacts.search' ||
       scope === 'bank_import.preview' ||
+      scope === 'bank_import.prepare' ||
+      scope === 'bank_import.commit' ||
       scope === 'donation_classification.prepare' ||
+      scope === 'donation_classification.apply' ||
       scope === 'certificates.prepare' ||
+      scope === 'certificates.generate' ||
       scope === 'pending_documents.write' ||
       scope === 'pending_documents.link'
   );
