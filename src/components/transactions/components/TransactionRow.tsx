@@ -104,6 +104,7 @@ interface TransactionRowProps {
   isDocumentLoading: boolean;
   isCategoryLoading: boolean;
   isContactLoading?: boolean;
+  canMutateDocuments?: boolean;
   // Bulk selection (opcional, només si canBulkEdit)
   isSelected?: boolean;
   isSelectionDisabled?: boolean;
@@ -230,6 +231,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   isDocumentLoading,
   isCategoryLoading,
   isContactLoading,
+  canMutateDocuments = false,
   isSelected,
   isSelectionDisabled,
   onToggleSelect,
@@ -1029,7 +1031,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       {/* Documents column - always visible */}
       <TableCell className="w-10 shrink-0 py-2 text-center align-top">
         <div className="flex items-center justify-center">
-          <TransactionDocumentsButton transaction={tx} loading={isDocumentLoading} />
+          <TransactionDocumentsButton transaction={tx} loading={isDocumentLoading} canEdit={canMutateDocuments} />
         </div>
       </TableCell>
 
@@ -1079,10 +1081,12 @@ export const TransactionRow = React.memo(function TransactionRow({
               <MessageSquare className="mr-2 h-4 w-4" />
               {tx.note ? (t.editNote || 'Editar nota') : (t.addNote || 'Afegir nota')}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleAttachDocument}>
-              <FileUp className="mr-2 h-4 w-4" />
-              {t.attachDocument}
-            </DropdownMenuItem>
+            {canMutateDocuments && (
+              <DropdownMenuItem onClick={handleAttachDocument}>
+                <FileUp className="mr-2 h-4 w-4" />
+                {t.attachDocument}
+              </DropdownMenuItem>
+            )}
             {hasStripeImputation && onOpenStripeImputationDetail && (
               <DropdownMenuItem onClick={handleOpenStripeDetail}>
                 <Eye className="mr-2 h-4 w-4 text-blue-600" />

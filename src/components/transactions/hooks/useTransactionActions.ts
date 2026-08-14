@@ -50,6 +50,7 @@ interface UseTransactionActionsParams {
   userId?: string | null;
   authUser?: { getIdToken: () => Promise<string> } | null;
   canEditMovements?: boolean;
+  canMutateDocuments?: boolean;
 }
 
 interface UseTransactionActionsReturn {
@@ -158,9 +159,10 @@ export function useTransactionActions({
   userId,
   authUser,
   canEditMovements = true,
+  canMutateDocuments = false,
 }: UseTransactionActionsParams): UseTransactionActionsReturn {
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // ─────────────────────────────────────────────────────────────────────────
   // STATE: Document Upload / Delete
@@ -197,6 +199,20 @@ export function useTransactionActions({
     });
     return false;
   }, [canEditMovements, toast, t.common.error]);
+
+  const ensureCanMutateDocuments = React.useCallback((): boolean => {
+    if (!ensureCanEdit()) return false;
+    if (canMutateDocuments) return true;
+    toast({
+      variant: 'destructive',
+      title: t.common.error,
+      description: tr(
+        'movements.documents.readOnlyByPlan',
+        'El pla o la configuració actual permet consultar i descarregar la documentació existent, però no modificar-la.'
+      ),
+    });
+    return false;
+  }, [canMutateDocuments, ensureCanEdit, t.common.error, toast, tr]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // NOTE SETTER (for InlineNoteEditor component)
@@ -311,7 +327,7 @@ export function useTransactionActions({
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleAttachDocument = React.useCallback((transactionId: string) => {
-    if (!ensureCanEdit()) return;
+    if (!ensureCanMutateDocuments()) return;
     if (!organizationId || !transactionsCollection) {
       const errorMsg = t.movements.table.organizationNotIdentified;
       toast({ variant: 'destructive', title: t.common.error, description: errorMsg });
@@ -408,7 +424,7 @@ export function useTransactionActions({
       document.body.appendChild(fileInput);
       fileInput.click();
     }, 100);
-  }, [ensureCanEdit, organizationId, transactionsCollection, storage, toast, t]);
+  }, [ensureCanMutateDocuments, organizationId, transactionsCollection, storage, toast, t, transactions, userId]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DOCUMENT ATTACH WITH EXPLICIT FILENAME (called from TransactionsTable dialog)
@@ -419,7 +435,7 @@ export function useTransactionActions({
     file: File,
     overrideFilename: string,
   ) => {
-    if (!ensureCanEdit()) return;
+    if (!ensureCanMutateDocuments()) return;
     if (!organizationId || !firestore) {
       toast({ variant: 'destructive', title: t.common.error, description: t.movements.table.organizationNotIdentified });
       return;
@@ -468,19 +484,20 @@ export function useTransactionActions({
     } finally {
       setDocLoadingStates(prev => ({ ...prev, [transactionId]: false }));
     }
-  }, [ensureCanEdit, organizationId, firestore, storage, transactions, toast, t]);
+  }, [ensureCanMutateDocuments, organizationId, firestore, storage, transactions, toast, t]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DOCUMENT DELETE
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleDeleteDocClick = React.useCallback((transaction: Transaction) => {
+    if (!ensureCanMutateDocuments()) return;
     setTransactionToDeleteDoc(transaction);
     setIsDeleteDocDialogOpen(true);
-  }, []);
+  }, [ensureCanMutateDocuments]);
 
   const handleDeleteDocConfirm = React.useCallback(async () => {
-    if (!ensureCanEdit()) return;
+    if (!ensureCanMutateDocuments()) return;
     if (!transactionToDeleteDoc || !transactionsCollection || !organizationId || !firestore) {
       setIsDeleteDocDialogOpen(false);
       setTransactionToDeleteDoc(null);
@@ -546,7 +563,7 @@ export function useTransactionActions({
       setIsDeleteDocDialogOpen(false);
       setTransactionToDeleteDoc(null);
     }
-  }, [ensureCanEdit, transactionToDeleteDoc, transactionsCollection, organizationId, firestore, storage, toast, t]);
+  }, [ensureCanMutateDocuments, transactionToDeleteDoc, transactionsCollection, organizationId, firestore, storage, toast, t]);
 
   const handleCloseDeleteDocDialog = React.useCallback(() => {
     setIsDeleteDocDialogOpen(false);

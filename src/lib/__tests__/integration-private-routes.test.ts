@@ -289,6 +289,12 @@ function createLinkRequest(body: Record<string, unknown>, token = 'link-token') 
   } as never;
 }
 
+const allowEntitlement = async () => ({
+  allowed: true,
+  diagnostics: [],
+  enforcementMode: 'active' as const,
+});
+
 test('contacts search stays isolated per org', async () => {
   const authRepository = new InMemoryAuthRepository([
     buildToken({ scopes: ['contacts.read'] }, 'contacts-token'),
@@ -482,6 +488,7 @@ test('pending documents upload is idempotent and does not duplicate the document
   const storage = new InMemoryUploadStorage();
 
   const firstResponse = await handlePrivatePendingDocumentsUpload(createUploadRequest('mail-1'), {
+    resolveEntitlementFn: allowEntitlement,
     authRepository,
     store,
     storage,
@@ -493,6 +500,7 @@ test('pending documents upload is idempotent and does not duplicate the document
   };
 
   const secondResponse = await handlePrivatePendingDocumentsUpload(createUploadRequest('mail-1'), {
+    resolveEntitlementFn: allowEntitlement,
     authRepository,
     store,
     storage,
@@ -529,6 +537,7 @@ test('pending documents upload can create a confirmed invoice when required fiel
       categoryId: 'cat-services',
     }),
     {
+      resolveEntitlementFn: allowEntitlement,
       authRepository,
       store,
       storage: new InMemoryUploadStorage(),
@@ -568,6 +577,7 @@ test('pending documents upload rejects confirmed invoices without Summa required
       supplierId: 'supplier-acme',
     }),
     {
+      resolveEntitlementFn: allowEntitlement,
       authRepository,
       store: new InMemoryUploadStore(),
       storage: new InMemoryUploadStorage(),
@@ -618,7 +628,7 @@ test('pending document link validates one reviewed match and updates transaction
       reviewerLabel: 'Raul',
       note: 'OK granular pilot Baruma',
     }),
-    { authRepository, store, storage }
+    { authRepository, store, storage, resolveEntitlementFn: allowEntitlement }
   );
 
   assert.equal(response.status, 200);
@@ -696,7 +706,7 @@ test('pending document link blocks hash mismatches and existing transaction docu
       reviewerLabel: 'Raul',
       note: 'OK granular',
     }),
-    { authRepository, store, storage: new InMemoryLinkStorage() }
+    { authRepository, store, storage: new InMemoryLinkStorage(), resolveEntitlementFn: allowEntitlement }
   );
   assert.equal(hashMismatch.status, 409);
   assert.equal((await hashMismatch.json() as { code: string }).code, 'DOCUMENT_HASH_MISMATCH');
@@ -718,7 +728,7 @@ test('pending document link blocks hash mismatches and existing transaction docu
       reviewerLabel: 'Raul',
       note: 'OK granular',
     }),
-    { authRepository, store, storage: new InMemoryLinkStorage() }
+    { authRepository, store, storage: new InMemoryLinkStorage(), resolveEntitlementFn: allowEntitlement }
   );
   assert.equal(existingDocument.status, 409);
   assert.equal((await existingDocument.json() as { code: string }).code, 'TRANSACTION_ALREADY_HAS_DOCUMENT');

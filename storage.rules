@@ -32,6 +32,81 @@ service firebase.storage {
         && (getMemberRole(orgId) == 'admin' || getMemberRole(orgId) == 'user');
     }
 
+    function entitlementEnforcementMode() {
+      let configured = firestore.exists(/databases/(default)/documents/system/entitlements)
+        ? firestore.get(/databases/(default)/documents/system/entitlements).data.get('enforcementMode', 'off')
+        : 'off';
+      return configured in ['off', 'shadow', 'active'] ? configured : 'off';
+    }
+
+    function transactionDocumentsOperationallyEnabled(orgId) {
+      return firestore.get(/databases/(default)/documents/organizations/$(orgId))
+        .data.get('features', {}).get('transactionDocuments', true) != false;
+    }
+
+    function subscriptionSnapshotMatchesCatalogV1(orgId) {
+      let subscriptionPath = /databases/(default)/documents/organizations/$(orgId)/subscription/current;
+      let data = firestore.get(subscriptionPath).data;
+      let plan = data.get('planId', 'unknown');
+      let entitlements = data.get('entitlements', {});
+      return data.get('catalogVersion', 0) == 1
+        && data.get('status', 'cancelled') in ['trial', 'active']
+        && (
+          (plan == 'control'
+            && entitlements.get('transactionDocuments.readHistorical', false) == true
+            && entitlements.get('transactionDocuments.mutate', true) == false
+            && entitlements.get('pendingDocuments.mutate', true) == false)
+          || (plan == 'management'
+            && entitlements.get('transactionDocuments.readHistorical', false) == true
+            && entitlements.get('transactionDocuments.mutate', false) == true
+            && entitlements.get('pendingDocuments.mutate', true) == false)
+          || (plan == 'complete'
+            && entitlements.get('transactionDocuments.readHistorical', false) == true
+            && entitlements.get('transactionDocuments.mutate', false) == true
+            && entitlements.get('pendingDocuments.mutate', false) == true)
+        );
+    }
+
+    function canMutateTransactionDocuments(orgId) {
+      let mode = entitlementEnforcementMode();
+      let subscriptionPath = /databases/(default)/documents/organizations/$(orgId)/subscription/current;
+      return transactionDocumentsOperationallyEnabled(orgId)
+        && ((mode == 'off' || mode == 'shadow')
+        || (
+          mode == 'active'
+          && firestore.exists(subscriptionPath)
+          && subscriptionSnapshotMatchesCatalogV1(orgId)
+          && firestore.get(subscriptionPath).data.get('planId', 'control') in ['management', 'complete']
+          && firestore.get(subscriptionPath).data.get('entitlements', {}).get('transactionDocuments.mutate', false) == true
+        ));
+    }
+
+    function hasMovementReadCapability(orgId) {
+      return isOrgMember(orgId)
+        && (getMemberRole(orgId) == 'admin'
+          || firestore.get(/databases/(default)/documents/organizations/$(orgId)/members/$(request.auth.uid))
+            .data.get('capabilities', {}).get('moviments.read', false) == true);
+    }
+
+    function pendingDocumentsOperationallyEnabled(orgId) {
+      return firestore.get(/databases/(default)/documents/organizations/$(orgId))
+        .data.get('features', {}).get('pendingDocs', false) == true;
+    }
+
+    function canMutatePendingDocuments(orgId) {
+      let mode = entitlementEnforcementMode();
+      let subscriptionPath = /databases/(default)/documents/organizations/$(orgId)/subscription/current;
+      return pendingDocumentsOperationallyEnabled(orgId)
+        && ((mode == 'off' || mode == 'shadow')
+        || (
+          mode == 'active'
+          && firestore.exists(subscriptionPath)
+          && subscriptionSnapshotMatchesCatalogV1(orgId)
+          && firestore.get(subscriptionPath).data.get('planId', 'control') == 'complete'
+          && firestore.get(subscriptionPath).data.get('entitlements', {}).get('pendingDocuments.mutate', false) == true
+        ));
+    }
+
     function isOrgAdmin(orgId) {
       return isOrgMember(orgId) && getMemberRole(orgId) == 'admin';
     }
@@ -96,6 +171,7 @@ service firebase.storage {
 
     // Uploads client confirmats: configuració d'org (admin-only)
     match /organizations/{orgId}/logo {
+      allow read: if isSuperAdmin() || isOrgMember(orgId);
       allow create, update: if (isSuperAdmin() || isOrgAdmin(orgId))
         && isAllowedImage()
         && isAtMost(2 * 1024 * 1024);
@@ -103,6 +179,7 @@ service firebase.storage {
     }
 
     match /organizations/{orgId}/signature {
+      allow read: if isSuperAdmin() || isOrgMember(orgId);
       allow create, update: if (isSuperAdmin() || isOrgAdmin(orgId))
         && isAllowedImage()
         && isAtMost(1 * 1024 * 1024);
@@ -111,29 +188,39 @@ service firebase.storage {
 
     // Uploads client confirmats: operativa d'org (admin/user)
     match /organizations/{orgId}/pendingDocuments/{docId}/{fileName} {
-      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+      allow read: if isSuperAdmin() || isOrgMember(orgId);
+      allow create, update: if canMutatePendingDocuments(orgId)
+        && (isSuperAdmin() || hasOperationalOrgAccess(orgId))
         && (
           (isReceiptDocument() && isAtMost(15 * 1024 * 1024)) ||
           (docId == '_healthcheck' && fileName.matches('[0-9]+\\.txt') && isPlainText() && isAtMost(1024))
         );
-      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+      allow delete: if canMutatePendingDocuments(orgId)
+        && (isSuperAdmin() || hasOperationalOrgAccess(orgId));
     }
 
     match /organizations/{orgId}/documents/{transactionId}/{fileName} {
-      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+      allow read: if isSuperAdmin() || hasMovementReadCapability(orgId);
+      allow create, update: if canMutateTransactionDocuments(orgId)
+        && (isSuperAdmin() || hasOperationalOrgAccess(orgId))
         && isAttachableDocument()
         && isAtMost(15 * 1024 * 1024);
-      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+      allow delete: if canMutateTransactionDocuments(orgId)
+        && (isSuperAdmin() || hasOperationalOrgAccess(orgId));
     }
 
     match /organizations/{orgId}/transactions/{transactionId}/{fileName} {
-      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+      allow read: if isSuperAdmin() || hasMovementReadCapability(orgId);
+      allow create, update: if canMutateTransactionDocuments(orgId)
+        && (isSuperAdmin() || hasOperationalOrgAccess(orgId))
         && isAttachableDocument()
         && isAtMost(15 * 1024 * 1024);
-      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+      allow delete: if canMutateTransactionDocuments(orgId)
+        && (isSuperAdmin() || hasOperationalOrgAccess(orgId));
     }
 
     match /organizations/{orgId}/offBankExpenses/{expenseId}/{fileName} {
+      allow read: if isSuperAdmin() || isOrgMember(orgId);
       allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
         && isAttachableDocument()
         && isAtMost(15 * 1024 * 1024);
@@ -141,6 +228,7 @@ service firebase.storage {
     }
 
     match /organizations/{orgId}/expenseReports/{reportId}/{fileName} {
+      allow read: if isSuperAdmin() || isOrgMember(orgId);
       allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
         && isPdf()
         && isAtMost(15 * 1024 * 1024);
@@ -148,6 +236,7 @@ service firebase.storage {
     }
 
     match /organizations/{orgId}/prebankRemittances/{remittanceId}/{fileName} {
+      allow read: if isSuperAdmin() || isOrgMember(orgId);
       allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
         && isXml()
         && isAtMost(2 * 1024 * 1024);
@@ -155,6 +244,7 @@ service firebase.storage {
     }
 
     match /organizations/{orgId}/sepaCollectionRuns/{runId}/{fileName} {
+      allow read: if isSuperAdmin() || isOrgMember(orgId);
       allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
         && isXml()
         && isAtMost(2 * 1024 * 1024);
@@ -162,11 +252,10 @@ service firebase.storage {
     }
 
     // ════════════════════════════════════════════════════════════════════════════
-    // Organitzacions - lectura per membres reals; sense write blanket
+    // Organitzacions - cap fallback: cada prefix ha de declarar lectura i escriptura.
     // ════════════════════════════════════════════════════════════════════════════
     match /organizations/{orgId}/{allPaths=**} {
-      allow read: if isSuperAdmin() || isOrgMember(orgId);
-      allow write: if false;
+      allow read, write: if false;
     }
 
     // ════════════════════════════════════════════════════════════════════════════

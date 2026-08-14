@@ -28,7 +28,7 @@ interface TransactionDocumentsButtonProps {
 
 export function TransactionDocumentsButton({
   transaction,
-  canEdit = true,
+  canEdit = false,
   loading = false,
 }: TransactionDocumentsButtonProps) {
   const { firestore } = useFirebase();

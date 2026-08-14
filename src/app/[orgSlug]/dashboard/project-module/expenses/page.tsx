@@ -96,6 +96,7 @@ import { buildDocumentFilename } from '@/lib/build-document-filename';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useEntitlements } from '@/hooks/use-entitlements';
 import {
   canSelectExpenseForProjectAssignment,
   matchesProjectExpenseTableFilter,
@@ -753,8 +754,13 @@ export default function ExpensesInboxPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, organization } = useCurrentOrganization();
   const { canReadBankInProjectes, projectCapability } = usePermissions();
+  const { canUseCapability } = useEntitlements();
+  const canMutateTransactionDocuments = canUseCapability('transactionDocuments.mutate', {
+    operationalEnabled: organization?.features?.transactionDocuments !== false,
+    userAllowed: projectCapability !== 'none',
+  });
   const { toast } = useToast();
   const storage = useStorage();
   const isMobile = useIsMobile();
@@ -1177,6 +1183,7 @@ export default function ExpensesInboxPage() {
         const offBankId = txId.replace('off_', '');
         await updateOffBankExpense(offBankId, { attachments: [] });
       } else {
+        if (!canMutateTransactionDocuments) return;
         // Bank: actualitzar document a null
         const txRef = doc(firestore, 'organizations', organizationId, 'transactions', txId);
         await updateDoc(txRef, { document: null });
@@ -1236,6 +1243,7 @@ export default function ExpensesInboxPage() {
           attachments: [...existingAttachments, newAttachment],
         });
       } else {
+        if (!canMutateTransactionDocuments) return;
         await addTransactionDocument({
           firestore,
           storage,
@@ -1267,7 +1275,7 @@ export default function ExpensesInboxPage() {
     } finally {
       setUploadingDocTxId(null);
     }
-  }, [organizationId, storage, firestore, updateOffBankExpense, refresh, toast, t, ep, user?.uid]);
+  }, [canMutateTransactionDocuments, organizationId, storage, firestore, updateOffBankExpense, refresh, toast, t, ep, user?.uid]);
 
   const handleOpenExpenseDocument = React.useCallback((expense: UnifiedExpenseWithLink['expense']) => {
     const attachment = expense.attachments?.find((item) => item.url || item.storagePath) ?? null;

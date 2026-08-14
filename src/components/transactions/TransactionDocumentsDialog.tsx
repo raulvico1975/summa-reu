@@ -48,13 +48,14 @@ export function TransactionDocumentsDialog({
     .replace('{count}', String(documents.length));
 
   const handlePickFile = React.useCallback(() => {
+    if (!canWrite) return;
     fileInputRef.current?.click();
-  }, []);
+  }, [canWrite]);
 
   const handleFileSelected = React.useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file || !organizationId) return;
+    if (!file || !organizationId || !canWrite) return;
 
     setPendingAction('upload');
     try {
@@ -69,27 +70,27 @@ export function TransactionDocumentsDialog({
     } finally {
       setPendingAction(null);
     }
-  }, [firestore, organizationId, storage, transaction, user?.uid]);
+  }, [canWrite, firestore, organizationId, storage, transaction, user?.uid]);
 
   const handleSetPrimary = React.useCallback(async (documentId: string) => {
-    if (!organizationId) return;
+    if (!organizationId || !canWrite) return;
     setPendingAction(`primary:${documentId}`);
     try {
       await setPrimaryTransactionDocument(firestore, organizationId, transaction, documentId);
     } finally {
       setPendingAction(null);
     }
-  }, [firestore, organizationId, transaction]);
+  }, [canWrite, firestore, organizationId, transaction]);
 
   const handleDelete = React.useCallback(async (documentId: string) => {
-    if (!organizationId) return;
+    if (!organizationId || !canWrite) return;
     setPendingAction(`delete:${documentId}`);
     try {
       await deleteTransactionDocument(firestore, organizationId, transaction, documentId);
     } finally {
       setPendingAction(null);
     }
-  }, [firestore, organizationId, transaction]);
+  }, [canWrite, firestore, organizationId, transaction]);
 
   const handleOpen = React.useCallback(async (document: ResolvedTransactionDocument) => {
     if (!organizationId || !user) {
@@ -150,6 +151,18 @@ export function TransactionDocumentsDialog({
               </>
             )}
           </div>
+
+          {!canEdit && (
+            <p
+              role="status"
+              className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-5 text-amber-900"
+            >
+              {tr(
+                'movements.documents.readOnlyByPlan',
+                'El pla o la configuració actual permet consultar i descarregar la documentació existent, però no modificar-la.'
+              )}
+            </p>
+          )}
 
           <div className="max-h-[360px] space-y-2 overflow-y-auto">
             {documents.map((document) => (

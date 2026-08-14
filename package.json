@@ -21,6 +21,7 @@
     "demo:up:work": "node scripts/demo/up.mjs --mode work",
     "qa:user": "node scripts/qa/user-standard.mjs",
     "qa:user:test": "node --test scripts/qa/__tests__/*.test.mjs",
+    "qa:entitlements:emulator": "node scripts/qa/run-plan-entitlements-emulator.mjs",
     "prepare": "husky",
     "updates:drafts": "npx tsx scripts/generate-product-update-drafts.ts",
     "test:blog-publish-local": "node --import tsx scripts/test-blog-publish-local.ts",

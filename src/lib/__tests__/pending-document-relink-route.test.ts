@@ -127,6 +127,7 @@ function makeDeps(args: {
       userGrants: null,
     }) as any,
     requireOperationalAccessFn: requireOperationalAccess,
+    resolveEntitlementFn: async () => ({ allowed: true, diagnostics: [], enforcementMode: 'active' as const }),
   };
 }
 

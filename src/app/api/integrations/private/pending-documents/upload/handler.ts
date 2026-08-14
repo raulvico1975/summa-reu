@@ -12,6 +12,7 @@ import {
   type IntegrationAuthRepository,
   type IntegrationContext,
 } from '@/lib/api/integration-auth';
+import { resolveServerEntitlement, type EntitlementDbLike } from '@/lib/api/require-entitlement';
 
 const ROUTE_PATH = '/api/integrations/private/pending-documents/upload';
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -119,6 +120,7 @@ interface PendingDocumentsUploadDeps {
   authRepository?: IntegrationAuthRepository;
   store?: PendingDocumentsUploadStore;
   storage?: PendingDocumentsUploadStorage;
+  resolveEntitlementFn?: typeof resolveServerEntitlement;
 }
 
 function normalizeOptionalString(value: FormDataEntryValue | null): string | null {
@@ -639,6 +641,19 @@ export async function handlePrivatePendingDocumentsUpload(
       { success: false, code: auth.code },
       { status: auth.status }
     );
+  }
+
+  const entitlement = await (deps.resolveEntitlementFn ?? resolveServerEntitlement)({
+    db: deps.resolveEntitlementFn ? ({} as EntitlementDbLike) : getAdminDb() as unknown as EntitlementDbLike,
+    orgId: auth.context.orgId,
+    capability: 'pendingDocuments.mutate',
+    userAllowed: true,
+  });
+  if (!entitlement.allowed) {
+    await auditRoute(authRepository, auth.audit, 'scope_denied', 403, 'ENTITLEMENT_DENIED', {
+      requestKeyHash,
+    });
+    return NextResponse.json({ success: false, code: 'ENTITLEMENT_DENIED' }, { status: 403 });
   }
 
   const formData = await request.formData();

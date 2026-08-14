@@ -4,7 +4,7 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { useFirebase } from '@/firebase';
+import { useDoc, useFirebase } from '@/firebase';
 import { collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
 import { generateUniqueSlug, reserveSlug } from '@/lib/slugs';
 import type { Organization, OrganizationRole, UserProfile, OrganizationMember } from '@/lib/data';
@@ -14,6 +14,8 @@ import { Loader2, AlertCircle, LogOut } from 'lucide-react';
 import { User, signOut } from 'firebase/auth';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 import { broadcastLogoutSync } from '@/lib/session-sync';
+import type { EntitlementSystemConfig, OrganizationSubscriptionProjection, ResolvedEntitlements } from '@/lib/entitlements/types';
+import { resolveOrganizationEntitlements } from '@/lib/entitlements/resolve-entitlements';
 
 interface OrganizationContextType {
   organization: Organization | null;
@@ -23,6 +25,8 @@ interface OrganizationContextType {
   member: OrganizationMember | null;
   userRole: OrganizationRole | null;
   firebaseUser: User | null;
+  subscription: OrganizationSubscriptionProjection | null;
+  entitlements: ResolvedEntitlements;
   isLoading: boolean;
   error: Error | null;
 }
@@ -341,8 +345,32 @@ function useOrganizationBySlug(orgSlug?: string) {
  */
 export function OrganizationProvider({ children, orgSlug }: OrganizationProviderProps) {
   const organizationData = useOrganizationBySlug(orgSlug);
-  const { auth } = useFirebase();
+  const { auth, firestore } = useFirebase();
   const router = useRouter();
+  const subscriptionRef = React.useMemo(() => {
+    if (!organizationData.organizationId) return null;
+    return doc(
+      firestore,
+      'organizations',
+      organizationData.organizationId,
+      'subscription',
+      'current'
+    );
+  }, [firestore, organizationData.organizationId]);
+  const { data: subscriptionData, isLoading: isSubscriptionLoading } = useDoc<OrganizationSubscriptionProjection>(subscriptionRef);
+  const entitlementConfigRef = React.useMemo(() => doc(firestore, 'system', 'entitlements'), [firestore]);
+  const { data: entitlementConfig, isLoading: isEntitlementConfigLoading } = useDoc<EntitlementSystemConfig>(entitlementConfigRef);
+  const subscription = subscriptionData as OrganizationSubscriptionProjection | null;
+  const entitlements = React.useMemo(() => resolveOrganizationEntitlements({
+    subscription,
+    legacyPlanId: organizationData.organization?.billingPlan,
+    defaultEnforcementMode: entitlementConfig?.enforcementMode,
+  }), [entitlementConfig?.enforcementMode, organizationData.organization?.billingPlan, subscription]);
+  const contextValue = React.useMemo<OrganizationContextType>(() => ({
+    ...organizationData,
+    subscription,
+    entitlements,
+  }), [entitlements, organizationData, subscription]);
 
   // Handler per tancar sessió
   // HARD REDIRECT: Usem window.location.assign per desmuntar tota l'app
@@ -360,7 +388,7 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
   };
 
   // Mentre es carrega, mostrar un indicador
-  if (organizationData.isLoading) {
+  if (organizationData.isLoading || isEntitlementConfigLoading || (organizationData.organizationId && isSubscriptionLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -432,7 +460,7 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
   }
 
   return (
-    <OrganizationContext.Provider value={organizationData}>
+    <OrganizationContext.Provider value={contextValue}>
       {children}
     </OrganizationContext.Provider>
   );

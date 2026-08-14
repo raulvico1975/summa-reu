@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useEntitlements } from '@/hooks/use-entitlements';
 import { useRouter } from 'next/navigation';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -103,12 +104,16 @@ export default function PendingDocsPage() {
   const { toast } = useToast();
   const { t, tr } = useTranslations();
   const isMobile = useIsMobile();
+  const { canUseCapability } = useEntitlements();
 
   // Feature flag check - redirect if not enabled
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
 
   // Admin i user poden operar (superadmin es resol com admin). Viewer: només lectura.
-  const canOperate = userRole === 'admin' || userRole === 'user';
+  const canOperate = canUseCapability('pendingDocuments.mutate', {
+    operationalEnabled: isPendingDocsEnabled,
+    userAllowed: userRole === 'admin' || userRole === 'user',
+  });
 
   // Estat del filtre (per defecte: Per revisar = drafts)
   const [statusFilter, setStatusFilter] = React.useState<PendingDocumentStatus[] | 'all' | 'matched' | 'archived'>(DRAFTS_FILTER);

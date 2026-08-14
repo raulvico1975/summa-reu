@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getStorage } from 'firebase-admin/storage';
 import { getAdminApp, getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
 import { extractStoragePathFromDocumentUrl } from '@/app/api/transaction-documents/open/handler';
+import { requirePermission } from '@/lib/api/require-permission';
 
 const SIGNED_URL_TTL_MS = 15 * 60 * 1000;
 
@@ -67,6 +68,14 @@ export async function handleOpenOrgDocument(
   const membership = await validateUserMembership(db, auth.uid, orgId);
   if (!membership.valid) {
     return NextResponse.json({ success: false, code: 'NOT_MEMBER' }, { status: 403 });
+  }
+  const area = storagePath.split('/')[2];
+  if (area === 'documents' || area === 'transactions') {
+    const denied = requirePermission(membership, {
+      code: 'MOVIMENTS_ROUTE_REQUIRED',
+      check: (permissions) => permissions['sections.moviments'] && permissions['moviments.read'],
+    });
+    if (denied) return denied;
   }
 
   const bucket = deps.storageBucket ?? getStorage(getAdminApp()).bucket();

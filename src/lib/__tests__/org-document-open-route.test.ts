@@ -4,6 +4,7 @@ import { handleOpenOrgDocument } from '@/app/api/org-documents/open/handler';
 
 const MEMBER_PATH = 'organizations/org-a/members/user-1';
 const OFFBANK_STORAGE_PATH = 'organizations/org-a/offBankExpenses/off-1/receipt.pdf';
+const TRANSACTION_STORAGE_PATH = 'organizations/org-a/documents/tx-1/invoice.pdf';
 
 class FakeDb {
   constructor(private readonly docs: Record<string, Record<string, unknown>>) {}
@@ -25,10 +26,12 @@ class FakeDb {
 class FakeBucket {
   readonly signedUrlCalls: Array<{ path: string; expires: number }> = [];
 
+  constructor(private readonly existingPath = OFFBANK_STORAGE_PATH) {}
+
   file(path: string) {
     return {
       exists: async () => {
-        return [path === OFFBANK_STORAGE_PATH] as [boolean];
+        return [path === this.existingPath] as [boolean];
       },
       getSignedUrl: async (options: { action: 'read'; expires: number }) => {
         this.signedUrlCalls.push({ path, expires: options.expires });
@@ -66,6 +69,35 @@ test('open org document regenerates a fresh URL for off-bank attachments', async
   assert.equal(body.durable, true);
   assert.equal(body.url, `https://signed.local/${encodeURIComponent(OFFBANK_STORAGE_PATH)}`);
   assert.deepEqual(bucket.signedUrlCalls, [{ path: OFFBANK_STORAGE_PATH, expires: 901_000 }]);
+});
+
+test('open org document exigeix moviments.read per documents de transacció', async () => {
+  const db = new FakeDb({
+    [MEMBER_PATH]: { role: 'viewer', userOverrides: { deny: ['moviments.read'] } },
+  });
+  const response = await handleOpenOrgDocument(requestFor({
+    orgId: 'org-a',
+    storagePath: TRANSACTION_STORAGE_PATH,
+  }), {
+    db: db as never,
+    storageBucket: new FakeBucket(TRANSACTION_STORAGE_PATH),
+    verifyIdTokenFn: async () => ({ uid: 'user-1', email: 'user@example.org' }),
+  });
+  assert.equal(response.status, 403);
+  assert.equal((await response.json() as { code: string }).code, 'MOVIMENTS_ROUTE_REQUIRED');
+});
+
+test('open org document manté lectura històrica per membre amb moviments.read', async () => {
+  const db = new FakeDb({ [MEMBER_PATH]: { role: 'viewer' } });
+  const response = await handleOpenOrgDocument(requestFor({
+    orgId: 'org-a',
+    storagePath: TRANSACTION_STORAGE_PATH,
+  }), {
+    db: db as never,
+    storageBucket: new FakeBucket(TRANSACTION_STORAGE_PATH),
+    verifyIdTokenFn: async () => ({ uid: 'user-1', email: 'user@example.org' }),
+  });
+  assert.equal(response.status, 200);
 });
 
 test('open org document rejects non-document organization paths', async () => {

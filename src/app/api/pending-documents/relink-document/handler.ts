@@ -21,6 +21,7 @@ import type { Bucket } from '@google-cloud/storage';
 import { validateUserMembership } from '@/lib/api/admin-sdk';
 import { requireOperationalAccess } from '@/lib/api/require-operational-access';
 import { safeUpdate, SafeWriteValidationError } from '@/lib/safe-write';
+import { resolveServerEntitlement, type EntitlementDbLike } from '@/lib/api/require-entitlement';
 
 // =============================================================================
 // FIREBASE ADMIN INITIALIZATION
@@ -148,6 +149,7 @@ interface RelinkDocumentDeps {
   getAdminStorageFn?: () => Bucket;
   validateUserMembershipFn?: typeof validateUserMembership;
   requireOperationalAccessFn?: typeof requireOperationalAccess;
+  resolveEntitlementFn?: typeof resolveServerEntitlement;
 }
 
 function getOrganizationStoragePrefix(orgId: string): string {
@@ -164,6 +166,7 @@ export async function handleRelinkDocumentPost(
   const getAdminStorageFn = deps.getAdminStorageFn ?? getAdminStorage;
   const validateUserMembershipFn = deps.validateUserMembershipFn ?? validateUserMembership;
   const requireOperationalAccessFn = deps.requireOperationalAccessFn ?? requireOperationalAccess;
+  const resolveEntitlementFn = deps.resolveEntitlementFn ?? resolveServerEntitlement;
 
   // 1. Autenticació
   const authResult = await verifyIdTokenFn(request);
@@ -203,6 +206,27 @@ export async function handleRelinkDocumentPost(
   const membership = await validateUserMembershipFn(db, uid, orgId);
   const accessError = requireOperationalAccessFn(membership);
   if (accessError) return accessError;
+
+  const [pendingEntitlement, transactionDocumentEntitlement] = await Promise.all([
+    resolveEntitlementFn({
+      db: db as unknown as EntitlementDbLike,
+      orgId,
+      capability: 'pendingDocuments.mutate',
+      userAllowed: true,
+    }),
+    resolveEntitlementFn({
+      db: db as unknown as EntitlementDbLike,
+      orgId,
+      capability: 'transactionDocuments.mutate',
+      userAllowed: true,
+    }),
+  ]);
+  if (!pendingEntitlement.allowed || !transactionDocumentEntitlement.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'El pla no permet modificar documents.', code: 'ENTITLEMENT_DENIED' },
+      { status: 403 }
+    );
+  }
 
   // 5. Carregar pending document
   const pendingRef = db.doc(`organizations/${orgId}/pendingDocuments/${pendingId}`);

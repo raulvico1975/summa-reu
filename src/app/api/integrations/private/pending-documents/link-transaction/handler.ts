@@ -10,6 +10,7 @@ import {
   type IntegrationAuthRepository,
   type IntegrationContext,
 } from '@/lib/api/integration-auth';
+import { resolveServerEntitlement, type EntitlementDbLike } from '@/lib/api/require-entitlement';
 
 const ROUTE_PATH = '/api/integrations/private/pending-documents/link-transaction';
 const AMOUNT_TOLERANCE = 0.01;
@@ -76,6 +77,7 @@ interface PendingDocumentLinkDeps {
   authRepository?: IntegrationAuthRepository;
   store?: PendingDocumentLinkStore;
   storage?: PendingDocumentLinkStorage;
+  resolveEntitlementFn?: typeof resolveServerEntitlement;
 }
 
 function cleanString(value: unknown): string | null {
@@ -430,6 +432,29 @@ export async function handlePrivatePendingDocumentLinkTransaction(
           : 'unauthorized';
     await auditRoute(authRepository, auth.audit, result, auth.status, auth.code);
     return NextResponse.json({ success: false, code: auth.code }, { status: auth.status });
+  }
+
+  const resolveEntitlementFn = deps.resolveEntitlementFn ?? resolveServerEntitlement;
+  const entitlementDb = deps.resolveEntitlementFn
+    ? ({} as EntitlementDbLike)
+    : getAdminDb() as unknown as EntitlementDbLike;
+  const [pendingEntitlement, transactionDocumentEntitlement] = await Promise.all([
+    resolveEntitlementFn({
+      db: entitlementDb,
+      orgId: auth.context.orgId,
+      capability: 'pendingDocuments.mutate',
+      userAllowed: true,
+    }),
+    resolveEntitlementFn({
+      db: entitlementDb,
+      orgId: auth.context.orgId,
+      capability: 'transactionDocuments.mutate',
+      userAllowed: true,
+    }),
+  ]);
+  if (!pendingEntitlement.allowed || !transactionDocumentEntitlement.allowed) {
+    await auditRoute(authRepository, auth.audit, 'scope_denied', 403, 'ENTITLEMENT_DENIED');
+    return NextResponse.json({ success: false, code: 'ENTITLEMENT_DENIED' }, { status: 403 });
   }
 
   const input = await parseInput(request, auth.context.orgId);

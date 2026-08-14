@@ -79,6 +79,7 @@ interface TransactionRowMobileProps {
   onGenerateReturnEmailDraft?: (tx: Transaction) => void;
   onViewRemittanceDetail?: (txId: string) => void;
   onAttachDocument?: (txId: string) => void;
+  canMutateDocuments?: boolean;
   showDonationToggle?: boolean;
   isDonationPending?: boolean;
   onToggleDonation182?: (txId: string) => void;
@@ -142,6 +143,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   onGenerateReturnEmailDraft,
   onViewRemittanceDetail,
   onAttachDocument,
+  canMutateDocuments = false,
   showDonationToggle,
   isDonationPending,
   onToggleDonation182,
@@ -531,7 +533,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
 
       {/* Actions rail */}
       <div className="mt-2 flex justify-end gap-1 shrink-0">
-        <TransactionDocumentsButton transaction={tx} />
+        <TransactionDocumentsButton transaction={tx} canEdit={canMutateDocuments} />
         <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -547,7 +549,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               <MessageSquare className="h-4 w-4 mr-2" />
               {tx.note ? (t.editNote || 'Editar nota') : (t.addNote || 'Afegir nota')}
             </DropdownMenuItem>
-            {onAttachDocument && (
+            {canMutateDocuments && onAttachDocument && (
               <DropdownMenuItem onClick={handleAttachDoc}>
                 <FileText className="h-4 w-4 mr-2 text-muted-foreground/40" />
                 {t.attachProof}
