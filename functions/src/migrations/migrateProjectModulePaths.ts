@@ -1,5 +1,4 @@
 import * as admin from "firebase-admin";
-import * as functions from "firebase-functions/v1";
 import { createHash, randomUUID } from "node:crypto";
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,160}$/;
@@ -19,6 +18,25 @@ interface MigrationResult {
 }
 
 interface MigrationContextLike { auth?: { uid: string } | null }
+export type MigrationErrorCode =
+  | "unauthenticated"
+  | "invalid-argument"
+  | "permission-denied"
+  | "not-found"
+  | "already-exists"
+  | "aborted"
+  | "failed-precondition";
+
+export class MigrationError extends Error {
+  constructor(public readonly code: MigrationErrorCode, message: string) {
+    super(message);
+    this.name = "MigrationError";
+  }
+}
+
+type MigrationErrorFactory = (code: MigrationErrorCode, message: string) => Error;
+type MigrationLogger = (message: string, details: Record<string, unknown>) => void;
+
 interface MigrationSnapshotLike {
   exists: boolean;
   id?: string;
@@ -43,6 +61,14 @@ interface MigrationDbLike {
   runTransaction<T>(callback: (transaction: MigrationTransactionLike) => Promise<T>): Promise<T>;
 }
 
+function migrationError(
+  code: MigrationErrorCode,
+  message: string,
+  factory?: MigrationErrorFactory,
+): Error {
+  return factory?.(code, message) ?? new MigrationError(code, message);
+}
+
 const MIGRATION_KIND = "project-module-paths-v1";
 const MIGRATION_LEASE_MS = 5 * 60 * 1000;
 
@@ -53,30 +79,36 @@ function requestFingerprint(input: { orgId: string; dryRun: boolean; reason: str
 export async function handleMigrateProjectModulePaths(
   data: unknown,
   context: MigrationContextLike,
-  deps?: { db: MigrationDbLike; now?: () => number; runToken?: () => string }
+  deps?: {
+    db?: MigrationDbLike;
+    now?: () => number;
+    runToken?: () => string;
+    errorFactory?: MigrationErrorFactory;
+    logger?: MigrationLogger;
+  }
 ): Promise<MigrationResult> {
   if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Usuari no autenticat");
+    throw migrationError("unauthenticated", "Usuari no autenticat", deps?.errorFactory);
   }
   const payload = data && typeof data === "object" && !Array.isArray(data) ? data as Record<string, unknown> : {};
   if (Object.keys(payload).some((key) => !["orgId", "dryRun", "reason", "idempotencyKey"].includes(key))) {
-    throw new functions.https.HttpsError("invalid-argument", "Camps no admesos");
+    throw migrationError("invalid-argument", "Camps no admesos", deps?.errorFactory);
   }
   const orgId = typeof payload.orgId === "string" ? payload.orgId.trim() : "";
   if (!ID_PATTERN.test(orgId)) {
-    throw new functions.https.HttpsError("invalid-argument", "orgId obligatori i invàlid");
+    throw migrationError("invalid-argument", "orgId obligatori i invàlid", deps?.errorFactory);
   }
   if (payload.dryRun !== undefined && typeof payload.dryRun !== "boolean") {
-    throw new functions.https.HttpsError("invalid-argument", "dryRun ha de ser booleà");
+    throw migrationError("invalid-argument", "dryRun ha de ser booleà", deps?.errorFactory);
   }
   const dryRun = payload.dryRun !== false;
   const reason = typeof payload.reason === "string" ? payload.reason.trim() : "";
   if (reason.length < 3 || reason.length > 500) {
-    throw new functions.https.HttpsError("invalid-argument", "reason obligatori (3-500 caràcters)");
+    throw migrationError("invalid-argument", "reason obligatori (3-500 caràcters)", deps?.errorFactory);
   }
   const idempotencyKey = typeof payload.idempotencyKey === "string" ? payload.idempotencyKey.trim() : "";
   if (!ID_PATTERN.test(idempotencyKey)) {
-    throw new functions.https.HttpsError("invalid-argument", "idempotencyKey obligatori i invàlid");
+    throw migrationError("invalid-argument", "idempotencyKey obligatori i invàlid", deps?.errorFactory);
   }
 
   const migrationDb = deps?.db ?? admin.firestore() as unknown as MigrationDbLike;
@@ -84,13 +116,13 @@ export async function handleMigrateProjectModulePaths(
   const runToken = deps?.runToken?.() ?? randomUUID();
   const superAdminSnap = await migrationDb.doc(`systemSuperAdmins/${context.auth.uid}`).get();
   if (!superAdminSnap.exists) {
-    throw new functions.https.HttpsError("permission-denied", "Accés exclusiu de SuperAdmin");
+    throw migrationError("permission-denied", "Accés exclusiu de SuperAdmin", deps?.errorFactory);
   }
 
   const orgRef = migrationDb.doc(`organizations/${orgId}`);
   const orgSnap = await orgRef.get();
   if (!orgSnap.exists) {
-    throw new functions.https.HttpsError("not-found", "Organització no trobada");
+    throw migrationError("not-found", "Organització no trobada", deps?.errorFactory);
   }
 
   const auditRef = migrationDb.doc(`adminAuditLogs/project-module-migration_${idempotencyKey}`);
@@ -118,14 +150,14 @@ export async function handleMigrateProjectModulePaths(
     }
     const audit = auditSnap.data?.() ?? {};
     if (audit.requestFingerprint !== fingerprint) {
-      throw new functions.https.HttpsError("already-exists", "idempotencyKey reutilitzat amb una petició diferent");
+      throw migrationError("already-exists", "idempotencyKey reutilitzat amb una petició diferent", deps?.errorFactory);
     }
     if (audit.status === "completed" && audit.result && typeof audit.result === "object") {
       return audit.result as MigrationResult;
     }
     const leaseExpiresAtMs = typeof audit.leaseExpiresAtMs === "number" ? audit.leaseExpiresAtMs : 0;
     if (leaseExpiresAtMs > now) {
-      throw new functions.https.HttpsError("aborted", "La mateixa migració ja està en curs");
+      throw migrationError("aborted", "La mateixa migració ja està en curs", deps?.errorFactory);
     }
     transaction.set(auditRef, {
       status: "started",
@@ -265,12 +297,12 @@ export async function handleMigrateProjectModulePaths(
   await migrationDb.runTransaction(async (transaction) => {
     const auditSnap = await transaction.get(auditRef);
     if (!auditSnap.exists) {
-      throw new functions.https.HttpsError("failed-precondition", "No existeix el registre d'auditoria de la migració");
+      throw migrationError("failed-precondition", "No existeix el registre d'auditoria de la migració", deps?.errorFactory);
     }
     const audit = auditSnap.data?.() ?? {};
     if (audit.status === "completed" && audit.result && typeof audit.result === "object") return;
     if (audit.activeRunToken !== runToken) {
-      throw new functions.https.HttpsError("aborted", "El lease de la migració ha canviat de propietari");
+      throw migrationError("aborted", "El lease de la migració ha canviat de propietari", deps?.errorFactory);
     }
     transaction.set(auditRef, {
       status: "completed",
@@ -280,7 +312,7 @@ export async function handleMigrateProjectModulePaths(
       leaseExpiresAtMs: 0,
     }, { merge: true });
   });
-  functions.logger.info("Migració projectModule finalitzada", {
+  deps?.logger?.("Migració projectModule finalitzada", {
     actorUid: context.auth.uid,
     orgId,
     dryRun,
@@ -290,7 +322,3 @@ export async function handleMigrateProjectModulePaths(
   });
   return result;
 }
-
-export const migrateProjectModulePaths = functions
-  .region("europe-west1")
-  .https.onCall((data, context) => handleMigrateProjectModulePaths(data, context));
