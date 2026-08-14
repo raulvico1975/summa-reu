@@ -15,6 +15,7 @@ import {
   type PublicLocale,
 } from '@/lib/public-locale';
 import { getPublicTranslations } from '@/i18n/public';
+import { parsePublicPlanId, type PublicPlanId } from '@/lib/public-plans';
 
 interface PageProps {
   params: Promise<{ lang: string }>;
@@ -64,9 +65,9 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
   const locale = lang as PublicLocale;
   const t = getPublicTranslations(locale);
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const planMessage = resolvedSearchParams.plan
-    ? t.contact.form.planMessages[resolvedSearchParams.plan]
-    : undefined;
+  const planId = parsePublicPlanId(resolvedSearchParams.plan);
+  const planMessages = t.contact.form.planMessages as Partial<Record<PublicPlanId, string>>;
+  const planMessage = planId ? planMessages[planId] : undefined;
   const manualCopy = locale === 'ca' || locale === 'es' ? CONTACT_MANUAL_COPY[locale] : null;
 
   return (
@@ -101,6 +102,7 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
                   messagePlaceholder: t.contact.form.messagePlaceholder,
                 }}
                 initialMessage={planMessage}
+                planId={planId ?? undefined}
               />
             </div>
 

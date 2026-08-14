@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { PUBLIC_PLAN_IDS } from '@/lib/public-plans';
 
 const CONTACT_FORM_SCHEMA = z.object({
   name: z.string().trim().min(2).max(120),
@@ -8,6 +9,7 @@ const CONTACT_FORM_SCHEMA = z.object({
   message: z.string().trim().min(10).max(5000),
   website: z.string().trim().max(500).optional().transform((value) => value ?? ''),
   language: z.enum(['ca', 'es', 'fr', 'pt']).optional(),
+  planId: z.enum(PUBLIC_PLAN_IDS).optional(),
 });
 
 function escapeHtml(value: string) {
@@ -40,6 +42,7 @@ function getContactEmailCopy(language?: 'ca' | 'es' | 'fr' | 'pt') {
       email: 'Email',
       organization: 'Entidad',
       language: 'Idioma',
+      plan: 'Plan',
       timestamp: 'Fecha/hora servidor',
       message: 'Mensaje',
     };
@@ -52,6 +55,7 @@ function getContactEmailCopy(language?: 'ca' | 'es' | 'fr' | 'pt') {
     email: 'Email',
     organization: 'Entitat',
     language: 'Idioma',
+    plan: 'Pla',
     timestamp: 'Data/hora servidor',
     message: 'Missatge',
   };
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, code: 'INVALID_PAYLOAD' }, { status: 400 });
   }
 
-  const { website, name, email, organization, message, language } = parsed.data;
+  const { website, name, email, organization, message, language, planId } = parsed.data;
 
   if (website) {
     return NextResponse.json({ ok: true });
@@ -94,6 +98,7 @@ export async function POST(request: NextRequest) {
   const subject = `${copy.subjectPrefix} - ${subjectTarget}`;
   const organizationLine = organization || '-';
   const languageLine = language || '-';
+  const planLine = planId || '-';
 
   const text = [
     copy.title,
@@ -102,6 +107,7 @@ export async function POST(request: NextRequest) {
     `${copy.email}: ${email}`,
     `${copy.organization}: ${organizationLine}`,
     `${copy.language}: ${languageLine}`,
+    `${copy.plan}: ${planLine}`,
     `${copy.timestamp}: ${serverTimestamp}`,
     '',
     `${copy.message}:`,
@@ -115,6 +121,7 @@ export async function POST(request: NextRequest) {
       <p><strong>${escapeHtml(copy.email)}:</strong> ${escapeHtml(email)}</p>
       <p><strong>${escapeHtml(copy.organization)}:</strong> ${escapeHtml(organizationLine)}</p>
       <p><strong>${escapeHtml(copy.language)}:</strong> ${escapeHtml(languageLine)}</p>
+      <p><strong>${escapeHtml(copy.plan)}:</strong> ${escapeHtml(planLine)}</p>
       <p><strong>${escapeHtml(copy.timestamp)}:</strong> ${escapeHtml(serverTimestamp)}</p>
       <p><strong>${escapeHtml(copy.message)}:</strong></p>
       <p>${escapeHtml(message).replaceAll('\n', '<br />')}</p>
