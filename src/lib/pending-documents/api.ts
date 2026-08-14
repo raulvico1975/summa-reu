@@ -19,6 +19,7 @@ import {
   type Query,
 } from 'firebase/firestore';
 import { ref, deleteObject, type FirebaseStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 import { pendingDocumentsCollection, pendingDocumentDoc } from './refs';
 import type {
   PendingDocument,
@@ -582,34 +583,15 @@ export async function unmatchPendingDocument(
     throw new Error('El document indica status matched però no té matchedTransactionId');
   }
 
-  const txRef = firestoreDoc(firestore, `organizations/${orgId}/transactions/${matchedTxId}`);
-  const txSnap = await getDoc(txRef);
-  const txExists = txSnap.exists();
-  const txData = txExists ? (txSnap.data() as { document?: string | null }) : null;
-  const shouldClearTransactionDocument = txData
-    ? transactionDocumentBelongsToPendingFile(txData.document, pendingData.file)
-    : false;
-
-  const batch = writeBatch(firestore);
-
-  batch.update(pendingRef, {
-    status: 'confirmed',
-    matchedTransactionId: null,
-    updatedAt: serverTimestamp(),
+  await callPendingTransactionUnlink(firestore, {
+    orgId,
+    pendingDocumentId: pendingDocId,
+    action: 'confirm',
   });
 
-  if (txExists && shouldClearTransactionDocument) {
-    batch.update(txRef, {
-      document: null,
-      updatedAt: serverTimestamp(),
-    });
-  }
-
-  await batch.commit();
-
   return {
-    transactionDocumentCleared: shouldClearTransactionDocument,
-    transactionFound: txExists,
+    transactionDocumentCleared: true,
+    transactionFound: true,
   };
 }
 
@@ -690,58 +672,37 @@ export async function deleteMatchedPendingDocument(
     throw new Error('El document indica status matched però no té matchedTransactionId');
   }
 
-  // 3. Comprovar si la transacció existeix
-  const txRef = firestoreDoc(firestore, `organizations/${orgId}/transactions/${matchedTxId}`);
-  const txSnap = await getDoc(txRef);
-  const txExists = txSnap.exists();
+  // 3. Netejar metadata+mirror+registry i eliminar el pendent atòmicament al backend.
+  const unlinkResult = await callPendingTransactionUnlink(firestore, {
+    orgId,
+    pendingDocumentId: pendingDocId,
+    action: 'delete',
+  });
 
-  if (!txExists) {
-    console.warn(`[deleteMatchedPendingDocument] Transacció ${matchedTxId} ja no existeix (orphan reference)`);
-  }
+  return {
+    success: true,
+    fileDeleted: !unlinkResult.cleanupPending,
+    ...(unlinkResult.cleanupPending
+      ? { fileError: 'La neteja del fitxer ha quedat pendent i es reintentarà.' }
+      : {}),
+  };
+}
 
-  // 4. Preparar batch per atomicitat
-  const batch = writeBatch(firestore);
-
-  // 4a. Actualitzar la transacció per treure referència al document (només si existeix)
-  if (txExists) {
-    batch.update(txRef, {
-      document: null,
-      updatedAt: serverTimestamp(),
-    });
-  }
-
-  // 4b. Eliminar el pending document
-  batch.delete(pendingRef);
-
-  // 5. Executar batch
-  await batch.commit();
-
-  // 5. Eliminar fitxers de Storage (best-effort, fora del batch)
-  let fileDeleted = true;
-  let fileError: string | undefined;
-
-  // Eliminar fitxer original (pendingDocuments path)
-  if (pendingData.file?.storagePath) {
-    try {
-      const storageRef = ref(storage, pendingData.file.storagePath);
-      await deleteObject(storageRef);
-    } catch (error) {
-      console.warn('[deleteMatchedPendingDocument] No s\'ha pogut esborrar storagePath:', error);
-      // No és error crític - pot ser que ja s'hagi eliminat
-    }
-  }
-
-  // Eliminar còpia al destí final (documents path)
-  if (pendingData.file?.finalStoragePath) {
-    try {
-      const finalRef = ref(storage, pendingData.file.finalStoragePath);
-      await deleteObject(finalRef);
-    } catch (error) {
-      console.warn('[deleteMatchedPendingDocument] No s\'ha pogut esborrar finalStoragePath:', error);
-      fileDeleted = false;
-      fileError = error instanceof Error ? error.message : 'Error desconegut';
-    }
-  }
-
-  return { success: true, fileDeleted, fileError };
+async function callPendingTransactionUnlink(
+  firestore: Firestore,
+  body: { orgId: string; pendingDocumentId: string; action: 'confirm' | 'delete' }
+): Promise<{ cleanupPending: boolean }> {
+  const user = getAuth(firestore.app).currentUser;
+  if (!user) throw new Error('Sessió no vàlida');
+  const response = await fetch('/api/pending-documents/unlink-transaction', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${await user.getIdToken()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  const result = await response.json() as { cleanupPending?: boolean; error?: string };
+  if (!response.ok) throw new Error(result.error ?? 'No s\'ha pogut desfer la conciliació');
+  return { cleanupPending: result.cleanupPending === true };
 }

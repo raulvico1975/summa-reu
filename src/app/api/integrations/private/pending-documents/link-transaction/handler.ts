@@ -11,9 +11,15 @@ import {
   type IntegrationContext,
 } from '@/lib/api/integration-auth';
 import { resolveServerEntitlement, type EntitlementDbLike } from '@/lib/api/require-entitlement';
+import { mutateTransactionDocumentsAdmin } from '@/lib/server/transaction-document-registry';
+import {
+  buildPendingDocumentStorageIdentity,
+  pendingDocumentStoragePathsMatch,
+} from '@/lib/server/pending-document-storage-identity';
 
 const ROUTE_PATH = '/api/integrations/private/pending-documents/link-transaction';
 const AMOUNT_TOLERANCE = 0.01;
+const ID_PATTERN = /^[A-Za-z0-9_-]{1,160}$/;
 export const LINKED_TRANSACTION_DOCUMENT_SIGNED_URL_EXPIRES = '03-01-2500';
 
 type RequestLike = Pick<NextRequest, 'headers' | 'json' | 'nextUrl'>;
@@ -59,6 +65,7 @@ export interface PendingDocumentLinkStore {
     transactionId: string;
     documentUrl: string;
     finalStoragePath: string;
+    expectedPendingStatus: string;
     context: IntegrationContext;
     input: LinkInput;
   }): Promise<void>;
@@ -71,6 +78,7 @@ export interface PendingDocumentLinkStorage {
     transactionId: string;
     file: NonNullable<PendingDocumentLinkRecord['file']>;
   }): Promise<{ documentUrl: string; finalStoragePath: string; copied: boolean }>;
+  cleanupLinkedFile?(finalStoragePath: string): Promise<void>;
 }
 
 interface PendingDocumentLinkDeps {
@@ -84,6 +92,11 @@ function cleanString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed || null;
+}
+
+function cleanBoundedString(value: unknown, maxLength: number): string | null {
+  const cleaned = cleanString(value);
+  return cleaned && cleaned.length <= maxLength ? cleaned : null;
 }
 
 function cleanSha256(value: unknown): string | null {
@@ -112,10 +125,6 @@ function dateOnly(value: string | null): string | null {
 
 function amountsMatch(left: number, right: number): boolean {
   return Math.abs(Math.abs(left) - Math.abs(right)) <= AMOUNT_TOLERANCE;
-}
-
-function storagePathBelongsToOrg(path: string | null, orgId: string): boolean {
-  return typeof path === 'string' && path.startsWith(`organizations/${orgId}/`);
 }
 
 async function auditRoute(
@@ -147,21 +156,21 @@ async function parseInput(request: RequestLike, orgIdFromUrl: string): Promise<L
   }
 
   const orgId = cleanString(raw.orgId) ?? orgIdFromUrl;
-  if (orgId !== orgIdFromUrl) {
+  if (orgId !== orgIdFromUrl || !ID_PATTERN.test(orgId)) {
     return { code: 'ORG_ID_MISMATCH', status: 400 };
   }
 
   const pendingDocumentId = cleanString(raw.pendingDocumentId);
   const transactionId = cleanString(raw.transactionId);
-  const caseId = cleanString(raw.caseId);
+  const caseId = cleanBoundedString(raw.caseId, 160);
   const documentHash = cleanSha256(raw.documentHash);
   const expectedAmount = cleanAmount(raw.expectedAmount);
   const expectedDate = cleanString(raw.expectedDate);
-  const reviewerLabel = cleanString(raw.reviewerLabel);
-  const note = cleanString(raw.note);
+  const reviewerLabel = cleanBoundedString(raw.reviewerLabel, 160);
+  const note = cleanBoundedString(raw.note, 4_000);
 
-  if (!pendingDocumentId) return { code: 'MISSING_PENDING_DOCUMENT_ID', status: 400 };
-  if (!transactionId) return { code: 'MISSING_TRANSACTION_ID', status: 400 };
+  if (!pendingDocumentId || !ID_PATTERN.test(pendingDocumentId)) return { code: 'MISSING_PENDING_DOCUMENT_ID', status: 400 };
+  if (!transactionId || !ID_PATTERN.test(transactionId)) return { code: 'MISSING_TRANSACTION_ID', status: 400 };
   if (!caseId) return { code: 'MISSING_CASE_ID', status: 400 };
   if (!documentHash) return { code: 'INVALID_DOCUMENT_HASH', status: 400 };
   if (expectedAmount === null) return { code: 'INVALID_EXPECTED_AMOUNT', status: 400 };
@@ -223,48 +232,54 @@ function createFirestoreLinkStore(): PendingDocumentLinkStore {
       };
     },
 
-    async linkDocumentToTransaction({ orgId, pendingDocumentId, transactionId, documentUrl, finalStoragePath, context, input }) {
-      const batch = db.batch();
-      const pendingRef = db.doc(`organizations/${orgId}/pendingDocuments/${pendingDocumentId}`);
-      const transactionRef = db.doc(`organizations/${orgId}/transactions/${transactionId}`);
-      const transactionDocumentRef = transactionRef.collection('documents').doc();
+    async linkDocumentToTransaction({ orgId, pendingDocumentId, transactionId, documentUrl, finalStoragePath, expectedPendingStatus, context, input }) {
       const nowIso = new Date().toISOString();
 
-      batch.update(pendingRef, {
-        status: 'matched',
-        matchedTransactionId: transactionId,
-        suggestedTransactionIds: [],
-        'file.finalStoragePath': finalStoragePath,
-        updatedAt: FieldValue.serverTimestamp(),
-        integrationLinkMeta: {
-          tokenId: context.tokenId,
-          label: context.label,
-          sourceRepo: context.sourceRepo,
-          caseId: input.caseId,
-          reviewerLabel: input.reviewerLabel,
-          note: input.note,
-          linkedVia: 'private_integration_api',
-          linkedAt: FieldValue.serverTimestamp(),
+      await mutateTransactionDocumentsAdmin({
+        db,
+        orgId,
+        transactionId,
+        actorUid: null,
+        nowIso,
+        relatedWrites: [{
+          path: `organizations/${orgId}/pendingDocuments/${pendingDocumentId}`,
+          action: 'update',
+          expected: { status: expectedPendingStatus },
+          data: {
+            status: 'matched',
+            matchedTransactionId: transactionId,
+            suggestedTransactionIds: [],
+            'file.finalStoragePath': finalStoragePath,
+            updatedAt: FieldValue.serverTimestamp(),
+            integrationLinkMeta: {
+              tokenId: context.tokenId,
+              label: context.label,
+              sourceRepo: context.sourceRepo,
+              caseId: input.caseId,
+              reviewerLabel: input.reviewerLabel,
+              note: input.note,
+              linkedVia: 'private_integration_api',
+              linkedAt: FieldValue.serverTimestamp(),
+            },
+          },
+        }],
+        mutation: {
+          action: 'link',
+          makePrimary: true,
+          document: {
+            url: documentUrl,
+            storagePath: finalStoragePath,
+            filename: finalStoragePath.split('/').filter(Boolean).pop() ?? 'document',
+            contentType: null,
+            size: null,
+            isPrimary: true,
+            createdAt: nowIso,
+            createdByUid: null,
+            source: 'transaction-upload',
+          },
         },
       });
 
-      batch.update(transactionRef, {
-        document: documentUrl,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      batch.set(transactionDocumentRef, {
-        url: documentUrl,
-        storagePath: finalStoragePath,
-        filename: finalStoragePath.split('/').filter(Boolean).pop() ?? 'document',
-        contentType: null,
-        size: null,
-        isPrimary: true,
-        createdAt: nowIso,
-        createdByUid: null,
-        source: 'transaction-upload',
-      });
-
-      await batch.commit();
     },
   };
 }
@@ -274,39 +289,53 @@ function createFirebaseLinkStorage(): PendingDocumentLinkStorage {
 
   return {
     async ensureLinkedFile({ orgId, pendingDocumentId, transactionId, file }) {
-      if (!file.filename) {
-        throw new Error('MISSING_FILE_NAME');
+      const identity = buildPendingDocumentStorageIdentity({
+        orgId,
+        pendingDocumentId,
+        transactionId,
+        filename: file.filename,
+      });
+      if (!identity) throw new Error('INVALID_FILE_IDENTITY');
+      if (!pendingDocumentStoragePathsMatch({
+        identity,
+        originalPath: file.storagePath,
+        finalPath: file.finalStoragePath,
+      })) {
+        throw new Error('STORAGE_PATH_IDENTITY_MISMATCH');
       }
 
-      const finalStoragePath =
-        file.finalStoragePath && storagePathBelongsToOrg(file.finalStoragePath, orgId)
-          ? file.finalStoragePath
-          : `organizations/${orgId}/documents/${transactionId}/${file.filename}`;
+      const finalStoragePath = identity.finalPath;
 
       const destination = bucket.file(finalStoragePath);
       const [destinationExists] = await destination.exists();
       let copied = false;
 
-      if (!destinationExists) {
-        const sourcePath = file.storagePath ?? `organizations/${orgId}/pendingDocuments/${pendingDocumentId}/${file.filename}`;
-        if (!storagePathBelongsToOrg(sourcePath, orgId)) {
-          throw new Error('STORAGE_PATH_OUTSIDE_ORG');
+      try {
+        if (!destinationExists) {
+          const source = bucket.file(file.storagePath as string);
+          const [sourceExists] = await source.exists();
+          if (!sourceExists) {
+            throw new Error('SOURCE_FILE_NOT_FOUND');
+          }
+          await source.copy(destination);
+          copied = true;
         }
-        const source = bucket.file(sourcePath);
-        const [sourceExists] = await source.exists();
-        if (!sourceExists) {
-          throw new Error('SOURCE_FILE_NOT_FOUND');
+
+        const [documentUrl] = await destination.getSignedUrl({
+          action: 'read',
+          expires: LINKED_TRANSACTION_DOCUMENT_SIGNED_URL_EXPIRES,
+        });
+
+        return { documentUrl, finalStoragePath, copied };
+      } catch (error) {
+        if (copied) {
+          await destination.delete({ ignoreNotFound: true }).catch(() => undefined);
         }
-        await source.copy(destination);
-        copied = true;
+        throw error;
       }
-
-      const [documentUrl] = await destination.getSignedUrl({
-        action: 'read',
-        expires: LINKED_TRANSACTION_DOCUMENT_SIGNED_URL_EXPIRES,
-      });
-
-      return { documentUrl, finalStoragePath, copied };
+    },
+    async cleanupLinkedFile(finalStoragePath) {
+      await bucket.file(finalStoragePath).delete({ ignoreNotFound: true });
     },
   };
 }
@@ -340,19 +369,11 @@ async function validateAndLink(
     return { ok: false as const, status: 409 as const, code: 'PENDING_DOCUMENT_ALREADY_MATCHED', previous };
   }
 
-  if (transaction.document && pendingDocument.matchedTransactionId === input.transactionId) {
-    return {
-      ok: true as const,
-      status: 200 as const,
-      idempotent: true,
-      copied: false,
-      finalStoragePath: pendingDocument.file?.finalStoragePath ?? null,
-      documentUrl: transaction.document,
-      previous,
-    };
-  }
+  const repairingIdempotentLink = Boolean(
+    transaction.document && pendingDocument.matchedTransactionId === input.transactionId
+  );
 
-  if (transaction.document) {
+  if (transaction.document && !repairingIdempotentLink) {
     return { ok: false as const, status: 409 as const, code: 'TRANSACTION_ALREADY_HAS_DOCUMENT', previous };
   }
 
@@ -364,7 +385,17 @@ async function validateAndLink(
     return { ok: false as const, status: 409 as const, code: 'DOCUMENT_HASH_MISMATCH', previous };
   }
 
-  if (!storagePathBelongsToOrg(pendingDocument.file.storagePath, input.orgId)) {
+  const storageIdentity = buildPendingDocumentStorageIdentity({
+    orgId: input.orgId,
+    pendingDocumentId: input.pendingDocumentId,
+    transactionId: input.transactionId,
+    filename: pendingDocument.file.filename,
+  });
+  if (!storageIdentity || !pendingDocumentStoragePathsMatch({
+    identity: storageIdentity,
+    originalPath: pendingDocument.file.storagePath,
+    finalPath: pendingDocument.file.finalStoragePath,
+  })) {
     return { ok: false as const, status: 409 as const, code: 'STORAGE_PATH_OUTSIDE_ORG', previous };
   }
 
@@ -387,20 +418,28 @@ async function validateAndLink(
     file: pendingDocument.file,
   });
 
-  await store.linkDocumentToTransaction({
-    orgId: input.orgId,
-    pendingDocumentId: input.pendingDocumentId,
-    transactionId: input.transactionId,
-    documentUrl: linkedFile.documentUrl,
-    finalStoragePath: linkedFile.finalStoragePath,
-    context,
-    input,
-  });
+  try {
+    await store.linkDocumentToTransaction({
+      orgId: input.orgId,
+      pendingDocumentId: input.pendingDocumentId,
+      transactionId: input.transactionId,
+      documentUrl: linkedFile.documentUrl,
+      finalStoragePath: linkedFile.finalStoragePath,
+      expectedPendingStatus: pendingDocument.status,
+      context,
+      input,
+    });
+  } catch (error) {
+    if (linkedFile.copied && storage.cleanupLinkedFile) {
+      await storage.cleanupLinkedFile(linkedFile.finalStoragePath).catch(() => undefined);
+    }
+    throw error;
+  }
 
   return {
     ok: true as const,
     status: 200 as const,
-    idempotent: false,
+    idempotent: repairingIdempotentLink,
     copied: linkedFile.copied,
     finalStoragePath: linkedFile.finalStoragePath,
     documentUrl: linkedFile.documentUrl,
@@ -438,7 +477,7 @@ export async function handlePrivatePendingDocumentLinkTransaction(
   const entitlementDb = deps.resolveEntitlementFn
     ? ({} as EntitlementDbLike)
     : getAdminDb() as unknown as EntitlementDbLike;
-  const [pendingEntitlement, transactionDocumentEntitlement] = await Promise.all([
+  const [pendingMutationEntitlement, pendingMatchEntitlement, transactionDocumentEntitlement] = await Promise.all([
     resolveEntitlementFn({
       db: entitlementDb,
       orgId: auth.context.orgId,
@@ -448,11 +487,17 @@ export async function handlePrivatePendingDocumentLinkTransaction(
     resolveEntitlementFn({
       db: entitlementDb,
       orgId: auth.context.orgId,
+      capability: 'pendingDocuments.match',
+      userAllowed: true,
+    }),
+    resolveEntitlementFn({
+      db: entitlementDb,
+      orgId: auth.context.orgId,
       capability: 'transactionDocuments.mutate',
       userAllowed: true,
     }),
   ]);
-  if (!pendingEntitlement.allowed || !transactionDocumentEntitlement.allowed) {
+  if (!pendingMutationEntitlement.allowed || !pendingMatchEntitlement.allowed || !transactionDocumentEntitlement.allowed) {
     await auditRoute(authRepository, auth.audit, 'scope_denied', 403, 'ENTITLEMENT_DENIED');
     return NextResponse.json({ success: false, code: 'ENTITLEMENT_DENIED' }, { status: 403 });
   }

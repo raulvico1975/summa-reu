@@ -55,6 +55,13 @@ export function ProjectFundingSourcesPanel({
   const [open, setOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<ProjectFundingSource | null>(null);
 
+  React.useEffect(() => {
+    if (!canEdit) {
+      setOpen(false);
+      setEditing(null);
+    }
+  }, [canEdit]);
+
   const activeSources = fundingSources
     .filter((source) => source.archivedAt === null)
     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
@@ -116,7 +123,7 @@ export function ProjectFundingSourcesPanel({
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(source); setOpen(true); }}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onArchive(source.id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => canEdit && onArchive(source.id)} disabled={!canEdit}>
                           <Archive className="h-4 w-4" />
                         </Button>
                       </div>
@@ -153,11 +160,13 @@ export function ProjectFundingSourcesPanel({
         )}
       </CardContent>
       <FundingSourceDialog
-        open={open}
-        onOpenChange={setOpen}
+        open={canEdit && open}
+        onOpenChange={(next) => canEdit && setOpen(next)}
         source={editing}
         isSaving={isSaving}
+        canEdit={canEdit}
         onSave={async (data) => {
+          if (!canEdit) return;
           await onSave(data, editing?.id);
           setOpen(false);
           setEditing(null);
@@ -172,12 +181,14 @@ function FundingSourceDialog({
   onOpenChange,
   source,
   isSaving,
+  canEdit,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   source: ProjectFundingSource | null;
   isSaving: boolean;
+  canEdit: boolean;
   onSave: (data: ProjectFundingSourceFormData) => Promise<void>;
 }) {
   const { tr } = useTranslations();
@@ -201,7 +212,7 @@ function FundingSourceDialog({
   }, [open, source]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={canEdit && open} onOpenChange={(next) => canEdit && onOpenChange(next)}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{source ? tr('projectModule.multiFunding.editSource') : tr('projectModule.multiFunding.addSource')}</DialogTitle>
@@ -261,7 +272,7 @@ function FundingSourceDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>{tr('common.cancel')}</Button>
-          <Button onClick={() => onSave(form)} disabled={isSaving || !form.name.trim()}>{tr('common.save')}</Button>
+          <Button onClick={() => canEdit && onSave(form)} disabled={!canEdit || isSaving || !form.name.trim()}>{tr('common.save')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

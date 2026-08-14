@@ -33,6 +33,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 
 import { OffBankExpenseModal } from '@/components/project-module/add-off-bank-expense-modal';
+import { useProjectCommercialAccess } from '@/hooks/use-project-module';
 import { openDocumentUrl, openOrganizationDocument } from '@/lib/open-document-url';
 
 const PAGE_SIZE = 50;
@@ -54,6 +55,7 @@ export default function CaptureExpensesPage() {
   const { t, tr } = useTranslations();
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   // Textos i18n per captura
   const c = t.projectModule?.capture;
@@ -76,6 +78,7 @@ export default function CaptureExpensesPage() {
   const isAdmin = userRole === 'admin';
   const isEditor = userRole === 'user'; // 'user' = editor (terminologia interna)
   const isViewer = userRole === 'viewer';
+  const canCreate = (isAdmin || isEditor) && canMutateProjects;
 
   // UID de l'usuari actual (per filtrar si és editor)
   const currentUid = firebaseUser?.uid ?? user?.uid ?? null;
@@ -98,10 +101,10 @@ export default function CaptureExpensesPage() {
 
   // Deep-link: obrir modal si ?new=1
   useEffect(() => {
-    if (searchParams.get('new') === '1' && !isViewer) {
+    if (searchParams.get('new') === '1' && canCreate) {
       setModalOpen(true);
     }
-  }, [searchParams, isViewer]);
+  }, [searchParams, canCreate]);
 
   // Carregar despeses off-bank
   const loadExpenses = React.useCallback(async (isLoadMore = false) => {
@@ -294,7 +297,8 @@ export default function CaptureExpensesPage() {
 
         {/* CTA principal - més prominent per editor (mòbil) */}
         <Button
-          onClick={() => setModalOpen(true)}
+          onClick={() => canCreate && setModalOpen(true)}
+          disabled={!canCreate}
           size="lg"
           className={isEditor ? 'w-full md:w-auto' : ''}
         >
@@ -372,7 +376,7 @@ export default function CaptureExpensesPage() {
                       : c?.emptyNoExpensesBody}
                   </p>
                   {isEditor && (
-                    <Button onClick={() => setModalOpen(true)} className="mt-4">
+                    <Button disabled={!canCreate} onClick={() => canCreate && setModalOpen(true)} className="mt-4">
                       <Camera className="h-4 w-4 mr-2" />
                       {c?.ctaTakePhoto}
                     </Button>
@@ -561,8 +565,8 @@ export default function CaptureExpensesPage() {
 
       {/* Modal de creació */}
       <OffBankExpenseModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
+        open={modalOpen && canCreate}
+        onOpenChange={(open) => setModalOpen(open && canCreate)}
         onSuccess={handleSuccess}
         organizationId={organizationId ?? ''}
         quickMode={true}

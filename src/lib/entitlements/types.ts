@@ -1,7 +1,19 @@
 export const ENTITLEMENT_CAPABILITIES = [
   'transactionDocuments.readHistorical',
   'transactionDocuments.mutate',
+  'pendingDocuments.readHistorical',
   'pendingDocuments.mutate',
+  'pendingDocuments.match',
+  'pendingDocuments.ocr',
+  'model347.read',
+  'model347.export',
+  'aiCategorization.execute',
+  'closingBundle.export',
+  'projects.readHistorical',
+  'projects.mutate',
+  'projectBudgets.mutate',
+  'multicurrency.mutate',
+  'grantJustification.export',
 ] as const;
 
 export type EntitlementCapability = typeof ENTITLEMENT_CAPABILITIES[number];
@@ -16,6 +28,7 @@ export interface OrganizationSubscriptionProjection {
   planId: CanonicalPlanId;
   status: SubscriptionStatus;
   catalogVersion: number;
+  catalogFingerprint: string;
   entitlements: EntitlementSnapshot;
   effectiveAt?: string | null;
   updatedAt?: string | null;
@@ -26,6 +39,12 @@ export interface OrganizationSubscriptionProjection {
 export interface EntitlementSystemConfig {
   enforcementMode: EntitlementEnforcementMode;
   catalogVersion: number;
+}
+
+export interface ResolvedEntitlementSystemConfig {
+  enforcementMode: EntitlementEnforcementMode;
+  compatible: boolean;
+  diagnostics: string[];
 }
 
 export interface ResolvedEntitlements {

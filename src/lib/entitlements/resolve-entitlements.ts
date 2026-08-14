@@ -1,27 +1,22 @@
 import {
   ENTITLEMENTS_CATALOG_VERSION,
   catalogEntitlementsFor,
+  catalogFingerprintFor,
 } from './catalog';
 import { normalizePlanId } from './normalize-plan';
+import { resolveEntitlementSystemConfig } from './system-config';
 import type {
   EntitlementCapability,
-  EntitlementEnforcementMode,
   EntitlementSnapshot,
   OrganizationSubscriptionProjection,
   ResolvedEntitlements,
+  EntitlementSystemConfig,
 } from './types';
+import { ENTITLEMENT_CAPABILITIES } from './types';
 
-const ALLOW_ALL: EntitlementSnapshot = {
-  'transactionDocuments.readHistorical': true,
-  'transactionDocuments.mutate': true,
-  'pendingDocuments.mutate': true,
-};
-
-function snapshotsEqual(left: EntitlementSnapshot, right: EntitlementSnapshot): boolean {
-  return left['transactionDocuments.readHistorical'] === right['transactionDocuments.readHistorical']
-    && left['transactionDocuments.mutate'] === right['transactionDocuments.mutate']
-    && left['pendingDocuments.mutate'] === right['pendingDocuments.mutate'];
-}
+const ALLOW_ALL = Object.fromEntries(
+  ENTITLEMENT_CAPABILITIES.map((capability) => [capability, true])
+) as EntitlementSnapshot;
 
 function safeControlProjection(): EntitlementSnapshot {
   return catalogEntitlementsFor('control');
@@ -30,15 +25,18 @@ function safeControlProjection(): EntitlementSnapshot {
 export function resolveOrganizationEntitlements(input: {
   subscription?: Partial<OrganizationSubscriptionProjection> | null;
   legacyPlanId?: unknown;
-  defaultEnforcementMode?: EntitlementEnforcementMode;
+  systemConfig?: Partial<EntitlementSystemConfig> | null;
 }): ResolvedEntitlements {
   const subscription = input.subscription;
+  const config = resolveEntitlementSystemConfig(input.systemConfig);
+  const mode = config.enforcementMode;
 
   if (!subscription) {
-    const mode = input.defaultEnforcementMode ?? 'off';
     const legacyPlan = normalizePlanId(input.legacyPlanId);
-    const projected = legacyPlan ? catalogEntitlementsFor(legacyPlan) : safeControlProjection();
-    const diagnostics = ['subscription_absent'];
+    const projected = config.compatible && legacyPlan
+      ? catalogEntitlementsFor(legacyPlan)
+      : safeControlProjection();
+    const diagnostics = [...config.diagnostics, 'subscription_absent'];
     if (!legacyPlan) diagnostics.push('legacy_plan_unknown');
     return {
       planId: legacyPlan ?? 'control',
@@ -53,22 +51,20 @@ export function resolveOrganizationEntitlements(input: {
     };
   }
 
-  const mode: EntitlementEnforcementMode = input.defaultEnforcementMode ?? 'off';
-  const plan = normalizePlanId(subscription.planId);
+  const plan = subscription.planId === 'control' || subscription.planId === 'management' || subscription.planId === 'complete'
+    ? subscription.planId
+    : null;
   const expected = plan ? catalogEntitlementsFor(plan) : safeControlProjection();
   const validStatus = subscription.status === 'active' || subscription.status === 'trial';
   const validVersion = subscription.catalogVersion === ENTITLEMENTS_CATALOG_VERSION;
-  const validSnapshot = !!subscription.entitlements && snapshotsEqual(
-    subscription.entitlements as EntitlementSnapshot,
-    expected
-  );
-  const diagnostics: string[] = [];
+  const validFingerprint = !!plan && subscription.catalogFingerprint === catalogFingerprintFor(plan);
+  const diagnostics: string[] = [...config.diagnostics];
   if (!plan) diagnostics.push('plan_unknown');
   if (!validVersion) diagnostics.push('catalog_version_mismatch');
-  if (!validSnapshot) diagnostics.push('snapshot_mismatch');
+  if (!validFingerprint) diagnostics.push('catalog_fingerprint_mismatch');
   if (!validStatus) diagnostics.push('subscription_inactive');
 
-  const projected = plan && validVersion && validSnapshot && validStatus
+  const projected = config.compatible && plan && validVersion && validFingerprint && validStatus
     ? expected
     : safeControlProjection();
 
@@ -80,7 +76,7 @@ export function resolveOrganizationEntitlements(input: {
 
   return {
     planId: plan ?? 'control',
-    status: plan && validVersion && validSnapshot ? (subscription.status ?? 'invalid') : 'invalid',
+    status: plan && validVersion && validFingerprint ? (subscription.status ?? 'invalid') : 'invalid',
     enforcementMode: mode,
     applied: mode === 'active' ? projected : { ...ALLOW_ALL },
     projected,

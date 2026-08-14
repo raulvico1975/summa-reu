@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import type { PendingDocument } from '@/lib/pending-documents';
 import type { ExpenseReport } from '@/lib/expense-reports';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useEntitlements } from '@/hooks/use-entitlements';
 
 const TransactionImporter = dynamic(
   () => import('@/components/transaction-importer').then((mod) => mod.TransactionImporter),
@@ -27,6 +28,7 @@ export default function MovimientosPage() {
   const { firestore } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { can } = usePermissions();
+  const { canUseCapability } = useEntitlements();
   const { t } = useTranslations();
   const searchParams = useSearchParams();
   const initialPeriodFilter = React.useMemo(() => {
@@ -70,6 +72,7 @@ export default function MovimientosPage() {
 
   // Feature flag: Documents pendents
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
+  const canReadPendingDocuments = canUseCapability('pendingDocuments.readHistorical');
 
   const categoriesQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
@@ -79,13 +82,13 @@ export default function MovimientosPage() {
 
   const pendingActionsQuery = useMemoFirebase(
     () => {
-      if (!organizationId || !isPendingDocsEnabled) return null;
+      if (!organizationId || !canReadPendingDocuments) return null;
       return query(
         collection(firestore, 'organizations', organizationId, 'pendingDocuments'),
         where('status', 'in', ['draft', 'confirmed', 'sepa_generated'])
       );
     },
-    [firestore, organizationId, isPendingDocsEnabled]
+    [canReadPendingDocuments, firestore, organizationId]
   );
   const { data: pendingActions } = useCollection<PendingDocument>(pendingActionsQuery);
   const pendingActionsCount = pendingActions?.length ?? 0;
@@ -112,7 +115,7 @@ export default function MovimientosPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {canImportExtracts && <TransactionImporter availableCategories={categories} />}
-          {isPendingDocsEnabled && (
+          {canReadPendingDocuments && (
             <>
               <Button variant="outline" asChild>
                 <Link href="movimientos/pendents">

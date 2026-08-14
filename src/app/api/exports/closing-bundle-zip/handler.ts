@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
 import { requirePermission } from '@/lib/api/require-permission';
+import { resolveServerEntitlement, type EntitlementDbLike } from '@/lib/api/require-entitlement';
 
 const REGION = 'europe-west1';
 
@@ -12,6 +13,7 @@ export interface ClosingBundleZipDeps {
   requirePermissionFn?: typeof requirePermission;
   validateUserMembershipFn?: typeof validateUserMembership;
   verifyIdTokenFn?: typeof verifyIdToken;
+  resolveEntitlementFn?: typeof resolveServerEntitlement;
 }
 
 export function buildClosingBundleUpstreamPayload(
@@ -71,6 +73,18 @@ export async function handleClosingBundleZipPost(
       check: (permissions) => permissions['informes.exportar'],
     });
     if (denied) return denied;
+    const entitlement = await (deps.resolveEntitlementFn ?? resolveServerEntitlement)({
+      db: db as unknown as EntitlementDbLike,
+      orgId,
+      capability: 'closingBundle.export',
+      userAllowed: true,
+    });
+    if (!entitlement.allowed) {
+      return NextResponse.json(
+        { code: 'ENTITLEMENT_DENIED', message: 'El paquet de tancament requereix el pla Complet' },
+        { status: 403 }
+      );
+    }
 
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     if (!projectId) {

@@ -86,6 +86,8 @@ import { CATEGORY_TRANSLATION_KEYS } from '@/lib/default-data';
 interface ExpenseReportDetailProps {
   report: ExpenseReport;
   onClose: () => void;
+  canOperate: boolean;
+  canUseOcr: boolean;
   /** Si s'especifica, fa scroll i highlight a la secció indicada */
   scrollToSection?: 'kilometratge';
 }
@@ -152,7 +154,7 @@ async function fetchReceiptImages(receipts: PendingDocument[]): Promise<ReceiptI
 // COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function ExpenseReportDetail({ report, onClose, scrollToSection }: ExpenseReportDetailProps) {
+export function ExpenseReportDetail({ report, onClose, canOperate, canUseOcr, scrollToSection }: ExpenseReportDetailProps) {
   const { organizationId, organization } = useCurrentOrganization();
   const { firestore, storage } = useFirebase();
   const { buildUrl } = useOrgUrl();
@@ -345,7 +347,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
 
   // Guardar canvis
   const handleSave = async () => {
-    if (!organizationId || !firestore) return;
+    if (!canOperate || !organizationId || !firestore) return;
 
     setIsSaving(true);
     try {
@@ -380,7 +382,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
 
   // Afegir tiquets seleccionats
   const handleAddReceipts = async (selectedIds: string[]) => {
-    if (!organizationId || !firestore) return;
+    if (!canOperate || !organizationId || !firestore) return;
 
     try {
       // Actualitzar cada pendingDocument amb el reportId
@@ -404,7 +406,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
 
   // Treure tiquet
   const handleRemoveReceipt = async (docId: string) => {
-    if (!organizationId || !firestore) return;
+    if (!canOperate || !organizationId || !firestore) return;
 
     try {
       await updatePendingDocument(firestore, organizationId, docId, {
@@ -421,10 +423,10 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
   const handleReceiptsDragOver = React.useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.dataTransfer.types.includes('Files')) {
+    if (canOperate && e.dataTransfer.types.includes('Files')) {
       setIsDraggingReceipts(true);
     }
-  }, []);
+  }, [canOperate]);
 
   const handleReceiptsDragLeave = React.useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -436,6 +438,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
     e.preventDefault();
     e.stopPropagation();
     setIsDraggingReceipts(false);
+    if (!canOperate) return;
 
     if (e.dataTransfer.files.length > 0) {
       // Filtrar només fitxers vàlids abans d'obrir el modal
@@ -458,12 +461,12 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
       setInitialUploadFiles(validFiles);
       setIsUploadModalOpen(true);
     }
-  }, [toast, t]);
+  }, [canOperate, toast, t]);
 
   // Callback quan es completa l'upload de tiquets nous (des de drag & drop)
   // Consulta els nous docs i els vincula a la liquidació
   const handleReceiptsUploadComplete = React.useCallback(async (count: number) => {
-    if (!organizationId || !firestore || count === 0) return;
+    if (!canOperate || !organizationId || !firestore || count === 0) return;
 
     // Petit delay per esperar que Firestore propagui els nous docs
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -503,7 +506,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
     }
 
     setInitialUploadFiles(undefined);
-  }, [organizationId, firestore, report.id, toast, t]);
+  }, [canOperate, organizationId, firestore, report.id, toast, t]);
 
   // Funcions per gestionar mileageItems
   const resetMileageForm = () => {
@@ -515,7 +518,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
   };
 
   const handleAddMileageItem = () => {
-    if (!newMileageDate || !newMileageKm || !newMileageRate) return;
+    if (!canOperate || !newMileageDate || !newMileageKm || !newMileageRate) return;
 
     const km = parseFloat(newMileageKm);
     const rate = parseFloat(newMileageRate);
@@ -546,6 +549,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
   };
 
   const handleEditMileageItem = (item: MileageItem) => {
+    if (!canOperate) return;
     setEditingMileageId(item.id);
     setNewMileageDate(parseISO(item.date));
     setNewMileageKm(item.km.toString());
@@ -554,6 +558,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
   };
 
   const handleDeleteMileageItem = (itemId: string) => {
+    if (!canOperate) return;
     setMileageItems((prev) => prev.filter((item) => item.id !== itemId));
     toast({ title: t.expenseReports.detail.mileageDeleted });
   };
@@ -579,7 +584,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
 
   // Generar PDF
   const handleGeneratePdf = async () => {
-    if (!organizationId || !firestore || !storage || !organization) return;
+    if (!canOperate || !organizationId || !firestore || !storage || !organization) return;
     if (!canGeneratePdf) return;
 
     setIsGeneratingPdf(true);
@@ -836,7 +841,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
               <Receipt className="h-4 w-4" />
               {t.expenseReports.detail.receipts}
             </CardTitle>
-            <Button size="sm" variant="outline" onClick={() => setIsReceiptsModalOpen(true)}>
+            <Button size="sm" variant="outline" disabled={!canOperate} onClick={() => canOperate && setIsReceiptsModalOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               {t.expenseReports.detail.add}
             </Button>
@@ -872,6 +877,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
                       variant="ghost"
                       className="h-8 w-8"
                       onClick={() => handleRemoveReceipt(receipt.id)}
+                      disabled={!canOperate}
                       title={t.expenseReports.detail.removeFromReport}
                     >
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -942,6 +948,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
                       variant="ghost"
                       className="h-8 w-8"
                       onClick={() => handleEditMileageItem(item)}
+                      disabled={!canOperate}
                       title={t.common.edit}
                     >
                       <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -951,6 +958,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
                       variant="ghost"
                       className="h-8 w-8"
                       onClick={() => handleDeleteMileageItem(item.id)}
+                      disabled={!canOperate}
                       title={t.common.delete}
                     >
                       <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -1046,7 +1054,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
               <Button
                 size="sm"
                 onClick={handleAddMileageItem}
-                disabled={!newMileageDate || !newMileageKm || !newMileageRate}
+                disabled={!canOperate || !newMileageDate || !newMileageKm || !newMileageRate}
               >
                 <Plus className="mr-1 h-4 w-4" />
                 {editingMileageId ? t.expenseReports.detail.updateLine : t.expenseReports.detail.addLine}
@@ -1096,7 +1104,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
                   variant="ghost"
                   size="sm"
                   onClick={handleGeneratePdf}
-                  disabled={isGeneratingPdf || !canGeneratePdf}
+                  disabled={!canOperate || isGeneratingPdf || !canGeneratePdf}
                   title={t.expenseReports.detail.regenerate}
                 >
                   {isGeneratingPdf ? (
@@ -1116,7 +1124,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
                   variant="outline"
                   size="sm"
                   onClick={handleGeneratePdf}
-                  disabled={isGeneratingPdf || !canGeneratePdf}
+                  disabled={!canOperate || isGeneratingPdf || !canGeneratePdf}
                 >
                   {isGeneratingPdf ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1215,6 +1223,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
                     variant="outline"
                     size="sm"
                     onClick={() => setIsSepaModalOpen(true)}
+                    disabled={!canOperate}
                   >
                     <CreditCard className="mr-2 h-4 w-4" />
                     {t.expenseReports.detail.generateSepaReimbursement}
@@ -1256,7 +1265,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
         <Button variant="outline" onClick={onClose}>
           {t.expenseReports.detail.cancel}
         </Button>
-        <Button onClick={handleSave} disabled={isSaving}>
+        <Button onClick={handleSave} disabled={!canOperate || isSaving}>
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
           {t.expenseReports.detail.save}
         </Button>
@@ -1272,8 +1281,8 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
       />
 
       {/* Modal upload tiquets nous (drag & drop) */}
-      <PendingDocumentsUploadModal
-        open={isUploadModalOpen}
+      {canOperate && <PendingDocumentsUploadModal
+        open={canOperate && isUploadModalOpen}
         onOpenChange={(open) => {
           setIsUploadModalOpen(open);
           if (!open) setInitialUploadFiles(undefined);
@@ -1281,7 +1290,9 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
         onUploadComplete={handleReceiptsUploadComplete}
         contacts={contacts || []}
         initialFiles={initialUploadFiles}
-      />
+        canOperate={canOperate}
+        canUseOcr={canUseOcr}
+      />}
 
       {/* Modal SEPA reemborsament */}
       <GenerateSepaModal
@@ -1295,7 +1306,7 @@ export function ExpenseReportDetail({ report, onClose, scrollToSection }: Expens
         bankAccounts={activeBankAccounts}
         isGenerating={isGeneratingSepa}
         onGenerate={async (bankAccountId, executionDate) => {
-          if (!organizationId || !firestore || !storage || !organization || !resolvedBeneficiary) return;
+          if (!canOperate || !organizationId || !firestore || !storage || !organization || !resolvedBeneficiary) return;
 
           const bankAccount = activeBankAccounts.find((ba) => ba.id === bankAccountId);
           if (!bankAccount) return;

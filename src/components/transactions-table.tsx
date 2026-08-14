@@ -867,6 +867,7 @@ export function TransactionsTable({
     isBatchCategorizing,
     batchProgress,
     batchStatus,
+    canExecuteAiCategorization,
     handleCategorize,
     handleBatchCategorize,
     handleCancelBatch,
@@ -2689,6 +2690,7 @@ export function TransactionsTable({
           noContactCount={noContactTransactions.length}
           donationsNoContactCount={donationsNoContactTransactions.length}
           hasUncategorized={hasUncategorized ?? false}
+          canExecuteAiCategorization={canExecuteAiCategorization}
           isBatchCategorizing={isBatchCategorizing}
           onBatchCategorize={handleBatchCategorize}
           onCancelBatch={handleCancelBatch}
@@ -3121,6 +3123,7 @@ export function TransactionsTable({
                   onSetProject={handleSetProject}
                   onAttachDocument={handleAttachDocumentWithRename}
                   canMutateDocuments={canMutateTransactionDocuments}
+                  canCategorizeWithAi={canExecuteAiCategorization}
                   onDeleteDocument={handleDeleteDocument}
                   onCategorize={handleCategorize}
                   onEdit={handleEditClick}

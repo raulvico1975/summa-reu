@@ -75,6 +75,7 @@ interface PendingDocumentRowProps {
   contacts: Contact[];
   categories: Category[];
   canOperate?: boolean;
+  canMatch?: boolean;
   onUpdate: (docId: string, field: string, value: string | number | null) => void;
   onConfirm: (doc: PendingDocument) => void;
   onArchive: (doc: PendingDocument) => void;
@@ -157,6 +158,7 @@ export function PendingDocumentRow({
   contacts,
   categories,
   canOperate = false,
+  canMatch = false,
   onUpdate,
   onConfirm,
   onArchive,
@@ -576,9 +578,9 @@ export function PendingDocumentRow({
               variant="outline"
               className={cn(
                 'bg-cyan-50 text-cyan-700 border-cyan-200',
-                canOperate && onReconcile && 'cursor-pointer hover:bg-cyan-100'
+                canMatch && onReconcile && 'cursor-pointer hover:bg-cyan-100'
               )}
-              onClick={canOperate && onReconcile ? () => onReconcile(doc) : undefined}
+              onClick={canMatch && onReconcile ? () => onReconcile(doc) : undefined}
             >
               <Link2 className="h-3 w-3 mr-1" />
               {t.pendingDocs.suggested}
@@ -591,7 +593,7 @@ export function PendingDocumentRow({
       <TableCell>
         <div className="flex items-center gap-1">
           {/* Reconcile button when suggestions exist */}
-          {canOperate && doc.suggestedTransactionIds && doc.suggestedTransactionIds.length > 0 && onReconcile && (
+          {canMatch && doc.suggestedTransactionIds && doc.suggestedTransactionIds.length > 0 && onReconcile && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -663,7 +665,7 @@ export function PendingDocumentRow({
               )}
 
               {/* Re-link document: HIDDEN - funcionalitat obsoleta
-              {doc.status === 'matched' && doc.matchedTransactionId && onRelinkDocument && (
+              {canMatch && doc.status === 'matched' && doc.matchedTransactionId && onRelinkDocument && (
                 <DropdownMenuItem
                   onClick={() => onRelinkDocument(doc)}
                   disabled={isRelinking}
@@ -679,7 +681,7 @@ export function PendingDocumentRow({
               */}
 
               {/* Undo reconciliation without deleting files */}
-              {canOperate && doc.status === 'matched' && onDeleteMatched && (
+              {canMatch && doc.status === 'matched' && onDeleteMatched && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

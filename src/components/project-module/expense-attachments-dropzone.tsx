@@ -87,6 +87,7 @@ export function ExpenseAttachmentsDropzone({
   const { user } = useFirebase();
   const { t, tr } = useTranslations();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const disabledRef = React.useRef(disabled);
 
   const [isDragging, setIsDragging] = React.useState(false);
   const [pendingFiles, setPendingFiles] = React.useState<PendingFile[]>([]);
@@ -94,6 +95,11 @@ export function ExpenseAttachmentsDropzone({
   // Estat per renomenar attachments
   const [editingUrl, setEditingUrl] = React.useState<string | null>(null);
   const [editingName, setEditingName] = React.useState<string>('');
+
+  React.useEffect(() => {
+    disabledRef.current = disabled;
+    if (disabled) setIsDragging(false);
+  }, [disabled]);
 
   // Textos i18n
   const texts = {
@@ -141,6 +147,7 @@ export function ExpenseAttachmentsDropzone({
   // ---------------------------------------------------------------------------
 
   const handleFiles = React.useCallback(async (files: File[]) => {
+    if (disabledRef.current) return;
     const validFiles: PendingFile[] = [];
 
     for (const file of files) {
@@ -169,21 +176,35 @@ export function ExpenseAttachmentsDropzone({
 
     // Upload each file
     for (const pending of validFiles) {
+      if (disabledRef.current) {
+        setPendingFiles(prev => prev.filter(p => p.id !== pending.id));
+        continue;
+      }
       await uploadFile(pending);
     }
-  }, [organizationId, expenseId, storage, attachments, onAttachmentsChange]);
+  }, [organizationId, expenseId, storage, attachments, onAttachmentsChange, disabled]);
 
   const uploadFile = async (pending: PendingFile) => {
+    if (disabledRef.current) return;
     const { file, id } = pending;
     const storageFolder = expenseId || 'temp';
     // Usar buildFileName si està disponible, sinó usar timestamp + nom original
     const finalFileName = buildFileName ? buildFileName(file.name) : `${Date.now()}_${file.name}`;
     const storagePath = `organizations/${organizationId}/offBankExpenses/${storageFolder}/${finalFileName}`;
     const storageRef = ref(storage, storagePath);
+    let uploadedByThisAttempt = false;
 
     try {
       const uploadResult = await uploadBytes(storageRef, file);
+      uploadedByThisAttempt = true;
       const downloadURL = await getDownloadURL(uploadResult.ref);
+
+      if (disabledRef.current) {
+        await deleteObject(storageRef).catch(() => undefined);
+        uploadedByThisAttempt = false;
+        setPendingFiles(prev => prev.filter(p => p.id !== id));
+        return;
+      }
 
       const newAttachment: OffBankAttachment = {
         url: downloadURL,
@@ -200,6 +221,9 @@ export function ExpenseAttachmentsDropzone({
       // Add to attachments
       onAttachmentsChange([...attachments, newAttachment]);
     } catch (error) {
+      if (uploadedByThisAttempt) {
+        await deleteObject(storageRef).catch(() => undefined);
+      }
       console.error('[Dropzone] Upload error:', error);
       setPendingFiles(prev =>
         prev.map(p => (p.id === id ? { ...p, uploading: false, error: texts.uploadError } : p))
@@ -212,6 +236,7 @@ export function ExpenseAttachmentsDropzone({
   // ---------------------------------------------------------------------------
 
   const handleDelete = React.useCallback(async (attachment: OffBankAttachment) => {
+    if (disabledRef.current) return;
     setDeletingUrls(prev => new Set(prev).add(attachment.url));
 
     try {
@@ -230,7 +255,7 @@ export function ExpenseAttachmentsDropzone({
       // Remove from list
       onAttachmentsChange(attachments.filter(a => a.url !== attachment.url));
     }
-  }, [storage, attachments, onAttachmentsChange]);
+  }, [storage, attachments, onAttachmentsChange, disabled]);
 
   const handleRemovePending = React.useCallback((id: string) => {
     setPendingFiles(prev => prev.filter(p => p.id !== id));

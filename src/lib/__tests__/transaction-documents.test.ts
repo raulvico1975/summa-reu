@@ -7,6 +7,7 @@ import {
   resolveTransactionDocuments,
   type TransactionDocumentRecord,
 } from '@/lib/transactions/transaction-documents';
+import { buildUniqueTransactionDocumentStoragePath } from '@/lib/files/transaction-documents';
 
 const baseDocument = (overrides: Partial<TransactionDocumentRecord> & { id?: string } = {}) => ({
   id: overrides.id,
@@ -31,6 +32,14 @@ test('resolveTransactionDocuments: moviment sense document retorna 0 documents',
   assert.equal(result.count, 0);
   assert.equal(result.primaryDocument, null);
   assert.deepEqual(result.documents, []);
+});
+
+test('uploads amb el mateix filename tenen paths únics i no se sobreescriuen', () => {
+  const base = { organizationId: 'org-1', transactionId: 'tx-1', filename: 'factura.pdf' };
+  const first = buildUniqueTransactionDocumentStoragePath({ ...base, uploadId: 'attempt-a' });
+  const second = buildUniqueTransactionDocumentStoragePath({ ...base, uploadId: 'attempt-b' });
+  assert.notEqual(first, second);
+  assert.match(first, /\/attempt-a--factura\.pdf$/);
 });
 
 test('resolveTransactionDocuments: document legacy es mostra com 1 document principal', () => {

@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ENTITLEMENTS_CATALOG_VERSION, PLAN_ENTITLEMENTS_CATALOG } from '@/lib/entitlements/catalog';
+import { ENTITLEMENTS_CATALOG_VERSION, PLAN_ENTITLEMENTS_CATALOG, catalogFingerprintFor } from '@/lib/entitlements/catalog';
 import { normalizePlanId } from '@/lib/entitlements/normalize-plan';
 import { resolveCapabilityAccess, resolveOrganizationEntitlements } from '@/lib/entitlements/resolve-entitlements';
 import { buildEntitlementBackfillDryRun } from '@/lib/entitlements/backfill';
 
-test('catàleg v1 usa plans canònics i mapes legacy explícits', () => {
-  assert.equal(ENTITLEMENTS_CATALOG_VERSION, 1);
+test('catàleg v3 usa plans canònics, fingerprint per pla i mapes legacy explícits', () => {
+  assert.equal(ENTITLEMENTS_CATALOG_VERSION, 3);
   assert.deepEqual(Object.keys(PLAN_ENTITLEMENTS_CATALOG), ['control', 'management', 'complete']);
   assert.equal(normalizePlanId('initial'), 'control');
   assert.equal(normalizePlanId('fiscal_documents'), 'complete');
@@ -22,7 +22,7 @@ test('subscription absent és fail-open en off, shadow calcula denegació i acti
     const result = resolveOrganizationEntitlements({
       subscription: null,
       legacyPlanId: 'management',
-      defaultEnforcementMode: mode,
+      systemConfig: { enforcementMode: mode, catalogVersion: 3 },
     });
     assert.equal(result.applied['transactionDocuments.mutate'], true);
     assert.equal(result.projected['transactionDocuments.mutate'], true);
@@ -31,7 +31,7 @@ test('subscription absent és fail-open en off, shadow calcula denegació i acti
   const active = resolveOrganizationEntitlements({
     subscription: null,
     legacyPlanId: 'management',
-    defaultEnforcementMode: 'active',
+    systemConfig: { enforcementMode: 'active', catalogVersion: 3 },
   });
   assert.equal(active.applied['transactionDocuments.readHistorical'], true);
   assert.equal(active.applied['transactionDocuments.mutate'], false);
@@ -39,16 +39,13 @@ test('subscription absent és fail-open en off, shadow calcula denegació i acti
 
 test('mode global active i snapshot corrupta no reobren mutacions', () => {
   const result = resolveOrganizationEntitlements({
-    defaultEnforcementMode: 'active',
+    systemConfig: { enforcementMode: 'active', catalogVersion: 3 },
     subscription: {
       planId: 'complete',
       status: 'active',
       catalogVersion: 999,
-      entitlements: {
-        'transactionDocuments.readHistorical': true,
-        'transactionDocuments.mutate': true,
-        'pendingDocuments.mutate': true,
-      },
+      catalogFingerprint: catalogFingerprintFor('complete'),
+      entitlements: PLAN_ENTITLEMENTS_CATALOG.complete.entitlements,
     },
   });
   assert.equal(result.enforcementMode, 'active');
@@ -56,30 +53,49 @@ test('mode global active i snapshot corrupta no reobren mutacions', () => {
   assert.ok(result.diagnostics.includes('catalog_version_mismatch'));
 });
 
-test('qualsevol bit corrupte del snapshot complet cau a Control segur', () => {
+test('el mapa auditable no és autoritat i alterar-ne bits no canvia l’accés', () => {
   const expected = PLAN_ENTITLEMENTS_CATALOG.management.entitlements;
   for (const capability of Object.keys(expected) as Array<keyof typeof expected>) {
     const result = resolveOrganizationEntitlements({
-      defaultEnforcementMode: 'active',
+      systemConfig: { enforcementMode: 'active', catalogVersion: 3 },
       subscription: {
         planId: 'management',
         status: 'active',
-        catalogVersion: 1,
+        catalogVersion: 3,
+        catalogFingerprint: catalogFingerprintFor('management'),
         entitlements: { ...expected, [capability]: !expected[capability] },
       },
     });
-    assert.equal(result.applied['transactionDocuments.mutate'], false, capability);
-    assert.ok(result.diagnostics.includes('snapshot_mismatch'));
+    assert.equal(result.applied['transactionDocuments.mutate'], true, capability);
+    assert.equal(result.diagnostics.includes('catalog_fingerprint_mismatch'), false);
+  }
+});
+
+test('fingerprint absent, incorrecte o d’un altre pla cau a Control segur', () => {
+  for (const catalogFingerprint of [undefined, 'wrong', catalogFingerprintFor('complete')]) {
+    const result = resolveOrganizationEntitlements({
+      systemConfig: { enforcementMode: 'active', catalogVersion: 3 },
+      subscription: {
+        planId: 'management',
+        status: 'active',
+        catalogVersion: 3,
+        catalogFingerprint,
+        entitlements: PLAN_ENTITLEMENTS_CATALOG.management.entitlements,
+      },
+    });
+    assert.equal(result.applied['transactionDocuments.mutate'], false);
+    assert.ok(result.diagnostics.includes('catalog_fingerprint_mismatch'));
   }
 });
 
 test('accés final és AND comercial, configuració operativa i permís personal', () => {
   const entitlements = resolveOrganizationEntitlements({
-    defaultEnforcementMode: 'active',
+    systemConfig: { enforcementMode: 'active', catalogVersion: 3 },
     subscription: {
       planId: 'management',
       status: 'active',
-      catalogVersion: 1,
+      catalogVersion: 3,
+      catalogFingerprint: catalogFingerprintFor('management'),
       entitlements: PLAN_ENTITLEMENTS_CATALOG.management.entitlements,
     },
   });

@@ -105,6 +105,7 @@ interface TransactionRowProps {
   isCategoryLoading: boolean;
   isContactLoading?: boolean;
   canMutateDocuments?: boolean;
+  canCategorizeWithAi?: boolean;
   // Bulk selection (opcional, només si canBulkEdit)
   isSelected?: boolean;
   isSelectionDisabled?: boolean;
@@ -232,6 +233,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   isCategoryLoading,
   isContactLoading,
   canMutateDocuments = false,
+  canCategorizeWithAi = false,
   isSelected,
   isSelectionDisabled,
   onToggleSelect,
@@ -936,7 +938,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                         </CommandItem>
                       ))}
                     </CommandGroup>
-                    <CommandGroup>
+                    {canCategorizeWithAi && <CommandGroup>
                       <CommandItem
                         value={t.suggestWithAI}
                         onSelect={handleCategorizeWithAI}
@@ -945,7 +947,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                         <Sparkles className="mr-2 h-3 w-3" />
                         {t.suggestWithAI}
                       </CommandItem>
-                    </CommandGroup>
+                    </CommandGroup>}
                   </CommandList>
                 </Command>
               </PopoverContent>

@@ -128,6 +128,14 @@ function makeDeps(args: {
     }) as any,
     requireOperationalAccessFn: requireOperationalAccess,
     resolveEntitlementFn: async () => ({ allowed: true, diagnostics: [], enforcementMode: 'active' as const }),
+    mutateTransactionDocumentsAdminFn: async () => ({
+      documentId: 'doc-1',
+      documentCount: 1,
+      primaryDocumentId: 'doc-1',
+      idempotent: false,
+      storageCleanupPaths: [],
+      cleanupPending: false,
+    }),
   };
 }
 

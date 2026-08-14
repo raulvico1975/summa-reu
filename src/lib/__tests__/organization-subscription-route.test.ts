@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { handleOrganizationSubscriptionPost, parseSubscriptionUpdateInput } from '@/app/api/admin/organization-subscription/handler';
+import { catalogFingerprintFor, ENTITLEMENTS_CATALOG_VERSION } from '@/lib/entitlements/catalog';
 
 class FakeDb {
   readonly docs = new Map<string, Record<string, unknown>>();
@@ -88,7 +89,8 @@ test('upgrade escriu root legacy, snapshot canònic i auditoria en una transacci
   assert.equal(db.docs.get('organizations/org-1')?.billingPlan, 'management');
   const subscription = db.docs.get('organizations/org-1/subscription/current');
   assert.equal(subscription?.planId, 'management');
-  assert.equal(subscription?.catalogVersion, 1);
+  assert.equal(subscription?.catalogVersion, ENTITLEMENTS_CATALOG_VERSION);
+  assert.equal(subscription?.catalogFingerprint, catalogFingerprintFor('management'));
   assert.deepEqual((subscription?.entitlements as Record<string, boolean>)['transactionDocuments.mutate'], true);
   assert.equal(db.docs.get('adminAuditLogs/plan-change_12345678')?.actorUid, 'super-1');
   assert.equal(JSON.stringify([...db.docs.values()]).includes('undefined'), false);

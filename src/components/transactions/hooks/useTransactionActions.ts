@@ -547,9 +547,21 @@ export function useTransactionActions({
         return;
       }
 
-      await clearTransactionDocumentLink(firestore, organizationId, transactionId, documentUrl ?? null);
+      const deletion = await clearTransactionDocumentLink(
+        firestore,
+        organizationId,
+        transactionId,
+        documentUrl ?? null
+      );
 
-      toast({ title: t.movements.table.documentDeleted });
+      if (deletion.cleanupPending) {
+        toast({
+          variant: 'destructive',
+          title: tr('movements.table.documentCleanupPending', 'Document desvinculat; la neteja del fitxer queda pendent.'),
+        });
+      } else {
+        toast({ title: t.movements.table.documentDeleted });
+      }
     } catch (error: unknown) {
       console.error('Error eliminant document:', error);
       const firebaseError = error as { message?: string };

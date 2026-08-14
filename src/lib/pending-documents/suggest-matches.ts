@@ -5,19 +5,17 @@ import {
   query,
   where,
   getDocs,
-  getDoc,
   updateDoc,
-  doc,
   writeBatch,
   type Firestore,
 } from 'firebase/firestore';
-import { ref, getDownloadURL, type FirebaseStorage } from 'firebase/storage';
+import type { FirebaseStorage } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 import type { Transaction, Contact } from '@/lib/data';
 import type { PendingDocument } from './types';
 import type { PrebankRemittance } from './sepa-remittance';
 import { pendingDocumentsCollection, pendingDocumentDoc } from './refs';
 import { prebankRemittancesCollection, prebankRemittanceDoc } from './sepa-remittance';
-import { linkExistingTransactionDocument } from '@/lib/files/transaction-documents';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -373,84 +371,19 @@ export async function linkDocumentToTransaction(
   pendingDoc: PendingDocument,
   transactionId: string
 ): Promise<void> {
-  // 1. Llegir la transacció actual per saber quins camps ja té
-  const txRef = doc(firestore, 'organizations', orgId, 'transactions', transactionId);
-  const txSnap = await getDoc(txRef);
-  const txData = txSnap.data() as Transaction | undefined;
-
-  // 2. Obtenir downloadUrl del document pendent (si té fitxer)
-  let documentUrl: string | null = null;
-  if (pendingDoc.file?.storagePath) {
-    try {
-      const storageRef = ref(storage, pendingDoc.file.storagePath);
-      documentUrl = await getDownloadURL(storageRef);
-    } catch (error) {
-      console.warn('[linkDocumentToTransaction] No s\'ha pogut obtenir downloadUrl:', error);
-    }
-  }
-
-  // 3. Preparar batch update
-  const batch = writeBatch(firestore);
-
-  // Actualitzar document pendent (mantenim ignoredTransactionIds)
-  const docRef = pendingDocumentDoc(firestore, orgId, pendingDoc.id);
-  batch.update(docRef, {
-    status: 'matched',
-    matchedTransactionId: transactionId,
-    suggestedTransactionIds: [],
-    // ignoredTransactionIds es manté intacte (no l'esborrem)
+  void storage;
+  const user = getAuth(firestore.app).currentUser;
+  if (!user) throw new Error('Sessió no vàlida');
+  const response = await fetch('/api/pending-documents/link-transaction', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${await user.getIdToken()}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ orgId, pendingDocumentId: pendingDoc.id, transactionId }),
   });
-
-  // 4. Actualitzar transacció (només camps buits)
-  const txUpdates: {
-    category?: string;
-    document?: string;
-    contactId?: string;
-    contactType?: string;
-  } = {};
-
-  // Assignar document (downloadUrl) si la tx no en té
-  if (documentUrl && !txData?.document) {
-    txUpdates.document = documentUrl;
-  }
-
-  // Assignar categoria si el doc la té i la tx no
-  if (pendingDoc.categoryId && !txData?.category) {
-    txUpdates.category = pendingDoc.categoryId;
-  }
-
-  // Assignar contacte si el doc el té i la tx no
-  if (pendingDoc.supplierId && !txData?.contactId) {
-    txUpdates.contactId = pendingDoc.supplierId;
-    txUpdates.contactType = 'supplier';
-  }
-
-  if (Object.keys(txUpdates).length > 0) {
-    batch.update(txRef, txUpdates);
-  }
-
-  await batch.commit();
-
-  if (documentUrl) {
-    await linkExistingTransactionDocument({
-      firestore,
-      organizationId: orgId,
-      transaction: {
-        id: transactionId,
-        date: txData?.date,
-        description: txData?.description,
-        note: txData?.note,
-        document: txData?.document ?? txUpdates.document ?? null,
-      },
-      url: documentUrl,
-      storagePath: pendingDoc.file?.finalStoragePath ?? pendingDoc.file?.storagePath ?? null,
-      filename: pendingDoc.file?.filename ?? null,
-      contentType: pendingDoc.file?.contentType ?? null,
-      size: pendingDoc.file?.sizeBytes ?? null,
-      source: 'transaction-upload',
-      makePrimary: !txData?.document,
-    });
-  }
+  const result = await response.json() as { error?: string };
+  if (!response.ok) throw new Error(result.error ?? 'No s\'ha pogut vincular el document');
 }
 
 /**

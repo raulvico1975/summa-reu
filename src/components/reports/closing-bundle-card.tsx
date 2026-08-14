@@ -7,11 +7,16 @@ import { Archive } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 import { ClosingBundleDialog } from './closing-bundle-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useEntitlements } from '@/hooks/use-entitlements';
 
 export function ClosingBundleCard() {
   const { t } = useTranslations();
   const { can } = usePermissions();
   const canExportReports = can('informes.exportar');
+  const { canUseCapability } = useEntitlements();
+  const canExportClosingBundle = canUseCapability('closingBundle.export', {
+    userAllowed: canExportReports,
+  });
   const [dialogOpen, setDialogOpen] = React.useState(false);
 
   return (
@@ -24,7 +29,7 @@ export function ClosingBundleCard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={() => setDialogOpen(true)} disabled={!canExportReports}>
+          <Button onClick={() => setDialogOpen(true)} disabled={!canExportClosingBundle}>
             <Archive className="mr-2 h-4 w-4" />
             {t.reports.closingBundle.cta}
           </Button>

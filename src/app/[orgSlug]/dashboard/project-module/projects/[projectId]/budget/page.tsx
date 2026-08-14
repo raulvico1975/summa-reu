@@ -20,6 +20,7 @@ import {
   getEffectiveProjectTC,
   computeWeightedFxRate,
   computeFxCurrency,
+  useProjectCommercialAccess,
 } from '@/hooks/use-project-module';
 import {
   useFundingBudgetAllocations,
@@ -107,10 +108,7 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { doc, getDoc } from 'firebase/firestore';
 import {
-  buildProjectJustificationFundingXlsx,
-  buildProjectMultiFunderJustificationXlsx,
   type FundingOrderMode,
-  type FundingColumnLabels,
 } from '@/lib/project-justification-export';
 import { buildJustificationRows } from '@/lib/project-justification-rows';
 import {
@@ -540,11 +538,17 @@ export default function ProjectBudgetPage() {
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
-  const { t, tr } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const { firestore, user } = useFirebase();
   const { organizationId, userRole } = useCurrentOrganization();
   const { canUseProjectModule, canAccessMovimentsRoute } = usePermissions();
   const isMobile = useIsMobile();
+  const {
+    canMutateProjects,
+    canMutateBudgets,
+    canMutateMulticurrency,
+    canExportGrantJustification,
+  } = useProjectCommercialAccess();
 
   // Track page open
   React.useEffect(() => {
@@ -604,8 +608,8 @@ export default function ProjectBudgetPage() {
   const [fxRateInput, setFxRateInput] = React.useState('');
   const [fxCurrencyInput, setFxCurrencyInput] = React.useState('');
 
-  const canConfigureMultiFunding = userRole === 'admin';
-  const canDistributeMultiFunding = userRole === 'admin' || userRole === 'user';
+  const canConfigureMultiFunding = userRole === 'admin' && canMutateProjects;
+  const canDistributeMultiFunding = (userRole === 'admin' || userRole === 'user') && canMutateBudgets;
   const [multiFundingTab, setMultiFundingTab] = React.useState<'budget' | 'expenses' | 'tracking' | 'documentReview'>('budget');
 
   // Inicialitzar inputs FX quan es carrega el projecte
@@ -703,7 +707,7 @@ export default function ProjectBudgetPage() {
 
   // Handler per re-aplicar TC
   const handleReapplyFx = React.useCallback(async () => {
-    if (!project) return;
+    if (!canMutateMulticurrency || !project) return;
     setReapplyConfirmOpen(false);
     try {
       const result = await reapplyFx(projectId, fxTransfers, project);
@@ -726,7 +730,7 @@ export default function ProjectBudgetPage() {
         description: err instanceof Error ? err.message : tr('projectModule.budget.errorRecalculating'),
       });
     }
-  }, [project, projectId, fxTransfers, reapplyFx, toast, tr, refreshExpenseLinks]);
+  }, [canMutateMulticurrency, project, projectId, fxTransfers, reapplyFx, toast, tr, refreshExpenseLinks]);
 
   // Calcular execució per partida
   const executionByLine = React.useMemo(() => {
@@ -845,6 +849,7 @@ export default function ProjectBudgetPage() {
     row: DocumentReviewRow,
     document: DocumentReviewDocument
   ) => {
+    if (!canMutateProjects) return;
     if (!organizationId || !user) {
       toast({
         variant: 'destructive',
@@ -936,7 +941,7 @@ export default function ProjectBudgetPage() {
         return next;
       });
     }
-  }, [organizationId, toast, tr, user]);
+  }, [canMutateProjects, organizationId, toast, tr, user]);
 
   React.useEffect(() => {
     if (project?.multiFunderEnabled === true && !multiFundingSetupReady && !linesLoading && !fundingSourcesLoading) {
@@ -945,6 +950,7 @@ export default function ProjectBudgetPage() {
   }, [fundingSourcesLoading, linesLoading, multiFundingSetupReady, project?.multiFunderEnabled]);
 
   const handleSave = async (data: BudgetLineFormData) => {
+    if (!canMutateBudgets) return;
     try {
       await save(projectId, data, editingLine?.id);
       toast({
@@ -964,7 +970,7 @@ export default function ProjectBudgetPage() {
   };
 
   const handleDelete = async () => {
-    if (!deleteConfirm) return;
+    if (!canMutateBudgets || !deleteConfirm) return;
 
     // Guardrail: bloquejar si la partida té despeses assignades
     const hasLinkedExpenses = expenseLinks.some(link =>
@@ -997,6 +1003,7 @@ export default function ProjectBudgetPage() {
   };
 
   const openEdit = (line: BudgetLine, e?: React.MouseEvent) => {
+    if (!canMutateBudgets) return;
     e?.stopPropagation();
     trackUX('budget.editLine.open', { lineId: line.id, lineName: line.name });
     setEditingLine(line);
@@ -1004,6 +1011,7 @@ export default function ProjectBudgetPage() {
   };
 
   const openNew = () => {
+    if (!canMutateBudgets) return;
     setEditingLine(null);
     setFormOpen(true);
   };
@@ -1021,48 +1029,33 @@ export default function ProjectBudgetPage() {
   };
 
   const handleOpenExportDialog = () => {
-    if (!organizationId || !project) return;
+    if (!canExportGrantJustification || !organizationId || !project) return;
     setExportOrderMode('budgetLineThenChronological');
     setExportDialogOpen(true);
   };
 
   const handleConfirmExportFunding = async () => {
-    if (!organizationId || !project) return;
+    if (!canExportGrantJustification || !organizationId || !project || !user) return;
 
     setExportDialogOpen(false);
     setIsExportingFunding(true);
     try {
-      const expenseMap = new Map(allExpenses.map((e) => [e.expense.txId, e.expense]));
-
-      const columnLabels: FundingColumnLabels = {
-        order: tr('projectModule.export.columns.order'),
-        date: tr('projectModule.export.columns.date'),
-        concept: tr('projectModule.export.columns.concept'),
-        supplier: tr('projectModule.export.columns.supplier'),
-        invoiceNumber: tr('projectModule.export.columns.invoiceNumber'),
-        budgetLine: tr('projectModule.export.columns.budgetLine'),
-        fxRateApplied: tr('projectModule.export.columns.fxRateApplied'),
-        totalOriginalAmount: tr('projectModule.export.columns.totalOriginalAmount'),
-        currency: tr('projectModule.export.columns.currency'),
-        totalEurAmount: tr('projectModule.export.columns.totalEurAmount'),
-        assignedPct: tr('projectModule.export.columns.assignedPct'),
-        assignedOriginalAmount: tr('projectModule.export.columns.assignedOriginalAmount'),
-        assignedEurAmount: tr('projectModule.export.columns.assignedEurAmount'),
-      };
-
-      const { blob, filename } = buildProjectJustificationFundingXlsx({
-        projectId,
-        projectCode: project.code ?? '',
-        projectName: project.name,
-        budgetLines,
-        expenseLinks,
-        expenses: expenseMap,
-        orderMode: exportOrderMode,
-        projectFxRate: getEffectiveProjectTC(fxTransfers, project),
-        columnLabels,
-        sheetName: tr('projectModule.export.fundingSheetName'),
-        filenamePrefix: tr('projectModule.export.fundingFilenamePrefix'),
+      const token = await user.getIdToken();
+      const response = await fetch('/api/project-module/grant-justification/export', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orgId: organizationId,
+          projectId,
+          kind: 'funding-xlsx',
+          orderMode: exportOrderMode,
+          locale: language,
+        }),
       });
+      if (!response.ok) throw new Error(tr('projectModule.budget.errorGeneratingExcel'));
+      const blob = await response.blob();
+      const disposition = response.headers.get('content-disposition') ?? '';
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? `justificacio_${projectId}.xlsx`;
 
       // Descarregar fitxer
       const url = URL.createObjectURL(blob);
@@ -1091,7 +1084,7 @@ export default function ProjectBudgetPage() {
   };
 
   const handleEnableMultiFunding = async () => {
-    if (!project) return;
+    if (!canMutateProjects || !project) return;
     try {
       await enableMultiFunder(projectId);
       await refreshProject();
@@ -1109,22 +1102,25 @@ export default function ProjectBudgetPage() {
   };
 
   const handleExportMultiFunding = async () => {
-    if (!project) return;
+    if (!canExportGrantJustification) return;
+    if (!project || !organizationId || !user) return;
     setIsExportingMultiFunding(true);
     try {
-      const expenseMap = new Map(allExpenses.map((item) => [item.expense.txId, item.expense]));
-      const { blob, filename } = buildProjectMultiFunderJustificationXlsx({
-        projectId,
-        projectCode: project.code,
-        projectName: project.name,
-        budgetLines,
-        expenseLinks,
-        expenses: expenseMap,
-        fundingSources,
-        budgetAllocations,
-        expenseAllocations,
-        resolveAssignmentAmountEUR: resolveFundingAssignmentAmountEUR,
+      const token = await user.getIdToken();
+      const response = await fetch('/api/project-module/grant-justification/export', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orgId: organizationId,
+          projectId,
+          kind: 'multi-funding-xlsx',
+          locale: language,
+        }),
       });
+      if (!response.ok) throw new Error(tr('projectModule.budget.errorGeneratingExcel'));
+      const blob = await response.blob();
+      const disposition = response.headers.get('content-disposition') ?? '';
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? `justificacio_multi_${projectId}.xlsx`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1162,6 +1158,7 @@ export default function ProjectBudgetPage() {
   }, [expenseLinks, projectId]);
 
   const handleExportZip = async () => {
+    if (!canUseProjectModule) return;
     if (!organizationId || !project) return;
 
     trackUX('budget.downloadZip.click', { projectId, entriesCount: projectAssignmentsCount });
@@ -1271,7 +1268,9 @@ export default function ProjectBudgetPage() {
           <div className="flex flex-col gap-2">
             <Button
               className="w-full"
+              disabled={!canMutateProjects}
               onClick={() => {
+                if (!canMutateProjects) return;
                 trackUX('budget.justification.open', { projectId });
                 setJustificationModalOpen(true);
               }}
@@ -1294,7 +1293,7 @@ export default function ProjectBudgetPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleOpenExportDialog}
-                  disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
+                  disabled={!canExportGrantJustification || isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
                 >
                   {isExportingFunding ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1305,7 +1304,7 @@ export default function ProjectBudgetPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleExportZip}
-                  disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
+                  disabled={!canUseProjectModule || isExportingZip || expensesLoading || projectAssignmentsCount === 0}
                 >
                   {isExportingZip ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1314,7 +1313,7 @@ export default function ProjectBudgetPage() {
                   )}
                   {tr('projectModule.downloadAttachments')}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setImportWizardOpen(true)}>
+                <DropdownMenuItem disabled={!canMutateBudgets} onClick={() => canMutateBudgets && setImportWizardOpen(true)}>
                   <Upload className="mr-2 h-4 w-4" />
                   {tr('projectModule.importBudget')}
                 </DropdownMenuItem>
@@ -1324,7 +1323,9 @@ export default function ProjectBudgetPage() {
         ) : (
           <div className="flex gap-2">
             <Button
+              disabled={!canMutateProjects}
               onClick={() => {
+                if (!canMutateProjects) return;
                 trackUX('budget.justification.open', { projectId });
                 setJustificationModalOpen(true);
               }}
@@ -1345,7 +1346,7 @@ export default function ProjectBudgetPage() {
               variant="outline"
               size="icon"
               onClick={handleOpenExportDialog}
-              disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
+              disabled={!canExportGrantJustification || isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
               title={tr('projectModule.exportExcel')}
             >
               {isExportingFunding ? (
@@ -1358,7 +1359,7 @@ export default function ProjectBudgetPage() {
               variant="outline"
               size="icon"
               onClick={handleExportZip}
-              disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
+              disabled={!canUseProjectModule || isExportingZip || expensesLoading || projectAssignmentsCount === 0}
               title={tr('projectModule.downloadAttachments')}
             >
               {isExportingZip ? (
@@ -1370,7 +1371,8 @@ export default function ProjectBudgetPage() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setImportWizardOpen(true)}
+              onClick={() => canMutateBudgets && setImportWizardOpen(true)}
+              disabled={!canMutateBudgets}
               title={tr('projectModule.importBudget')}
             >
               <Upload className="h-4 w-4" />
@@ -1396,11 +1398,11 @@ export default function ProjectBudgetPage() {
           projectCode={project.code ?? projectId}
           organizationId={organizationId}
           offBankAttachmentsByTxId={offBankAttachmentsByTxId}
-          canCompleteOffBankDocuments={canUseProjectModule}
+          canCompleteOffBankDocuments={canMutateProjects}
           canOpenBankMovements={canAccessMovimentsRoute}
           buildBankMovementHref={buildDocumentReviewMovementHref}
           onDocumentsChanged={handleDocumentReviewDocumentsChanged}
-          canAnalyzeDocuments={canUseProjectModule}
+          canAnalyzeDocuments={canMutateProjects}
           analyzingDocumentKeys={documentReviewAnalyzingKeys}
           analyzedDocumentKeys={analyzedDocumentKeys}
           aiUnavailable={documentReviewAiUnavailable}
@@ -1565,7 +1567,7 @@ export default function ProjectBudgetPage() {
                 size="sm"
                 className="ml-3 shrink-0"
                 onClick={() => setReapplyConfirmOpen(true)}
-                disabled={isReapplying}
+                disabled={!canMutateMulticurrency || isReapplying}
               >
                 {isReapplying ? (
                   <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -1606,9 +1608,11 @@ export default function ProjectBudgetPage() {
             size="sm"
             className="h-8"
             onClick={() => {
+              if (!canMutateMulticurrency) return;
               setEditingFxTransfer(null);
               setFxTransferFormOpen(true);
             }}
+            disabled={!canMutateMulticurrency}
           >
             <Plus className="h-4 w-4 mr-1" />
             {tr('projectModule.budget.fxTransfersAdd')}
@@ -1646,9 +1650,11 @@ export default function ProjectBudgetPage() {
                             size="icon"
                             className="h-7 w-7"
                             onClick={() => {
+                              if (!canMutateMulticurrency) return;
                               setEditingFxTransfer(transfer);
                               setFxTransferFormOpen(true);
                             }}
+                            disabled={!canMutateMulticurrency}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
@@ -1656,7 +1662,8 @@ export default function ProjectBudgetPage() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-destructive"
-                            onClick={() => setDeleteFxTransferConfirm(transfer)}
+                            onClick={() => canMutateMulticurrency && setDeleteFxTransferConfirm(transfer)}
+                            disabled={!canMutateMulticurrency}
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -1723,6 +1730,7 @@ export default function ProjectBudgetPage() {
                     size="sm"
                     className="h-8"
                     onClick={async () => {
+                      if (!canMutateMulticurrency) return;
                       const rate = fxRateInput ? parseFloat(fxRateInput.replace(',', '.')) : null;
                       if (fxRateInput && (isNaN(rate!) || rate! <= 0)) {
                         toast({
@@ -1752,7 +1760,7 @@ export default function ProjectBudgetPage() {
                         });
                       }
                     }}
-                    disabled={isSavingFx}
+                    disabled={!canMutateMulticurrency || isSavingFx}
                   >
                     {isSavingFx ? <Loader2 className="h-4 w-4 animate-spin" /> : tr('common.save')}
                   </Button>
@@ -1771,7 +1779,8 @@ export default function ProjectBudgetPage() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 shrink-0"
-                  onClick={() => setFxEditMode(true)}
+                  onClick={() => canMutateMulticurrency && setFxEditMode(true)}
+                  disabled={!canMutateMulticurrency}
                   title={tr('projectModule.budget.editFx')}
                 >
                   <Pencil className="h-4 w-4" />
@@ -1799,7 +1808,7 @@ export default function ProjectBudgetPage() {
               variant="outline"
               size="sm"
               onClick={handleExportMultiFunding}
-              disabled={isExportingMultiFunding || fundingSources.filter((source) => source.archivedAt === null).length === 0}
+              disabled={!canExportGrantJustification || isExportingMultiFunding || fundingSources.filter((source) => source.archivedAt === null).length === 0}
             >
               {isExportingMultiFunding ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1836,10 +1845,12 @@ export default function ProjectBudgetPage() {
                 isSaving={isSavingFunding}
                 canEdit={canConfigureMultiFunding}
                 onSave={async (data, sourceId) => {
+                  if (!canConfigureMultiFunding) return;
                   await saveFundingSource(projectId, data, sourceId);
                   await refreshFundingSources();
                 }}
                 onArchive={async (sourceId) => {
+                  if (!canConfigureMultiFunding) return;
                   await archiveFundingSource(projectId, sourceId);
                   await refreshFundingSources();
                 }}
@@ -1851,7 +1862,7 @@ export default function ProjectBudgetPage() {
                     <CardTitle className="text-base">{tr('projectModule.multiFunding.budgetLinesTitle')}</CardTitle>
                     <CardDescription>{tr('projectModule.multiFunding.budgetLinesDescription')}</CardDescription>
                   </div>
-                  {canConfigureMultiFunding && (
+                  {canConfigureMultiFunding && canMutateBudgets && (
                     <Button variant="outline" size="sm" onClick={openNew}>
                       <Plus className="mr-2 h-4 w-4" />
                       {tr('projectModule.addBudgetLine')}
@@ -1863,11 +1874,11 @@ export default function ProjectBudgetPage() {
                     <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm text-muted-foreground">{tr('projectModule.budget.noBudgetLinesHint')}</p>
                       <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button onClick={openNew} variant="outline">
+                        <Button onClick={openNew} variant="outline" disabled={!canMutateBudgets}>
                           <Plus className="mr-2 h-4 w-4" />
                           {tr('projectModule.budget.createLineManually')}
                         </Button>
-                        <Button onClick={() => setImportWizardOpen(true)} variant="outline">
+                        <Button onClick={() => canMutateBudgets && setImportWizardOpen(true)} variant="outline" disabled={!canMutateBudgets}>
                           <Upload className="mr-2 h-4 w-4" />
                           {tr('projectModule.budget.importLinesExcel')}
                         </Button>
@@ -1903,6 +1914,7 @@ export default function ProjectBudgetPage() {
                                     size="icon"
                                     className="h-7 w-7"
                                     onClick={(event) => openEdit(line, event)}
+                                    disabled={!canMutateBudgets}
                                     title={tr('projectModule.editBudgetLine')}
                                   >
                                     <Pencil className="h-3.5 w-3.5" />
@@ -1911,7 +1923,8 @@ export default function ProjectBudgetPage() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-destructive hover:text-destructive"
-                                    onClick={() => setDeleteConfirm(line)}
+                                    onClick={() => canMutateBudgets && setDeleteConfirm(line)}
+                                    disabled={!canMutateBudgets}
                                     title={tr('projectModule.deleteBudgetLine')}
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -1931,8 +1944,9 @@ export default function ProjectBudgetPage() {
                 budgetLines={budgetLines}
                 fundingSources={fundingSources}
                 budgetAllocations={budgetAllocations}
-                canEdit={canConfigureMultiFunding}
+                canEdit={canConfigureMultiFunding && canMutateBudgets}
                 onSaveAllocation={async (budgetLineId, fundingSourceId, amountEUR) => {
+                  if (!canConfigureMultiFunding || !canMutateBudgets) return;
                   await saveFundingBudgetAllocation(projectId, budgetLineId, fundingSourceId, amountEUR);
                   await refreshBudgetAllocations();
                 }}
@@ -1989,11 +2003,11 @@ export default function ProjectBudgetPage() {
                 projectCode={project.code ?? projectId}
                 organizationId={organizationId}
                 offBankAttachmentsByTxId={offBankAttachmentsByTxId}
-                canCompleteOffBankDocuments={canUseProjectModule}
+                canCompleteOffBankDocuments={canMutateProjects}
                 canOpenBankMovements={canAccessMovimentsRoute}
                 buildBankMovementHref={buildDocumentReviewMovementHref}
                 onDocumentsChanged={handleDocumentReviewDocumentsChanged}
-                canAnalyzeDocuments={canUseProjectModule}
+                canAnalyzeDocuments={canMutateProjects}
                 analyzingDocumentKeys={documentReviewAnalyzingKeys}
                 analyzedDocumentKeys={analyzedDocumentKeys}
                 aiUnavailable={documentReviewAiUnavailable}
@@ -2013,11 +2027,11 @@ export default function ProjectBudgetPage() {
                 {tr('projectModule.budget.noBudgetLinesHint')}
               </p>
               <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                <Button onClick={openNew} variant="outline">
+                <Button onClick={openNew} variant="outline" disabled={!canMutateBudgets}>
                   <Plus className="h-4 w-4 mr-2" />
                   {tr('projectModule.budget.createLineManually')}
                 </Button>
-                <Button onClick={() => setImportWizardOpen(true)} variant="outline">
+                <Button onClick={() => canMutateBudgets && setImportWizardOpen(true)} variant="outline" disabled={!canMutateBudgets}>
                   <Upload className="h-4 w-4 mr-2" />
                   {tr('projectModule.budget.importLinesExcel')}
                 </Button>
@@ -2127,17 +2141,19 @@ export default function ProjectBudgetPage() {
                             size="icon"
                             className="h-8 w-8"
                             onClick={(e) => e.stopPropagation()}
+                            disabled={!canMutateBudgets}
                           >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(line)}>
+                          <DropdownMenuItem disabled={!canMutateBudgets} onClick={() => openEdit(line)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             {tr('projectModule.budget.edit')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => setDeleteConfirm(line)}
+                            disabled={!canMutateBudgets}
+                            onClick={() => canMutateBudgets && setDeleteConfirm(line)}
                             className="text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -2230,6 +2246,7 @@ export default function ProjectBudgetPage() {
                             size="icon"
                             className="h-7 w-7"
                             onClick={(e) => openEdit(line, e)}
+                            disabled={!canMutateBudgets}
                             title={tr('projectModule.editBudgetLine')}
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -2240,8 +2257,9 @@ export default function ProjectBudgetPage() {
                             className="h-7 w-7 text-destructive hover:text-destructive"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setDeleteConfirm(line);
+                              if (canMutateBudgets) setDeleteConfirm(line);
                             }}
+                            disabled={!canMutateBudgets}
                             title={tr('projectModule.deleteBudgetLine')}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -2261,7 +2279,7 @@ export default function ProjectBudgetPage() {
 
       {/* Form Modal */}
       <BudgetLineForm
-        open={formOpen}
+        open={canMutateBudgets && formOpen}
         onOpenChange={(open) => {
           setFormOpen(open);
           if (!open) setEditingLine(null);
@@ -2272,7 +2290,7 @@ export default function ProjectBudgetPage() {
       />
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+      <AlertDialog open={canMutateBudgets && !!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t.projectModule.deleteBudgetLine}</AlertDialogTitle>
@@ -2282,7 +2300,7 @@ export default function ProjectBudgetPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction disabled={!canMutateBudgets} onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {t.common.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -2291,7 +2309,7 @@ export default function ProjectBudgetPage() {
 
       {/* Modal Quadrar projecte */}
       <BalanceProjectModal
-        open={justificationModalOpen}
+        open={canMutateProjects && justificationModalOpen}
         onOpenChange={setJustificationModalOpen}
         guidedMode={true}
         project={project}
@@ -2304,7 +2322,7 @@ export default function ProjectBudgetPage() {
       />
 
       {/* Dialog selecció ordre Excel */}
-      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+      <Dialog open={canExportGrantJustification && exportDialogOpen} onOpenChange={setExportDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -2339,7 +2357,7 @@ export default function ProjectBudgetPage() {
             <Button variant="outline" onClick={() => setExportDialogOpen(false)}>
               {tr('common.cancel')}
             </Button>
-            <Button onClick={handleConfirmExportFunding}>
+            <Button disabled={!canExportGrantJustification} onClick={handleConfirmExportFunding}>
               <Download className="h-4 w-4 mr-2" />
               {tr('projectModule.export.download')}
             </Button>
@@ -2359,12 +2377,13 @@ export default function ProjectBudgetPage() {
 
       {/* Form alta/edició FX Transfer */}
       <FxTransferForm
-        open={fxTransferFormOpen}
+        open={canMutateMulticurrency && fxTransferFormOpen}
         onOpenChange={(open) => {
           setFxTransferFormOpen(open);
           if (!open) setEditingFxTransfer(null);
         }}
         onSave={async (data) => {
+          if (!canMutateMulticurrency) return;
           try {
             await saveFxTransfer(projectId, data, editingFxTransfer?.id);
             toast({
@@ -2387,7 +2406,7 @@ export default function ProjectBudgetPage() {
 
       {/* Confirmació eliminació FX Transfer */}
       <AlertDialog
-        open={!!deleteFxTransferConfirm}
+        open={canMutateMulticurrency && !!deleteFxTransferConfirm}
         onOpenChange={(open) => !open && setDeleteFxTransferConfirm(null)}
       >
         <AlertDialogContent>
@@ -2402,7 +2421,7 @@ export default function ProjectBudgetPage() {
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
-                if (!deleteFxTransferConfirm) return;
+                if (!canMutateMulticurrency || !deleteFxTransferConfirm) return;
                 try {
                   await removeFxTransfer(projectId, deleteFxTransferConfirm.id);
                   toast({
@@ -2426,7 +2445,7 @@ export default function ProjectBudgetPage() {
       </AlertDialog>
 
       {/* Confirmació re-aplicar TC */}
-      <AlertDialog open={reapplyConfirmOpen} onOpenChange={setReapplyConfirmOpen}>
+      <AlertDialog open={canMutateMulticurrency && reapplyConfirmOpen} onOpenChange={setReapplyConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -2438,7 +2457,7 @@ export default function ProjectBudgetPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tr('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReapplyFx} disabled={isReapplying}>
+            <AlertDialogAction onClick={handleReapplyFx} disabled={!canMutateMulticurrency || isReapplying}>
               {isReapplying
                 ? tr('projectModule.budget.fxReapplyRunning')
                 : tr('projectModule.budget.fxReapplyButton')}

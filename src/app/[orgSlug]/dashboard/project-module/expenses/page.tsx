@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { computeFxAmountEUR } from '@/lib/project-module/fx';
 import { normalizeAssignments } from '@/lib/project-module/normalize-assignments';
-import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useUpdateOffBankExpense, useHardDeleteOffBankExpense, useProjectFxTransfers, getEffectiveProjectTC, isFxExpenseNeedingProjectTC, resolveExpenseTC } from '@/hooks/use-project-module';
+import { useUnifiedExpenseFeed, useProjects, useSaveExpenseLink, useProjectBudgetLines, useUpdateOffBankExpense, useHardDeleteOffBankExpense, useProjectFxTransfers, getEffectiveProjectTC, isFxExpenseNeedingProjectTC, resolveExpenseTC, useProjectCommercialAccess } from '@/hooks/use-project-module';
 import { collection, doc, updateDoc, getDoc, getDocs } from 'firebase/firestore';
 import { useFirebase, useStorage } from '@/firebase/provider';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -103,7 +103,7 @@ import {
   shouldShowProjectExpenseLoadMore,
   type ProjectExpenseTableFilter,
 } from '@/lib/project-module/expense-assignment-policy';
-import { addTransactionDocument } from '@/lib/files/transaction-documents';
+import { addTransactionDocument, clearTransactionDocumentLink } from '@/lib/files/transaction-documents';
 import { openDocumentUrl, openOrganizationDocument } from '@/lib/open-document-url';
 
 function formatAmount(amount: number): string {
@@ -292,6 +292,7 @@ function AssignmentStatusPopover({
   onEditAssignment,
   isSaving,
   projectIdFilter,
+  canOperate,
   ep,
 }: {
   expense: UnifiedExpenseWithLink;
@@ -302,6 +303,7 @@ function AssignmentStatusPopover({
   onEditAssignment: (expense: UnifiedExpenseWithLink) => void;
   isSaving: boolean;
   projectIdFilter?: string | null;
+  canOperate: boolean;
   ep: { statusUnassigned: string; statusPartial: string; statusAssigned: string; popoverAssigned: string; popoverFree: string; breakdownNProjects: (n: number) => string; breakdownNProjectsPcts: (n: number, pcts: string) => string; breakdownInThisProject: (pct: number) => string };
 }) {
   const { tr } = useTranslations();
@@ -327,7 +329,7 @@ function AssignmentStatusPopover({
   return (
     <div className="flex min-w-0 flex-nowrap items-center gap-1">
       {/* Badge 1: Estat — obre el popover */}
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={canOperate && open} onOpenChange={(next) => canOperate && setOpen(next)}>
         <PopoverTrigger asChild>
           <Badge variant={status === 'assigned' ? 'default' : 'outline'} className={`${badgeClass} h-5 whitespace-nowrap px-1.5 py-0 text-xs`}>
             {statusLabel}
@@ -394,12 +396,13 @@ function AssignmentStatusPopover({
                     className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                     onClick={async (e) => {
                       e.stopPropagation();
+                      if (!canOperate) return;
                       await onRemoveAssignment(expense.expense.txId, index);
                       if (assignments.length === 1) {
                         setOpen(false);
                       }
                     }}
-                    disabled={isSaving}
+                    disabled={!canOperate || isSaving}
                     aria-label={tr('projectModule.removeAssignment', 'Eliminar assignació')}
                   >
                     <X className="h-3 w-3" />
@@ -423,6 +426,7 @@ function AssignmentStatusPopover({
               size="sm"
               className="flex-1 text-xs"
               onClick={() => {
+                if (!canOperate) return;
                 setOpen(false);
                 onEditAssignment(expense);
               }}
@@ -435,10 +439,11 @@ function AssignmentStatusPopover({
               size="sm"
               className="flex-1 text-xs text-destructive hover:text-destructive"
               onClick={async () => {
+                if (!canOperate) return;
                 await onUnassignAll(expense.expense.txId);
                 setOpen(false);
               }}
-              disabled={isSaving}
+              disabled={!canOperate || isSaving}
             >
               <Trash2 className="h-3 w-3 mr-1" />
               Eliminar tot
@@ -477,6 +482,7 @@ function QuickAssignPopover({
   onTcMissing,
   isAssigning,
   assignTooltip,
+  canOperate,
 }: {
   expense: UnifiedExpenseWithLink;
   projects: Project[];
@@ -485,11 +491,20 @@ function QuickAssignPopover({
   onTcMissing?: (project: Project) => void;
   isAssigning: boolean;
   assignTooltip: string;
+  canOperate: boolean;
 }) {
   const { tr } = useTranslations();
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
+
+  React.useEffect(() => {
+    if (!canOperate) {
+      setOpen(false);
+      setSelectedProject(null);
+      setSearch('');
+    }
+  }, [canOperate]);
 
   // Carregar partides i fxTransfers quan es selecciona un projecte
   const { budgetLines, isLoading: budgetLinesLoading } = useProjectBudgetLines(selectedProject?.id ?? '');
@@ -503,12 +518,13 @@ function QuickAssignPopover({
   );
 
   const handleSelectProject = (project: Project) => {
+    if (!canOperate) return;
     setSelectedProject(project);
     setSearch('');
   };
 
   const handleSelectBudgetLine = async (budgetLine: BudgetLine | null) => {
-    if (!selectedProject) return;
+    if (!canOperate || !selectedProject) return;
 
     // Si la despesa és FX, computar EUR amb TC (manual o projecte), o null si no n'hi ha
     if (isFxExpense) {
@@ -533,6 +549,7 @@ function QuickAssignPopover({
   };
 
   const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen && !canOperate) return;
     setOpen(isOpen);
     if (!isOpen) {
       setSelectedProject(null);
@@ -541,7 +558,7 @@ function QuickAssignPopover({
   };
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={canOperate && open} onOpenChange={handleOpenChange}>
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
@@ -549,7 +566,7 @@ function QuickAssignPopover({
               variant="ghost"
               size="icon"
               className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-              disabled={isAssigning}
+              disabled={!canOperate || isAssigning}
               aria-label={assignTooltip}
             >
               <FolderPlus className="h-4 w-4" />
@@ -590,6 +607,7 @@ function QuickAssignPopover({
               <CommandGroup>
                 <CommandItem
                   onSelect={() => {
+                    if (!canOperate) return;
                     setOpen(false);
                     onOpenSplitModal(expense);
                   }}
@@ -673,6 +691,7 @@ interface DroppableExpenseRowProps {
   onUploadDocument: (expense: UnifiedExpenseWithLink, file: File) => Promise<void>;
   isUploading: boolean;
   isSelected: boolean;
+  canUpload: boolean;
 }
 
 const ACCEPTED_TYPES = [
@@ -693,6 +712,7 @@ function DroppableExpenseRow({
   onUploadDocument,
   isUploading,
   isSelected,
+  canUpload,
 }: DroppableExpenseRowProps) {
   const { tr } = useTranslations();
   const [isDragging, setIsDragging] = React.useState(false);
@@ -700,10 +720,10 @@ function DroppableExpenseRow({
   const handleDragOver = React.useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!isUploading) {
+    if (canUpload && !isUploading) {
       setIsDragging(true);
     }
-  }, [isUploading]);
+  }, [canUpload, isUploading]);
 
   const handleDragLeave = React.useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -716,7 +736,7 @@ function DroppableExpenseRow({
     e.stopPropagation();
     setIsDragging(false);
 
-    if (isUploading) return;
+    if (!canUpload || isUploading) return;
 
     const files = Array.from(e.dataTransfer.files);
     const validFile = files.find(f =>
@@ -726,7 +746,7 @@ function DroppableExpenseRow({
     if (validFile) {
       await onUploadDocument(expense, validFile);
     }
-  }, [expense, onUploadDocument, isUploading]);
+  }, [canUpload, expense, onUploadDocument, isUploading]);
 
   return (
     <TableRow
@@ -757,6 +777,7 @@ export default function ExpensesInboxPage() {
   const { organizationId, organization } = useCurrentOrganization();
   const { canReadBankInProjectes, projectCapability } = usePermissions();
   const { canUseCapability } = useEntitlements();
+  const { canMutateProjects } = useProjectCommercialAccess();
   const canMutateTransactionDocuments = canUseCapability('transactionDocuments.mutate', {
     operationalEnabled: organization?.features?.transactionDocuments !== false,
     userAllowed: projectCapability !== 'none',
@@ -913,6 +934,7 @@ export default function ExpensesInboxPage() {
 
   // Quick Assign 100%
   const handleAssign100 = async (txId: string, project: Project, budgetLine?: BudgetLine | null, fxAmountEUR?: number) => {
+    if (!canMutateProjects) return;
     const expense = expenses.find(e => e.expense.txId === txId);
     if (!expense) return;
 
@@ -968,7 +990,7 @@ export default function ExpensesInboxPage() {
 
   // Split Modal save
   const handleSplitSave = async (assignments: ExpenseAssignment[], note: string | null) => {
-    if (!splitModalExpense) return;
+    if (!canMutateProjects || !splitModalExpense) return;
 
     // Normalitzar i validar abans de persistir
     const expData = splitModalExpense.expense;
@@ -1033,6 +1055,7 @@ export default function ExpensesInboxPage() {
 
   // Bulk Assign
   const handleBulkAssign = async (project: Project) => {
+    if (!canMutateProjects) return;
     setIsBulkAssigning(true);
 
     try {
@@ -1121,7 +1144,7 @@ export default function ExpensesInboxPage() {
 
   // Selection handlers
   const toggleSelect = (expense: UnifiedExpenseWithLink) => {
-    if (!canSelectExpenseForProjectAssignment(expense)) return;
+    if (!canMutateProjects || !canSelectExpenseForProjectAssignment(expense)) return;
 
     const txId = expense.expense.txId;
     const newSet = new Set(selectedIds);
@@ -1141,12 +1164,14 @@ export default function ExpensesInboxPage() {
 
   // Handler per obrir edició de despesa off-bank
   const handleEditOffBank = (expense: UnifiedExpenseWithLink) => {
+    if (!canMutateProjects) return;
     trackUX('expenses.offBank.edit.open', { expenseId: expense.expense.txId });
     setEditOffBankExpense(expense);
   };
 
   // Handler per confirmar i executar eliminació definitiva de despesa off-bank
   const handleConfirmDeleteOffBank = async () => {
+    if (!canMutateProjects) return;
     if (!deleteConfirmExpense) return;
     const expense = deleteConfirmExpense.expense;
     const offBankId = expense.txId.replace('off_', '');
@@ -1179,14 +1204,27 @@ export default function ExpensesInboxPage() {
 
     try {
       if (expense.expense.source === 'offBank') {
+        if (!canMutateProjects) return;
         // Off-bank: eliminar attachments (posar array buit)
         const offBankId = txId.replace('off_', '');
         await updateOffBankExpense(offBankId, { attachments: [] });
       } else {
         if (!canMutateTransactionDocuments) return;
-        // Bank: actualitzar document a null
-        const txRef = doc(firestore, 'organizations', organizationId, 'transactions', txId);
-        await updateDoc(txRef, { document: null });
+        // Bank: mutació backend-owned per mantenir metadata, mirror i registry.
+        const deletion = await clearTransactionDocumentLink(
+          firestore,
+          organizationId,
+          txId,
+          expense.expense.documentUrl ?? null
+        );
+        if (deletion.cleanupPending) {
+          toast({
+            variant: 'destructive',
+            title: tr('movements.table.documentCleanupPending', 'Document desvinculat; la neteja del fitxer queda pendent.'),
+          });
+          await refresh();
+          return;
+        }
       }
 
       await refresh();
@@ -1221,6 +1259,7 @@ export default function ExpensesInboxPage() {
       });
 
       if (expense.expense.source === 'offBank') {
+        if (!canMutateProjects) return;
         // Off-bank: afegir a attachments[]
         const offBankId = txId.replace('off_', '');
         const storagePath = `organizations/${organizationId}/offBankExpenses/${offBankId}/${fileName}`;
@@ -1275,7 +1314,7 @@ export default function ExpensesInboxPage() {
     } finally {
       setUploadingDocTxId(null);
     }
-  }, [canMutateTransactionDocuments, organizationId, storage, firestore, updateOffBankExpense, refresh, toast, t, ep, user?.uid]);
+  }, [canMutateProjects, canMutateTransactionDocuments, organizationId, storage, firestore, updateOffBankExpense, refresh, toast, t, ep, user?.uid]);
 
   const handleOpenExpenseDocument = React.useCallback((expense: UnifiedExpenseWithLink['expense']) => {
     const attachment = expense.attachments?.find((item) => item.url || item.storagePath) ?? null;
@@ -1295,12 +1334,14 @@ export default function ExpensesInboxPage() {
 
   // Handler per des-assignar completament (amb confirmació)
   const handleUnassign = async (txId: string) => {
+    if (!canMutateProjects) return;
     if (!confirm(ep.confirmUnassign)) return;
     await handleUnassignAll(txId);
   };
 
   // Handler per des-assignar completament (sense confirmació, per ús des del popover)
   const handleUnassignAll = async (txId: string) => {
+    if (!canMutateProjects) return;
     try {
       await remove(txId);
       await refresh();
@@ -1320,6 +1361,7 @@ export default function ExpensesInboxPage() {
 
   // Handler per eliminar una assignació específica (per index)
   const handleRemoveSingleAssignment = async (txId: string, assignmentIndex: number) => {
+    if (!canMutateProjects) return;
     // Buscar la despesa per obtenir les assignacions actuals
     const expenseItem = expenses.find(e => e.expense.txId === txId);
     if (!expenseItem?.link?.assignments) return;
@@ -1375,6 +1417,7 @@ export default function ExpensesInboxPage() {
   };
 
   const toggleSelectAll = () => {
+    if (!canMutateProjects) return;
     if (selectedVisibleSelectableCount === selectableExpenses.length) {
       setSelectedIds(new Set());
     } else {
@@ -1714,7 +1757,7 @@ export default function ExpensesInboxPage() {
                         </Tooltip>
                       )}
                       {/* Assignar (per-projecte TC check al popover) */}
-                      {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                      {canMutateProjects && !projectsLoading && projects.length > 0 && status === 'unassigned' && (
                         expense.amountEUR !== null || isFxExpenseNeedingProjectTC(expense)
                       ) && (
                         <QuickAssignPopover
@@ -1725,6 +1768,7 @@ export default function ExpensesInboxPage() {
                           onTcMissing={handleTcMissing}
                           isAssigning={isSaving}
                           assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
+                          canOperate={canMutateProjects}
                         />
                       )}
                       {/* Indicador moneda FX (informatiu, no bloquejant) */}
@@ -1848,6 +1892,7 @@ export default function ExpensesInboxPage() {
                       key={expense.txId}
                       expense={item}
                       onUploadDocument={handleUploadDocument}
+                      canUpload={expense.source === 'offBank' ? canMutateProjects : canMutateTransactionDocuments}
                       isUploading={isUploading}
                       isSelected={isSelected}
                     >
@@ -1857,7 +1902,7 @@ export default function ExpensesInboxPage() {
                           checked={isSelected}
                           onCheckedChange={() => toggleSelect(item)}
                           aria-label={`${ep.tableSelectExpense} ${expense.txId}`}
-                          disabled={!canSelectExpenseForProjectAssignment(item)}
+                          disabled={!canMutateProjects || !canSelectExpenseForProjectAssignment(item)}
                         />
                       </TableCell>
 
@@ -1951,6 +1996,7 @@ export default function ExpensesInboxPage() {
                           onEditAssignment={setSplitModalExpense}
                           isSaving={isSaving}
                           projectIdFilter={projectIdFilter}
+                          canOperate={canMutateProjects}
                           ep={ep}
                         />
                       </TableCell>
@@ -1958,7 +2004,7 @@ export default function ExpensesInboxPage() {
                       {/* Accions */}
                       <TableCell className="px-1">
                         <div className="flex items-center gap-0.5 justify-end">
-                          {!projectsLoading && projects.length > 0 && status === 'unassigned' && (
+                          {canMutateProjects && !projectsLoading && projects.length > 0 && status === 'unassigned' && (
                             expense.amountEUR !== null || isFxExpenseNeedingProjectTC(expense)
                           ) && (
                             <QuickAssignPopover
@@ -1969,6 +2015,7 @@ export default function ExpensesInboxPage() {
                               onTcMissing={handleTcMissing}
                               isAssigning={isSaving}
                               assignTooltip={t.projectModule?.assignToProject ?? 'Assignar a projecte'}
+                              canOperate={canMutateProjects}
                             />
                           )}
                           {/* Indicador moneda FX (informatiu, no bloquejant) */}
@@ -1977,7 +2024,7 @@ export default function ExpensesInboxPage() {
                               {expense.originalCurrency}
                             </span>
                           )}
-                          {expense.source === 'offBank' && (
+                          {canMutateProjects && expense.source === 'offBank' && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -1993,7 +2040,7 @@ export default function ExpensesInboxPage() {
                               <TooltipContent>{t.projectModule?.editExpense ?? 'Editar despesa'}</TooltipContent>
                             </Tooltip>
                           )}
-                          {expense.source === 'offBank' && expense.documentUrl && (
+                          {canMutateProjects && expense.source === 'offBank' && expense.documentUrl && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -2012,7 +2059,7 @@ export default function ExpensesInboxPage() {
                               <TooltipContent>{t.movements?.table?.deleteDocument ?? 'Eliminar document'}</TooltipContent>
                             </Tooltip>
                           )}
-                          {expense.source === 'offBank' && (
+                          {canMutateProjects && expense.source === 'offBank' && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -2086,7 +2133,7 @@ export default function ExpensesInboxPage() {
       )}
 
       {/* Barra inferior per bulk assign */}
-      {hasSelection && (
+      {canMutateProjects && hasSelection && (
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 shadow-lg z-50">
           <div className="w-full flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -2098,9 +2145,9 @@ export default function ExpensesInboxPage() {
                 Deseleccionar
               </Button>
             </div>
-            <Popover open={bulkAssignOpen} onOpenChange={setBulkAssignOpen}>
+            <Popover open={canMutateProjects && bulkAssignOpen} onOpenChange={(next) => canMutateProjects && setBulkAssignOpen(next)}>
               <PopoverTrigger asChild>
-                <Button disabled={isBulkAssigning || projectsLoading}>
+                <Button disabled={!canMutateProjects || isBulkAssigning || projectsLoading}>
                   <FolderPlus className="h-4 w-4 mr-2" />
                   {isBulkAssigning ? 'Assignant...' : 'Assignar a projecte...'}
                 </Button>
@@ -2136,7 +2183,7 @@ export default function ExpensesInboxPage() {
       )}
 
       {/* Split Modal */}
-      <Dialog open={!!splitModalExpense} onOpenChange={(open) => !open && setSplitModalExpense(null)}>
+      <Dialog open={canMutateProjects && !!splitModalExpense} onOpenChange={(open) => !open && setSplitModalExpense(null)}>
         <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,72rem)] overflow-y-auto sm:w-[min(calc(100vw-3rem),72rem)]">
           <DialogHeader>
             <DialogTitle>{tr('projectModule.expenses.bulkAssignTitle', 'Assignació múltiple')}</DialogTitle>

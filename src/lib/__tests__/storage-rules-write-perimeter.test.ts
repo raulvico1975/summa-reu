@@ -81,12 +81,8 @@ test('storage rules constrain client writes by MIME type and size', () => {
   }
 });
 
-test('storage rules preserve only the explicit health-check text upload path', () => {
+test('storage rules do not create a functional-document bypass for health checks', () => {
   const rules = readRules();
-
-  assert.match(
-    rules,
-    /docId == '_healthcheck' && fileName\.matches\('\[0-9\]\+\\\\\.txt'\) && isPlainText\(\) && isAtMost\(1024\)/m,
-  );
+  assert.doesNotMatch(rules, /_healthcheck/);
   assert.doesNotMatch(rules, /isPlainText\(\)\s*\|\|/);
 });

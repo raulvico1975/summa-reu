@@ -63,6 +63,8 @@ export interface ClosingTransaction {
   contactId: string | null;
   contactName: string | null;
   document: string | null; // URL de Firebase Storage
+  organizationId?: string | null;
+  documents?: ClosingTransactionDocument[];
   transactionType: string | null;
   isRemittance: boolean;
   remittanceStatus: string | null;
@@ -70,6 +72,17 @@ export interface ClosingTransaction {
   source: string | null;
   parentTransactionId: string | null;
   isRemittanceItem: boolean;
+}
+
+export interface ClosingTransactionDocument {
+  id: string;
+  value: string;
+  storagePath: string | null;
+  url: string | null;
+  filename: string | null;
+  contentType: string | null;
+  isPrimary: boolean;
+  source: 'metadata' | 'legacy';
 }
 
 export interface ClosingManifestRow {
@@ -87,6 +100,7 @@ export interface ClosingManifestRow {
 
 export interface ClosingIncident {
   txId: string;
+  documentDiagnosticKey?: string;
   type: IncidentType;
   severity: IncidentSeverity;
   message: string;
@@ -108,6 +122,8 @@ export interface ClosingIncidentRow {
 
 export interface ClosingDocumentInfo {
   txId: string;
+  documentId?: string;
+  diagnosticKey?: string;
   ordre: number;
   storagePath: string;
   bucketName: string | null;
@@ -147,6 +163,7 @@ export interface ClosingBundleManifest {
   totalExpense: number;
   balance: number;
   totalWithDocRef: number;
+  totalDocumentRefs?: number;
   totalIncluded: number;
   totalIncidents: number;
   statusCounts: DocumentStatusCounts;

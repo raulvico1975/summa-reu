@@ -3,6 +3,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { getAdminApp, getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
 import { extractStoragePathFromDocumentUrl } from '@/app/api/transaction-documents/open/handler';
 import { requirePermission } from '@/lib/api/require-permission';
+import { canAccessMovimentsRoute, canAccessProjectsArea } from '@/lib/permissions';
 
 const SIGNED_URL_TTL_MS = 15 * 60 * 1000;
 
@@ -70,10 +71,23 @@ export async function handleOpenOrgDocument(
     return NextResponse.json({ success: false, code: 'NOT_MEMBER' }, { status: 403 });
   }
   const area = storagePath.split('/')[2];
-  if (area === 'documents' || area === 'transactions') {
+  if (
+    area === 'documents'
+    || area === 'transactions'
+    || area === 'pendingDocuments'
+    || area === 'prebankRemittances'
+    || area === 'sepaCollectionRuns'
+  ) {
     const denied = requirePermission(membership, {
       code: 'MOVIMENTS_ROUTE_REQUIRED',
-      check: (permissions) => permissions['sections.moviments'] && permissions['moviments.read'],
+      check: canAccessMovimentsRoute,
+    });
+    if (denied) return denied;
+  }
+  if (area === 'offBankExpenses' || area === 'expenseReports') {
+    const denied = requirePermission(membership, {
+      code: 'PROJECT_MODULE_REQUIRED',
+      check: canAccessProjectsArea,
     });
     if (denied) return denied;
   }

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createHash } from 'node:crypto';
 import { getAdminDb, isSuperAdmin, verifyIdToken } from '@/lib/api/admin-sdk';
-import { ENTITLEMENTS_CATALOG_VERSION, catalogEntitlementsFor } from '@/lib/entitlements/catalog';
+import { ENTITLEMENTS_CATALOG_VERSION, catalogEntitlementsFor, catalogFingerprintFor } from '@/lib/entitlements/catalog';
 import { normalizePlanId } from '@/lib/entitlements/normalize-plan';
 import type { CanonicalPlanId, SubscriptionStatus } from '@/lib/entitlements/types';
 
@@ -127,6 +127,7 @@ export async function handleOrganizationSubscriptionPost(request: RequestLike, d
         planId: input.planId,
         status: input.status,
         catalogVersion: ENTITLEMENTS_CATALOG_VERSION,
+        catalogFingerprint: catalogFingerprintFor(input.planId as CanonicalPlanId),
         entitlements: catalogEntitlementsFor(input.planId as CanonicalPlanId),
         effectiveAt: nowIso,
         updatedAt: nowIso,

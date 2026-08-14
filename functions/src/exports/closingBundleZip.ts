@@ -39,7 +39,8 @@ import {
   DebugRow,
 } from './closing-bundle/build-closing-artifacts';
 import { canGenerateClosingBundle } from './closing-bundle/closing-permissions';
-import { inferExtension, buildDocumentFileName } from './closing-bundle/normalize-filename';
+import { canExportClosingBundleWithEntitlement } from './closing-bundle/closing-entitlements';
+import { inferExtension } from './closing-bundle/normalize-filename';
 
 const db = admin.firestore();
 
@@ -142,23 +143,40 @@ export const exportClosingBundleZip = functions
     }
 
     // 4. Verificar permisos efectius de l'usuari
+    let organizationData: Record<string, unknown> | null = null;
     try {
       const memberRef = db.doc(`organizations/${orgId}/members/${uid}`);
-      const memberSnap = await memberRef.get();
+      const [memberSnap, orgSnap, subscriptionSnap, configSnap] = await Promise.all([
+        memberRef.get(),
+        db.doc(`organizations/${orgId}`).get(),
+        db.doc(`organizations/${orgId}/subscription/current`).get(),
+        db.doc('system/entitlements').get(),
+      ]);
 
       const superAdminSnap = memberSnap.exists
         ? null
         : await db.doc(`systemSuperAdmins/${uid}`).get();
 
-      if (!canGenerateClosingBundle({
+      const permissionAllowed = canGenerateClosingBundle({
         memberData: memberSnap.exists ? memberSnap.data() : null,
         isSystemSuperAdmin: !!superAdminSnap?.exists,
-      })) {
+      });
+      if (!permissionAllowed) {
         sendError(
           res,
           403,
           { code: 'UNAUTHORIZED', message: memberSnap.exists ? 'No tens permisos per generar aquest paquet' : 'No ets membre d\'aquesta organització' }
         );
+        return;
+      }
+      organizationData = orgSnap.exists ? orgSnap.data() ?? null : null;
+      if (!canExportClosingBundleWithEntitlement({
+        organizationData,
+        subscriptionData: subscriptionSnap.exists ? subscriptionSnap.data() ?? null : null,
+        systemConfigData: configSnap.exists ? configSnap.data() ?? null : null,
+        permissionAllowed,
+      })) {
+        sendError(res, 403, { code: 'UNAUTHORIZED', message: 'El paquet de tancament requereix el pla Complet' });
         return;
       }
     } catch (err) {
@@ -169,14 +187,7 @@ export const exportClosingBundleZip = functions
 
     // 5. Obtenir orgSlug
     let orgSlug = orgId;
-    try {
-      const orgSnap = await db.doc(`organizations/${orgId}`).get();
-      if (orgSnap.exists) {
-        orgSlug = (orgSnap.data()?.slug as string) || orgId;
-      }
-    } catch {
-      // Usar orgId com a fallback
-    }
+    orgSlug = (organizationData?.slug as string) || orgId;
 
     // Generar runId per correlació de logs
     const runId = generateRunId();
@@ -247,10 +258,11 @@ export const exportClosingBundleZip = functions
       archive.pipe(res);
 
       const downloadedTxIds = new Set<string>();
+      const downloadedDocumentKeys = new Set<string>();
 
       // 14. Descarregar documents amb exists() previ
       for (const docInfo of docs) {
-        const diagnostic = diagnostics.get(docInfo.txId);
+        const diagnostic = diagnostics.get(docInfo.diagnosticKey ?? docInfo.txId);
         if (!diagnostic) continue;
 
         try {
@@ -280,18 +292,12 @@ export const exportClosingBundleZip = functions
           let finalFileName = docInfo.fileName;
           if (docInfo.contentType) {
             const ext = inferExtension(docInfo.contentType, docInfo.storagePath);
-            finalFileName = buildDocumentFileName({
-              ordre: docInfo.ordre,
-              date: transactions.find((t) => t.id === docInfo.txId)?.date || '',
-              amount: transactions.find((t) => t.id === docInfo.txId)?.amount || 0,
-              concept: transactions.find((t) => t.id === docInfo.txId)?.description || '',
-              txId: docInfo.txId,
-              extension: ext,
-            });
+            finalFileName = docInfo.fileName.replace(/\.[^.]+$/, `.${ext}`);
           }
 
           archive.append(buffer, { name: `documents/${finalFileName}` });
           downloadedTxIds.add(docInfo.txId);
+          downloadedDocumentKeys.add(docInfo.diagnosticKey ?? docInfo.txId);
           docInfo.fileName = finalFileName;
           diagnostic.status = 'OK';
         } catch (err) {
@@ -346,7 +352,8 @@ export const exportClosingBundleZip = functions
 
       const totalIncome = transactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
       const totalExpense = transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0);
-      const totalWithDocRef = transactions.filter((t) => t.document).length;
+      const totalWithDocRef = transactions.filter((t) => (t.documents?.length ?? 0) > 0 || t.document).length;
+      const totalDocumentRefs = [...diagnostics.values()].filter((diagnostic) => diagnostic.status !== 'NO_DOCUMENT').length;
       const finalIncidents = buildVisibleIncidents(transactions, incidents, diagnostics);
       const generatedAt = new Date().toISOString();
 
@@ -375,7 +382,8 @@ export const exportClosingBundleZip = functions
         totalIncome,
         totalExpense,
         totalWithDocRef,
-        totalIncluded: downloadedTxIds.size,
+        totalDocumentRefs,
+        totalIncluded: downloadedDocumentKeys.size,
         totalIncidents: finalIncidents.length,
         statusCounts,
       });
@@ -388,7 +396,8 @@ export const exportClosingBundleZip = functions
         totalIncome,
         totalExpense,
         totalWithDocRef,
-        totalIncluded: downloadedTxIds.size,
+        totalDocumentRefs,
+        totalIncluded: downloadedDocumentKeys.size,
         statusCounts,
         totalIncidents: finalIncidents.length,
       });
@@ -399,22 +408,22 @@ export const exportClosingBundleZip = functions
         dateTo,
         totalTransactions: transactions.length,
         totalWithDocRef,
-        totalIncluded: downloadedTxIds.size,
+        totalDocumentRefs,
+        totalIncluded: downloadedDocumentKeys.size,
         statusCounts,
       });
-      const debugRows: DebugRow[] = transactions.map((tx) => {
-        const diagnostic = diagnostics.get(tx.id);
+      const debugRows: DebugRow[] = [...diagnostics.values()].map((diagnostic) => {
         return {
-          txId: tx.id,
-          rawDocumentValue: diagnostic?.rawDocumentValue || null,
-          extractedPath: diagnostic?.extractedPath || null,
-          bucketConfigured: diagnostic?.bucketConfigured || null,
-          bucketInUrl: diagnostic?.bucketInUrl || null,
-          status: diagnostic?.status || 'NO_DOCUMENT',
-          kind: diagnostic?.kind || null,
-          errorCode: diagnostic?.errorCode || null,
-          errorMessage: diagnostic?.errorMessage || null,
-          errorAt: diagnostic?.errorAt || null,
+          txId: diagnostic.txId,
+          rawDocumentValue: diagnostic.rawDocumentValue || null,
+          extractedPath: diagnostic.extractedPath || null,
+          bucketConfigured: diagnostic.bucketConfigured || null,
+          bucketInUrl: diagnostic.bucketInUrl || null,
+          status: diagnostic.status,
+          kind: diagnostic.kind || null,
+          errorCode: diagnostic.errorCode || null,
+          errorMessage: diagnostic.errorMessage || null,
+          errorAt: diagnostic.errorAt || null,
         };
       });
 
@@ -442,7 +451,7 @@ export const exportClosingBundleZip = functions
         orgId,
         mode,
         transactions: transactions.length,
-        documentsIncluded: downloadedTxIds.size,
+        documentsIncluded: downloadedDocumentKeys.size,
         statusCounts,
         incidents: finalIncidents.length,
       });

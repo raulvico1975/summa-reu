@@ -1,4 +1,4 @@
-import { ENTITLEMENTS_CATALOG_VERSION, catalogEntitlementsFor } from './catalog';
+import { ENTITLEMENTS_CATALOG_VERSION, catalogEntitlementsFor, catalogFingerprintFor } from './catalog';
 import { normalizePlanId } from './normalize-plan';
 import type { OrganizationSubscriptionProjection, SubscriptionStatus } from './types';
 
@@ -31,6 +31,7 @@ function sameProjection(
     && current.planId === next.planId
     && current.status === next.status
     && current.catalogVersion === next.catalogVersion
+    && current.catalogFingerprint === next.catalogFingerprint
     && current.entitlements?.['transactionDocuments.readHistorical'] === next.entitlements['transactionDocuments.readHistorical']
     && current.entitlements?.['transactionDocuments.mutate'] === next.entitlements['transactionDocuments.mutate']
     && current.entitlements?.['pendingDocuments.mutate'] === next.entitlements['pendingDocuments.mutate'];
@@ -77,11 +78,12 @@ export function buildEntitlementBackfillDryRun(records: LegacyOrganizationBillin
       planId: normalizedPlan,
       status: normalizedStatus,
       catalogVersion: ENTITLEMENTS_CATALOG_VERSION,
+      catalogFingerprint: catalogFingerprintFor(normalizedPlan),
       entitlements: catalogEntitlementsFor(normalizedPlan),
       effectiveAt: null,
       updatedAt: null,
       origin: 'legacy_backfill_dry_run',
-      changeReason: 'catalog_v1_projection',
+      changeReason: 'catalog_v3_projection',
     };
 
     if (sameProjection(record.currentSubscription, projection)) {

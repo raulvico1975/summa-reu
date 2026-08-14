@@ -336,6 +336,7 @@ export const ca = {
       confirmDeleteDocument: "Eliminar justificant adjunt?",
       confirmDeleteDocumentDescription: "Aquesta acció eliminarà el justificant adjunt d'aquest moviment. El fitxer també s'eliminarà de l'emmagatzematge.",
       documentDeleted: "Justificant eliminat correctament",
+      documentCleanupPending: "Document desvinculat; la neteja del fitxer queda pendent.",
       deleteDocFromPendingError: "No es pot eliminar",
       deleteDocFromPendingHint: "Aquest document prové d'un moviment pendent conciliat. Elimina el pendent per desfer la conciliació.",
       // Rename dialog

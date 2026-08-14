@@ -6,7 +6,7 @@ Estat: implementat en codi, pendent de migració i activació operativa.
 
 Summa Social usa un catàleg versionat amb tres plans canònics: `control`, `management` i `complete`. Els identificadors legacy es normalitzen explícitament: `initial -> control` i `fiscal_documents -> complete`. No s'utilitzen comparacions per rang de pla.
 
-La projecció autoritativa és `organizations/{orgId}/subscription/current`, generada només al backend, amb `planId`, `status`, `catalogVersion`, `entitlements`, dates, origen i motiu. El client pot llegir-la però no escriure-la. El mode d'enforcement és global i únic a `system/entitlements`; no forma part de la projecció per organització.
+La projecció autoritativa és `organizations/{orgId}/subscription/current`, generada només al backend. Des del catàleg v3, l'autoritat compacta és el tuple `planId + status + catalogVersion + catalogFingerprint`; el mapa `entitlements` es conserva només com a dada auditable i no participa en cap decisió d'accés. El client pot llegir la projecció però no escriure-la. El mode d'enforcement és global i únic a `system/entitlements`; no forma part de la projecció per organització.
 
 L'accés final a una mutació és sempre:
 
@@ -14,7 +14,7 @@ L'accés final a una mutació és sempre:
 
 La configuració operativa només pot restringir. Mai pot concedir una capacitat que el pla no tingui.
 
-## Catàleg v1
+## Catàleg v3
 
 | Capacitat | Control | Gestió | Complet |
 |---|---:|---:|---:|
@@ -29,7 +29,7 @@ La configuració operativa només pot restringir. Mai pot concedir una capacitat
 1. Control conserva lectura, descàrrega i exportació de documents històrics.
 2. Un downgrade no esborra, mou ni transforma documents o transaccions.
 3. Control no pot fer cap mutació documental, inclòs posar el camp legacy `document` a `null`, eliminar subdocuments, eliminar fitxers de Storage o eliminar una transacció que conserva un document.
-4. Una subscripció absent, desconeguda, inactiva, amb versió incorrecta o snapshot incoherent resol com a Control quan el mode global és `active`.
+4. Una subscripció absent, desconeguda, inactiva, amb versió incorrecta o fingerprint absent/incoherent resol com a Control quan el mode global és `active`.
 5. En `off` i `shadow`, una subscripció absent continua en fail-open per facilitar la migració, però la configuració operativa i els permisos personals segueixen aplicant-se.
 6. El mode global preval sobre qualsevol dada local. No hi ha override de mode per organització.
 7. `subscription/current` i el registre d'auditoria s'actualitzen atòmicament amb el registre legacy de facturació.
@@ -45,10 +45,12 @@ No es pot passar a `active` fins que:
 
 - existeixi `system/entitlements` amb versió i mode vàlids;
 - el dry-run no tingui cap organització activa a `blocked`;
-- totes les organitzacions tinguin una projecció coherent amb el catàleg v1;
-- un informe repetible de projeccions confirmi zero `subscription_absent`, `plan_unknown`, `catalog_version_mismatch` i `snapshot_mismatch`; la telemetria shadow durable per accions client/Rules queda com a gate pendent abans d'`active`;
+- totes les organitzacions tinguin una projecció coherent amb el catàleg v3 i el fingerprint exacte del seu pla;
+- un informe repetible de projeccions confirmi zero `subscription_absent`, `plan_unknown`, `catalog_version_mismatch` i `catalog_fingerprint_mismatch`; la telemetria shadow durable per accions client/Rules queda com a gate pendent abans d'`active`;
 - s'hagin verificat manualment un Control, una Gestió, un Complet, un upgrade i un downgrade;
 - Firestore i Storage rules estiguin desplegades abans o al mateix release que l'activació.
+
+La prova semàntica local correlaciona el log de Rules amb cada operació. Un `ALLOW` no pot emetre cap error d'avaluació. Un `DENY` pot incloure l'error fail-closed documentat per Firebase només dins la seva finestra i en línies explícitament allowlisted; qualsevol línia nova, error no correlacionat, límit de 1.000 expressions o funció inexistent fa fallar el runner.
 
 ## Backfill preparat, no executat
 

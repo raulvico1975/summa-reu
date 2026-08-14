@@ -364,8 +364,8 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
   const entitlements = React.useMemo(() => resolveOrganizationEntitlements({
     subscription,
     legacyPlanId: organizationData.organization?.billingPlan,
-    defaultEnforcementMode: entitlementConfig?.enforcementMode,
-  }), [entitlementConfig?.enforcementMode, organizationData.organization?.billingPlan, subscription]);
+    systemConfig: entitlementConfig,
+  }), [entitlementConfig, organizationData.organization?.billingPlan, subscription]);
   const contextValue = React.useMemo<OrganizationContextType>(() => ({
     ...organizationData,
     subscription,

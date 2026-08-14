@@ -8,7 +8,6 @@ import type { Transaction, AnyContact, Category, ClassificationMemoryEntry } fro
 import { detectReturnType } from '@/lib/data';
 import { isCategoryIdCompatibleStrict } from '@/lib/constants';
 import Papa from 'papaparse';
-import { inferContact } from '@/ai/flows/infer-contact';
 import { normalizeTransaction } from '@/lib/normalize';
 import {
   Dialog,
@@ -67,6 +66,8 @@ import {
   resolveAutomaticContactDecision,
 } from '@/lib/transaction-classification/decision-engine';
 import { classificationMemoryCollection } from '@/lib/transaction-classification/memory';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface ImportTransactionsApiResponse {
   success: boolean;
@@ -209,6 +210,11 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   const { toast } = useToast();
   const { firestore, auth } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { can } = usePermissions();
+  const { canUseCapability } = useEntitlements();
+  const canExecuteAiCategorization = canUseCapability('aiCategorization.execute', {
+    userAllowed: can('moviments.editar'),
+  });
   const { buildUrl } = useOrgUrl();
   const { t, tr } = useTranslations();
 
@@ -802,17 +808,38 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
         const AI_THRESHOLD = 20;
         let transactionsWithAutomaticAssignments = [...transactionsAfterDeterministic];
+        const shouldCallAi = canExecuteAiCategorization
+          && ((availableContacts?.length && contactAiCandidates.length > 0 && contactAiCandidates.length <= AI_THRESHOLD)
+            || (availableCategories?.length && categoryAiCandidates.length > 0 && categoryAiCandidates.length <= AI_THRESHOLD));
+        const aiAuthUser = shouldCallAi ? auth.currentUser : null;
+        const aiIdToken = aiAuthUser ? await aiAuthUser.getIdToken() : null;
 
-        if (availableContacts?.length && contactAiCandidates.length > 0 && contactAiCandidates.length <= AI_THRESHOLD) {
-          const contactsForAI = availableContacts.map((contact) => ({ id: contact.id, name: contact.name }));
+        if (canExecuteAiCategorization && availableContacts?.length && contactAiCandidates.length > 0 && contactAiCandidates.length <= AI_THRESHOLD) {
+          const contactsForAI = availableContacts
+            .slice(0, 500)
+            .map((contact) => ({ id: contact.id, name: contact.name }));
 
           for (const candidate of contactAiCandidates) {
             try {
-              const result = await inferContact({
-                description: candidate.tx.description,
-                contacts: contactsForAI,
+              if (!aiIdToken) throw new Error('Sessió no vàlida.');
+              const response = await fetch('/api/ai/infer-contact', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${aiIdToken}`,
+                },
+                body: JSON.stringify({
+                  orgId: organizationId,
+                  description: candidate.tx.description,
+                  contacts: contactsForAI,
+                }),
               });
-              if (!canAutoApplyAiContactDecision(result)) {
+              const result = await response.json() as { ok?: boolean; contactId?: string | null; confidence?: number };
+              if (!response.ok || !result.ok) continue;
+              if (!canAutoApplyAiContactDecision({
+                contactId: result.contactId,
+                confidence: result.confidence,
+              })) {
                 continue;
               }
 
@@ -841,12 +868,10 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           }
         }
 
-        if (availableCategories?.length && categoryAiCandidates.length > 0 && categoryAiCandidates.length <= AI_THRESHOLD) {
-          const aiAuthUser = auth.currentUser;
-          if (!aiAuthUser) {
+        if (canExecuteAiCategorization && availableCategories?.length && categoryAiCandidates.length > 0 && categoryAiCandidates.length <= AI_THRESHOLD) {
+          if (!aiIdToken) {
             throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
           }
-          const aiIdToken = await aiAuthUser.getIdToken();
 
           for (const candidate of categoryAiCandidates) {
             const currentTx = transactionsWithAutomaticAssignments[candidate.index];

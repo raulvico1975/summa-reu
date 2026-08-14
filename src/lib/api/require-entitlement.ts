@@ -1,5 +1,6 @@
 import type { EntitlementCapability, OrganizationSubscriptionProjection } from '@/lib/entitlements/types';
 import { resolveCapabilityAccess, resolveOrganizationEntitlements } from '@/lib/entitlements/resolve-entitlements';
+import { buildShadowDecisionRecord } from '@/lib/entitlements/shadow-report';
 
 interface SnapshotLike {
   exists: boolean;
@@ -27,23 +28,34 @@ export async function resolveServerEntitlement(input: {
     input.db.doc(`organizations/${input.orgId}/subscription/current`).get(),
     input.db.doc('system/entitlements').get(),
   ]);
+  if (!organizationSnap.exists) {
+    return {
+      allowed: false,
+      diagnostics: ['organization_absent'],
+      enforcementMode: 'active',
+    };
+  }
   const organization = organizationSnap.data() ?? {};
   const subscription = subscriptionSnap.exists
     ? subscriptionSnap.data() as Partial<OrganizationSubscriptionProjection>
     : null;
-  const config = configSnap.data() ?? {};
+  const config = configSnap.exists ? configSnap.data() ?? {} : null;
   const entitlements = resolveOrganizationEntitlements({
     subscription,
     legacyPlanId: organization.billingPlan,
-    defaultEnforcementMode: config.enforcementMode === 'active' || config.enforcementMode === 'shadow'
-      ? config.enforcementMode
-      : 'off',
+    systemConfig: config,
   });
   const features = organization.features as Record<string, unknown> | undefined;
-  const operationalEnabled = input.capability === 'pendingDocuments.mutate'
+  const operationalEnabled = input.capability.startsWith('pendingDocuments.')
+    && input.capability !== 'pendingDocuments.readHistorical'
     ? features?.pendingDocs === true
     : input.capability === 'transactionDocuments.mutate'
       ? features?.transactionDocuments !== false
+      : (input.capability.startsWith('projects.') && input.capability !== 'projects.readHistorical')
+        || input.capability === 'projectBudgets.mutate'
+        || input.capability === 'multicurrency.mutate'
+        || input.capability === 'grantJustification.export'
+        ? features?.projectModule === true
       : true;
   const access = resolveCapabilityAccess({
     entitlements,
@@ -54,10 +66,12 @@ export async function resolveServerEntitlement(input: {
 
   if (entitlements.enforcementMode === 'shadow' || entitlements.source === 'legacy_missing') {
     console.info('[ENTITLEMENTS_SHADOW]', JSON.stringify({
-      orgId: input.orgId,
-      capability: input.capability,
-      diagnostics: entitlements.diagnostics,
-      projectedAllowed: entitlements.projected[input.capability],
+      ...buildShadowDecisionRecord({
+        organizationId: input.orgId,
+        capability: input.capability,
+        resolved: entitlements,
+        legacyPlanId: organization.billingPlan,
+      }),
     }));
   }
 

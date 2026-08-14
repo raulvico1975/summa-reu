@@ -66,6 +66,7 @@ interface SepaGenerationModalProps {
   selectedDocuments: PendingDocument[];
   contacts: Contact[];
   onComplete: () => void;
+  canOperate: boolean;
 }
 
 type ModalStep = 'validation' | 'configuration' | 'generating' | 'success';
@@ -80,6 +81,7 @@ export function SepaGenerationModal({
   selectedDocuments,
   contacts,
   onComplete,
+  canOperate,
 }: SepaGenerationModalProps) {
   const { firestore, storage } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
@@ -142,6 +144,7 @@ export function SepaGenerationModal({
 
   // Handlers
   const handleContinue = () => {
+    if (!canOperate) return;
     if (validDocs.length === 0) {
       toast({
         variant: 'destructive',
@@ -154,7 +157,7 @@ export function SepaGenerationModal({
   };
 
   const handleGenerate = async () => {
-    if (!firestore || !storage || !organizationId || !organization) {
+    if (!canOperate || !firestore || !storage || !organizationId || !organization) {
       toast({
         variant: 'destructive',
         title: t.sepa.toasts.error,
@@ -257,7 +260,7 @@ export function SepaGenerationModal({
   const bankAccountsWithIban = bankAccounts.filter(a => a.iban);
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={canOperate && open} onOpenChange={handleClose}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,72rem)] overflow-y-auto sm:w-[min(calc(100vw-3rem),72rem)]">
         <DialogHeader>
           <DialogTitle>

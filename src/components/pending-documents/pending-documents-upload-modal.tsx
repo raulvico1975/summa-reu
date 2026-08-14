@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, ref, uploadBytes, type StorageReference } from 'firebase/storage';
 import { doc, collection, serverTimestamp, setDoc, query, where, getDocs } from 'firebase/firestore';
 import { computeSha256 } from '@/lib/files/sha256';
 import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
@@ -62,6 +62,8 @@ interface PendingDocumentsUploadModalProps {
   contacts?: Contact[];
   /** Fitxers inicials per carregar automàticament (drag & drop extern) */
   initialFiles?: File[];
+  canOperate: boolean;
+  canUseOcr: boolean;
 }
 
 // =============================================================================
@@ -134,6 +136,8 @@ export function PendingDocumentsUploadModal({
   onUploadComplete,
   contacts = [],
   initialFiles,
+  canOperate,
+  canUseOcr,
 }: PendingDocumentsUploadModalProps) {
   const { firestore, storage, auth } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
@@ -144,6 +148,14 @@ export function PendingDocumentsUploadModal({
   const [isUploading, setIsUploading] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const canOperateRef = React.useRef(canOperate);
+  const canUseOcrRef = React.useRef(canUseOcr);
+
+  React.useEffect(() => { canOperateRef.current = canOperate; }, [canOperate]);
+  React.useEffect(() => { canUseOcrRef.current = canUseOcr; }, [canUseOcr]);
+  React.useEffect(() => {
+    if (open && !canOperate) onOpenChange(false);
+  }, [canOperate, onOpenChange, open]);
 
   // Netejar estat quan es tanca
   React.useEffect(() => {
@@ -156,7 +168,7 @@ export function PendingDocumentsUploadModal({
 
   // Carregar fitxers inicials quan s'obre el modal (drag & drop extern)
   React.useEffect(() => {
-    if (open && initialFiles && initialFiles.length > 0 && files.length === 0) {
+    if (open && canOperate && initialFiles && initialFiles.length > 0 && files.length === 0) {
       const validFiles = initialFiles.filter(f => {
         const ext = f.name.toLowerCase().split('.').pop();
         return ['pdf', 'xml', 'jpg', 'jpeg', 'png'].includes(ext || '');
@@ -172,10 +184,11 @@ export function PendingDocumentsUploadModal({
         setFiles(newItems);
       }
     }
-  }, [open, initialFiles]);
+  }, [canOperate, open, initialFiles, files.length]);
 
   // Afegir fitxers a la llista
   const addFiles = React.useCallback((newFiles: FileList | File[]) => {
+    if (!canOperateRef.current) return;
     const fileArray = Array.from(newFiles);
     const validFiles = fileArray.filter(f => {
       const ext = f.name.toLowerCase().split('.').pop();
@@ -268,7 +281,9 @@ export function PendingDocumentsUploadModal({
 
   // Processar un fitxer
   const processFile = React.useCallback(async (item: FileUploadItem): Promise<boolean> => {
-    if (!organizationId || !firestore || !storage) return false;
+    if (!canOperateRef.current || !organizationId || !firestore || !storage) return false;
+    let uploadedRef: StorageReference | null = null;
+    let firestoreSaved = false;
 
     try {
       // 1. Calcular SHA256
@@ -277,6 +292,7 @@ export function PendingDocumentsUploadModal({
       updateFileStatus(item.id, { sha256, progress: 30 });
 
       // 2. Comprovar duplicat
+      if (!canOperateRef.current) throw new Error('L’accés de pujada ja no està disponible.');
       updateFileStatus(item.id, { status: 'checking', progress: 40 });
       const isDuplicate = await checkDuplicate(sha256);
       if (isDuplicate) {
@@ -289,6 +305,7 @@ export function PendingDocumentsUploadModal({
       updateFileStatus(item.id, { docId, progress: 50 });
 
       // 4. Pujar a Storage
+      if (!canOperateRef.current) throw new Error('L’accés de pujada ja no està disponible.');
       updateFileStatus(item.id, { status: 'uploading', progress: 60 });
       const storagePath = `organizations/${organizationId}/pendingDocuments/${docId}/${item.file.name}`;
 
@@ -317,9 +334,11 @@ export function PendingDocumentsUploadModal({
           sha256,
         },
       });
+      uploadedRef = storageRef;
       updateFileStatus(item.id, { progress: 80 });
 
       // 5. Crear document Firestore
+      if (!canOperateRef.current) throw new Error('L’accés de pujada ja no està disponible.');
       updateFileStatus(item.id, { status: 'saving', progress: 90 });
       const docRef = doc(pendingDocumentsCollection(firestore, organizationId), docId);
       const now = serverTimestamp();
@@ -349,6 +368,7 @@ export function PendingDocumentsUploadModal({
       };
 
       await setDoc(docRef, pendingDoc);
+      firestoreSaved = true;
 
       // 6. Extracció automàtica (XML o PDF)
       const isXml =
@@ -376,30 +396,24 @@ export function PendingDocumentsUploadModal({
           // L'extracció pot fallar sense bloquejar l'upload
           console.warn('[processFile] XML extraction error (non-blocking):', extractError);
         }
-      } else if (isPdf && organization) {
+      } else if (isPdf && canUseOcrRef.current) {
         updateFileStatus(item.id, { status: 'extracting', progress: 95 });
 
         try {
-          await extractPdfData(
-            storage,
-            firestore,
-            organizationId,
-            organization.name || '',
-            organization.taxId || '',
-            fullDoc,
-            contacts
-          );
+          const authUser = auth.currentUser;
+          if (!authUser || !canUseOcrRef.current) throw new Error('OCR no disponible.');
+          await extractPdfData(organizationId, docId, storagePath, await authUser.getIdToken(), 'movements');
         } catch (extractError) {
           // L'extracció pot fallar sense bloquejar l'upload
           console.warn('[processFile] PDF extraction error (non-blocking):', extractError);
         }
-      } else if (contentType.startsWith('image/')) {
+      } else if (contentType.startsWith('image/') && canUseOcrRef.current) {
         // Imatges (tickets) - extraure amb IA
         updateFileStatus(item.id, { status: 'extracting', progress: 95 });
 
         try {
           const authUser = auth.currentUser;
-          if (!authUser) {
+          if (!authUser || !canUseOcrRef.current) {
             throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
           }
           await extractImageData(storage, firestore, organizationId, fullDoc, await authUser.getIdToken());
@@ -413,6 +427,11 @@ export function PendingDocumentsUploadModal({
       return true;
     } catch (error) {
       console.error('[processFile] Error:', error);
+      if (uploadedRef && !firestoreSaved) {
+        await deleteObject(uploadedRef).catch((cleanupError) => {
+          console.error('[processFile] Failed to clean up uploaded object:', cleanupError);
+        });
+      }
 
       // Detectar i reportar storage/unauthorized
       if (isStorageUnauthorizedError(error) && firestore && organizationId) {
@@ -435,7 +454,7 @@ export function PendingDocumentsUploadModal({
 
   // Iniciar upload de tots els fitxers
   const startUpload = React.useCallback(async () => {
-    if (files.length === 0) return;
+    if (!canOperateRef.current || files.length === 0) return;
 
     setIsUploading(true);
     let successCount = 0;
@@ -507,7 +526,7 @@ export function PendingDocumentsUploadModal({
   const canStartUpload = stats.queued > 0 && !isUploading;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={canOperate && open} onOpenChange={(next) => canOperate && onOpenChange(next)}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -524,7 +543,7 @@ export function PendingDocumentsUploadModal({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => canOperate && fileInputRef.current?.click()}
           className={cn(
             'border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors',
             isDragging
@@ -658,12 +677,12 @@ export function PendingDocumentsUploadModal({
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                disabled={isUploading}
+                disabled={!canOperate || isUploading}
               >
                 {stats.done === stats.total && stats.total > 0 ? t.pendingDocs.actions.close : t.pendingDocs.actions.cancel}
               </Button>
               {canStartUpload && (
-                <Button onClick={startUpload}>
+                <Button onClick={startUpload} disabled={!canOperate}>
                   <Upload className="mr-2 h-4 w-4" />
                   {t.pendingDocs.upload.button({ count: stats.queued })}
                 </Button>

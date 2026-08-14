@@ -20,6 +20,7 @@ import {
 } from '@/lib/files/transaction-documents';
 import { openDocumentUrl, openTransactionDocument } from '@/lib/open-document-url';
 import type { ResolvedTransactionDocument } from '@/lib/transactions/transaction-documents';
+import { useToast } from '@/hooks/use-toast';
 
 interface TransactionDocumentsDialogProps {
   organizationId: string | null;
@@ -40,6 +41,7 @@ export function TransactionDocumentsDialog({
 }: TransactionDocumentsDialogProps) {
   const { firestore, storage, user } = useFirebase();
   const { tr } = useTranslations();
+  const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
 
@@ -86,11 +88,17 @@ export function TransactionDocumentsDialog({
     if (!organizationId || !canWrite) return;
     setPendingAction(`delete:${documentId}`);
     try {
-      await deleteTransactionDocument(firestore, organizationId, transaction, documentId);
+      const deletion = await deleteTransactionDocument(firestore, organizationId, transaction, documentId);
+      if (deletion.cleanupPending) {
+        toast({
+          variant: 'destructive',
+          title: tr('movements.table.documentCleanupPending', 'Document desvinculat; la neteja del fitxer queda pendent.'),
+        });
+      }
     } finally {
       setPendingAction(null);
     }
-  }, [canWrite, firestore, organizationId, transaction]);
+  }, [canWrite, firestore, organizationId, toast, tr, transaction]);
 
   const handleOpen = React.useCallback(async (document: ResolvedTransactionDocument) => {
     if (!organizationId || !user) {

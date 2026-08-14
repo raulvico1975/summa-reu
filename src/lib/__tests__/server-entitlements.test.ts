@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolveServerEntitlement, type EntitlementDbLike } from '@/lib/api/require-entitlement';
-import { PLAN_ENTITLEMENTS_CATALOG } from '@/lib/entitlements/catalog';
+import { PLAN_ENTITLEMENTS_CATALOG, catalogFingerprintFor } from '@/lib/entitlements/catalog';
 
 function fakeDb(docs: Record<string, Record<string, unknown> | null>): EntitlementDbLike {
   return {
@@ -19,7 +19,7 @@ function fakeDb(docs: Record<string, Record<string, unknown> | null>): Entitleme
 test('server active denega subscription absent independentment del legacy', async () => {
   const decision = await resolveServerEntitlement({
     db: fakeDb({
-      'system/entitlements': { enforcementMode: 'active', catalogVersion: 1 },
+      'system/entitlements': { enforcementMode: 'active', catalogVersion: 3 },
       'organizations/org-1': { billingPlan: 'fiscal_documents' },
     }),
     orgId: 'org-1',
@@ -30,12 +30,13 @@ test('server active denega subscription absent independentment del legacy', asyn
 
 test('server exigeix pla i snapshot coherents i configuració operativa', async () => {
   const base = {
-    'system/entitlements': { enforcementMode: 'active', catalogVersion: 1 },
+    'system/entitlements': { enforcementMode: 'active', catalogVersion: 3 },
     'organizations/org-1': { features: { transactionDocuments: true } },
     'organizations/org-1/subscription/current': {
       planId: 'management',
       status: 'active',
-      catalogVersion: 1,
+      catalogVersion: 3,
+      catalogFingerprint: catalogFingerprintFor('management'),
       entitlements: PLAN_ENTITLEMENTS_CATALOG.management.entitlements,
     },
   };
@@ -50,12 +51,13 @@ test('server exigeix pla i snapshot coherents i configuració operativa', async 
 
 test('pending documents és només Complete i respecta features.pendingDocs', async () => {
   const docs = {
-    'system/entitlements': { enforcementMode: 'active', catalogVersion: 1 },
+    'system/entitlements': { enforcementMode: 'active', catalogVersion: 3 },
     'organizations/org-1': { features: { pendingDocs: true } },
     'organizations/org-1/subscription/current': {
       planId: 'complete',
       status: 'active',
-      catalogVersion: 1,
+      catalogVersion: 3,
+      catalogFingerprint: catalogFingerprintFor('complete'),
       entitlements: PLAN_ENTITLEMENTS_CATALOG.complete.entitlements,
     },
   };
@@ -70,4 +72,23 @@ test('pending documents és només Complete i respecta features.pendingDocs', as
     db: fakeDb({ ...docs, 'organizations/org-1': { features: { pendingDocs: false } } }),
     orgId: 'org-1', capability: 'pendingDocuments.mutate',
   })).allowed, false);
+});
+
+test('server denega org root absent encara que hi hagi subscription Complete orfe', async () => {
+  const decision = await resolveServerEntitlement({
+    db: fakeDb({
+      'system/entitlements': { enforcementMode: 'active', catalogVersion: 3 },
+      'organizations/org-1/subscription/current': {
+        planId: 'complete',
+        status: 'active',
+        catalogVersion: 3,
+        catalogFingerprint: catalogFingerprintFor('complete'),
+        entitlements: PLAN_ENTITLEMENTS_CATALOG.complete.entitlements,
+      },
+    }),
+    orgId: 'org-1',
+    capability: 'closingBundle.export',
+  });
+  assert.equal(decision.allowed, false);
+  assert.deepEqual(decision.diagnostics, ['organization_absent']);
 });

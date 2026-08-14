@@ -128,6 +128,7 @@ function makeDeps(
     verifyIdTokenFn: async () => ({ uid: 'uid-1', email: 'user@test.com' }),
     getAdminDbFn: () => new FakeDb(store) as any,
     validateUserMembershipFn: async () => membership as any,
+    resolveEntitlementFn: async () => ({ allowed: true, diagnostics: [], enforcementMode: 'active' as const }),
   };
 }
 
@@ -164,6 +165,54 @@ test('project lifecycle API rejects users without projectes.manage', async () =>
     error: 'PERMISSION_DENIED',
     code: 'PROJECTES_MANAGE_REQUIRED',
   });
+});
+
+test('project lifecycle API aplica deny de sections.projectes abans de llegir el projecte', async () => {
+  const store = new Map<string, Record<string, unknown>>();
+  store.set('organizations/org-1/projectModule/_/projects/project-1', { name: 'Projecte 1', status: 'active' });
+
+  const response = await handleProjectLifecyclePost(
+    makeRequest({ action: 'close', orgId: 'org-1', projectId: 'project-1' }),
+    makeDeps(store, {
+      valid: true,
+      role: 'admin',
+      userOverrides: { deny: ['sections.projectes'] },
+      userGrants: null,
+    })
+  );
+
+  assert.equal(response.status, 403);
+  assert.equal(store.get('organizations/org-1/projectModule/_/projects/project-1')?.status, 'active');
+});
+
+test('project lifecycle API aplica entitlement abans de llegir o mutar el projecte', async () => {
+  let projectReads = 0;
+  const db = {
+    doc() {
+      projectReads += 1;
+      throw new Error('PROJECT_READ_MUST_NOT_RUN');
+    },
+  };
+  const response = await handleProjectLifecyclePost(
+    makeRequest({ action: 'close', orgId: 'org-1', projectId: 'project-1' }),
+    {
+      verifyIdTokenFn: async () => ({ uid: 'uid-1', email: 'user@test.com' }),
+      getAdminDbFn: () => db as any,
+      validateUserMembershipFn: async () => ({
+        valid: true,
+        role: 'admin',
+        userOverrides: null,
+        userGrants: null,
+      }),
+      resolveEntitlementFn: async () => ({
+        allowed: false,
+        diagnostics: ['plan'],
+        enforcementMode: 'active' as const,
+      }),
+    }
+  );
+  assert.equal(response.status, 403);
+  assert.equal(projectReads, 0);
 });
 
 test('project lifecycle API blocks delete when a transaction references the project', async () => {

@@ -22,9 +22,12 @@ service firebase.storage {
     }
 
     function getMemberRole(orgId) {
-      return firestore.get(
-        /databases/(default)/documents/organizations/$(orgId)/members/$(request.auth.uid)
-      ).data.role;
+      return memberData(orgId).get('role', 'viewer');
+    }
+
+    function memberData(orgId) {
+      let path = /databases/(default)/documents/organizations/$(orgId)/members/$(request.auth.uid);
+      return isSignedIn() && firestore.exists(path) ? firestore.get(path).data : {};
     }
 
     function hasOperationalOrgAccess(orgId) {
@@ -32,38 +35,67 @@ service firebase.storage {
         && (getMemberRole(orgId) == 'admin' || getMemberRole(orgId) == 'user');
     }
 
+    function memberPermissionDenied(orgId, permKey) {
+      let member = memberData(orgId);
+      let overrides = member.get('userOverrides', {});
+      return overrides is map ? overrides.get('deny', []).hasAny([permKey]) : false;
+    }
+
+    function memberPermissionGranted(orgId, permKey) {
+      let member = memberData(orgId);
+      let grants = member.get('userGrants', []);
+      return grants is list ? grants.hasAny([permKey]) : false;
+    }
+
+    function roleDefaultAllowsPermission(orgId, permKey) {
+      let role = getMemberRole(orgId);
+      return (permKey == 'moviments.read' && role in ['admin', 'user', 'viewer'])
+        || (permKey == 'moviments.editar' && role in ['admin', 'user'])
+        || (permKey == 'projectes.manage' && role in ['admin', 'user'])
+        || (permKey == 'sections.projectes' && role in ['admin', 'user', 'viewer']);
+    }
+
+    function canEditMovements(orgId) {
+      let member = memberData(orgId);
+      return isOrgMember(orgId)
+        && !memberPermissionDenied(orgId, 'moviments.editar')
+        && (roleDefaultAllowsPermission(orgId, 'moviments.editar')
+          || member.get('capabilities', {}).get('moviments.editar', false) == true
+          || memberPermissionGranted(orgId, 'moviments.editar'));
+    }
+
+    function entitlementSystemConfigCompatible() {
+      let path = /databases/(default)/documents/system/entitlements;
+      let data = firestore.exists(path) ? firestore.get(path).data : {};
+      return data.get('catalogVersion', 0) == 3
+        && data.get('enforcementMode', 'invalid') in ['off', 'shadow', 'active'];
+    }
+
     function entitlementEnforcementMode() {
-      let configured = firestore.exists(/databases/(default)/documents/system/entitlements)
-        ? firestore.get(/databases/(default)/documents/system/entitlements).data.get('enforcementMode', 'off')
-        : 'off';
-      return configured in ['off', 'shadow', 'active'] ? configured : 'off';
+      let path = /databases/(default)/documents/system/entitlements;
+      let data = firestore.exists(path) ? firestore.get(path).data : {};
+      return data.get('catalogVersion', 0) == 3
+          && data.get('enforcementMode', 'invalid') in ['off', 'shadow', 'active']
+        ? data.get('enforcementMode', 'active') : 'active';
     }
 
     function transactionDocumentsOperationallyEnabled(orgId) {
-      return firestore.get(/databases/(default)/documents/organizations/$(orgId))
-        .data.get('features', {}).get('transactionDocuments', true) != false;
+      let orgPath = /databases/(default)/documents/organizations/$(orgId);
+      let data = firestore.exists(orgPath) ? firestore.get(orgPath).data : {};
+      return firestore.exists(orgPath) && data.get('features', {}).get('transactionDocuments', true) != false;
     }
 
-    function subscriptionSnapshotMatchesCatalogV1(orgId) {
+    function subscriptionSnapshotMatchesCatalogV3(orgId) {
       let subscriptionPath = /databases/(default)/documents/organizations/$(orgId)/subscription/current;
-      let data = firestore.get(subscriptionPath).data;
+      let data = firestore.exists(subscriptionPath) ? firestore.get(subscriptionPath).data : {};
       let plan = data.get('planId', 'unknown');
-      let entitlements = data.get('entitlements', {});
-      return data.get('catalogVersion', 0) == 1
+      let fingerprint = data.get('catalogFingerprint', 'missing');
+      return data.get('catalogVersion', 0) == 3
         && data.get('status', 'cancelled') in ['trial', 'active']
         && (
-          (plan == 'control'
-            && entitlements.get('transactionDocuments.readHistorical', false) == true
-            && entitlements.get('transactionDocuments.mutate', true) == false
-            && entitlements.get('pendingDocuments.mutate', true) == false)
-          || (plan == 'management'
-            && entitlements.get('transactionDocuments.readHistorical', false) == true
-            && entitlements.get('transactionDocuments.mutate', false) == true
-            && entitlements.get('pendingDocuments.mutate', true) == false)
-          || (plan == 'complete'
-            && entitlements.get('transactionDocuments.readHistorical', false) == true
-            && entitlements.get('transactionDocuments.mutate', false) == true
-            && entitlements.get('pendingDocuments.mutate', false) == true)
+          (plan == 'control' && fingerprint == 'summa-entitlements-v3-control')
+          || (plan == 'management' && fingerprint == 'summa-entitlements-v3-management')
+          || (plan == 'complete' && fingerprint == 'summa-entitlements-v3-complete')
         );
     }
 
@@ -74,23 +106,25 @@ service firebase.storage {
         && ((mode == 'off' || mode == 'shadow')
         || (
           mode == 'active'
+          && entitlementSystemConfigCompatible()
           && firestore.exists(subscriptionPath)
-          && subscriptionSnapshotMatchesCatalogV1(orgId)
+          && subscriptionSnapshotMatchesCatalogV3(orgId)
           && firestore.get(subscriptionPath).data.get('planId', 'control') in ['management', 'complete']
-          && firestore.get(subscriptionPath).data.get('entitlements', {}).get('transactionDocuments.mutate', false) == true
         ));
     }
 
     function hasMovementReadCapability(orgId) {
       return isOrgMember(orgId)
-        && (getMemberRole(orgId) == 'admin'
-          || firestore.get(/databases/(default)/documents/organizations/$(orgId)/members/$(request.auth.uid))
-            .data.get('capabilities', {}).get('moviments.read', false) == true);
+        && !memberPermissionDenied(orgId, 'moviments.read')
+        && (roleDefaultAllowsPermission(orgId, 'moviments.read')
+          || memberData(orgId).get('capabilities', {}).get('moviments.read', false) == true
+          || memberPermissionGranted(orgId, 'moviments.read'));
     }
 
     function pendingDocumentsOperationallyEnabled(orgId) {
-      return firestore.get(/databases/(default)/documents/organizations/$(orgId))
-        .data.get('features', {}).get('pendingDocs', false) == true;
+      let orgPath = /databases/(default)/documents/organizations/$(orgId);
+      let data = firestore.exists(orgPath) ? firestore.get(orgPath).data : {};
+      return data.get('features', {}).get('pendingDocs', false) == true;
     }
 
     function canMutatePendingDocuments(orgId) {
@@ -100,10 +134,48 @@ service firebase.storage {
         && ((mode == 'off' || mode == 'shadow')
         || (
           mode == 'active'
+          && entitlementSystemConfigCompatible()
           && firestore.exists(subscriptionPath)
-          && subscriptionSnapshotMatchesCatalogV1(orgId)
+          && subscriptionSnapshotMatchesCatalogV3(orgId)
           && firestore.get(subscriptionPath).data.get('planId', 'control') == 'complete'
-          && firestore.get(subscriptionPath).data.get('entitlements', {}).get('pendingDocuments.mutate', false) == true
+        ));
+    }
+
+    function projectModuleOperationallyEnabled(orgId) {
+      let orgPath = /databases/(default)/documents/organizations/$(orgId);
+      let data = firestore.exists(orgPath) ? firestore.get(orgPath).data : {};
+      return data.get('features', {}).get('projectModule', false) == true;
+    }
+
+    function hasProjectCapability(orgId) {
+      let member = memberData(orgId);
+      return isOrgMember(orgId)
+        && !memberPermissionDenied(orgId, 'sections.projectes')
+        && (roleDefaultAllowsPermission(orgId, 'sections.projectes')
+          || member.get('capabilities', {}).get('sections.projectes', false) == true
+          || memberPermissionGranted(orgId, 'sections.projectes'))
+        && ((
+          !memberPermissionDenied(orgId, 'projectes.manage')
+          && (roleDefaultAllowsPermission(orgId, 'projectes.manage')
+            || member.get('capabilities', {}).get('projectes.manage', false) == true
+            || memberPermissionGranted(orgId, 'projectes.manage'))
+        ) || (
+          !memberPermissionDenied(orgId, 'projectes.expenseInput')
+          && (member.get('capabilities', {}).get('projectes.expenseInput', false) == true
+            || memberPermissionGranted(orgId, 'projectes.expenseInput'))
+        ));
+    }
+
+    function canMutateProjects(orgId) {
+      let mode = entitlementEnforcementMode();
+      let subscriptionPath = /databases/(default)/documents/organizations/$(orgId)/subscription/current;
+      return projectModuleOperationallyEnabled(orgId)
+        && ((mode == 'off' || mode == 'shadow')
+        || (mode == 'active'
+          && entitlementSystemConfigCompatible()
+          && firestore.exists(subscriptionPath)
+          && subscriptionSnapshotMatchesCatalogV3(orgId)
+          && firestore.get(subscriptionPath).data.get('planId', 'control') == 'complete'
         ));
     }
 
@@ -188,59 +260,59 @@ service firebase.storage {
 
     // Uploads client confirmats: operativa d'org (admin/user)
     match /organizations/{orgId}/pendingDocuments/{docId}/{fileName} {
-      allow read: if isSuperAdmin() || isOrgMember(orgId);
+      allow read: if isSuperAdmin() || hasMovementReadCapability(orgId);
       allow create, update: if canMutatePendingDocuments(orgId)
-        && (isSuperAdmin() || hasOperationalOrgAccess(orgId))
-        && (
-          (isReceiptDocument() && isAtMost(15 * 1024 * 1024)) ||
-          (docId == '_healthcheck' && fileName.matches('[0-9]+\\.txt') && isPlainText() && isAtMost(1024))
-        );
+        && (isSuperAdmin() || canEditMovements(orgId))
+        && isReceiptDocument()
+        && isAtMost(15 * 1024 * 1024);
       allow delete: if canMutatePendingDocuments(orgId)
-        && (isSuperAdmin() || hasOperationalOrgAccess(orgId));
+        && (isSuperAdmin() || canEditMovements(orgId));
     }
 
     match /organizations/{orgId}/documents/{transactionId}/{fileName} {
       allow read: if isSuperAdmin() || hasMovementReadCapability(orgId);
-      allow create, update: if canMutateTransactionDocuments(orgId)
-        && (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+      allow create: if canMutateTransactionDocuments(orgId)
+        && (isSuperAdmin() || canEditMovements(orgId))
+        && resource == null
         && isAttachableDocument()
         && isAtMost(15 * 1024 * 1024);
-      allow delete: if canMutateTransactionDocuments(orgId)
-        && (isSuperAdmin() || hasOperationalOrgAccess(orgId));
+      allow update, delete: if false;
     }
 
     match /organizations/{orgId}/transactions/{transactionId}/{fileName} {
       allow read: if isSuperAdmin() || hasMovementReadCapability(orgId);
-      allow create, update: if canMutateTransactionDocuments(orgId)
-        && (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+      allow create: if canMutateTransactionDocuments(orgId)
+        && (isSuperAdmin() || canEditMovements(orgId))
+        && resource == null
         && isAttachableDocument()
         && isAtMost(15 * 1024 * 1024);
-      allow delete: if canMutateTransactionDocuments(orgId)
-        && (isSuperAdmin() || hasOperationalOrgAccess(orgId));
+      allow update, delete: if false;
     }
 
     match /organizations/{orgId}/offBankExpenses/{expenseId}/{fileName} {
-      allow read: if isSuperAdmin() || isOrgMember(orgId);
-      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+      allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+      allow create, update: if canMutateProjects(orgId) && (isSuperAdmin() || hasProjectCapability(orgId))
         && isAttachableDocument()
         && isAtMost(15 * 1024 * 1024);
-      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+      allow delete: if canMutateProjects(orgId) && (isSuperAdmin() || hasProjectCapability(orgId));
     }
 
     match /organizations/{orgId}/expenseReports/{reportId}/{fileName} {
-      allow read: if isSuperAdmin() || isOrgMember(orgId);
-      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+      allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+      allow create, update: if canMutateProjects(orgId) && (isSuperAdmin() || hasProjectCapability(orgId))
         && isPdf()
         && isAtMost(15 * 1024 * 1024);
-      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+      allow delete: if canMutateProjects(orgId) && (isSuperAdmin() || hasProjectCapability(orgId));
     }
 
     match /organizations/{orgId}/prebankRemittances/{remittanceId}/{fileName} {
-      allow read: if isSuperAdmin() || isOrgMember(orgId);
-      allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
+      allow read: if isSuperAdmin() || hasMovementReadCapability(orgId);
+      allow create, update: if canMutatePendingDocuments(orgId)
+        && (isSuperAdmin() || canEditMovements(orgId))
         && isXml()
         && isAtMost(2 * 1024 * 1024);
-      allow delete: if isSuperAdmin() || hasOperationalOrgAccess(orgId);
+      allow delete: if canMutatePendingDocuments(orgId)
+        && (isSuperAdmin() || canEditMovements(orgId));
     }
 
     match /organizations/{orgId}/sepaCollectionRuns/{runId}/{fileName} {

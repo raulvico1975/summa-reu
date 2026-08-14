@@ -31,6 +31,7 @@ import { trackUX } from '@/lib/ux/trackUX';
 import { ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ExpenseAttachmentsDropzone } from './expense-attachments-dropzone';
+import { useProjectCommercialAccess } from '@/hooks/use-project-module';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
 import { useTranslations } from '@/i18n';
 
@@ -92,6 +93,7 @@ export function OffBankExpenseModal({
   const { save: saveExpenseLink } = useSaveExpenseLink();
   const { toast } = useToast();
   const { tr } = useTranslations();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   const isEditMode = mode === 'edit';
   const isProcessing = isSaving || isUpdating;
@@ -272,6 +274,7 @@ export function OffBankExpenseModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canMutateProjects) return;
 
     if (!validate()) return;
     const effectiveDate = paymentDate || invoiceDate || date;
@@ -816,7 +819,7 @@ export function OffBankExpenseModal({
                     expenseId={isEditMode ? expenseId ?? null : null}
                     attachments={attachments}
                     onAttachmentsChange={setAttachments}
-                    disabled={isProcessing}
+                    disabled={!canMutateProjects || isProcessing}
                     buildFileName={handleBuildFileName}
                   />
                 </div>
@@ -834,7 +837,7 @@ export function OffBankExpenseModal({
           >
             {tr('projectModule.offBank.cancel')}
           </Button>
-          <Button type="submit" form="offbank-form" disabled={isProcessing}>
+          <Button type="submit" form="offbank-form" disabled={!canMutateProjects || isProcessing}>
             {isProcessing
               ? tr('projectModule.offBank.saving')
               : isEditMode

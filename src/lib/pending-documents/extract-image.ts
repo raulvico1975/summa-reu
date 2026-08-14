@@ -1,10 +1,9 @@
 // src/lib/pending-documents/extract-image.ts
 // Servei per extreure dades d'una imatge de ticket i actualitzar el pendingDocument
 
-import { ref, getDownloadURL, FirebaseStorage } from 'firebase/storage';
-import { updateDoc, serverTimestamp, Firestore, FieldValue } from 'firebase/firestore';
-import { pendingDocumentDoc } from './refs';
-import type { PendingDocument, PendingDocumentExtraction } from './types';
+import { FirebaseStorage } from 'firebase/storage';
+import { Firestore } from 'firebase/firestore';
+import type { PendingDocument } from './types';
 
 /**
  * Resultat de l'extracció d'imatge.
@@ -25,15 +24,6 @@ export interface ExtractImageResult {
     invoiceDate?: string;
     amount?: number;
   };
-}
-
-/**
- * Mapeja la confiança de Gemini a la nostra escala.
- */
-function mapConfidence(aiConfidence: number): PendingDocumentExtraction['confidence'] {
-  if (aiConfidence >= 0.8) return 'high';
-  if (aiConfidence >= 0.5) return 'medium';
-  return 'low';
 }
 
 /**
@@ -60,10 +50,6 @@ export async function extractImageData(
       return { success: true, extracted: false };
     }
 
-    // Validem que el fitxer existeix, però el backend només rep el path intern.
-    const storageRef = ref(storage, doc.file.storagePath);
-    await getDownloadURL(storageRef);
-
     // Cridar l'API endpoint d'extracció de tickets
     const response = await fetch('/api/ai/extract-ticket', {
       method: 'POST',
@@ -75,6 +61,8 @@ export async function extractImageData(
         orgId,
         storagePath: doc.file.storagePath,
         docId: doc.id,
+        context: 'movements',
+        target: 'pending',
       }),
     });
 
@@ -97,45 +85,10 @@ export async function extractImageData(
       };
     }
 
-    // Preparar l'update - només escriure camps que són null al document actual
-    const updates: { [key: string]: string | number | PendingDocumentExtraction | FieldValue | null } = {
-      updatedAt: serverTimestamp(),
-    };
-
-    // Camp extracted amb evidències
-    const extraction: PendingDocumentExtraction = {
-      source: 'ai',
-      confidence: mapConfidence(aiOutput.confidence),
-      evidence: {
-        invoiceDate: aiOutput.date ?? undefined,
-        amount: aiOutput.amount?.toString() ?? undefined,
-        supplierName: aiOutput.merchant ?? undefined,
-      },
-    };
-    updates.extracted = extraction;
-
-    // Camps de dades (només si el document té el camp a null)
-    const fields: ExtractImageResult['fields'] = {};
-
-    if (doc.invoiceDate === null && aiOutput.date) {
-      updates.invoiceDate = aiOutput.date;
-      fields.invoiceDate = aiOutput.date;
-    }
-
-    if (doc.amount === null && aiOutput.amount !== null) {
-      updates.amount = aiOutput.amount;
-      fields.amount = aiOutput.amount;
-    }
-
-    // Actualitzar Firestore
-    const docRef = pendingDocumentDoc(firestore, orgId, doc.id);
-    await updateDoc(docRef, updates);
-
     return {
       success: true,
-      extracted: Object.keys(fields).length > 0,
+      extracted: aiOutput.persisted === true && aiOutput.confidence >= 0.3,
       aiOutput,
-      fields,
     };
   } catch (error) {
     console.error('[extractImageData] Error:', error);

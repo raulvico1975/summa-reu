@@ -1,5 +1,5 @@
 
-'use server';
+import 'server-only';
 
 /**
  * @fileOverview Infers a contact from a transaction description.
@@ -13,7 +13,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { CONTACT_AI_CONFIDENCE_THRESHOLD } from '@/lib/transaction-classification/decision-engine';
 
-const InferContactInputSchema = z.object({
+export const InferContactInputSchema = z.object({
   description: z.string().describe('The description of the transaction.'),
   contacts: z.array(z.object({
     id: z.string(),

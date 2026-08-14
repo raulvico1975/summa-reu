@@ -25,10 +25,12 @@ class FakeDb {
 
 class FakeBucket {
   readonly signedUrlCalls: Array<{ path: string; expires: number }> = [];
+  readonly fileCalls: string[] = [];
 
   constructor(private readonly existingPath = OFFBANK_STORAGE_PATH) {}
 
   file(path: string) {
+    this.fileCalls.push(path);
     return {
       exists: async () => {
         return [path === this.existingPath] as [boolean];
@@ -50,7 +52,7 @@ function requestFor(params: Record<string, string>) {
 }
 
 test('open org document regenerates a fresh URL for off-bank attachments', async () => {
-  const db = new FakeDb({ [MEMBER_PATH]: { role: 'viewer' } });
+  const db = new FakeDb({ [MEMBER_PATH]: { role: 'viewer', userGrants: ['projectes.expenseInput'] } });
   const bucket = new FakeBucket();
 
   const response = await handleOpenOrgDocument(requestFor({
@@ -69,6 +71,43 @@ test('open org document regenerates a fresh URL for off-bank attachments', async
   assert.equal(body.durable, true);
   assert.equal(body.url, `https://signed.local/${encodeURIComponent(OFFBANK_STORAGE_PATH)}`);
   assert.deepEqual(bucket.signedUrlCalls, [{ path: OFFBANK_STORAGE_PATH, expires: 901_000 }]);
+});
+
+test('open org document aplica deny de projectes abans de tocar Storage', async () => {
+  const db = new FakeDb({
+    [MEMBER_PATH]: { role: 'admin', userOverrides: { deny: ['sections.projectes'] } },
+  });
+  const bucket = new FakeBucket();
+  const response = await handleOpenOrgDocument(requestFor({
+    orgId: 'org-a', storagePath: OFFBANK_STORAGE_PATH,
+  }), {
+    db: db as never,
+    storageBucket: bucket,
+    verifyIdTokenFn: async () => ({ uid: 'user-1' }),
+  });
+  assert.equal(response.status, 403);
+  assert.equal(bucket.fileCalls.length, 0);
+});
+
+test('pending prebank i SEPA exigeixen lectura efectiva de moviments', async () => {
+  for (const area of ['pendingDocuments', 'prebankRemittances', 'sepaCollectionRuns']) {
+    const path = `organizations/org-a/${area}/item-1/file.pdf`;
+    const deniedBucket = new FakeBucket(path);
+    const denied = await handleOpenOrgDocument(requestFor({ orgId: 'org-a', storagePath: path }), {
+      db: new FakeDb({ [MEMBER_PATH]: { role: 'viewer', userOverrides: { deny: ['moviments.read'] } } }) as never,
+      storageBucket: deniedBucket,
+      verifyIdTokenFn: async () => ({ uid: 'user-1' }),
+    });
+    assert.equal(denied.status, 403);
+    assert.equal(deniedBucket.fileCalls.length, 0);
+
+    const allowed = await handleOpenOrgDocument(requestFor({ orgId: 'org-a', storagePath: path }), {
+      db: new FakeDb({ [MEMBER_PATH]: { role: 'viewer' } }) as never,
+      storageBucket: new FakeBucket(path),
+      verifyIdTokenFn: async () => ({ uid: 'user-1' }),
+    });
+    assert.equal(allowed.status, 200);
+  }
 });
 
 test('open org document exigeix moviments.read per documents de transacció', async () => {
