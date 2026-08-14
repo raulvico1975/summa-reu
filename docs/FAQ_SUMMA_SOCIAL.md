@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Preguntes Freqüents (FAQ)
 
-**Versió**: 1.46
-**Última actualització**: 12 Març 2026
+**Versió**: 1.56
+**Última actualització**: 14 Agost 2026
 
 ---
 
@@ -66,9 +66,11 @@ Si no trobes la teva pregunta, no et preocupis: mira el Manual d'Usuari complet 
 
 Summa Social té tres plans públics mensuals:
 
-- **Inicial:** 49 €/mes, per a entitats petites que volen ordenar donants, moviments i obligacions bàsiques.
-- **Gestió:** 79 €/mes, per a entitats que treballen amb remeses, banc, certificats i fiscalitat anual.
-- **Fiscal + Documents:** 119 €/mes, per a entitats amb més volum, Stripe, projectes, justificació econòmica o més necessitat de suport.
+- **Control:** 49 €/mes. Inclou importació i revisió bancària, moviments manuals, socis i donants, quotes i remeses SEPA, devolucions manuals, certificats de donació i preparació del Model 182.
+- **Gestió:** 79 €/mes. Inclou tot Control i afegeix documents vinculats als moviments, control documental, categorització assistida amb IA i preparació del Model 347.
+- **Complet:** 119 €/mes. Inclou tot Gestió i afegeix documents previs o pendents, OCR, paquet de tancament, projectes, pressupostos, multidivisa dins dels projectes i XLSX estructurat per preparar justificacions.
+
+Els models fiscals i els materials de justificació queden preparats per revisar; Summa Social no els presenta en nom de l'entitat.
 
 La pàgina pública de preus és `/{idioma}/preus`, per exemple `/ca/preus` o `/es/preus`.
 
@@ -78,9 +80,11 @@ Sí. La implantació inicial es pressuposta segons l'estat de les dades, el volu
 
 ### 0c. Els plans bloquegen funcionalitats?
 
-No. En aquesta fase no hi ha Stripe Billing, checkout, portal client ni automatització de cobrament dins de Summa Social.
+Sí. El pla actiu determina quines funcionalitats es poden utilitzar. La configuració operativa de l'entitat i els permisos de cada usuari poden restringir-les encara més, però no ampliar-les per sobre del pla contractat.
 
-Els plans són una referència comercial i administrativa. No bloquegen funcionalitats dins de l'aplicació.
+Si es baixa de pla, les dades i els documents històrics es conserven. Es poden consultar o descarregar quan correspongui, però no crear ni modificar els elements reservats al pla anterior.
+
+La contractació continua sent assistida: no hi ha checkout públic, portal client ni cobrament automatitzat dins de Summa Social.
 
 ---
 

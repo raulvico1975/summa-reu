@@ -43,6 +43,7 @@ test('POST /api/exports/closing-bundle-zip força mode user encara que el client
         getAdminDbFn: () => ({}) as never,
         validateUserMembershipFn: async () => ({ role: 'user' }) as never,
         requirePermissionFn: () => null,
+        resolveEntitlementFn: async () => ({ allowed: true, diagnostics: [], enforcementMode: 'active' }),
         fetchFn: async (_url, init) => {
           forwardedBody = JSON.parse(String(init?.body));
           return new Response(Buffer.from(zipBytes), {
@@ -80,4 +81,24 @@ test('cloud function exportClosingBundleZip also clamps mode to user server-side
   );
 
   assert.match(source, /const mode: ClosingBundleMode = 'user';/m);
+});
+
+test('proxy closing bundle denega entitlement abans de cridar la Function', async () => {
+  let upstreamCalls = 0;
+  const response = await handleClosingBundleZipPost(
+    makeRequest({ orgId: 'org-1', dateFrom: '2026-01-01', dateTo: '2026-01-31' }),
+    {
+      verifyIdTokenFn: async () => ({ uid: 'user-1' }),
+      getAdminDbFn: () => ({}) as never,
+      validateUserMembershipFn: async () => ({ role: 'admin' }) as never,
+      requirePermissionFn: () => null,
+      resolveEntitlementFn: async () => ({ allowed: false, diagnostics: ['commercial'], enforcementMode: 'active' }),
+      fetchFn: async () => {
+        upstreamCalls += 1;
+        return new Response();
+      },
+    }
+  );
+  assert.equal(response.status, 403);
+  assert.equal(upstreamCalls, 0);
 });

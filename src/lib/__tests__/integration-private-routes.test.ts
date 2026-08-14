@@ -244,19 +244,24 @@ class InMemoryLinkStore implements PendingDocumentLinkStore {
 }
 
 class InMemoryLinkStorage implements PendingDocumentLinkStorage {
+  cleanedPaths: string[] = [];
   async ensureLinkedFile(args: {
     orgId: string;
+    pendingDocumentId: string;
     transactionId: string;
     file: NonNullable<PendingDocumentLinkRecord['file']>;
   }) {
     const finalStoragePath =
       args.file.finalStoragePath ??
-      `organizations/${args.orgId}/documents/${args.transactionId}/${args.file.filename ?? 'document.pdf'}`;
+      `organizations/${args.orgId}/documents/${args.transactionId}/${args.pendingDocumentId}--${args.file.filename ?? 'document.pdf'}`;
     return {
       documentUrl: `https://storage.local/${encodeURIComponent(finalStoragePath)}`,
       finalStoragePath,
       copied: true,
     };
+  }
+  async cleanupLinkedFile(finalStoragePath: string) {
+    this.cleanedPaths.push(finalStoragePath);
   }
 }
 
@@ -288,6 +293,12 @@ function createLinkRequest(body: Record<string, unknown>, token = 'link-token') 
     },
   } as never;
 }
+
+const allowEntitlement = async () => ({
+  allowed: true,
+  diagnostics: [],
+  enforcementMode: 'active' as const,
+});
 
 test('contacts search stays isolated per org', async () => {
   const authRepository = new InMemoryAuthRepository([
@@ -482,6 +493,7 @@ test('pending documents upload is idempotent and does not duplicate the document
   const storage = new InMemoryUploadStorage();
 
   const firstResponse = await handlePrivatePendingDocumentsUpload(createUploadRequest('mail-1'), {
+    resolveEntitlementFn: allowEntitlement,
     authRepository,
     store,
     storage,
@@ -493,6 +505,7 @@ test('pending documents upload is idempotent and does not duplicate the document
   };
 
   const secondResponse = await handlePrivatePendingDocumentsUpload(createUploadRequest('mail-1'), {
+    resolveEntitlementFn: allowEntitlement,
     authRepository,
     store,
     storage,
@@ -529,6 +542,7 @@ test('pending documents upload can create a confirmed invoice when required fiel
       categoryId: 'cat-services',
     }),
     {
+      resolveEntitlementFn: allowEntitlement,
       authRepository,
       store,
       storage: new InMemoryUploadStorage(),
@@ -568,6 +582,7 @@ test('pending documents upload rejects confirmed invoices without Summa required
       supplierId: 'supplier-acme',
     }),
     {
+      resolveEntitlementFn: allowEntitlement,
       authRepository,
       store: new InMemoryUploadStore(),
       storage: new InMemoryUploadStorage(),
@@ -618,7 +633,7 @@ test('pending document link validates one reviewed match and updates transaction
       reviewerLabel: 'Raul',
       note: 'OK granular pilot Baruma',
     }),
-    { authRepository, store, storage }
+    { authRepository, store, storage, resolveEntitlementFn: allowEntitlement }
   );
 
   assert.equal(response.status, 200);
@@ -696,7 +711,7 @@ test('pending document link blocks hash mismatches and existing transaction docu
       reviewerLabel: 'Raul',
       note: 'OK granular',
     }),
-    { authRepository, store, storage: new InMemoryLinkStorage() }
+    { authRepository, store, storage: new InMemoryLinkStorage(), resolveEntitlementFn: allowEntitlement }
   );
   assert.equal(hashMismatch.status, 409);
   assert.equal((await hashMismatch.json() as { code: string }).code, 'DOCUMENT_HASH_MISMATCH');
@@ -718,8 +733,66 @@ test('pending document link blocks hash mismatches and existing transaction docu
       reviewerLabel: 'Raul',
       note: 'OK granular',
     }),
-    { authRepository, store, storage: new InMemoryLinkStorage() }
+    { authRepository, store, storage: new InMemoryLinkStorage(), resolveEntitlementFn: allowEntitlement }
   );
   assert.equal(existingDocument.status, 409);
   assert.equal((await existingDocument.json() as { code: string }).code, 'TRANSACTION_ALREADY_HAS_DOCUMENT');
+});
+
+test('pending private link neteja el destí creat si falla la transacció Firestore', async () => {
+  const authRepository = new InMemoryAuthRepository([
+    buildToken({ scopes: ['pending_documents.link'] }, 'link-token'),
+  ]);
+  const hash = 'd'.repeat(64);
+  const baseStore = new InMemoryLinkStore();
+  baseStore.pendingDocuments.set('org-a/intpd_1', {
+    id: 'intpd_1', status: 'draft', matchedTransactionId: null, amount: 90,
+    file: {
+      storagePath: 'organizations/org-a/pendingDocuments/intpd_1/invoice.pdf',
+      finalStoragePath: null, filename: 'invoice.pdf', sha256: hash,
+    },
+  });
+  baseStore.transactions.set('org-a/tx_1', {
+    id: 'tx_1', amount: -90, date: '2026-05-04', document: null,
+  });
+  const store: PendingDocumentLinkStore = {
+    getPendingDocument: (...args) => baseStore.getPendingDocument(...args),
+    getTransaction: (...args) => baseStore.getTransaction(...args),
+    linkDocumentToTransaction: async () => { throw new Error('INJECTED_FIRESTORE_FAILURE'); },
+  };
+  const storage = new InMemoryLinkStorage();
+  const response = await handlePrivatePendingDocumentLinkTransaction(
+    createLinkRequest({
+      pendingDocumentId: 'intpd_1', transactionId: 'tx_1', caseId: 'case-1',
+      documentHash: hash, expectedAmount: 90, expectedDate: '2026-05-04',
+      reviewerLabel: 'Raul', note: 'OK granular',
+    }),
+    { authRepository, store, storage, resolveEntitlementFn: allowEntitlement }
+  );
+  assert.equal(response.status, 500);
+  assert.deepEqual(storage.cleanedPaths, [
+    'organizations/org-a/documents/tx_1/intpd_1--invoice.pdf',
+  ]);
+});
+
+test('pending private link rebutja IDs amb slash i notes enormes abans de side effects', async () => {
+  const authRepository = new InMemoryAuthRepository([
+    buildToken({ scopes: ['pending_documents.link'] }, 'link-token'),
+  ]);
+  let reads = 0;
+  const store: PendingDocumentLinkStore = {
+    getPendingDocument: async () => { reads += 1; return null; },
+    getTransaction: async () => { reads += 1; return null; },
+    linkDocumentToTransaction: async () => { reads += 1; },
+  };
+  const response = await handlePrivatePendingDocumentLinkTransaction(
+    createLinkRequest({
+      pendingDocumentId: '../other', transactionId: 'tx_1', caseId: 'case-1',
+      documentHash: 'e'.repeat(64), expectedAmount: 90, expectedDate: '2026-05-04',
+      reviewerLabel: 'Raul', note: 'x'.repeat(4_001),
+    }),
+    { authRepository, store, storage: new InMemoryLinkStorage(), resolveEntitlementFn: allowEntitlement }
+  );
+  assert.equal(response.status, 400);
+  assert.equal(reads, 0);
 });

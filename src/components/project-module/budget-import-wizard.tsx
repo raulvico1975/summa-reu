@@ -70,6 +70,7 @@ import {
   type ColumnMapping,
   type ConsolidatedBudgetLine,
 } from '@/lib/budget-import';
+import { useProjectCommercialAccess } from '@/hooks/use-project-module';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -98,6 +99,7 @@ export function BudgetImportWizard({
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateBudgets } = useProjectCommercialAccess();
 
   // Estat del wizard
   const [step, setStep] = React.useState<ImportStep>('upload');
@@ -295,7 +297,7 @@ export function BudgetImportWizard({
   };
 
   const handleImport = async () => {
-    if (!organizationId || !user) return;
+    if (!canMutateBudgets || !organizationId || !user) return;
 
     const linesToImport = previewLines.filter(line => line.include);
     if (linesToImport.length === 0) {
@@ -337,7 +339,7 @@ export function BudgetImportWizard({
           currentBatch.delete(docSnap.ref);
           batchCount++;
 
-          if (batchCount >= 450) {
+          if (batchCount >= 50) {
             deleteBatches.push(currentBatch);
             currentBatch = writeBatch(firestore);
             batchCount = 0;
@@ -375,7 +377,7 @@ export function BudgetImportWizard({
         });
         batchCount++;
 
-        if (batchCount >= 450) {
+        if (batchCount >= 50) {
           createBatches.push(currentBatch);
           currentBatch = writeBatch(firestore);
           batchCount = 0;
@@ -865,7 +867,7 @@ export function BudgetImportWizard({
   };
 
   return (
-    <Dialog open={open} onOpenChange={isImporting ? undefined : onOpenChange}>
+    <Dialog open={open && canMutateBudgets} onOpenChange={isImporting ? undefined : onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,78rem)] overflow-y-auto sm:w-[min(calc(100vw-3rem),78rem)]">
         <DialogHeader>
           <DialogTitle>
@@ -900,7 +902,7 @@ export function BudgetImportWizard({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               {tr('projectModule.import.cancel', 'Cancel·lar')}
             </Button>
-            <Button onClick={handleNext} disabled={!canGoNext()}>
+            <Button onClick={handleNext} disabled={!canMutateBudgets || !canGoNext()}>
               {step === 'preview' ? (
                 <>
                   {tr('projectModule.import.importAndReplace', 'Importar i substituir')}

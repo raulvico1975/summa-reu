@@ -336,6 +336,7 @@ export const es = {
       confirmDeleteDocument: "¿Eliminar justificante adjunto?",
       confirmDeleteDocumentDescription: "Esta acción eliminará el justificante adjunto de este movimiento. El archivo también se eliminará del almacenamiento.",
       documentDeleted: "Justificante eliminado correctamente",
+      documentCleanupPending: "Documento desvinculado; la limpieza del archivo queda pendiente.",
       deleteDocFromPendingError: "No se puede eliminar",
       deleteDocFromPendingHint: "Este documento proviene de un movimiento pendiente conciliado. Elimina el pendiente para deshacer la conciliación.",
       // Rename dialog

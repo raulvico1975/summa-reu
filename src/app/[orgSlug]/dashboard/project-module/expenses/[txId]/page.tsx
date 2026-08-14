@@ -6,7 +6,7 @@
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useExpenseDetail, useProjects, useSaveExpenseLink } from '@/hooks/use-project-module';
+import { useExpenseDetail, useProjectCommercialAccess, useProjects, useSaveExpenseLink } from '@/hooks/use-project-module';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +65,7 @@ export default function ExpenseDetailPage() {
   const { expense, link, isLoading, error, refresh } = useExpenseDetail(txId);
   const { projects, isLoading: projectsLoading, error: projectsError } = useProjects(true);
   const { save, remove, isSaving } = useSaveExpenseLink();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   const [isEditing, setIsEditing] = React.useState(false);
   const [hasAutoOpened, setHasAutoOpened] = React.useState(false);
@@ -95,7 +96,7 @@ export default function ExpenseDetailPage() {
 
   // Obrir editor automàticament si la despesa no està completament assignada
   React.useEffect(() => {
-    if (!isLoading && expense && !hasAutoOpened) {
+    if (canMutateProjects && !isLoading && expense && !hasAutoOpened) {
       const assignedAmt = link
         ? link.assignments.reduce((sum, a) => sum + (a.amountEUR != null ? Math.abs(a.amountEUR) : 0), 0)
         : 0;
@@ -110,9 +111,10 @@ export default function ExpenseDetailPage() {
         setHasAutoOpened(true);
       }
     }
-  }, [isLoading, expense, link, hasAutoOpened]);
+  }, [canMutateProjects, isLoading, expense, link, hasAutoOpened]);
 
   const handleSave = async (assignments: ExpenseAssignment[], note: string | null) => {
+    if (!canMutateProjects) return;
     try {
       // Mantenir la justificació existent
       await save(txId, assignments, note, link?.justification);
@@ -147,7 +149,7 @@ export default function ExpenseDetailPage() {
   }, [organizationId, user]);
 
   const handleSaveJustification = async () => {
-    if (!link) return;
+    if (!canMutateProjects || !link) return;
 
     const justification: ExpenseJustification = {
       invoiceNumber: invoiceNumber.trim() || null,
@@ -193,6 +195,7 @@ export default function ExpenseDetailPage() {
   };
 
   const handleRemove = async () => {
+    if (!canMutateProjects) return;
     if (!confirm(tr('projectModule.assignment.confirmRemove'))) return;
 
     try {
@@ -354,7 +357,7 @@ export default function ExpenseDetailPage() {
                       variant="outline"
                       size="icon"
                       onClick={handleRemove}
-                      disabled={isSaving}
+                      disabled={!canMutateProjects || isSaving}
                       title={tr('projectModule.expenseDetail.deleteAssignment')}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -363,8 +366,8 @@ export default function ExpenseDetailPage() {
                   <Button
                     variant="default"
                     size="icon"
-                    onClick={() => setIsEditing(true)}
-                    disabled={isSaving}
+                    onClick={() => canMutateProjects && setIsEditing(true)}
+                    disabled={!canMutateProjects || isSaving}
                     title={link ? tr('projectModule.expenseDetail.editAssignment') : tr('projectModule.expenseDetail.assignToProject')}
                   >
                     {link ? (
@@ -378,7 +381,7 @@ export default function ExpenseDetailPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {isEditing ? (
+            {isEditing && canMutateProjects ? (
               <AssignmentEditor
                 projects={projects}
                 projectsLoading={projectsLoading}
@@ -538,7 +541,7 @@ export default function ExpenseDetailPage() {
                         variant="outline"
                         size="sm"
                         onClick={handleCancelJustification}
-                        disabled={isSaving}
+                        disabled={!canMutateProjects || isSaving}
                       >
                         <X className="h-4 w-4 mr-1" />
                         {tr('projectModule.expenseDetail.cancel')}
@@ -546,7 +549,7 @@ export default function ExpenseDetailPage() {
                       <Button
                         size="sm"
                         onClick={handleSaveJustification}
-                        disabled={isSaving}
+                        disabled={!canMutateProjects || isSaving}
                       >
                         <Save className="h-4 w-4 mr-1" />
                         {tr('projectModule.expenseDetail.save')}
@@ -581,7 +584,8 @@ export default function ExpenseDetailPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setIsEditingJustification(true)}
+                        onClick={() => canMutateProjects && setIsEditingJustification(true)}
+                        disabled={!canMutateProjects}
                       >
                         <Edit className="h-4 w-4 mr-1" />
                         {tr('projectModule.expenseDetail.edit')}

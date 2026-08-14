@@ -24,6 +24,7 @@ import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useEntitlements } from '@/hooks/use-entitlements';
 import {
   type PeriodOption,
   type ClosingBundleError,
@@ -44,6 +45,10 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
   const { can } = usePermissions();
   const { toast } = useToast();
   const canExportReports = can('informes.exportar');
+  const { canUseCapability } = useEntitlements();
+  const canExportClosingBundle = canUseCapability('closingBundle.export', {
+    userAllowed: canExportReports,
+  });
 
   const [periodOption, setPeriodOption] = React.useState<PeriodOption>('current_year');
   const [customDateFrom, setCustomDateFrom] = React.useState('');
@@ -74,7 +79,7 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
   }, [periodOption, customDateFrom, customDateTo]);
 
   const handleGenerate = async () => {
-    if (!canExportReports) {
+    if (!canExportClosingBundle) {
       toast({
         variant: 'destructive',
         title: t.common.error,

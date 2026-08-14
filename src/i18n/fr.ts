@@ -336,6 +336,7 @@ export const fr = {
       confirmDeleteDocument: "Supprimer le justificatif joint ?",
       confirmDeleteDocumentDescription: "Le justificatif sera supprimé du mouvement et du stockage.",
       documentDeleted: "Justificatif supprimé",
+      documentCleanupPending: "Document dissocié ; le nettoyage du fichier reste en attente.",
       deleteDocFromPendingError: "Impossible de supprimer",
       deleteDocFromPendingHint: "Ce document provient d'un mouvement en attente concilié. Supprimez le mouvement en attente pour annuler la conciliation.",
       // Rename dialog

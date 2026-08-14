@@ -1,4 +1,4 @@
-'use server';
+import 'server-only';
 
 /**
  * @fileOverview Extreu dades estructurades d'una factura PDF usant Gemini.

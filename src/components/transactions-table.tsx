@@ -76,6 +76,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useEntitlements } from '@/hooks/use-entitlements';
 import { useReturnManagement } from '@/components/transactions/hooks/useReturnManagement';
 import { useTransactionsRealtime } from '@/components/transactions/hooks/useTransactionsRealtime';
 import { useTransactionCategorization } from '@/components/transactions/hooks/useTransactionCategorization';
@@ -176,6 +177,11 @@ export function TransactionsTable({
 }: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
+  const { canUseCapability } = useEntitlements();
+  const canMutateTransactionDocuments = canUseCapability('transactionDocuments.mutate', {
+    operationalEnabled: organization?.features?.transactionDocuments !== false,
+    userAllowed: canEditMovements,
+  });
   const { t, language, tr } = useTranslations();
   const { toast } = useToast();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
@@ -861,6 +867,7 @@ export function TransactionsTable({
     isBatchCategorizing,
     batchProgress,
     batchStatus,
+    canExecuteAiCategorization,
     handleCategorize,
     handleBatchCategorize,
     handleCancelBatch,
@@ -922,6 +929,7 @@ export function TransactionsTable({
     userId: user?.uid,
     authUser: user,
     canEditMovements,
+    canMutateDocuments: canMutateTransactionDocuments,
   });
 
   const setInlineUpdatePending = React.useCallback((txId: string, nextState: 'contact' | 'category' | 'donation' | null) => {
@@ -1144,6 +1152,7 @@ export function TransactionsTable({
 
   /** Punt únic de "prepare upload": obre diàleg si cal, sinó puja directe */
   const prepareUpload = React.useCallback((txId: string, file: File) => {
+    if (!canMutateTransactionDocuments) return;
     const tx = transactions?.find(t => t.id === txId);
     if (!tx) return;
 
@@ -1159,7 +1168,7 @@ export function TransactionsTable({
       // Noms iguals → puja directament
       handleAttachDocumentWithName(txId, file, file.name);
     }
-  }, [transactions, getConceptForFilename, handleAttachDocumentWithName]);
+  }, [canMutateTransactionDocuments, transactions, getConceptForFilename, handleAttachDocumentWithName]);
 
   /** Confirma upload des del diàleg: useOriginal=true → nom original, false → suggerit */
   const handleConfirmUpload = React.useCallback((useOriginal: boolean) => {
@@ -1174,14 +1183,16 @@ export function TransactionsTable({
   // DRAG & DROP DOCUMENT HANDLER
   // ═══════════════════════════════════════════════════════════════════════════
   const handleDropFile = React.useCallback(async (txId: string, file: File) => {
+    if (!canMutateTransactionDocuments) return;
     if (!firestore || !storage || !organizationId) return;
     prepareUpload(txId, file);
-  }, [firestore, storage, organizationId, prepareUpload]);
+  }, [canMutateTransactionDocuments, firestore, storage, organizationId, prepareUpload]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CLICK-TO-ATTACH WITH RENAME (substitueix handleAttachDocument del hook)
   // ═══════════════════════════════════════════════════════════════════════════
   const handleAttachDocumentWithRename = React.useCallback((txId: string) => {
+    if (!canMutateTransactionDocuments) return;
     if (!organizationId) return;
 
     setTimeout(() => {
@@ -1203,7 +1214,7 @@ export function TransactionsTable({
       document.body.appendChild(fileInput);
       fileInput.click();
     }, 100);
-  }, [organizationId, prepareUpload]);
+  }, [canMutateTransactionDocuments, organizationId, prepareUpload]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // ESTADÍSTIQUES
@@ -1527,11 +1538,12 @@ export function TransactionsTable({
 
   const bulkT = t.movements?.table?.bulkSelection;
   const isBulkSelectionBlocked = React.useCallback((tx: Transaction): boolean => {
+    if (tx.document && !canMutateTransactionDocuments) return true;
     if (getDeleteTransactionBlockedReason(tx)) return true;
     if (tx.isSplit) return true;
     if (!tx.parentTransactionId) return false;
     return !!allTransactionsById[tx.parentTransactionId]?.isSplit;
-  }, [allTransactionsById]);
+  }, [allTransactionsById, canMutateTransactionDocuments]);
   const selectedTransactions = React.useMemo(
     () => Array.from(selectedIds)
       .map((id) => allTransactionsById[id])
@@ -2095,6 +2107,14 @@ export function TransactionsTable({
   }, [tr]);
 
   const handleDeleteWithSplitGuard = React.useCallback((transaction: Transaction) => {
+    if (transaction.document && !canMutateTransactionDocuments) {
+      toast({
+        variant: 'destructive',
+        title: tr('movements.delete.blocked.title'),
+        description: tr('movements.delete.blocked.historicalDocuments'),
+      });
+      return;
+    }
     const blockedReason = getDeleteTransactionBlockedReason(transaction);
     const blockedMessage = getDeleteBlockedMessage(blockedReason);
     if (blockedMessage) {
@@ -2116,7 +2136,7 @@ export function TransactionsTable({
     }
 
     handleDeleteClick(transaction);
-  }, [getDeleteBlockedMessage, handleDeleteClick, isSplitDeleteBlockedInMemory, toast, tr]);
+  }, [canMutateTransactionDocuments, getDeleteBlockedMessage, handleDeleteClick, isSplitDeleteBlockedInMemory, toast, tr]);
 
   const handleViewRemittanceDetail = (remittanceId: string, parentTx?: Transaction) => {
     setSelectedRemittanceId(remittanceId);
@@ -2670,6 +2690,7 @@ export function TransactionsTable({
           noContactCount={noContactTransactions.length}
           donationsNoContactCount={donationsNoContactTransactions.length}
           hasUncategorized={hasUncategorized ?? false}
+          canExecuteAiCategorization={canExecuteAiCategorization}
           isBatchCategorizing={isBatchCategorizing}
           onBatchCategorize={handleBatchCategorize}
           onCancelBatch={handleCancelBatch}
@@ -2989,7 +3010,8 @@ export function TransactionsTable({
               onOpenReturnDialog={handleOpenReturnDialog}
               onGenerateReturnEmailDraft={handleGenerateReturnEmailDraft}
               onViewRemittanceDetail={handleViewRemittanceDetail}
-              onAttachDocument={handleAttachDocumentWithRename}
+              onAttachDocument={canMutateTransactionDocuments ? handleAttachDocumentWithRename : undefined}
+              canMutateDocuments={canMutateTransactionDocuments}
               showDonationToggle={canEditMovements && canToggleDonation182(tx)}
               isDonationPending={inlineUpdatePendingByTxId[tx.id] === 'donation'}
               onToggleDonation182={handleToggleDonation182}
@@ -3093,13 +3115,15 @@ export function TransactionsTable({
                   isSelected={canBulkEdit ? selectedIds.has(tx.id) : undefined}
                   isSelectionDisabled={canBulkEdit ? isBulkSelectionBlocked(tx) : undefined}
                   onToggleSelect={canBulkEdit ? toggleOne : undefined}
-                  onDropFile={canBulkEdit ? handleDropFile : undefined}
+                  onDropFile={canMutateTransactionDocuments ? handleDropFile : undefined}
                   dropHint={t.movements.table.dropToAttach || 'Deixa anar per adjuntar'}
                   onSetNote={handleSetNote}
                   onSetCategory={handleSetCategory}
                   onSetContact={handleSetContact}
                   onSetProject={handleSetProject}
                   onAttachDocument={handleAttachDocumentWithRename}
+                  canMutateDocuments={canMutateTransactionDocuments}
+                  canCategorizeWithAi={canExecuteAiCategorization}
                   onDeleteDocument={handleDeleteDocument}
                   onCategorize={handleCategorize}
                   onEdit={handleEditClick}

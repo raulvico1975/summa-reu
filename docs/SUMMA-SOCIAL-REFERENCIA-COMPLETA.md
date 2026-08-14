@@ -63,10 +63,10 @@ Les entitats espanyoles gestionen les seves finances amb fulls de càlcul, cosa 
 ## 1.3 Solució
 
 Eina centralitzada amb:
-- Importació automàtica d'extractes bancaris (CSV/XLSX/XLS)
-- Categorització intel·ligent amb IA (Gemini)
-- Auto-assignació de contactes als moviments
-- Generació automàtica d'informes fiscals (Excel per gestoria)
+- Importació d'extractes bancaris (CSV/XLSX/XLS)
+- Categorització assistida amb IA (Gemini)
+- Propostes de contactes i categories revisables abans de confirmar
+- Preparació d'informes fiscals (Excel per revisar amb la gestoria)
 - Certificats de donació PDF amb firma digitalitzada
 - Enviament de certificats de donació per email des de l'app (individual i massiu)
 - Export oficial AEAT per als models fiscals (182 i 347)
@@ -77,10 +77,10 @@ Eina centralitzada amb:
 - Adjunció de factures i comprovants amb drag & drop, multiadjunt i document principal
 - Liquidacions de despeses de viatge amb tiquets, quilometratge i PDF
 - Mòdul de projectes amb pressupost, partides i assignació de despeses
-- Captura i gestió de despeses de terreny, també en moneda local
-- Justificació econòmica per subvencions i finançadors
-- Exportació de justificació amb Excel i ZIP de factures/comprovants, ordenats cronològicament o per partides, llestos per enviar al finançador
-- Importador de devolucions del banc
+- Captura i gestió de despeses de terreny, també en moneda local dins dels projectes
+- Preparació de justificacions econòmiques per a subvencions i finançadors
+- Exportació XLSX estructurada i documentació agrupada per revisar abans de presentar al finançador
+- Registre i gestió manual de devolucions bancàries
 - Imputació Stripe sobre abonaments bancaris, amb càrrega CSV opcional, assignació manual i persistència fiscal a `donations`
 - Multicomptes bancaris amb filtre i traçabilitat
 - Web pública multiidioma amb landing, contacte, privacitat, pàgina "Qui som", preus i blog editorial
@@ -95,13 +95,15 @@ Summa Social comunica un model comercial públic per plans mensuals:
 
 | Pla | Preu públic | Orientació |
 |-----|-------------|------------|
-| Inicial | 49 €/mes | Entitats petites que volen ordenar donants, moviments i obligacions bàsiques. |
-| Gestió | 79 €/mes | Entitats que treballen amb remeses, banc, certificats i fiscalitat anual. |
-| Fiscal + Documents | 119 €/mes | Entitats amb més volum, Stripe, projectes, justificació econòmica o més necessitat de suport. |
+| Control | 49 €/mes | Banc, moviments manuals, socis i donants, SEPA, devolucions manuals, certificats i preparació del Model 182. |
+| Gestió | 79 €/mes | Tot Control, més documents vinculats, control sense document, IA assistida i preparació del Model 347. |
+| Complet | 119 €/mes | Tot Gestió, més documents previs o pendents, OCR, tancament, projectes, pressupostos, multidivisa dins dels projectes i XLSX estructurat. |
 
 La implantació inicial es pressuposta segons l'estat de les dades, el volum de contactes i la complexitat del procés, a partir de 300 €.
 
-La segmentació per plans és comercial i informativa en aquesta fase. No bloqueja funcionalitats, no talla accessos, no limita Model 182, remeses, Stripe, documents ni projectes, i no introdueix Stripe Billing, checkout, portal client ni automatització de cobrament.
+La segmentació es governa amb una capa d'entitlements separada de la configuració operativa i dels permisos d'usuari. El pla fixa el màxim disponible; la configuració i els permisos poden restringir-lo, però no ampliar-lo. En un downgrade, les dades històriques es conserven en lectura o descàrrega quan correspon, mentre es bloquegen les noves mutacions reservades al pla superior.
+
+La contractació continua sent assistida i no introdueix Stripe Billing, checkout públic, portal client ni automatització de cobrament.
 
 ## 1.4 URLs i Recursos
 
@@ -3243,9 +3245,10 @@ On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
 #### Pàgina de preus
 
 - Ruta pública: `/{lang}/preus`
-- Comunica els plans públics 49/79/119 €/mes i implantació inicial a partir de 300 €
-- És una superfície comercial informativa: no fa checkout, no activa Stripe Billing i no limita funcionalitats dins l'app
-- Les crides a acció porten a contacte o registre segons context
+- Comunica els plans públics Control 49 €, Gestió 79 € i Complet 119 € al mes, i implantació inicial a partir de 300 €
+- Explica que tots els plans importen extractes; la diferència entre Control i Gestió és la pujada i vinculació de documents als moviments
+- Les funcionalitats comercials es corresponen amb la capa d'entitlements de l'aplicació
+- No fa checkout ni activa Stripe Billing; les crides a acció porten al formulari de contacte amb l'identificador canònic del pla
 
 #### Contacte i descoberta pública
 
@@ -6125,6 +6128,7 @@ Les fites històriques i els desplegaments anteriors es documenten a `docs/CHANG
 
 | Versió | Data | Canvis principals |
 |--------|------|-------------------|
+| **1.56** | **14 Agost 2026** | **Plans Control/Gestió/Complet: IDs canònics, capa d'entitlements separada de configuració i permisos, copy públic CA/ES/FR/PT alineat amb 49/79/119, comparativa, FAQ de downgrade i traçabilitat comercial.** |
 | **1.55** | **11 Jun 2026** | **Referència completa actualitzada contra el codi actual: documents multiadjunt de moviments, realtime acotat, integracions privades v1, MCP Summa Agent, web/blog/preus/contacte, SuperAdmin actual, CRM de leads i rollback legacy pain.008.** |
 | **1.54** | **10 Jun 2026** | **Documents de moviments i justificació: subcol·lecció multiadjunt, eliminació segura del principal sense ressuscitar legacy, obertura amb URL signada i exports de justificació amb documents múltiples.** |
 | **1.53** | **3 Jun 2026** | **Moviments: refresc en temps real de la finestra activa amb límits de lectura, respectant filtres, ledger visibility i exclusions de remeses filles.** |
@@ -6135,7 +6139,7 @@ Les fites històriques i els desplegaments anteriors es documenten a `docs/CHANG
 | 1.7 | Des 2024 | Excel Model 182 per gestoria, suport Excel remeses, camps city/province, session persistence |
 | 1.8 | Des 2024 | Importador devolucions del banc, remeses parcials, suport multi-banc (Santander/Triodos), tests unitaris, fixes modals Radix, UX simplificada |
 | 1.9 | Des 2025 | Importador Stripe (payouts → donacions + comissions), matching per email, traçabilitat completa |
-| **1.51** | **11 Maig 2026** | **Model comercial: nova pàgina pública `/{lang}/preus` amb plans 49/79/119 €/mes, implantació inicial des de 300 €, i registre intern informatiu del pla comercial per organització al SuperAdmin. Sense bloquejos funcionals, sense Stripe Billing i sense canvis fiscals.** |
+| **1.51** | **11 Maig 2026** | **Fase inicial del model comercial: nova pàgina pública `/{lang}/preus` amb plans 49/79/119 €/mes, implantació inicial des de 300 € i registre intern informatiu del pla al SuperAdmin. En aquella versió encara no hi havia bloquejos funcionals ni Stripe Billing.** |
 | **1.50** | **9 Abr 2026** | **Dashboard: el resum de "terreny / mission transfers" ja contempla categories legacy sense `systemKey`, evitant desalineacions entre el resum API i la categorització històrica.** |
 | **1.49** | **9 Abr 2026** | **Donants: nova vista d'eliminats amb restauració, bloqueig conservador d'eliminar si hi ha qualsevol moviment vinculat, avís de duplicat contra donants eliminats i flux `POST /api/contacts/restore`.** |
 | **1.48** | **27 Mar 2026** | **Novetats localitzades per idioma: contracte `productUpdates` amb `locale` base i `locales.es`, publicació S2S amb auto-generació de castellà, i consum públic/app amb fallback `fr/pt -> es`. Home, llistat i detall de novetats en mode dinàmic per evitar contingut congelat post-publish.** |

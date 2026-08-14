@@ -14,8 +14,9 @@ test('storage rules deny blanket writes on arbitrary organization paths', () => 
 
   assert.match(
     rules,
-    /match \/organizations\/\{orgId\}\/\{allPaths=\*\*\}\s*\{\s*allow read: if isSuperAdmin\(\) \|\| isOrgMember\(orgId\);\s*allow write: if false;\s*\}/m,
+    /match \/organizations\/\{orgId\}\/\{allPaths=\*\*\}\s*\{\s*allow read, write: if false;\s*\}/m,
   );
+  assert.doesNotMatch(rules, /allPaths\.matches\(/);
 });
 
 test('storage rules reopen only confirmed operational upload prefixes', () => {
@@ -51,11 +52,11 @@ test('storage rules keep logo and signature uploads admin-only', () => {
 
   assert.match(
     rules,
-    /match \/organizations\/\{orgId\}\/logo\s*\{\s*allow create, update: if \(isSuperAdmin\(\) \|\| isOrgAdmin\(orgId\)\)\s*&& isAllowedImage\(\)\s*&& isAtMost\(2 \* 1024 \* 1024\);/m,
+    /match \/organizations\/\{orgId\}\/logo\s*\{[\s\S]*?allow create, update: if \(isSuperAdmin\(\) \|\| isOrgAdmin\(orgId\)\)\s*&& isAllowedImage\(\)\s*&& isAtMost\(2 \* 1024 \* 1024\);/m,
   );
   assert.match(
     rules,
-    /match \/organizations\/\{orgId\}\/signature\s*\{\s*allow create, update: if \(isSuperAdmin\(\) \|\| isOrgAdmin\(orgId\)\)\s*&& isAllowedImage\(\)\s*&& isAtMost\(1 \* 1024 \* 1024\);/m,
+    /match \/organizations\/\{orgId\}\/signature\s*\{[\s\S]*?allow create, update: if \(isSuperAdmin\(\) \|\| isOrgAdmin\(orgId\)\)\s*&& isAllowedImage\(\)\s*&& isAtMost\(1 \* 1024 \* 1024\);/m,
   );
 });
 
@@ -80,12 +81,8 @@ test('storage rules constrain client writes by MIME type and size', () => {
   }
 });
 
-test('storage rules preserve only the explicit health-check text upload path', () => {
+test('storage rules do not create a functional-document bypass for health checks', () => {
   const rules = readRules();
-
-  assert.match(
-    rules,
-    /docId == '_healthcheck' && fileName\.matches\('\[0-9\]\+\\\\\.txt'\) && isPlainText\(\) && isAtMost\(1024\)/m,
-  );
+  assert.doesNotMatch(rules, /_healthcheck/);
   assert.doesNotMatch(rules, /isPlainText\(\)\s*\|\|/);
 });

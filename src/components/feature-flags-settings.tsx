@@ -3,120 +3,21 @@
 
 'use client';
 
-import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
-import { doc, updateDoc } from 'firebase/firestore';
-import { Puzzle, FolderKanban, Loader2, FileStack } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Puzzle, FolderKanban, FileStack } from 'lucide-react';
 
 export function FeatureFlagsSettings() {
-  const { firestore } = useFirebase();
-  const { organization, organizationId } = useCurrentOrganization();
-  const { toast } = useToast();
-  const router = useRouter();
+  const { organization } = useCurrentOrganization();
   const { tr } = useTranslations();
-
-  const [isUpdating, setIsUpdating] = React.useState(false);
-  const [updatingFlag, setUpdatingFlag] = React.useState<string | null>(null);
 
   // Feature flags actuals
   const isProjectModuleEnabled = organization?.features?.projectModule ?? false;
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
-
-  const handleToggleProjectModule = async (enabled: boolean) => {
-    if (!organizationId || !firestore) return;
-
-    setIsUpdating(true);
-    try {
-      const orgRef = doc(firestore, 'organizations', organizationId);
-      await updateDoc(orgRef, {
-        'features.projectModule': enabled,
-        updatedAt: new Date().toISOString(),
-      });
-
-      toast({
-        title: enabled
-          ? tr('settings.featureFlags.toasts.moduleEnabledTitle', 'Mòdul activat')
-          : tr('settings.featureFlags.toasts.moduleDisabledTitle', 'Mòdul desactivat'),
-        description: enabled
-          ? tr(
-            'settings.featureFlags.toasts.projectModuleEnabledDescription',
-            'El Mòdul Projectes s\'ha activat correctament.'
-          )
-          : tr(
-            'settings.featureFlags.toasts.projectModuleDisabledDescription',
-            'El Mòdul Projectes s\'ha desactivat.'
-          ),
-      });
-
-      // Refrescar per actualitzar sidebar
-      router.refresh();
-    } catch (error) {
-      console.error('Error actualitzant feature flag:', error);
-      toast({
-        variant: 'destructive',
-        title: tr('settings.featureFlags.toasts.errorTitle', 'Error'),
-        description: tr(
-          'settings.featureFlags.toasts.errorDescription',
-          'No s\'ha pogut actualitzar el mòdul. Torna-ho a intentar.'
-        ),
-      });
-    } finally {
-      setIsUpdating(false);
-      setUpdatingFlag(null);
-    }
-  };
-
-  const handleTogglePendingDocs = async (enabled: boolean) => {
-    if (!organizationId || !firestore) return;
-
-    setIsUpdating(true);
-    setUpdatingFlag('pendingDocs');
-    try {
-      const orgRef = doc(firestore, 'organizations', organizationId);
-      await updateDoc(orgRef, {
-        'features.pendingDocs': enabled,
-        updatedAt: new Date().toISOString(),
-      });
-
-      toast({
-        title: enabled
-          ? tr('settings.featureFlags.toasts.moduleEnabledTitle', 'Mòdul activat')
-          : tr('settings.featureFlags.toasts.moduleDisabledTitle', 'Mòdul desactivat'),
-        description: enabled
-          ? tr(
-            'settings.featureFlags.toasts.pendingDocsEnabledDescription',
-            'Documents pendents de conciliació activat.'
-          )
-          : tr(
-            'settings.featureFlags.toasts.pendingDocsDisabledDescription',
-            'Documents pendents de conciliació desactivat.'
-          ),
-      });
-
-      router.refresh();
-    } catch (error) {
-      console.error('Error actualitzant feature flag:', error);
-      toast({
-        variant: 'destructive',
-        title: tr('settings.featureFlags.toasts.errorTitle', 'Error'),
-        description: tr(
-          'settings.featureFlags.toasts.errorDescription',
-          'No s\'ha pogut actualitzar el mòdul. Torna-ho a intentar.'
-        ),
-      });
-    } finally {
-      setIsUpdating(false);
-      setUpdatingFlag(null);
-    }
-  };
 
   return (
     <Card>
@@ -128,7 +29,7 @@ export function FeatureFlagsSettings() {
         <CardDescription>
           {tr(
             'settings.featureFlags.description',
-            'Activa o desactiva mòduls addicionals per a la teva organització.'
+            'Estat dels mòduls contractats. Els canvis els gestiona Summa Social.'
           )}
         </CardDescription>
       </CardHeader>
@@ -159,12 +60,10 @@ export function FeatureFlagsSettings() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isUpdating && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
             <Switch
               id="project-module"
               checked={isProjectModuleEnabled}
-              onCheckedChange={handleToggleProjectModule}
-              disabled={isUpdating}
+              disabled
             />
           </div>
         </div>
@@ -198,12 +97,10 @@ export function FeatureFlagsSettings() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {updatingFlag === 'pendingDocs' && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
             <Switch
               id="pending-docs"
               checked={isPendingDocsEnabled}
-              onCheckedChange={handleTogglePendingDocs}
-              disabled={isUpdating}
+              disabled
             />
           </div>
         </div>

@@ -4,6 +4,7 @@
  */
 
 import type { PublicLocale } from '@/lib/public-locale';
+import type { PublicPlanId } from '@/lib/public-plans';
 
 type CardType = {
   title: string;
@@ -188,7 +189,7 @@ export interface PublicTranslations {
       invalidMessage: string;
       helper: string;
       messagePlaceholder: string;
-      planMessages: Record<string, string>;
+      planMessages: Record<PublicPlanId, string>;
     };
   };
   pricing: {
@@ -201,6 +202,8 @@ export interface PublicTranslations {
     orientationTitle: string;
     orientationText: string;
     orientationPoints: string[];
+    differentiatorTitle: string;
+    differentiatorText: string;
     implantationTitle: string;
     implantationText: string;
     implantationPrice: string;
@@ -211,7 +214,7 @@ export interface PublicTranslations {
     decisionText: string;
     cta: string;
     plans: Array<{
-      id: string;
+      id: PublicPlanId;
       name: string;
       price: string;
       badge: string;
@@ -219,7 +222,21 @@ export interface PublicTranslations {
       description: string;
       recommended?: boolean;
       features: string[];
+      limit?: string;
     }>;
+    comparisonTitle: string;
+    comparisonDescription: string;
+    comparisonFeatureLabel: string;
+    comparisonIncludedLabel: string;
+    comparisonNotIncludedLabel: string;
+    comparisonRows: Array<{
+      feature: string;
+      control: boolean;
+      management: boolean;
+      complete: boolean;
+    }>;
+    faqTitle: string;
+    faqItems: Array<{ question: string; answer: string }>;
   };
   home: {
     metaTitle: string;
@@ -459,8 +476,8 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
         'Puges el fitxer del banc i en minuts tens tots els moviments dins el sistema.'
       ),
       autoClassification: createCard(
-        'Classificació automàtica',
-        'El sistema recorda com classifiques i ho aplica sol. Si no ho sap, la IA proposa.'
+        'Categorització assistida',
+        'La IA proposa una categoria perquè la puguis revisar abans de confirmar-la.'
       ),
       contactAssignment: createCard(
         'Assignació de contactes',
@@ -504,15 +521,15 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
       ),
       bankReturns: createCard(
         'Devolucions bancàries',
-        'Importa les devolucions i el sistema les vincula al donant correcte.'
+        'Registra les devolucions i relaciona-les amb la quota i la persona corresponents.'
       ),
       sepaPayments: createCard(
         'Remeses SEPA de pagament',
         'Genera fitxers SEPA per pagar factures i nòmines des del banc.'
       ),
       stripeDonations: createCard(
-        'Donacions online (Stripe)',
-        'Les donacions web entren automàticament, separant donació i comissió.'
+        'Donacions i historial',
+        'Registra les donacions i conserva l’historial econòmic de cada donant.'
       ),
     },
   },
@@ -522,11 +539,11 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
     cards: {
       model182: createCard(
         'Model 182',
-        'Donacions anuals llestes per enviar a la gestoria. Amb validació prèvia i alertes.'
+        'Donacions anuals preparades per revisar abans de compartir-les amb la gestoria.'
       ),
       model347: createCard(
         'Model 347',
-        'Proveïdors que superen el llindar, amb CIF validat.'
+        'Informació dels proveïdors que superen el llindar, preparada per revisar.'
       ),
       donationCertificates: createCard(
         'Certificats de donació',
@@ -534,7 +551,7 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
       ),
       cleanExcel: createCard(
         'Excel net per a la gestoria',
-        'Tot en format estàndard, sense haver de retocar res.'
+        'Informació estructurada perquè la gestoria la pugui revisar.'
       ),
     },
   },
@@ -556,7 +573,7 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
       ),
       funderExport: createCard(
         'Exportació per al finançador',
-        'Excel de justificació + ZIP amb tots els comprovants, amb un clic.'
+        'XLSX estructurat i comprovants agrupats per preparar la justificació.'
       ),
     },
   },
@@ -594,8 +611,8 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
         'Subes el fichero del banco y en minutos tienes todos los movimientos dentro del sistema.'
       ),
       autoClassification: createCard(
-        'Clasificación automática',
-        'El sistema recuerda cómo clasificas y lo aplica solo. Si no lo sabe, la IA propone.'
+        'Categorización asistida',
+        'La IA propone una categoría para que puedas revisarla antes de confirmarla.'
       ),
       contactAssignment: createCard(
         'Asignación de contactos',
@@ -639,15 +656,15 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
       ),
       bankReturns: createCard(
         'Devoluciones bancarias',
-        'Importa las devoluciones y el sistema las vincula al donante correcto.'
+        'Registra las devoluciones y relaciónalas con la cuota y la persona correspondientes.'
       ),
       sepaPayments: createCard(
         'Remesas SEPA de pago',
         'Genera ficheros SEPA para pagar facturas y nóminas desde el banco.'
       ),
       stripeDonations: createCard(
-        'Donaciones online (Stripe)',
-        'Las donaciones web entran automáticamente, separando donación y comisión.'
+        'Donaciones e histórico',
+        'Registra las donaciones y conserva el histórico económico de cada donante.'
       ),
     },
   },
@@ -657,11 +674,11 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
     cards: {
       model182: createCard(
         'Modelo 182',
-        'Donaciones anuales listas para enviar a la gestoría. Con validación previa y alertas.'
+        'Donaciones anuales preparadas para revisar antes de compartirlas con la gestoría.'
       ),
       model347: createCard(
         'Modelo 347',
-        'Proveedores que superan el umbral, con CIF validado.'
+        'Información de los proveedores que superan el umbral, preparada para revisar.'
       ),
       donationCertificates: createCard(
         'Certificados de donación',
@@ -669,7 +686,7 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
       ),
       cleanExcel: createCard(
         'Excel limpio para la gestoría',
-        'Todo en formato estándar, sin tener que retocar nada.'
+        'Información estructurada para que la gestoría pueda revisarla.'
       ),
     },
   },
@@ -691,7 +708,7 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
       ),
       funderExport: createCard(
         'Exportación para el financiador',
-        'Excel de justificación + ZIP con todos los comprobantes, con un clic.'
+        'XLSX estructurado y comprobantes agrupados para preparar la justificación.'
       ),
     },
   },
@@ -729,8 +746,8 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
         'Téléchargez le fichier de la banque et en quelques minutes tous les mouvements sont dans le système.'
       ),
       autoClassification: createCard(
-        'Classification automatique',
-        "Le système retient comment vous classez et l'applique seul. S'il ne sait pas, l'IA propose."
+        'Catégorisation assistée',
+        "L'IA propose une catégorie afin que vous puissiez la vérifier avant confirmation."
       ),
       contactAssignment: createCard(
         'Attribution de contacts',
@@ -774,15 +791,15 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
       ),
       bankReturns: createCard(
         'Rejets bancaires',
-        'Importez les rejets et le système les rattache au donateur concerné.'
+        'Enregistrez les rejets et reliez-les à la cotisation et à la personne concernées.'
       ),
       sepaPayments: createCard(
         'Remises SEPA de paiement',
         'Générez des fichiers SEPA pour payer factures et salaires depuis la banque.'
       ),
       stripeDonations: createCard(
-        'Dons en ligne (Stripe)',
-        'Les dons web entrent automatiquement, en séparant don et commission.'
+        'Dons et historique',
+        'Enregistrez les dons et conservez l’historique économique de chaque donateur.'
       ),
     },
   },
@@ -792,11 +809,11 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
     cards: {
       model182: createCard(
         'Modèle 182',
-        'Dons annuels prêts à envoyer au cabinet comptable. Avec validation préalable et alertes.'
+        'Dons annuels préparés pour vérification avant partage avec le cabinet comptable.'
       ),
       model347: createCard(
         'Modèle 347',
-        'Fournisseurs dépassant le seuil, avec NIF validé.'
+        'Informations sur les fournisseurs dépassant le seuil, préparées pour vérification.'
       ),
       donationCertificates: createCard(
         'Certificats de don',
@@ -804,7 +821,7 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
       ),
       cleanExcel: createCard(
         'Excel propre pour le comptable',
-        'Tout en format standard, sans avoir à retoucher.'
+        'Informations structurées afin que le cabinet comptable puisse les vérifier.'
       ),
     },
   },
@@ -826,7 +843,7 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
       ),
       funderExport: createCard(
         'Export pour le bailleur',
-        'Excel de justification + ZIP avec toutes les pièces, en un clic.'
+        'XLSX structuré et pièces regroupées pour préparer la justification.'
       ),
     },
   },
@@ -864,8 +881,8 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
         'Carrega o ficheiro do banco e em minutos tens todos os movimentos dentro do sistema.'
       ),
       autoClassification: createCard(
-        'Classificação automática',
-        'O sistema lembra como classificas e aplica sozinho. Se não souber, a IA propõe.'
+        'Categorização assistida',
+        'A IA propõe uma categoria para revisão antes da confirmação.'
       ),
       contactAssignment: createCard(
         'Atribuição de contactos',
@@ -909,15 +926,15 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
       ),
       bankReturns: createCard(
         'Devoluções bancárias',
-        'Importa as devoluções e o sistema liga-as ao doador correto.'
+        'Regista as devoluções e relaciona-as com a quota e a pessoa correspondentes.'
       ),
       sepaPayments: createCard(
         'Remessas SEPA de pagamento',
         'Gera ficheiros SEPA para pagar faturas e ordenados a partir do banco.'
       ),
       stripeDonations: createCard(
-        'Doações online (Stripe)',
-        'As doações web entram automaticamente, separando doação e comissão.'
+        'Doações e histórico',
+        'Regista as doações e conserva o histórico económico de cada doador.'
       ),
     },
   },
@@ -927,11 +944,11 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
     cards: {
       model182: createCard(
         'Modelo 182',
-        'Doações anuais prontas para enviar ao contabilista. Com validação prévia e alertas.'
+        'Doações anuais preparadas para revisão antes de partilhar com o contabilista.'
       ),
       model347: createCard(
         'Modelo 347',
-        'Fornecedores que ultrapassam o limiar, com NIF validado.'
+        'Informação dos fornecedores que ultrapassam o limiar, preparada para revisão.'
       ),
       donationCertificates: createCard(
         'Certificados de doação',
@@ -939,7 +956,7 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
       ),
       cleanExcel: createCard(
         'Excel limpo para o contabilista',
-        'Tudo em formato padrão, sem ter de retocar nada.'
+        'Informação estruturada para que o contabilista a possa rever.'
       ),
     },
   },
@@ -961,7 +978,7 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
       ),
       funderExport: createCard(
         'Exportação para o financiador',
-        'Excel de justificação + ZIP com todos os comprovativos, com um clique.'
+        'XLSX estruturado e comprovativos agrupados para preparar a justificação.'
       ),
     },
   },
@@ -1235,7 +1252,7 @@ const ca: PublicTranslations = {
       messagePlaceholder:
         'Expliqueu-nos breument quants socis o donants teniu, si feu remeses, si voleu importar moviments bancaris o si necessiteu preparar models fiscals.',
       planMessages: {
-        initial: 'Vull començar amb el pla Inicial.',
+        control: 'Vull començar amb el pla Control.',
         management: 'Vull començar amb el pla Gestió.',
         complete: 'Voldria parlar del pla Complet.',
       },
@@ -1245,18 +1262,21 @@ const ca: PublicTranslations = {
     navLabel: 'Preus',
     metaTitle: 'Preus | Summa Social',
     metaDescription:
-      'Plans de Summa Social per a entitats petites i mitjanes, amb implantació inicial segons dades i procés.',
-    title: 'Preus simples per portar la gestió econòmica amb més control',
+      'Plans de Summa Social des de 49 €/mes per controlar banc, socis i donacions, vincular documents i gestionar projectes.',
+    title: 'Trieu fins on voleu portar el control econòmic de la vostra entitat',
     subtitle:
-      'Summa Social combina moviments bancaris, donants, remeses, certificats i documentació en una eina pensada per a entitats socials petites i mitjanes.',
+      'Tots els plans permeten importar el banc i gestionar socis, quotes i donacions. Afegiu-hi documentació o projectes quan la gestió ho necessiti.',
     claim: 'Plans des de 49 €/mes.',
     orientationTitle: 'Trieu el pla segons la complexitat de la gestió',
-    orientationText: '',
+    orientationText: 'La diferència no és la mida de l’entitat, sinó fins on voleu centralitzar la gestió.',
     orientationPoints: [
-      'Quotes, socis i fiscalitat bàsica',
-      'Control bancari i revisió econòmica ordinària',
-      'Documents, gestoria i projectes',
+      'Control: banc, socis, quotes i donacions',
+      'Gestió: documents vinculats als moviments',
+      'Complet: tancament, projectes i pressupostos',
     ],
+    differentiatorTitle: 'Tots els plans permeten importar extractes bancaris',
+    differentiatorText:
+      'La diferència entre Control i Gestió és documental: amb Gestió també podeu pujar i vincular factures, nòmines, tiquets i altres justificants als moviments.',
     implantationTitle: 'Implantació inicial',
     implantationText:
       'Abans de treballar bé, cal ordenar les dades de partida: contactes, extractes, categories, remeses i criteris fiscals. Per això Summa Social inclou una implantació inicial pressupostada segons el cas.',
@@ -1266,24 +1286,28 @@ const ca: PublicTranslations = {
     implantationNoteTitle: 'Abans de començar, revisem el vostre cas.',
     implantationNoteText:
       "La implantació inicial es pressuposta segons el volum de dades i l’acompanyament necessari. No pagareu cap quota mensual fins que hàgim acordat el pla, l’import inicial i els primers passos.",
-    decisionTitle: 'Si dubteu, comenceu pel pla Gestió',
-    decisionText: '',
+    decisionTitle: 'Si dubteu, us ajudem a triar sense sobredimensionar el pla',
+    decisionText: 'Revisarem com gestioneu el banc, la documentació i els projectes abans de recomanar-vos cap opció.',
     cta: 'Parlem del vostre cas',
     plans: [
       {
-        id: 'initial',
-        name: 'Inicial',
+        id: 'control',
+        name: 'Control',
         price: '49 €/mes',
-        badge: 'Per començar',
-        cta: 'Vull començar amb Inicial',
+        badge: 'Control essencial',
+        cta: 'Vull controlar banc i donacions',
         description:
-          'Per a entitats petites que volen ordenar socis, quotes, certificats i la fiscalitat anual bàsica.',
+          'Per a entitats que conserven la documentació fora de Summa, però volen tenir sota control els moviments, els socis i les donacions.',
         features: [
+          'Importació i revisió d’extractes bancaris',
+          'Alta i edició manual de moviments',
           'Socis, donants i contactes',
-          'Emissió de remeses',
+          'Quotes i remeses SEPA',
+          'Gestió manual de devolucions',
           'Certificats de donació',
-          'Model 182',
+          'Preparació del Model 182, subjecta a revisió',
         ],
+        limit: 'No inclou pujar ni vincular documents als moviments.',
       },
       {
         id: 'management',
@@ -1292,36 +1316,55 @@ const ca: PublicTranslations = {
         badge: 'Recomanat',
         cta: 'Vull començar amb Gestió',
         recommended: true,
-        description:
-          'El pla natural per a entitats que, a més de quotes i certificats, necessiten control bancari i revisió econòmica regular.',
+        description: 'Per a entitats que volen centralitzar factures, nòmines, tiquets i justificants i relacionar-los amb els moviments bancaris.',
         features: [
-          'Tot el pla Inicial',
-          'Importació de moviments bancaris',
-          'Gestió de devolucions',
-          'Gestió de cobraments en línia',
-          'Pujada il·limitada de factures, nòmines, tiquets i documents vinculats a cada moviment bancari',
-          'Categorització amb IA',
-          'Model 347',
+          'Tot el pla Control',
+          'Pujada i vinculació de documents als moviments',
+          'Control dels moviments sense document',
+          'Categorització assistida amb IA',
+          'Preparació del Model 347, subjecta a revisió',
         ],
       },
       {
         id: 'complete',
         name: 'Complet',
         price: '119 €/mes',
-        badge: 'Gestoria i projectes',
-        cta: 'Parlem del pla Complet',
+        badge: 'Tancament i projectes',
+        cta: 'Vull gestionar projectes i tancaments',
         description:
-          'Per a entitats que volen arribar a la gestoria i als projectes amb documents, despeses i justificacions més preparades.',
+          'Per a entitats que volen preparar el tancament econòmic i gestionar pressupostos, despeses i justificacions de projectes.',
         features: [
           'Tot el pla Gestió',
-          'Assignació automàtica de documents pendents',
-          'Exportació per gestoria',
-          'Mòdul de projectes',
-          'Justificació econòmica de subvencions',
-          'Multidivisa amb càlcul automàtic',
-          'Captura de rebuts o tiquets amb fotografia i extracció amb IA',
+          'Safata de documents previs o pendents de vincular',
+          'Propostes de conciliació assistida de documents',
+          'Captura de tiquets i extracció assistida de dades',
+          'Paquet de tancament amb moviments i documents',
+          'Projectes, partides i pressupostos',
+          'Multidivisa dins dels projectes',
+          'XLSX estructurat per preparar la justificació econòmica',
         ],
       },
+    ],
+    comparisonTitle: 'Compareu els tres plans',
+    comparisonDescription: 'El banc és comú a tots els plans. Gestió afegeix la documentació i Complet, el tancament i els projectes.',
+    comparisonFeatureLabel: 'Funcionalitat',
+    comparisonIncludedLabel: 'Inclòs',
+    comparisonNotIncludedLabel: 'No inclòs',
+    comparisonRows: [
+      { feature: 'Importació i revisió bancària', control: true, management: true, complete: true },
+      { feature: 'Socis, donants, SEPA, devolucions manuals, certificats i Model 182', control: true, management: true, complete: true },
+      { feature: 'Documents vinculats als moviments', control: false, management: true, complete: true },
+      { feature: 'Control sense document, IA assistida i Model 347', control: false, management: true, complete: true },
+      { feature: 'Safata prèvia, OCR i paquet de tancament', control: false, management: false, complete: true },
+      { feature: 'Projectes, pressupostos, multidivisa en projectes i XLSX estructurat', control: false, management: false, complete: true },
+    ],
+    faqTitle: 'Preguntes freqüents sobre els plans',
+    faqItems: [
+      { question: 'El pla Control permet importar el banc?', answer: 'Sí. La importació i revisió d’extractes bancaris està inclosa en tots els plans.' },
+      { question: 'Quina és la diferència principal entre Control i Gestió?', answer: 'Control permet treballar els moviments bancaris, però no afegir-hi documentació. Gestió permet pujar i vincular factures, nòmines, tiquets i altres justificants.' },
+      { question: 'Summa presenta els models fiscals?', answer: 'No. Summa prepara la informació i els fitxers perquè l’entitat o la seva assessoria els revisi i presenti.' },
+      { question: 'Summa substitueix la gestoria?', answer: 'No. Ordena i prepara la informació econòmica perquè l’entitat i la gestoria treballin amb més control.' },
+      { question: 'Què passa si baixo a un pla inferior?', answer: 'Les dades i els documents existents es conserven. Els podreu consultar i descarregar, però deixareu de poder crear o modificar els elements reservats al pla anterior.' },
     ],
   },
   home: {
@@ -1337,7 +1380,7 @@ const ca: PublicTranslations = {
     nav: {
       conciliation: 'Conciliació',
       remittances: 'Remeses i devolucions',
-      onlineDonations: 'Donacions online',
+      onlineDonations: 'Donacions i donants',
       fiscalCertificates: 'Fiscalitat i certificats',
       invoicesSepa: 'Factures i SEPA',
       ticketsSettlements: 'Tiquets i liquidacions',
@@ -1359,15 +1402,15 @@ const ca: PublicTranslations = {
       vision:
         "Visió clara i actualitzada: Dashboard amb mètriques en temps real. Ingressos, despeses, balanç i alertes, tot visible d'un cop d'ull. Informes automàtics per a junta o patronat.",
       control:
-        "Traçabilitat de cada moviment: segueix el comprovant fins al moviment bancari i prepara la justificació de subvencions amb l'Excel i els comprovants corresponents agrupats en un ZIP.",
+        "Traçabilitat de cada moviment: relaciona el comprovant amb el moviment bancari i obtén un XLSX estructurat amb els comprovants agrupats per preparar la justificació.",
       result:
         "El resultat: més temps per a la missió de l'entitat, menys temps amb fulls de càlcul i tasques repetitives. Gestió econòmica professional, accessible i sense complicacions.",
     },
     sections: {
       conciliation: {
-        title: 'Conciliació bancària automàtica i seguiment de comptes',
+        title: 'Conciliació bancària assistida i seguiment de comptes',
         description:
-          "Quan s'importa l'extracte bancari, Summa Social posa en relació el que ja s'ha treballat prèviament amb el que reflecteix el banc. Els moviments es reconcilien amb la documentació, els pagaments i les remeses existents, tot evitant duplicats i errors de transcripció.",
+          "Quan s'importa l'extracte bancari, Summa Social centralitza els moviments i ajuda a relacionar-los amb la documentació, els pagaments i les remeses existents perquè l'entitat pugui revisar i confirmar el resultat.",
       },
       remittances: {
         title: 'Gestió completa de remeses de socis i devolucions',
@@ -1375,15 +1418,15 @@ const ca: PublicTranslations = {
           "Quan l'entitat rep una remesa agrupada del banc —per quotes de socis o aportacions periòdiques— Summa Social permet desglossar aquest ingrés i situar cada import en el seu lloc. La remesa deixa de ser una xifra única i passa a convertir-se en el detall necessari per saber qui ha aportat què i en quin moment.",
       },
       onlineDonations: {
-        title: 'Registre i control acurat de donacions online i ingressos web',
+        title: 'Registre i control de donacions',
         description:
-          "Quan l'entitat rep donacions a través del web, els ingressos arriben al compte de forma agrupada. Summa Social permet incorporar aquests ingressos al sistema, identificar cada donació individual i situar-la dins del conjunt de la gestió econòmica, mantenint el vincle amb la persona que ha fet l'aportació.",
+          "Summa Social permet registrar les donacions, relacionar-les amb cada persona i mantenir l'historial econòmic i fiscal ordenat dins del mateix sistema.",
       },
       fiscalCertificates: {
         title:
-          'Elaboració i enviament en un click de models fiscals (182 i 347) i certificats de donació',
+          'Preparació de models fiscals (182 i 347) i certificats de donació',
         description:
-          "A mesura que la informació econòmica s'ha anat treballant amb criteri —ingressos, despeses, remeses i devolucions— la fiscalitat deixa de ser un exercici de reconstrucció. Summa Social permet generar els models fiscals i els certificats de donació a partir del que ja està ordenat i verificat dins del sistema.",
+          "A mesura que la informació econòmica s'ha anat treballant amb criteri —ingressos, despeses, remeses i devolucions— Summa Social prepara els models fiscals i els certificats a partir de les dades ordenades perquè es revisin abans de presentar-los o compartir-los.",
       },
       invoicesSepa: {
         title:
@@ -1393,7 +1436,7 @@ const ca: PublicTranslations = {
       },
       ticketsSettlements: {
         title:
-          "Captura d'imatges de rebuts i tiquets de viatge, i elaboració automàtica de liquidacions",
+          "Captura de rebuts i tiquets amb extracció assistida de dades",
         description:
           "Quan l'equip de l'entitat fa desplaçaments, viatges o activitats fora de l'oficina, Summa Social permet capturar de manera immediata els rebuts i tiquets que es van generant. Una simple fotografia des del mòbil és suficient perquè aquests comprovants quedin registrats dins del sistema, associats a la persona i al context en què s'han produït.",
       },
@@ -1421,11 +1464,11 @@ const ca: PublicTranslations = {
       },
       step2: {
         title: 'Gestiona',
-        description: 'Controla remeses de socis, devolucions bancàries i cobraments Stripe. Concilia moviments i categoritza ingressos i despeses amb assistència automàtica.',
+        description: 'Controla remeses de socis i devolucions bancàries. Revisa propostes de categorització i relaciona moviments amb contactes i documents.',
       },
       step3: {
         title: 'Compleix',
-        description: "Genera Model 182, 347 i certificats de donació amb enviament directe des de l'app. Controla també l'execució econòmica dels projectes, inclús en cooperació i amb diverses monedes.",
+        description: "Prepara els Models 182 i 347 i els certificats de donació per revisar. En el pla Complet, controla també l'execució econòmica i la multidivisa dins dels projectes.",
       },
       step4: {
         title: 'Obté',
@@ -1441,19 +1484,19 @@ const ca: PublicTranslations = {
       title: 'Què pots fer amb Summa Social',
       conciliation: {
         title: 'Conciliació bancària',
-        description: 'Importa extractes i concilia automàticament amb la documentació existent.',
+        description: 'Importa extractes i revisa les propostes per relacionar moviments i documentació.',
       },
       remittances: {
         title: 'Remeses i devolucions',
         description: 'Divideix remeses agrupades i gestiona devolucions amb traçabilitat.',
       },
       donations: {
-        title: 'Donacions online',
-        description: 'Integra Stripe i altres passarel·les per registrar donacions web.',
+        title: 'Donacions i donants',
+        description: 'Registra donacions i mantén cada aportació relacionada amb el seu donant.',
       },
       fiscal: {
         title: 'Fiscalitat i certificats',
-        description: 'Model 182, 347 i certificats de donació generats automàticament.',
+        description: 'Models 182 i 347 i certificats de donació preparats per revisar.',
       },
     },
     blocks: HOME_BLOCKS_CA,
@@ -1465,7 +1508,7 @@ const ca: PublicTranslations = {
       },
       projects: {
         title: 'Per a gestors de projectes',
-        description: "Seguiment de l'execució pressupostària, justificació de subvencions i exportació completa amb un clic. Excel + factures en ZIP.",
+        description: "Seguiment pressupostari, imputació de despeses i XLSX estructurat amb documentació agrupada per preparar la justificació.",
       },
     },
     whoWeAre: {
@@ -1506,9 +1549,9 @@ const ca: PublicTranslations = {
     mainTitle: '15 Principals Funcionalitats de Summa Social',
     list: {
       conciliation: {
-        title: '1. Conciliació Bancària Automàtica',
+        title: '1. Conciliació Bancària Assistida',
         description:
-          "Importes l'extracte del banc i Summa Social trova automàticament els moviments duplicats i els enllaça amb les operacions que ja tens registrades. Tot queda traçable per compte bancari.",
+          "Importes l'extracte del banc, Summa Social detecta possibles duplicats i et permet revisar i relacionar els moviments amb les operacions registrades. Tot queda traçable per compte bancari.",
         bullets: [
           "Importació d'extractes (CSV, Excel, OFX) de qualsevol banc",
           'Detecció automàtica de duplicats',
@@ -1517,14 +1560,14 @@ const ca: PublicTranslations = {
         ],
       },
       aiAssignment: {
-        title: '2. Auto-assignació Intel·ligent amb IA',
+        title: '2. Propostes de Categorització amb IA',
         description:
-          "Quan importes moviments, Summa Social reconeix automàticament els teus proveïdors, socis, donants i treballadors. La intel·ligència artificial intervé quan cal, aprenen de les teves decisions anteriors i cada cop és més intel·ligent.",
+          "Quan importes moviments, Summa Social proposa proveïdors, socis, donants, treballadors i categories a partir de les dades disponibles perquè ho puguis revisar abans de confirmar.",
         bullets: [
-          'Reconeixement automàtic per nom, IBAN o DNI',
-          'Assignació automàtica de categoria per defecte',
+          'Propostes per nom, IBAN o DNI',
+          'Proposta de categoria per revisar',
           'Memòria de decisions anteriors',
-          'Aprenentatge progressiu amb IA',
+          'Assistència amb IA quan cal',
         ],
       },
       remittancesDivider: {
@@ -1541,30 +1584,30 @@ const ca: PublicTranslations = {
       expensesSepa: {
         title: '4. Gestor de Despeses i Nòmines amb Generador de Remeses SEPA',
         description:
-          "Arrossega ràpidament factures i nòmines a Summa Social, confirma les dades que s'extreuen automàticament (IA) i genera una remesa de pagaments per pujar al banc.",
+          "Arrossega factures i nòmines a Summa Social, revisa les dades extretes amb assistència d'IA i genera una remesa de pagaments per pujar al banc.",
         ticketsNote:
-          'Novetat: captura de tiquets, viatges i quilometratge amb liquidacions automàtiques en PDF.',
+          'Novetat: captura de tiquets, viatges i quilometratge amb liquidacions en PDF regenerable.',
         bullets: [
           'Remeses de pagament (SEPA) per factures i nòmines',
-          'Extracció automàtica de dades amb IA',
+          'Extracció assistida de dades amb IA',
           'Liquidacions de tiquets, viatges i quilometratge amb PDF regenerable',
           'Enllaç clar document ↔ pagament ↔ moviment bancari',
-          "Quan entra l'extracte: conciliació automàtica",
+          "Quan entra l'extracte: revisió i vinculació amb el moviment",
         ],
       },
       fiscal: {
-        title: '5. Gestió Fiscal Automatitzada (Model 182 i 347)',
+        title: '5. Preparació Fiscal (Model 182 i 347)',
         description:
-          'Genera els fitxers per Hisenda amb validació prèvia i formats llestos per enviar a la gestoria.',
+          'Prepara els fitxers fiscals i les validacions perquè l’entitat o la gestoria els revisi abans de presentar-los.',
         bullets: [
           'Model 182 amb validació de requisits legals',
-          'Model 347 automàtic',
+          'Preparació del Model 347',
           'Comprovació de CIF/DNI/NIE i dades postals',
           'Exportació Excel per a la gestoria',
         ],
       },
       donationCertificates: {
-        title: '6. Certificats de Donació Automàtics',
+        title: '6. Certificats de Donació',
         bullets: [
           'Generació PDF amb logo i signatura digital',
           'Enviament individual o massiu per email',
@@ -1576,7 +1619,7 @@ const ca: PublicTranslations = {
         title: '7. Classificació de Moviments amb Memòria',
         bullets: [
           'Categories comptables personalitzables',
-          'Auto-categorització intel·ligent amb IA',
+          'Propostes de categorització amb IA',
           'Memòria persistent',
           'Assignació massiva per lots',
         ],
@@ -1604,18 +1647,18 @@ const ca: PublicTranslations = {
         title: '10. Gestió de Devolucions Bancàries',
         bullets: [
           'Importador específic de devolucions',
-          'Matching automàtic amb el donant',
+          'Vinculació manual amb el donant',
           'Seguiment de quotes pendents',
-          'Exclusió automàtica del Model 182',
+          'Retorn reflectit en la preparació del Model 182',
         ],
       },
       stripeIntegration: {
-        title: '11. Integració Stripe per Donacions Online',
+        title: '11. Registre i Històric de Donacions',
         bullets: [
-          'Separació donació vs comissió',
-          'Matching per email',
-          'Creació automàtica de donants',
-          'Trazabilitat completa',
+          'Registre individual de donacions',
+          'Vinculació amb la fitxa del donant',
+          'Històric econòmic i fiscal',
+          'Traçabilitat de cada aportació',
         ],
       },
       projectsModule: {
@@ -1921,7 +1964,7 @@ const es: PublicTranslations = {
       messagePlaceholder:
         'Cuéntanos brevemente cuántos socios o donantes tenéis, si hacéis remesas, si queréis importar movimientos bancarios o si necesitáis preparar modelos fiscales.',
       planMessages: {
-        initial: 'Quiero empezar con el plan Inicial.',
+        control: 'Quiero empezar con el plan Control.',
         management: 'Quiero empezar con el plan Gestión.',
         complete: 'Me gustaría hablar del plan Completo.',
       },
@@ -1931,18 +1974,21 @@ const es: PublicTranslations = {
     navLabel: 'Precios',
     metaTitle: 'Precios | Summa Social',
     metaDescription:
-      'Planes de Summa Social para entidades pequeñas y medianas, con implantación inicial según datos y proceso.',
-    title: 'Precios simples para llevar la gestión económica con más control',
+      'Planes de Summa Social desde 49 €/mes para controlar banco, socios y donaciones, vincular documentos y gestionar proyectos.',
+    title: 'Elegid hasta dónde queréis llevar el control económico de vuestra entidad',
     subtitle:
-      'Summa Social combina movimientos bancarios, donantes, remesas, certificados y documentación en una herramienta pensada para entidades sociales pequeñas y medianas.',
+      'Todos los planes permiten importar el banco y gestionar socios, cuotas y donaciones. Añadid documentación o proyectos cuando la gestión lo necesite.',
     claim: 'Planes desde 49 €/mes.',
     orientationTitle: 'Elegid el plan según la complejidad de la gestión',
-    orientationText: '',
+    orientationText: 'La diferencia no es el tamaño de la entidad, sino hasta dónde queréis centralizar la gestión.',
     orientationPoints: [
-      'Cuotas, socios y fiscalidad básica',
-      'Control bancario y revisión económica ordinaria',
-      'Documentos, gestoría y proyectos',
+      'Control: banco, socios, cuotas y donaciones',
+      'Gestión: documentos vinculados a los movimientos',
+      'Completo: cierre, proyectos y presupuestos',
     ],
+    differentiatorTitle: 'Todos los planes permiten importar extractos bancarios',
+    differentiatorText:
+      'La diferencia entre Control y Gestión es documental: con Gestión también podéis subir y vincular facturas, nóminas, tickets y otros justificantes a los movimientos.',
     implantationTitle: 'Implantación inicial',
     implantationText:
       'Antes de trabajar bien, hay que ordenar los datos de partida: contactos, extractos, categorías, remesas y criterios fiscales. Por eso Summa Social incluye una implantación inicial presupuestada según el caso.',
@@ -1952,24 +1998,28 @@ const es: PublicTranslations = {
     implantationNoteTitle: 'Antes de empezar, revisamos vuestro caso.',
     implantationNoteText:
       'La implantación inicial se presupuesta según el volumen de datos y el acompañamiento necesario. No pagaréis ninguna cuota mensual hasta que hayamos acordado el plan, el importe inicial y los primeros pasos.',
-    decisionTitle: 'Si dudáis, empezad por el plan Gestión',
-    decisionText: '',
+    decisionTitle: 'Si dudáis, os ayudamos a elegir sin sobredimensionar el plan',
+    decisionText: 'Revisaremos cómo gestionáis el banco, la documentación y los proyectos antes de recomendaros una opción.',
     cta: 'Hablemos de vuestro caso',
     plans: [
       {
-        id: 'initial',
-        name: 'Inicial',
+        id: 'control',
+        name: 'Control',
         price: '49 €/mes',
-        badge: 'Para empezar',
-        cta: 'Quiero empezar con Inicial',
+        badge: 'Control esencial',
+        cta: 'Quiero controlar banco y donaciones',
         description:
-          'Para entidades pequeñas que quieren ordenar socios, cuotas, certificados y la fiscalidad anual básica.',
+          'Para entidades que conservan la documentación fuera de Summa, pero quieren tener bajo control los movimientos, los socios y las donaciones.',
         features: [
+          'Importación y revisión de extractos bancarios',
+          'Alta y edición manual de movimientos',
           'Socios, donantes y contactos',
-          'Emisión de remesas',
+          'Cuotas y remesas SEPA',
+          'Gestión manual de devoluciones',
           'Certificados de donación',
-          'Modelo 182',
+          'Preparación del Modelo 182, sujeta a revisión',
         ],
+        limit: 'No incluye subir ni vincular documentos a los movimientos.',
       },
       {
         id: 'management',
@@ -1978,36 +2028,55 @@ const es: PublicTranslations = {
         badge: 'Recomendado',
         cta: 'Quiero empezar con Gestión',
         recommended: true,
-        description:
-          'El plan natural para entidades que, además de cuotas y certificados, necesitan control bancario y revisión económica regular.',
+        description: 'Para entidades que quieren centralizar facturas, nóminas, tickets y justificantes y relacionarlos con los movimientos bancarios.',
         features: [
-          'Todo el plan Inicial',
-          'Importación de movimientos bancarios',
-          'Gestión de devoluciones',
-          'Gestión de cobros en línea',
-          'Subida ilimitada de facturas, nóminas, tickets y documentos vinculados a cada movimiento bancario',
-          'Categorización con IA',
-          'Modelo 347',
+          'Todo el plan Control',
+          'Subida y vinculación de documentos a los movimientos',
+          'Control de movimientos sin documento',
+          'Categorización asistida con IA',
+          'Preparación del Modelo 347, sujeta a revisión',
         ],
       },
       {
         id: 'complete',
         name: 'Completo',
         price: '119 €/mes',
-        badge: 'Gestoría y proyectos',
-        cta: 'Hablemos del plan Completo',
+        badge: 'Cierre y proyectos',
+        cta: 'Quiero gestionar proyectos y cierres',
         description:
-          'Para entidades que quieren llegar a la gestoría y a los proyectos con documentos, gastos y justificaciones más preparados.',
+          'Para entidades que quieren preparar el cierre económico y gestionar presupuestos, gastos y justificaciones de proyectos.',
         features: [
           'Todo el plan Gestión',
-          'Asignación automática de documentos pendientes',
-          'Exportación para gestoría',
-          'Módulo de proyectos',
-          'Justificación económica de subvenciones',
-          'Multidivisa con cálculo automático',
-          'Captura de recibos o tickets con fotografía y extracción con IA',
+          'Bandeja de documentos previos o pendientes de vincular',
+          'Propuestas de conciliación asistida de documentos',
+          'Captura de tickets y extracción asistida de datos',
+          'Paquete de cierre con movimientos y documentos',
+          'Proyectos, partidas y presupuestos',
+          'Multidivisa dentro de los proyectos',
+          'XLSX estructurado para preparar la justificación económica',
         ],
       },
+    ],
+    comparisonTitle: 'Comparad los tres planes',
+    comparisonDescription: 'El banco es común a todos los planes. Gestión añade la documentación y Completo, el cierre y los proyectos.',
+    comparisonFeatureLabel: 'Funcionalidad',
+    comparisonIncludedLabel: 'Incluido',
+    comparisonNotIncludedLabel: 'No incluido',
+    comparisonRows: [
+      { feature: 'Importación y revisión bancaria', control: true, management: true, complete: true },
+      { feature: 'Socios, donantes, SEPA, devoluciones manuales, certificados y Modelo 182', control: true, management: true, complete: true },
+      { feature: 'Documentos vinculados a los movimientos', control: false, management: true, complete: true },
+      { feature: 'Control sin documento, IA asistida y Modelo 347', control: false, management: true, complete: true },
+      { feature: 'Bandeja previa, OCR y paquete de cierre', control: false, management: false, complete: true },
+      { feature: 'Proyectos, presupuestos, multidivisa en proyectos y XLSX estructurado', control: false, management: false, complete: true },
+    ],
+    faqTitle: 'Preguntas frecuentes sobre los planes',
+    faqItems: [
+      { question: '¿El plan Control permite importar el banco?', answer: 'Sí. La importación y revisión de extractos bancarios está incluida en todos los planes.' },
+      { question: '¿Cuál es la diferencia principal entre Control y Gestión?', answer: 'Control permite trabajar los movimientos bancarios, pero no añadirles documentación. Gestión permite subir y vincular facturas, nóminas, tickets y otros justificantes.' },
+      { question: '¿Summa presenta los modelos fiscales?', answer: 'No. Summa prepara la información y los archivos para que la entidad o su asesoría los revise y presente.' },
+      { question: '¿Summa sustituye a la gestoría?', answer: 'No. Ordena y prepara la información económica para que la entidad y la gestoría trabajen con más control.' },
+      { question: '¿Qué ocurre si bajo a un plan inferior?', answer: 'Los datos y documentos existentes se conservan. Podréis consultarlos y descargarlos, pero dejaréis de poder crear o modificar los elementos reservados al plan anterior.' },
     ],
   },
   home: {
@@ -2023,7 +2092,7 @@ const es: PublicTranslations = {
     nav: {
       conciliation: 'Conciliación',
       remittances: 'Remesas y devoluciones',
-      onlineDonations: 'Donaciones online',
+      onlineDonations: 'Donaciones y donantes',
       fiscalCertificates: 'Fiscalidad y certificados',
       invoicesSepa: 'Facturas y SEPA',
       ticketsSettlements: 'Tickets y liquidaciones',
@@ -2045,15 +2114,15 @@ const es: PublicTranslations = {
       vision:
         'Visión clara y actualizada: Dashboard con métricas en tiempo real. Ingresos, gastos, balance y alertas, todo visible de un vistazo. Informes automáticos para junta o patronato.',
       control:
-        'Trazabilidad de cada movimiento: sigue el comprobante hasta el movimiento bancario y prepara la justificación de subvenciones con el Excel y los comprobantes correspondientes agrupados en un ZIP.',
+        'Trazabilidad de cada movimiento: relaciona el comprobante con el movimiento bancario y obtén un XLSX estructurado con los comprobantes agrupados para preparar la justificación.',
       result:
         'El resultado: más tiempo para la misión de la entidad, menos tiempo con hojas de cálculo y tareas repetitivas. Gestión económica profesional, accesible y sin complicaciones.',
     },
     sections: {
       conciliation: {
-        title: 'Conciliación bancaria automática y seguimiento de cuentas',
+        title: 'Conciliación bancaria asistida y seguimiento de cuentas',
         description:
-          'Cuando se importa el extracto bancario, Summa Social pone en relación lo que ya se ha trabajado previamente con lo que refleja el banco. Los movimientos se reconcilian con la documentación, los pagos y las remesas existentes, evitando duplicados y errores de transcripción.',
+          'Cuando se importa el extracto bancario, Summa Social centraliza los movimientos y ayuda a relacionarlos con la documentación, los pagos y las remesas existentes para que la entidad pueda revisar y confirmar el resultado.',
       },
       remittances: {
         title: 'Gestión completa de remesas de socios y devoluciones',
@@ -2061,15 +2130,15 @@ const es: PublicTranslations = {
           'Cuando la entidad recibe una remesa agrupada del banco —por cuotas de socios o aportaciones periódicas— Summa Social permite desglosar este ingreso y situar cada importe en su lugar. La remesa deja de ser una cifra única y pasa a convertirse en el detalle necesario para saber quién ha aportado qué y en qué momento.',
       },
       onlineDonations: {
-        title: 'Registro y control preciso de donaciones online e ingresos web',
+        title: 'Registro y control de donaciones',
         description:
-          'Cuando la entidad recibe donaciones a través de la web, los ingresos llegan a la cuenta de forma agrupada. Summa Social permite incorporar estos ingresos al sistema, identificar cada donación individual y situarla dentro del conjunto de la gestión económica, manteniendo el vínculo con la persona que ha hecho la aportación.',
+          'Summa Social permite registrar las donaciones, relacionarlas con cada persona y mantener el histórico económico y fiscal ordenado dentro del mismo sistema.',
       },
       fiscalCertificates: {
         title:
-          'Elaboración y envío en un clic de modelos fiscales (182 y 347) y certificados de donación',
+          'Preparación de modelos fiscales (182 y 347) y certificados de donación',
         description:
-          'A medida que la información económica se ha ido trabajando con criterio —ingresos, gastos, remesas y devoluciones— la fiscalidad deja de ser un ejercicio de reconstrucción. Summa Social permite generar los modelos fiscales y los certificados de donación a partir de lo que ya está ordenado y verificado dentro del sistema.',
+          'A medida que la información económica se trabaja con criterio —ingresos, gastos, remesas y devoluciones— Summa Social prepara los modelos fiscales y los certificados a partir de los datos ordenados para revisarlos antes de presentarlos o compartirlos.',
       },
       invoicesSepa: {
         title:
@@ -2079,7 +2148,7 @@ const es: PublicTranslations = {
       },
       ticketsSettlements: {
         title:
-          'Captura de imágenes de recibos y tickets de viaje, y elaboración automática de liquidaciones',
+          'Captura de recibos y tickets con extracción asistida de datos',
         description:
           'Cuando el equipo de la entidad hace desplazamientos, viajes o actividades fuera de la oficina, Summa Social permite capturar de manera inmediata los recibos y tickets que se van generando. Una simple fotografía desde el móvil es suficiente para que estos comprobantes queden registrados dentro del sistema, asociados a la persona y al contexto en que se han producido.',
       },
@@ -2107,11 +2176,11 @@ const es: PublicTranslations = {
       },
       step2: {
         title: 'Gestiona',
-        description: 'Controla remesas de socios, devoluciones bancarias y cobros Stripe. Concilia movimientos y categoriza ingresos y gastos con asistencia automática.',
+        description: 'Controla remesas de socios y devoluciones bancarias. Revisa propuestas de categorización y relaciona movimientos con contactos y documentos.',
       },
       step3: {
         title: 'Cumple',
-        description: 'Genera Modelo 182, 347 y certificados de donación con envío directo desde la app. Controla también la ejecución económica de los proyectos, incluso en cooperación y con varias monedas.',
+        description: 'Prepara los Modelos 182 y 347 y los certificados de donación para revisar. En el plan Completo, controla también la ejecución económica y la multidivisa dentro de los proyectos.',
       },
       step4: {
         title: 'Obtén',
@@ -2127,19 +2196,19 @@ const es: PublicTranslations = {
       title: 'Qué puedes hacer con Summa Social',
       conciliation: {
         title: 'Conciliación bancaria',
-        description: 'Importa extractos y concilia automáticamente con la documentación existente.',
+        description: 'Importa extractos y revisa las propuestas para relacionar movimientos y documentación.',
       },
       remittances: {
         title: 'Remesas y devoluciones',
         description: 'Divide remesas agrupadas y gestiona devoluciones con trazabilidad.',
       },
       donations: {
-        title: 'Donaciones online',
-        description: 'Integra Stripe y otras pasarelas para registrar donaciones web.',
+        title: 'Donaciones y donantes',
+        description: 'Registra donaciones y mantiene cada aportación relacionada con su donante.',
       },
       fiscal: {
         title: 'Fiscalidad y certificados',
-        description: 'Modelo 182, 347 y certificados de donación generados automáticamente.',
+        description: 'Modelos 182 y 347 y certificados de donación preparados para revisar.',
       },
     },
     blocks: HOME_BLOCKS_ES,
@@ -2150,7 +2219,7 @@ const es: PublicTranslations = {
       },
       projects: {
         title: 'Para gestores de proyectos',
-        description: 'Seguimiento de la ejecución presupuestaria, justificación de subvenciones y exportación completa con un clic. Excel + facturas en ZIP.',
+        description: 'Seguimiento presupuestario, imputación de gastos y XLSX estructurado con documentación agrupada para preparar la justificación.',
       },
     },
     whoWeAre: {
@@ -2191,9 +2260,9 @@ const es: PublicTranslations = {
     mainTitle: '15 Principales Funcionalidades de Summa Social',
     list: {
       conciliation: {
-        title: '1. Conciliación Bancaria Automática',
+        title: '1. Conciliación Bancaria Asistida',
         description:
-          'Importas el extracto del banco y Summa Social encuentra automáticamente los movimientos duplicados y los enlaza con las operaciones que ya tienes registradas. Todo queda trazable por cuenta bancaria.',
+          'Importas el extracto del banco, Summa Social detecta posibles duplicados y te permite revisar y relacionar los movimientos con las operaciones registradas. Todo queda trazable por cuenta bancaria.',
         bullets: [
           'Importación de extractos (CSV, Excel, OFX) de cualquier banco',
           'Detección automática de duplicados',
@@ -2202,14 +2271,14 @@ const es: PublicTranslations = {
         ],
       },
       aiAssignment: {
-        title: '2. Auto-asignación Inteligente con IA',
+        title: '2. Propuestas de Categorización con IA',
         description:
-          'Cuando importas movimientos, Summa Social reconoce automáticamente tus proveedores, socios, donantes y trabajadores. La inteligencia artificial interviene cuando es necesario, aprende de tus decisiones anteriores y cada vez es más inteligente.',
+          'Cuando importas movimientos, Summa Social propone proveedores, socios, donantes, trabajadores y categorías a partir de los datos disponibles para que puedas revisarlos antes de confirmar.',
         bullets: [
-          'Reconocimiento automático por nombre, IBAN o DNI',
-          'Asignación automática de categoría por defecto',
+          'Propuestas por nombre, IBAN o DNI',
+          'Propuesta de categoría para revisar',
           'Memoria de decisiones anteriores',
-          'Aprendizaje progresivo con IA',
+          'Asistencia con IA cuando hace falta',
         ],
       },
       remittancesDivider: {
@@ -2226,30 +2295,30 @@ const es: PublicTranslations = {
       expensesSepa: {
         title: '4. Gestor de Gastos y Nóminas con Generador de Remesas SEPA',
         description:
-          'Arrastra rápidamente facturas y nóminas a Summa Social, confirma los datos que se extraen automáticamente (IA) y genera una remesa de pagos para subir al banco.',
+          'Arrastra facturas y nóminas a Summa Social, revisa los datos extraídos con asistencia de IA y genera una remesa de pagos para subir al banco.',
         ticketsNote:
-          'Novedad: captura de tickets, viajes y kilometraje con liquidaciones automáticas en PDF.',
+          'Novedad: captura de tickets, viajes y kilometraje con liquidaciones en PDF regenerable.',
         bullets: [
           'Remesas de pago (SEPA) para facturas y nóminas',
-          'Extracción automática de datos con IA',
+          'Extracción asistida de datos con IA',
           'Liquidaciones de tickets, viajes y kilometraje con PDF regenerable',
           'Enlace claro documento ↔ pago ↔ movimiento bancario',
-          'Cuando entra el extracto: conciliación automática',
+          'Cuando entra el extracto: revisión y vinculación con el movimiento',
         ],
       },
       fiscal: {
-        title: '5. Gestión Fiscal Automatizada (Modelo 182 y 347)',
+        title: '5. Preparación Fiscal (Modelo 182 y 347)',
         description:
-          'Genera los ficheros para Hacienda con validación previa y formatos listos para enviar a la gestoría.',
+          'Prepara los ficheros fiscales y las validaciones para que la entidad o la gestoría los revise antes de presentarlos.',
         bullets: [
           'Modelo 182 con validación de requisitos legales',
-          'Modelo 347 automático',
+          'Preparación del Modelo 347',
           'Comprobación de CIF/DNI/NIE y datos postales',
           'Exportación Excel para la gestoría',
         ],
       },
       donationCertificates: {
-        title: '6. Certificados de Donación Automáticos',
+        title: '6. Certificados de Donación',
         bullets: [
           'Generación PDF con logo y firma digital',
           'Envío individual o masivo por email',
@@ -2261,7 +2330,7 @@ const es: PublicTranslations = {
         title: '7. Clasificación de Movimientos con Memoria',
         bullets: [
           'Categorías contables personalizables',
-          'Auto-categorización inteligente con IA',
+          'Propuestas de categorización con IA',
           'Memoria persistente',
           'Asignación masiva por lotes',
         ],
@@ -2289,18 +2358,18 @@ const es: PublicTranslations = {
         title: '10. Gestión de Devoluciones Bancarias',
         bullets: [
           'Importador específico de devoluciones',
-          'Matching automático con el donante',
+          'Vinculación manual con el donante',
           'Seguimiento de cuotas pendientes',
-          'Exclusión automática del Modelo 182',
+          'Devolución reflejada en la preparación del Modelo 182',
         ],
       },
       stripeIntegration: {
-        title: '11. Integración Stripe para Donaciones Online',
+        title: '11. Registro e Histórico de Donaciones',
         bullets: [
-          'Separación donación vs comisión',
-          'Matching por email',
-          'Creación automática de donantes',
-          'Trazabilidad completa',
+          'Registro individual de donaciones',
+          'Vinculación con la ficha del donante',
+          'Histórico económico y fiscal',
+          'Trazabilidad de cada aportación',
         ],
       },
       projectsModule: {
@@ -2607,7 +2676,7 @@ const fr: PublicTranslations = {
       messagePlaceholder:
         'Expliquez-nous brièvement combien de membres ou de donateurs vous avez, si vous émettez des prélèvements, si vous voulez importer des mouvements bancaires ou préparer des déclarations fiscales.',
       planMessages: {
-        initial: 'Je veux commencer avec le plan Initial.',
+        control: 'Je veux commencer avec le plan Contrôle.',
         management: 'Je veux commencer avec le plan Gestion.',
         complete: 'Je voudrais parler du plan Complet.',
       },
@@ -2617,18 +2686,21 @@ const fr: PublicTranslations = {
     navLabel: 'Tarifs',
     metaTitle: 'Tarifs | Summa Social',
     metaDescription:
-      'Plans Summa Social pour petites et moyennes organisations, avec mise en place initiale selon les données et le processus.',
-    title: 'Des tarifs simples pour gérer l’économie avec plus de contrôle',
+      'Plans Summa Social dès 49 €/mois pour contrôler la banque, les membres et les dons, relier les documents et gérer les projets.',
+    title: 'Choisissez jusqu’où vous voulez porter le contrôle économique de votre organisation',
     subtitle:
-      'Summa Social réunit mouvements bancaires, donateurs, prélèvements, certificats et documentation dans un outil conçu pour les petites et moyennes organisations sociales.',
+      'Tous les plans permettent d’importer la banque et de gérer membres, cotisations et dons. Ajoutez la documentation ou les projets lorsque votre gestion l’exige.',
     claim: 'Plans à partir de 49 €/mois.',
     orientationTitle: 'Choisissez le plan selon la complexité de la gestion',
-    orientationText: '',
+    orientationText: 'La différence ne tient pas à la taille de l’organisation, mais au niveau de centralisation souhaité.',
     orientationPoints: [
-      'Cotisations, membres et fiscalité de base',
-      'Contrôle bancaire et revue économique régulière',
-      'Documents, comptabilité et projets',
+      'Contrôle : banque, membres, cotisations et dons',
+      'Gestion : documents liés aux mouvements',
+      'Complet : clôture, projets et budgets',
     ],
+    differentiatorTitle: 'Tous les plans permettent d’importer des relevés bancaires',
+    differentiatorText:
+      'La différence entre Contrôle et Gestion est documentaire : Gestion permet aussi de déposer et relier factures, fiches de paie, tickets et autres justificatifs aux mouvements.',
     implantationTitle: 'Mise en place initiale',
     implantationText:
       'Avant de bien travailler, il faut ordonner les données de départ : contacts, relevés, catégories, prélèvements et critères fiscaux. C’est pourquoi Summa Social inclut une mise en place initiale chiffrée selon le cas.',
@@ -2638,24 +2710,28 @@ const fr: PublicTranslations = {
     implantationNoteTitle: 'Avant de commencer, nous étudions votre situation.',
     implantationNoteText:
       'La mise en place initiale est chiffrée selon le volume de données et l’accompagnement nécessaire. Vous ne paierez aucune mensualité tant que nous n’aurons pas convenu du plan, du montant initial et des premières étapes.',
-    decisionTitle: 'En cas de doute, commencez par le plan Gestion',
-    decisionText: '',
+    decisionTitle: 'En cas de doute, nous vous aidons à choisir sans surdimensionner le plan',
+    decisionText: 'Nous examinerons votre gestion bancaire, documentaire et de projets avant de vous recommander une option.',
     cta: 'Parlons de votre cas',
     plans: [
       {
-        id: 'initial',
-        name: 'Initial',
+        id: 'control',
+        name: 'Contrôle',
         price: '49 €/mois',
-        badge: 'Pour commencer',
-        cta: 'Je veux commencer avec Initial',
+        badge: 'Contrôle essentiel',
+        cta: 'Je veux contrôler banque et dons',
         description:
-          'Pour les petites organisations qui veulent structurer membres, cotisations, certificats et fiscalité annuelle de base.',
+          'Pour les organisations qui conservent leurs documents hors de Summa, mais veulent contrôler mouvements, membres et dons.',
         features: [
+          'Import et vérification des relevés bancaires',
+          'Création et modification manuelles de mouvements',
           'Membres, donateurs et contacts',
-          'Émission de prélèvements',
+          'Cotisations et prélèvements SEPA',
+          'Gestion manuelle des rejets',
           'Certificats de don',
-          'Modèle 182',
+          'Préparation du Modèle 182, soumise à vérification',
         ],
+        limit: 'N’inclut pas le dépôt ni la liaison de documents aux mouvements.',
       },
       {
         id: 'management',
@@ -2664,36 +2740,55 @@ const fr: PublicTranslations = {
         badge: 'Recommandé',
         cta: 'Je veux commencer avec Gestion',
         recommended: true,
-        description:
-          'Le plan naturel pour les organisations qui, en plus des cotisations et certificats, ont besoin de contrôle bancaire et de revue économique régulière.',
+        description: 'Pour les organisations qui veulent centraliser factures, fiches de paie, tickets et justificatifs et les relier aux mouvements bancaires.',
         features: [
-          'Tout le plan Initial',
-          'Import de mouvements bancaires',
-          'Gestion des rejets',
-          'Gestion des encaissements en ligne',
-          'Dépôt illimité de factures, fiches de paie, reçus et documents liés à chaque mouvement bancaire',
-          'Catégorisation avec IA',
-          'Modèle 347',
+          'Tout le plan Contrôle',
+          'Dépôt et liaison de documents aux mouvements',
+          'Suivi des mouvements sans document',
+          'Catégorisation assistée par IA',
+          'Préparation du Modèle 347, soumise à vérification',
         ],
       },
       {
         id: 'complete',
         name: 'Complet',
         price: '119 €/mois',
-        badge: 'Comptabilité et projets',
-        cta: 'Parlons du plan Complet',
+        badge: 'Clôture et projets',
+        cta: 'Je veux gérer projets et clôtures',
         description:
-          'Pour les organisations qui veulent préparer la comptabilité et les projets avec documents, dépenses et justificatifs mieux structurés.',
+          'Pour les organisations qui veulent préparer la clôture économique et gérer budgets, dépenses et justificatifs de projets.',
         features: [
           'Tout le plan Gestion',
-          'Affectation automatique des documents en attente',
-          'Export pour la comptabilité',
-          'Module projets',
-          'Justification économique de subventions',
-          'Multidevise avec calcul automatique',
-          'Capture de reçus ou tickets par photo et extraction avec IA',
+          'Boîte de documents préalables ou en attente de liaison',
+          'Propositions de rapprochement documentaire assisté',
+          'Capture de tickets et extraction assistée des données',
+          'Dossier de clôture avec mouvements et documents',
+          'Projets, postes et budgets',
+          'Multidevise au sein des projets',
+          'XLSX structuré pour préparer la justification économique',
         ],
       },
+    ],
+    comparisonTitle: 'Comparez les trois plans',
+    comparisonDescription: 'La banque est commune à tous les plans. Gestion ajoute les documents et Complet, la clôture et les projets.',
+    comparisonFeatureLabel: 'Fonctionnalité',
+    comparisonIncludedLabel: 'Inclus',
+    comparisonNotIncludedLabel: 'Non inclus',
+    comparisonRows: [
+      { feature: 'Import et vérification bancaire', control: true, management: true, complete: true },
+      { feature: 'Membres, donateurs, SEPA, rejets manuels, certificats et Modèle 182', control: true, management: true, complete: true },
+      { feature: 'Documents liés aux mouvements', control: false, management: true, complete: true },
+      { feature: 'Suivi sans document, IA assistée et Modèle 347', control: false, management: true, complete: true },
+      { feature: 'Boîte préalable, OCR et dossier de clôture', control: false, management: false, complete: true },
+      { feature: 'Projets, budgets, multidevise dans les projets et XLSX structuré', control: false, management: false, complete: true },
+    ],
+    faqTitle: 'Questions fréquentes sur les plans',
+    faqItems: [
+      { question: 'Le plan Contrôle permet-il d’importer la banque ?', answer: 'Oui. L’import et la vérification des relevés bancaires sont inclus dans tous les plans.' },
+      { question: 'Quelle est la principale différence entre Contrôle et Gestion ?', answer: 'Contrôle permet de travailler les mouvements bancaires sans y ajouter de documents. Gestion permet de déposer et relier factures, fiches de paie, tickets et autres justificatifs.' },
+      { question: 'Summa dépose-t-il les déclarations fiscales ?', answer: 'Non. Summa prépare les informations et les fichiers pour vérification et dépôt par l’organisation ou son cabinet comptable.' },
+      { question: 'Summa remplace-t-il le cabinet comptable ?', answer: 'Non. Il organise et prépare les informations économiques afin que l’organisation et son cabinet travaillent avec plus de contrôle.' },
+      { question: 'Que se passe-t-il si je passe à un plan inférieur ?', answer: 'Les données et documents existants sont conservés. Vous pourrez les consulter et les télécharger, mais plus créer ni modifier les éléments réservés au plan précédent.' },
     ],
   },
   home: {
@@ -2709,7 +2804,7 @@ const fr: PublicTranslations = {
     nav: {
       conciliation: 'Rapprochement',
       remittances: 'Prélèvements et rejets',
-      onlineDonations: 'Dons en ligne',
+      onlineDonations: 'Dons et donateurs',
       fiscalCertificates: 'Fiscalité et certificats',
       invoicesSepa: 'Factures et SEPA',
       ticketsSettlements: 'Tickets et notes de frais',
@@ -2731,15 +2826,15 @@ const fr: PublicTranslations = {
       vision:
         "Vision claire et à jour : Tableau de bord avec métriques en temps réel. Revenus, dépenses, solde et alertes, tout visible d'un coup d'œil. Rapports automatiques pour le conseil d'administration.",
       control:
-        "Contrôle absolu de chaque euro : Traçabilité complète du justificatif au mouvement bancaire. Justification de subventions en un clic : Excel + toutes les factures en ZIP.",
+        "Traçabilité de chaque mouvement : reliez le justificatif au mouvement bancaire et obtenez un XLSX structuré avec les pièces regroupées pour préparer la justification.",
       result:
         "Le résultat : plus de temps pour la mission de l'association, moins de temps avec les tableurs et les tâches répétitives. Gestion économique professionnelle, accessible et sans complications.",
     },
     sections: {
       conciliation: {
-        title: 'Rapprochement bancaire automatique et suivi des comptes',
+        title: 'Rapprochement bancaire assisté et suivi des comptes',
         description:
-          "Quand on importe le relevé bancaire, Summa Social met en relation ce qui a déjà été traité avec ce que reflète la banque. Les mouvements sont rapprochés avec la documentation, les paiements et les prélèvements existants, évitant les doublons et les erreurs de transcription.",
+          "Quand le relevé bancaire est importé, Summa Social centralise les mouvements et aide à les relier aux documents, paiements et prélèvements existants afin que l'organisation puisse vérifier et confirmer le résultat.",
       },
       remittances: {
         title: 'Gestion complète des prélèvements adhérents et des rejets',
@@ -2747,15 +2842,15 @@ const fr: PublicTranslations = {
           "Quand l'association reçoit un prélèvement groupé de la banque — pour les cotisations ou contributions périodiques — Summa Social permet de décomposer ce revenu et de placer chaque montant à sa place. Le prélèvement cesse d'être un chiffre unique pour devenir le détail nécessaire pour savoir qui a contribué quoi et quand.",
       },
       onlineDonations: {
-        title: 'Enregistrement et contrôle précis des dons en ligne et revenus web',
+        title: 'Enregistrement et contrôle des dons',
         description:
-          "Quand l'association reçoit des dons via le web, les revenus arrivent au compte de façon groupée. Summa Social permet d'incorporer ces revenus au système, d'identifier chaque don individuel et de le situer dans l'ensemble de la gestion économique, en maintenant le lien avec la personne qui a fait la contribution.",
+          "Summa Social permet d'enregistrer les dons, de les relier à chaque personne et de conserver l'historique économique et fiscal dans un même système.",
       },
       fiscalCertificates: {
         title:
-          'Élaboration et envoi en un clic des modèles fiscaux (182 et 347) et certificats de don',
+          'Préparation des modèles fiscaux (182 et 347) et certificats de don',
         description:
-          "Au fur et à mesure que l'information économique a été travaillée avec rigueur — revenus, dépenses, prélèvements et rejets — la fiscalité cesse d'être un exercice de reconstruction. Summa Social permet de générer les modèles fiscaux et les certificats de don à partir de ce qui est déjà ordonné et vérifié dans le système.",
+          "À mesure que l'information économique est structurée — revenus, dépenses, prélèvements et rejets — Summa Social prépare les modèles fiscaux et les certificats à partir des données ordonnées, pour vérification avant dépôt ou partage.",
       },
       invoicesSepa: {
         title:
@@ -2765,7 +2860,7 @@ const fr: PublicTranslations = {
       },
       ticketsSettlements: {
         title:
-          "Capture d'images de reçus et tickets de voyage, et élaboration automatique de notes de frais",
+          "Capture de reçus et tickets avec extraction assistée des données",
         description:
           "Quand l'équipe de l'association fait des déplacements, voyages ou activités hors du bureau, Summa Social permet de capturer immédiatement les reçus et tickets générés. Une simple photo depuis le mobile suffit pour que ces justificatifs soient enregistrés dans le système, associés à la personne et au contexte.",
       },
@@ -2793,11 +2888,11 @@ const fr: PublicTranslations = {
       },
       step2: {
         title: 'Gérez',
-        description: 'Contrôlez prélèvements membres, rejets bancaires et encaissements Stripe. Rapprochez les mouvements et catégorisez recettes et dépenses avec assistance automatique.',
+        description: 'Contrôlez les prélèvements et les rejets bancaires. Vérifiez les propositions de catégorisation et reliez mouvements, contacts et documents.',
       },
       step3: {
         title: 'Conformez',
-        description: "Générez les modèles 182, 347 et les certificats de don avec envoi direct depuis l'app. Suivez aussi l'exécution économique des projets, y compris en coopération et en multi-devises.",
+        description: "Préparez les modèles 182 et 347 et les certificats de don pour vérification. Avec le plan Complet, suivez aussi l'exécution économique et le multidevise au sein des projets.",
       },
       step4: {
         title: 'Obtenez',
@@ -2814,19 +2909,19 @@ const fr: PublicTranslations = {
       title: 'Ce que vous pouvez faire avec Summa Social',
       conciliation: {
         title: 'Rapprochement bancaire',
-        description: 'Importez des extraits et rapprochez automatiquement avec la documentation existante.',
+        description: 'Importez les relevés et vérifiez les propositions pour relier mouvements et documentation.',
       },
       remittances: {
         title: 'Prélèvements et rejets',
         description: 'Divisez les prélèvements groupés et gérez les rejets avec traçabilité.',
       },
       donations: {
-        title: 'Dons en ligne',
-        description: "Intégrez Stripe et d'autres passerelles pour enregistrer les dons web.",
+        title: 'Dons et donateurs',
+        description: 'Enregistrez les dons et conservez chaque contribution reliée à son donateur.',
       },
       fiscal: {
         title: 'Fiscalité et certificats',
-        description: 'Modèle 182, 347 et certificats de don générés automatiquement.',
+        description: 'Modèles 182 et 347 et certificats de don préparés pour vérification.',
       },
     },
     blocks: HOME_BLOCKS_FR,
@@ -2837,7 +2932,7 @@ const fr: PublicTranslations = {
       },
       projects: {
         title: 'Pour gestionnaires de projets',
-        description: "Suivi de l'exécution budgétaire, justification des subventions et export complet en un clic. Excel + factures en ZIP.",
+        description: "Suivi budgétaire, affectation des dépenses et XLSX structuré avec documentation regroupée pour préparer la justification.",
       },
     },
     whoWeAre: {
@@ -2878,9 +2973,9 @@ const fr: PublicTranslations = {
     mainTitle: '15 Principales Fonctionnalités de Summa Social',
     list: {
       conciliation: {
-        title: '1. Rapprochement Bancaire Automatique',
+        title: '1. Rapprochement Bancaire Assisté',
         description:
-          'Importez le relevé de la banque et Summa Social trouve automatiquement les mouvements en double et les lie aux opérations déjà enregistrées. Tout reste traçable par compte bancaire.',
+          'Importez le relevé bancaire : Summa Social détecte les doublons possibles et vous permet de vérifier et relier les mouvements aux opérations enregistrées. Tout reste traçable par compte.',
         bullets: [
           "Importation de relevés (CSV, Excel, OFX) de n'importe quelle banque",
           'Détection automatique des doublons',
@@ -2889,14 +2984,14 @@ const fr: PublicTranslations = {
         ],
       },
       aiAssignment: {
-        title: '2. Affectation Intelligente avec IA',
+        title: '2. Propositions de Catégorisation avec IA',
         description:
-          "Quand vous importez des mouvements, Summa Social reconnaît automatiquement vos fournisseurs, adhérents, donateurs et employés. L'intelligence artificielle intervient quand nécessaire, apprend de vos décisions antérieures et devient de plus en plus intelligente.",
+          'Lors de l’import des mouvements, Summa Social propose fournisseurs, membres, donateurs, salariés et catégories à partir des données disponibles, pour vérification avant confirmation.',
         bullets: [
-          'Reconnaissance automatique par nom, IBAN ou NIF',
-          'Affectation automatique de catégorie par défaut',
+          'Propositions par nom, IBAN ou NIF',
+          'Proposition de catégorie à vérifier',
           'Mémoire des décisions antérieures',
-          'Apprentissage progressif avec IA',
+          'Assistance par IA lorsque nécessaire',
         ],
       },
       remittancesDivider: {
@@ -2913,30 +3008,30 @@ const fr: PublicTranslations = {
       expensesSepa: {
         title: '4. Gestionnaire de Dépenses et Salaires avec Générateur de Virements SEPA',
         description:
-          'Glissez rapidement factures et fiches de paie dans Summa Social, confirmez les données extraites automatiquement (IA) et générez un virement à télécharger sur la banque.',
+          'Glissez factures et fiches de paie dans Summa Social, vérifiez les données extraites avec assistance IA et générez un virement à télécharger sur la banque.',
         ticketsNote:
-          'Nouveauté : capture de tickets, voyages et kilométrage avec notes de frais automatiques en PDF.',
+          'Nouveauté : capture de tickets, voyages et kilométrage avec notes de frais en PDF régénérable.',
         bullets: [
           'Virements de paiement (SEPA) pour factures et salaires',
-          'Extraction automatique de données avec IA',
+          'Extraction assistée de données avec IA',
           'Notes de frais pour tickets, voyages et kilométrage avec PDF régénérable',
           'Lien clair document ↔ paiement ↔ mouvement bancaire',
-          'Quand le relevé arrive : rapprochement automatique',
+          'Quand le relevé arrive : vérification et liaison avec le mouvement',
         ],
       },
       fiscal: {
-        title: '5. Gestion Fiscale Automatisée (Modèle 182 et 347)',
+        title: '5. Préparation Fiscale (Modèle 182 et 347)',
         description:
-          "Génère les fichiers pour l'administration fiscale avec validation préalable et formats prêts à envoyer au comptable.",
+          "Prépare les fichiers fiscaux et les contrôles pour vérification par l'organisation ou le cabinet comptable avant dépôt.",
         bullets: [
           'Modèle 182 avec validation des exigences légales',
-          'Modèle 347 automatique',
+          'Préparation du Modèle 347',
           'Vérification de NIF et données postales',
           'Exportation Excel pour le comptable',
         ],
       },
       donationCertificates: {
-        title: '6. Certificats de Don Automatiques',
+        title: '6. Certificats de Don',
         bullets: [
           'Génération PDF avec logo et signature numérique',
           'Envoi individuel ou massif par email',
@@ -2948,7 +3043,7 @@ const fr: PublicTranslations = {
         title: '7. Classification des Mouvements avec Mémoire',
         bullets: [
           'Catégories comptables personnalisables',
-          'Auto-catégorisation intelligente avec IA',
+          'Propositions de catégorisation avec IA',
           'Mémoire persistante',
           'Affectation massive par lots',
         ],
@@ -2976,18 +3071,18 @@ const fr: PublicTranslations = {
         title: '10. Gestion des Rejets Bancaires',
         bullets: [
           'Importateur spécifique de rejets',
-          'Matching automatique avec le donateur',
+          'Liaison manuelle avec le donateur',
           'Suivi des cotisations en attente',
-          'Exclusion automatique du Modèle 182',
+          'Rejet pris en compte dans la préparation du Modèle 182',
         ],
       },
       stripeIntegration: {
-        title: '11. Intégration Stripe pour Dons en Ligne',
+        title: '11. Enregistrement et Historique des Dons',
         bullets: [
-          'Séparation don vs commission',
-          'Matching par email',
-          'Création automatique de donateurs',
-          'Traçabilité complète',
+          'Enregistrement individuel des dons',
+          'Liaison avec la fiche du donateur',
+          'Historique économique et fiscal',
+          'Traçabilité de chaque contribution',
         ],
       },
       projectsModule: {
@@ -3292,7 +3387,7 @@ const pt: PublicTranslations = {
       messagePlaceholder:
         'Explique-nos brevemente quantos sócios ou doadores têm, se fazem remessas, se querem importar movimentos bancários ou se precisam de preparar modelos fiscais.',
       planMessages: {
-        initial: 'Quero começar com o plano Inicial.',
+        control: 'Quero começar com o plano Controlo.',
         management: 'Quero começar com o plano Gestão.',
         complete: 'Gostaria de falar sobre o plano Completo.',
       },
@@ -3302,18 +3397,21 @@ const pt: PublicTranslations = {
     navLabel: 'Preços',
     metaTitle: 'Preços | Summa Social',
     metaDescription:
-      'Planos do Summa Social para entidades pequenas e médias, com implementação inicial conforme dados e processo.',
-    title: 'Preços simples para gerir a economia com mais controlo',
+      'Planos do Summa Social desde 49 €/mês para controlar banco, sócios e doações, ligar documentos e gerir projetos.',
+    title: 'Escolham até onde querem levar o controlo económico da vossa entidade',
     subtitle:
-      'O Summa Social combina movimentos bancários, doadores, remessas, certificados e documentação numa ferramenta pensada para entidades sociais pequenas e médias.',
+      'Todos os planos permitem importar o banco e gerir sócios, quotas e doações. Acrescentem documentação ou projetos quando a gestão o exigir.',
     claim: 'Planos desde 49 €/mês.',
     orientationTitle: 'Escolham o plano segundo a complexidade da gestão',
-    orientationText: '',
+    orientationText: 'A diferença não é o tamanho da entidade, mas até onde querem centralizar a gestão.',
     orientationPoints: [
-      'Quotas, sócios e fiscalidade básica',
-      'Controlo bancário e revisão económica ordinária',
-      'Documentos, contabilidade e projetos',
+      'Controlo: banco, sócios, quotas e doações',
+      'Gestão: documentos ligados aos movimentos',
+      'Completo: fecho, projetos e orçamentos',
     ],
+    differentiatorTitle: 'Todos os planos permitem importar extratos bancários',
+    differentiatorText:
+      'A diferença entre Controlo e Gestão é documental: com Gestão também podem carregar e ligar faturas, folhas de pagamento, tickets e outros comprovativos aos movimentos.',
     implantationTitle: 'Implementação inicial',
     implantationText:
       'Antes de trabalhar bem, é preciso ordenar os dados de partida: contactos, extratos, categorias, remessas e critérios fiscais. Por isso o Summa Social inclui uma implementação inicial orçamentada segundo o caso.',
@@ -3323,24 +3421,28 @@ const pt: PublicTranslations = {
     implantationNoteTitle: 'Antes de começar, analisamos o vosso caso.',
     implantationNoteText:
       'A implementação inicial é orçamentada segundo o volume de dados e o acompanhamento necessário. Não pagarão nenhuma mensalidade até acordarmos o plano, o valor inicial e os primeiros passos.',
-    decisionTitle: 'Em caso de dúvida, comecem pelo plano Gestão',
-    decisionText: '',
+    decisionTitle: 'Em caso de dúvida, ajudamos a escolher sem sobredimensionar o plano',
+    decisionText: 'Analisaremos como gerem o banco, a documentação e os projetos antes de recomendar uma opção.',
     cta: 'Falemos do vosso caso',
     plans: [
       {
-        id: 'initial',
-        name: 'Inicial',
+        id: 'control',
+        name: 'Controlo',
         price: '49 €/mês',
-        badge: 'Para começar',
-        cta: 'Quero começar com Inicial',
+        badge: 'Controlo essencial',
+        cta: 'Quero controlar banco e doações',
         description:
-          'Para entidades pequenas que querem ordenar sócios, quotas, certificados e a fiscalidade anual básica.',
+          'Para entidades que guardam a documentação fora do Summa, mas querem controlar os movimentos, os sócios e as doações.',
         features: [
+          'Importação e revisão de extratos bancários',
+          'Criação e edição manual de movimentos',
           'Sócios, doadores e contactos',
-          'Emissão de remessas',
+          'Quotas e remessas SEPA',
+          'Gestão manual de devoluções',
           'Certificados de donativo',
-          'Modelo 182',
+          'Preparação do Modelo 182, sujeita a revisão',
         ],
+        limit: 'Não inclui carregar nem ligar documentos aos movimentos.',
       },
       {
         id: 'management',
@@ -3349,36 +3451,55 @@ const pt: PublicTranslations = {
         badge: 'Recomendado',
         cta: 'Quero começar com Gestão',
         recommended: true,
-        description:
-          'O plano natural para entidades que, além de quotas e certificados, precisam de controlo bancário e revisão económica regular.',
+        description: 'Para entidades que querem centralizar faturas, folhas de pagamento, tickets e comprovativos e relacioná-los com os movimentos bancários.',
         features: [
-          'Todo o plano Inicial',
-          'Importação de movimentos bancários',
-          'Gestão de devoluções',
-          'Gestão de cobranças online',
-          'Carregamento ilimitado de faturas, folhas de pagamento, recibos e documentos ligados a cada movimento bancário',
-          'Categorização com IA',
-          'Modelo 347',
+          'Todo o plano Controlo',
+          'Carregamento e ligação de documentos aos movimentos',
+          'Controlo de movimentos sem documento',
+          'Categorização assistida com IA',
+          'Preparação do Modelo 347, sujeita a revisão',
         ],
       },
       {
         id: 'complete',
         name: 'Completo',
         price: '119 €/mês',
-        badge: 'Contabilidade e projetos',
-        cta: 'Falemos do plano Completo',
+        badge: 'Fecho e projetos',
+        cta: 'Quero gerir projetos e fechos',
         description:
-          'Para entidades que querem chegar à contabilidade e aos projetos com documentos, despesas e justificações mais preparadas.',
+          'Para entidades que querem preparar o fecho económico e gerir orçamentos, despesas e justificações de projetos.',
         features: [
           'Todo o plano Gestão',
-          'Atribuição automática de documentos pendentes',
-          'Exportação para contabilidade',
-          'Módulo de projetos',
-          'Justificação económica de subvenções',
-          'Multidivisa com cálculo automático',
-          'Captura de recibos ou tickets com fotografia e extração com IA',
+          'Caixa de documentos prévios ou pendentes de ligação',
+          'Propostas de reconciliação assistida de documentos',
+          'Captura de tickets e extração assistida de dados',
+          'Pacote de fecho com movimentos e documentos',
+          'Projetos, rubricas e orçamentos',
+          'Multidivisa dentro dos projetos',
+          'XLSX estruturado para preparar a justificação económica',
         ],
       },
+    ],
+    comparisonTitle: 'Comparem os três planos',
+    comparisonDescription: 'O banco é comum a todos os planos. Gestão acrescenta a documentação e Completo, o fecho e os projetos.',
+    comparisonFeatureLabel: 'Funcionalidade',
+    comparisonIncludedLabel: 'Incluído',
+    comparisonNotIncludedLabel: 'Não incluído',
+    comparisonRows: [
+      { feature: 'Importação e revisão bancária', control: true, management: true, complete: true },
+      { feature: 'Sócios, doadores, SEPA, devoluções manuais, certificados e Modelo 182', control: true, management: true, complete: true },
+      { feature: 'Documentos ligados aos movimentos', control: false, management: true, complete: true },
+      { feature: 'Controlo sem documento, IA assistida e Modelo 347', control: false, management: true, complete: true },
+      { feature: 'Caixa prévia, OCR e pacote de fecho', control: false, management: false, complete: true },
+      { feature: 'Projetos, orçamentos, multidivisa em projetos e XLSX estruturado', control: false, management: false, complete: true },
+    ],
+    faqTitle: 'Perguntas frequentes sobre os planos',
+    faqItems: [
+      { question: 'O plano Controlo permite importar o banco?', answer: 'Sim. A importação e revisão de extratos bancários está incluída em todos os planos.' },
+      { question: 'Qual é a principal diferença entre Controlo e Gestão?', answer: 'Controlo permite trabalhar os movimentos bancários, mas não adicionar-lhes documentação. Gestão permite carregar e ligar faturas, folhas de pagamento, tickets e outros comprovativos.' },
+      { question: 'O Summa apresenta os modelos fiscais?', answer: 'Não. O Summa prepara a informação e os ficheiros para que a entidade ou a sua assessoria os reveja e apresente.' },
+      { question: 'O Summa substitui a contabilidade?', answer: 'Não. Organiza e prepara a informação económica para que a entidade e a contabilidade trabalhem com mais controlo.' },
+      { question: 'O que acontece se mudar para um plano inferior?', answer: 'Os dados e documentos existentes são conservados. Poderão consultá-los e descarregá-los, mas deixarão de poder criar ou modificar os elementos reservados ao plano anterior.' },
     ],
   },
   home: {
@@ -3394,7 +3515,7 @@ const pt: PublicTranslations = {
     nav: {
       conciliation: 'Reconciliação',
       remittances: 'Remessas e devoluções',
-      onlineDonations: 'Doações online',
+      onlineDonations: 'Doações e doadores',
       fiscalCertificates: 'Fiscalidade e certificados',
       invoicesSepa: 'Faturas e SEPA',
       ticketsSettlements: 'Tickets e liquidações',
@@ -3416,15 +3537,15 @@ const pt: PublicTranslations = {
       vision:
         'Visão clara e atualizada: Dashboard com métricas em tempo real. Receitas, despesas, saldo e alertas, tudo visível de relance. Relatórios automáticos para direção ou conselho.',
       control:
-        'Controlo absoluto de cada euro: Rastreabilidade completa do comprovativo ao movimento bancário. Justificação de subsídios com um clique: Excel + todas as faturas num ZIP.',
+        'Rastreabilidade de cada movimento: relaciona o comprovativo com o movimento bancário e obtém um XLSX estruturado com os documentos agrupados para preparar a justificação.',
       result:
         'O resultado: mais tempo para a missão da entidade, menos tempo com folhas de cálculo e tarefas repetitivas. Gestão económica profissional, acessível e sem complicações.',
     },
     sections: {
       conciliation: {
-        title: 'Reconciliação bancária automática e acompanhamento de contas',
+        title: 'Reconciliação bancária assistida e acompanhamento de contas',
         description:
-          'Quando se importa o extrato bancário, Summa Social relaciona o que já foi trabalhado previamente com o que reflete o banco. Os movimentos são reconciliados com a documentação, os pagamentos e as remessas existentes, evitando duplicados e erros de transcrição.',
+          'Quando o extrato bancário é importado, o Summa Social centraliza os movimentos e ajuda a relacioná-los com a documentação, os pagamentos e as remessas existentes para que a entidade possa rever e confirmar o resultado.',
       },
       remittances: {
         title: 'Gestão completa de remessas de sócios e devoluções',
@@ -3432,15 +3553,15 @@ const pt: PublicTranslations = {
           'Quando a entidade recebe uma remessa agrupada do banco — por quotas de sócios ou contribuições periódicas — Summa Social permite decompor esta receita e colocar cada montante no seu lugar. A remessa deixa de ser um valor único e passa a ser o detalhe necessário para saber quem contribuiu o quê e quando.',
       },
       onlineDonations: {
-        title: 'Registo e controlo preciso de doações online e receitas web',
+        title: 'Registo e controlo de doações',
         description:
-          'Quando a entidade recebe doações através da web, as receitas chegam à conta de forma agrupada. Summa Social permite incorporar estas receitas no sistema, identificar cada doação individual e situá-la no conjunto da gestão económica, mantendo a ligação com a pessoa que fez a contribuição.',
+          'O Summa Social permite registar as doações, relacioná-las com cada pessoa e manter o histórico económico e fiscal organizado no mesmo sistema.',
       },
       fiscalCertificates: {
         title:
-          'Elaboração e envio num clique de modelos fiscais (182 e 347) e certificados de doação',
+          'Preparação de modelos fiscais (182 e 347) e certificados de doação',
         description:
-          'À medida que a informação económica foi trabalhada com critério — receitas, despesas, remessas e devoluções — a fiscalidade deixa de ser um exercício de reconstrução. Summa Social permite gerar os modelos fiscais e os certificados de doação a partir do que já está ordenado e verificado no sistema.',
+          'À medida que a informação económica é trabalhada com critério — receitas, despesas, remessas e devoluções — o Summa Social prepara os modelos fiscais e os certificados a partir dos dados ordenados para revisão antes da apresentação ou partilha.',
       },
       invoicesSepa: {
         title:
@@ -3450,7 +3571,7 @@ const pt: PublicTranslations = {
       },
       ticketsSettlements: {
         title:
-          'Captura de imagens de recibos e tickets de viagem, e elaboração automática de liquidações',
+          'Captura de recibos e tickets com extração assistida de dados',
         description:
           'Quando a equipa da entidade faz deslocações, viagens ou atividades fora do escritório, Summa Social permite capturar imediatamente os recibos e tickets gerados. Uma simples fotografia do telemóvel é suficiente para que estes comprovativos fiquem registados no sistema, associados à pessoa e ao contexto.',
       },
@@ -3478,11 +3599,11 @@ const pt: PublicTranslations = {
       },
       step2: {
         title: 'Gere',
-        description: 'Controla remessas de sócios, devoluções bancárias e cobranças Stripe. Reconcilia movimentos e categoriza receitas e despesas com assistência automática.',
+        description: 'Controla remessas de sócios e devoluções bancárias. Revê propostas de categorização e relaciona movimentos com contactos e documentos.',
       },
       step3: {
         title: 'Cumpre',
-        description: 'Gera Modelo 182, 347 e certificados de doação com envio direto a partir da app. Controla também a execução económica dos projetos, incluindo cooperação e várias moedas.',
+        description: 'Prepara os Modelos 182 e 347 e os certificados de doação para revisão. No plano Completo, controla também a execução económica e a multidivisa dentro dos projetos.',
       },
       step4: {
         title: 'Obtém',
@@ -3499,19 +3620,19 @@ const pt: PublicTranslations = {
       title: 'O que podes fazer com Summa Social',
       conciliation: {
         title: 'Reconciliação bancária',
-        description: 'Importa extratos e reconcilia automaticamente com a documentação existente.',
+        description: 'Importa extratos e revê as propostas para relacionar movimentos e documentação.',
       },
       remittances: {
         title: 'Remessas e devoluções',
         description: 'Divide remessas agrupadas e gere devoluções com rastreabilidade.',
       },
       donations: {
-        title: 'Doações online',
-        description: 'Integra Stripe e outras gateways para registar doações web.',
+        title: 'Doações e doadores',
+        description: 'Regista doações e mantém cada contribuição relacionada com o respetivo doador.',
       },
       fiscal: {
         title: 'Fiscalidade e certificados',
-        description: 'Modelo 182, 347 e certificados de doação gerados automaticamente.',
+        description: 'Modelos 182 e 347 e certificados de doação preparados para revisão.',
       },
     },
     blocks: HOME_BLOCKS_PT,
@@ -3522,7 +3643,7 @@ const pt: PublicTranslations = {
       },
       projects: {
         title: 'Para gestores de projetos',
-        description: 'Seguimento da execução orçamental, justificação de subsídios e exportação completa com um clique. Excel + faturas em ZIP.',
+        description: 'Seguimento orçamental, imputação de despesas e XLSX estruturado com documentação agrupada para preparar a justificação.',
       },
     },
     whoWeAre: {
@@ -3563,9 +3684,9 @@ const pt: PublicTranslations = {
     mainTitle: '15 Principais Funcionalidades do Summa Social',
     list: {
       conciliation: {
-        title: '1. Reconciliação Bancária Automática',
+        title: '1. Reconciliação Bancária Assistida',
         description:
-          'Importa o extrato do banco e Summa Social encontra automaticamente os movimentos duplicados e liga-os às operações já registadas. Tudo fica rastreável por conta bancária.',
+          'Importa o extrato bancário: o Summa Social deteta possíveis duplicados e permite rever e relacionar os movimentos com as operações registadas. Tudo fica rastreável por conta.',
         bullets: [
           'Importação de extratos (CSV, Excel, OFX) de qualquer banco',
           'Deteção automática de duplicados',
@@ -3574,14 +3695,14 @@ const pt: PublicTranslations = {
         ],
       },
       aiAssignment: {
-        title: '2. Atribuição Inteligente com IA',
+        title: '2. Propostas de Categorização com IA',
         description:
-          'Quando importas movimentos, Summa Social reconhece automaticamente os teus fornecedores, sócios, doadores e trabalhadores. A inteligência artificial intervém quando necessário, aprende das tuas decisões anteriores e fica cada vez mais inteligente.',
+          'Ao importar movimentos, o Summa Social propõe fornecedores, sócios, doadores, trabalhadores e categorias a partir dos dados disponíveis para revisão antes da confirmação.',
         bullets: [
-          'Reconhecimento automático por nome, IBAN ou NIF',
-          'Atribuição automática de categoria por defeito',
+          'Propostas por nome, IBAN ou NIF',
+          'Proposta de categoria para revisão',
           'Memória de decisões anteriores',
-          'Aprendizagem progressiva com IA',
+          'Assistência com IA quando necessário',
         ],
       },
       remittancesDivider: {
@@ -3598,30 +3719,30 @@ const pt: PublicTranslations = {
       expensesSepa: {
         title: '4. Gestor de Despesas e Ordenados com Gerador de Remessas SEPA',
         description:
-          'Arrasta rapidamente faturas e ordenados para o Summa Social, confirma os dados extraídos automaticamente (IA) e gera uma remessa de pagamentos para carregar no banco.',
+          'Arrasta faturas e ordenados para o Summa Social, revê os dados extraídos com assistência de IA e gera uma remessa de pagamentos para carregar no banco.',
         ticketsNote:
-          'Novidade: captura de tickets, viagens e quilometragem com liquidações automáticas em PDF.',
+          'Novidade: captura de tickets, viagens e quilometragem com liquidações em PDF regenerável.',
         bullets: [
           'Remessas de pagamento (SEPA) para faturas e ordenados',
-          'Extração automática de dados com IA',
+          'Extração assistida de dados com IA',
           'Liquidações de tickets, viagens e quilometragem com PDF regenerável',
           'Ligação clara documento ↔ pagamento ↔ movimento bancário',
-          'Quando entra o extrato: reconciliação automática',
+          'Quando entra o extrato: revisão e ligação com o movimento',
         ],
       },
       fiscal: {
-        title: '5. Gestão Fiscal Automatizada (Modelo 182 e 347)',
+        title: '5. Preparação Fiscal (Modelo 182 e 347)',
         description:
-          'Gera os ficheiros para a Autoridade Tributária com validação prévia e formatos prontos para enviar ao contabilista.',
+          'Prepara os ficheiros fiscais e as validações para revisão pela entidade ou pelo contabilista antes da apresentação.',
         bullets: [
           'Modelo 182 com validação de requisitos legais',
-          'Modelo 347 automático',
+          'Preparação do Modelo 347',
           'Verificação de NIF e dados postais',
           'Exportação Excel para o contabilista',
         ],
       },
       donationCertificates: {
-        title: '6. Certificados de Doação Automáticos',
+        title: '6. Certificados de Doação',
         bullets: [
           'Geração PDF com logo e assinatura digital',
           'Envio individual ou massivo por email',
@@ -3633,7 +3754,7 @@ const pt: PublicTranslations = {
         title: '7. Classificação de Movimentos com Memória',
         bullets: [
           'Categorias contabilísticas personalizáveis',
-          'Auto-categorização inteligente com IA',
+          'Propostas de categorização com IA',
           'Memória persistente',
           'Atribuição massiva por lotes',
         ],
@@ -3661,18 +3782,18 @@ const pt: PublicTranslations = {
         title: '10. Gestão de Devoluções Bancárias',
         bullets: [
           'Importador específico de devoluções',
-          'Matching automático com o doador',
+          'Ligação manual com o doador',
           'Acompanhamento de quotas pendentes',
-          'Exclusão automática do Modelo 182',
+          'Devolução refletida na preparação do Modelo 182',
         ],
       },
       stripeIntegration: {
-        title: '11. Integração Stripe para Doações Online',
+        title: '11. Registo e Histórico de Doações',
         bullets: [
-          'Separação doação vs comissão',
-          'Matching por email',
-          'Criação automática de doadores',
-          'Rastreabilidade completa',
+          'Registo individual de doações',
+          'Ligação à ficha do doador',
+          'Histórico económico e fiscal',
+          'Rastreabilidade de cada contribuição',
         ],
       },
       projectsModule: {

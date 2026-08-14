@@ -488,6 +488,7 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
   }
 
   const openBillingDialog = (org: AdminControlTowerSummary['entities'][number]) => {
+    billingIdempotencyKeyRef.current = crypto.randomUUID()
     setBillingOrg(org)
     setBillingForm({
       plan: org.billingPlan ?? 'none',
@@ -507,32 +508,56 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
     return Number.isFinite(amount) && amount >= 0 ? amount : null
   }
 
+  const billingIdempotencyKeyRef = React.useRef<string | null>(null)
+
   const handleSaveBilling = async () => {
-    if (!billingOrg) return
+    if (!billingOrg || !user) return
+
+    if (billingForm.plan === 'none' || billingForm.status === 'none') {
+      toast({
+        variant: 'destructive',
+        title: tr('admin.billing.validation.planStatusTitle', 'Pla comercial incomplet'),
+        description: tr(
+          'admin.billing.validation.planStatusDescription',
+          'Selecciona un pla i un estat per actualitzar la subscripció.'
+        ),
+      })
+      return
+    }
 
     setIsSavingBilling(true)
     try {
       const monthlyAmount = parseBillingAmount(billingForm.monthlyAmount)
       const implantationAmount = parseBillingAmount(billingForm.implantationAmount)
-      const payload: Record<string, string | number | null> = {
-        billingPlan: billingForm.plan === 'none' ? null : billingForm.plan,
-        billingStatus: billingForm.status === 'none' ? null : billingForm.status,
+      const payload = {
+        orgId: billingOrg.id,
+        planId: billingForm.plan,
+        status: billingForm.status,
+        reason: 'Actualització de subscripció des de la Torre de Control',
+        idempotencyKey: billingIdempotencyKeyRef.current ??= crypto.randomUUID(),
         billingMonthlyAmount: monthlyAmount,
         billingImplantationAmount: implantationAmount,
         billingContactEmail: billingForm.contactEmail.trim() || null,
         billingStartedAt: billingForm.startedAt.trim() || null,
         billingNotes: billingForm.notes.trim() || null,
-        billingUpdatedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       }
-
-      await updateDoc(doc(firestore, 'organizations', billingOrg.id), payload)
+      const token = await user.getIdToken()
+      const response = await fetch('/api/admin/organization-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      })
+      if (!response.ok) {
+        const result = await response.json().catch(() => null) as { code?: string } | null
+        throw new Error(result?.code || 'No s’ha pogut actualitzar la subscripció.')
+      }
 
       toast({
         title: billingCopy.saved,
         description: billingOrg.name,
       })
       setBillingOrg(null)
+      billingIdempotencyKeyRef.current = null
       refreshSummary()
     } catch (error) {
       console.error('Error updating billing plan:', error)

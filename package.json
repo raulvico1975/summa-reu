@@ -21,6 +21,7 @@
     "demo:up:work": "node scripts/demo/up.mjs --mode work",
     "qa:user": "node scripts/qa/user-standard.mjs",
     "qa:user:test": "node --test scripts/qa/__tests__/*.test.mjs",
+    "qa:entitlements:emulator": "node scripts/qa/run-plan-entitlements-emulator.mjs",
     "prepare": "husky",
     "updates:drafts": "npx tsx scripts/generate-product-update-drafts.ts",
     "test:blog-publish-local": "node --import tsx scripts/test-blog-publish-local.ts",
@@ -71,6 +72,10 @@
     "marketing:templates": "node scripts/marketing/generate-bank-reconciliation-template.mjs",
     "marketing:indexnow": "node --import tsx scripts/marketing/submit-indexnow.ts",
     "migrate:capabilities": "node scripts/migrations/backfill-member-capabilities.mjs",
+    "entitlements:seed:dry-run": "node --import tsx scripts/migrations/seed-entitlement-system-config.ts",
+    "entitlements:documents:audit": "node --import tsx scripts/migrations/audit-transaction-document-registry.ts",
+    "entitlements:shadow:report": "node --import tsx scripts/migrations/report-entitlements-shadow.ts",
+    "entitlements:preflight": "node --import tsx scripts/migrations/preflight-entitlements-cutover.ts",
     "images:landings:optimize": "node scripts/images/optimize-landing-assets.mjs"
     ,
     "editorial:seed-historical": "node --import tsx scripts/editorial/seed-historical.ts",

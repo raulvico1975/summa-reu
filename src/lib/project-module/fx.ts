@@ -1,4 +1,4 @@
-import type { ExpenseAssignment } from '@/lib/project-module-types';
+import type { ExpenseAssignment, FxTransfer, Project } from '@/lib/project-module-types';
 
 interface FxExpenseLike {
   source?: string | null;
@@ -126,4 +126,17 @@ export function computeSafeFxAssignmentAmountEUR(options: {
   }
 
   return null;
+}
+
+export function computeWeightedProjectFxRate(transfers: FxTransfer[]): number | null {
+  if (transfers.length === 0) return null;
+  const totalEur = transfers.reduce((sum, transfer) => sum + transfer.eurSent, 0);
+  const totalLocal = transfers.reduce((sum, transfer) => sum + transfer.localReceived, 0);
+  return totalLocal > 0 ? totalEur / totalLocal : null;
+}
+
+export function getEffectiveProjectFxRate(transfers: FxTransfer[], project: Project): number | null {
+  const weighted = computeWeightedProjectFxRate(transfers);
+  if (weighted !== null) return weighted;
+  return project.fxRate && project.fxRate > 0 ? 1 / project.fxRate : null;
 }

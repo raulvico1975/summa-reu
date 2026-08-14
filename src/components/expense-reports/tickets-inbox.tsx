@@ -90,6 +90,7 @@ interface TicketsInboxProps {
   storage: FirebaseStorage;
   organizationId: string;
   canOperate: boolean;
+  canUseOcr: boolean;
 }
 
 type TicketFilter = 'all' | 'unassigned' | 'assigned';
@@ -120,6 +121,7 @@ export function TicketsInbox({
   storage,
   organizationId,
   canOperate,
+  canUseOcr,
 }: TicketsInboxProps) {
   const { t } = useTranslations();
   const { toast } = useToast();
@@ -212,7 +214,7 @@ export function TicketsInbox({
 
       // Reparar amb chunking (màx 50 operacions per batch)
       const BATCH_LIMIT = 50;
-      try {
+      if (canUseOcr) try {
         for (let i = 0; i < orphanedTicketIds.length; i += BATCH_LIMIT) {
           const chunk = orphanedTicketIds.slice(i, i + BATCH_LIMIT);
           const batch = writeBatch(firestore);
@@ -323,6 +325,7 @@ export function TicketsInbox({
 
   // Funcions de selecció
   const handleToggleSelect = (ticketId: string) => {
+    if (!canOperate) return;
     setSelectedTicketIds((prev) => {
       const next = new Set(prev);
       if (next.has(ticketId)) {
@@ -335,6 +338,7 @@ export function TicketsInbox({
   };
 
   const handleSelectAll = () => {
+    if (!canOperate) return;
     if (selectedTicketIds.size === selectableTickets.length) {
       // Deseleccionar tot
       setSelectedTicketIds(new Set());
@@ -350,6 +354,7 @@ export function TicketsInbox({
 
   // Obrir modal d'assignació
   const handleOpenAssignModal = () => {
+    if (!canOperate) return;
     setAssignMode('existing');
     setSelectedReportId('');
     setNewReportForm({
@@ -364,7 +369,7 @@ export function TicketsInbox({
 
   // Assignació batch atòmica
   const handleAssignToReport = async () => {
-    if (selectedTicketIds.size === 0) return;
+    if (!canOperate || selectedTicketIds.size === 0) return;
 
     setIsAssigning(true);
 
@@ -533,6 +538,7 @@ export function TicketsInbox({
 
   // Obrir editor
   const handleEdit = (ticket: PendingDocument) => {
+    if (!canOperate) return;
     setEditingTicket(ticket);
     setEditForm({
       invoiceDate: ticket.invoiceDate ?? '',
@@ -544,7 +550,7 @@ export function TicketsInbox({
 
   // Guardar edició
   const handleSaveEdit = async () => {
-    if (!editingTicket) return;
+    if (!canOperate || !editingTicket) return;
 
     setIsSaving(true);
     try {
@@ -582,6 +588,7 @@ export function TicketsInbox({
 
   // Processar amb IA
   const handleProcessWithAI = async (ticket: PendingDocument) => {
+    if (!canOperate || !canUseOcr) return;
     setProcessingTicketId(ticket.id);
 
     try {
@@ -602,6 +609,8 @@ export function TicketsInbox({
           orgId: organizationId,
           storagePath: ticket.file.storagePath,
           docId: ticket.id,
+          context: 'movements',
+          target: 'pending',
         }),
       });
 
@@ -611,19 +620,7 @@ export function TicketsInbox({
         throw new Error(result.message || 'Error de IA');
       }
 
-      // Aplicar resultats només als camps buits (no sobreescriure manuals)
-      const patch: Record<string, string | number | null> = {};
-
-      if (result.date && !ticket.invoiceDate) {
-        patch.invoiceDate = result.date;
-      }
-
-      if (result.amount !== null && ticket.amount === null) {
-        patch.amount = result.amount;
-      }
-
-      if (Object.keys(patch).length > 0) {
-        await updatePendingDocument(firestore, organizationId, ticket.id, patch);
+      if (result.persisted && result.confidence > 0) {
         toast({
           title: t.ticketsInbox?.toasts?.aiFilledTitle ?? 'Camps omplerts amb IA',
         });
@@ -649,7 +646,7 @@ export function TicketsInbox({
 
   // Handler per pujar foto directa de la càmera
   const handleTicketImageUpload = async (file: File) => {
-    if (!file || !organizationId || !firestore || !storage) return;
+    if (!canOperate || !file || !organizationId || !firestore || !storage) return;
 
     setIsUploadingPhoto(true);
 
@@ -760,6 +757,7 @@ export function TicketsInbox({
 
   // Arxivar
   const handleArchive = async (ticket: PendingDocument) => {
+    if (!canOperate) return;
     try {
       await archivePendingDocument(firestore, organizationId, ticket);
       toast({ title: t.ticketsInbox?.toasts?.archivedTitle ?? 'Ticket arxivat' });
@@ -1019,19 +1017,21 @@ export function TicketsInbox({
                     {canOperate && (
                       <div className="flex items-center gap-1">
                         {/* Processar amb IA */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleProcessWithAI(ticket)}
-                          disabled={processingTicketId === ticket.id}
-                          title={t.ticketsInbox?.tooltips?.fillWithAI ?? 'Omplir amb IA'}
-                        >
-                          {processingTicketId === ticket.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Sparkles className="h-4 w-4" />
-                          )}
-                        </Button>
+                        {canUseOcr && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleProcessWithAI(ticket)}
+                            disabled={processingTicketId === ticket.id}
+                            title={t.ticketsInbox?.tooltips?.fillWithAI ?? 'Omplir amb IA'}
+                          >
+                            {processingTicketId === ticket.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
 
                         {/* Editar */}
                         <Button
@@ -1304,8 +1304,10 @@ export function TicketsInbox({
 
       {/* Modal de pujada de tickets */}
       <PendingDocumentsUploadModal
-        open={showUploadModal}
+        open={canOperate && showUploadModal}
         onOpenChange={setShowUploadModal}
+        canOperate={canOperate}
+        canUseOcr={canUseOcr}
       />
 
       {/* Input ocult per càmera directa */}

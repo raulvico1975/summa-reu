@@ -25,15 +25,28 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { ExpenseReportDetail } from '@/components/expense-reports/expense-report-detail';
 import { expenseReportRef, type ExpenseReport } from '@/lib/expense-reports';
+import { useProjectCommercialAccess } from '@/hooks/use-project-module';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export default function LiquidacioDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, organization } = useCurrentOrganization();
   const { firestore } = useFirebase();
   const { buildUrl } = useOrgUrl();
   const { t, tr } = useTranslations();
+  const { canMutateProjects } = useProjectCommercialAccess();
+  const { canUseCapability } = useEntitlements();
+  const { can } = usePermissions();
+  const canReadHistorical = canUseCapability('projects.readHistorical', {
+    userAllowed: can('sections.moviments') && can('moviments.editar'),
+  });
+  const canUseOcr = canUseCapability('pendingDocuments.ocr', {
+    operationalEnabled: organization?.features?.pendingDocs === true,
+    userAllowed: can('sections.moviments') && can('moviments.editar'),
+  });
 
   const reportId = params.id as string;
   const initialTab = searchParams.get('tab'); // 'kilometratge' o null
@@ -45,7 +58,7 @@ export default function LiquidacioDetailPage() {
 
   // Subscripció al document
   React.useEffect(() => {
-    if (!organizationId || !firestore || !reportId) {
+    if (!organizationId || !firestore || !reportId || !canReadHistorical) {
       setIsLoading(false);
       return;
     }
@@ -74,7 +87,7 @@ export default function LiquidacioDetailPage() {
     );
 
     return () => unsubscribe();
-  }, [organizationId, firestore, reportId, tr]);
+  }, [organizationId, firestore, reportId, tr, canReadHistorical]);
 
   // Handler per tancar (tornar al llistat)
   const handleClose = () => {
@@ -144,6 +157,8 @@ export default function LiquidacioDetailPage() {
       <ExpenseReportDetail
         report={report}
         onClose={handleClose}
+        canOperate={canMutateProjects && can('sections.moviments') && can('moviments.editar')}
+        canUseOcr={canUseOcr}
         scrollToSection={initialTab === 'kilometratge' ? 'kilometratge' : undefined}
       />
     </div>

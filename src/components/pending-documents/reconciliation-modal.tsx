@@ -107,32 +107,6 @@ export function ReconciliationModal({
     try {
       await linkDocumentToTransaction(firestore, storage, organizationId, pendingDoc, transaction.id);
 
-      // Cridar API de relink per copiar el fitxer a la ubicació estable
-      // Això garanteix que el document es copia immediatament després del match
-      try {
-        const { getAuth } = await import('firebase/auth');
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (user) {
-          const idToken = await user.getIdToken();
-          await fetch('/api/pending-documents/relink-document', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${idToken}`,
-            },
-            body: JSON.stringify({
-              orgId: organizationId,
-              pendingId: pendingDoc.id,
-            }),
-          });
-          // Ignorem el resultat - si falla, l'usuari pot fer "Re-vincular" manualment
-        }
-      } catch (relinkError) {
-        // Silenci - el link ja s'ha fet, relink és opcional
-        console.warn('[reconciliation-modal] Relink post-match failed (non-blocking):', relinkError);
-      }
-
       toast({
         title: t.reconciliation.linked,
         description: t.reconciliation.linkedDesc({ name: pendingDoc.invoiceNumber || pendingDoc.file.filename }),

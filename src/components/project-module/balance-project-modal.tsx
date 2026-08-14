@@ -59,6 +59,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useSaveExpenseLink } from '@/hooks/use-project-module';
+import { useProjectCommercialAccess } from '@/hooks/use-project-module';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { trackUX } from '@/lib/ux/trackUX';
@@ -225,6 +226,7 @@ export function BalanceProjectModal({
   const { t } = useTranslations();
   const { toast } = useToast();
   const { save: saveExpenseLink, isSaving } = useSaveExpenseLink();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   // Estat del mode guiat (activat si la prop és true, però pot desactivar-se internament)
   const [guidedModeActive, setGuidedModeActive] = React.useState(guidedMode);
@@ -751,6 +753,7 @@ export function BalanceProjectModal({
 
   // Aplicar canvis
   const applyChanges = async () => {
+    if (!canMutateProjects) return;
     if (simulatedMoves.length === 0) return;
 
     trackUX('balance.applyChanges.start', { moveCount: simulatedMoves.length });
@@ -1806,7 +1809,7 @@ export function BalanceProjectModal({
           <Button
             size="sm"
             onClick={applyChanges}
-            disabled={simulatedMoves.length === 0 || isApplying || isSaving}
+            disabled={!canMutateProjects || simulatedMoves.length === 0 || isApplying || isSaving}
           >
             {isApplying || isSaving ? (
               <>

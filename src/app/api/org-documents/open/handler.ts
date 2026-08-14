@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getStorage } from 'firebase-admin/storage';
 import { getAdminApp, getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
 import { extractStoragePathFromDocumentUrl } from '@/app/api/transaction-documents/open/handler';
+import { requirePermission } from '@/lib/api/require-permission';
+import { canAccessMovimentsRoute, canAccessProjectsArea } from '@/lib/permissions';
 
 const SIGNED_URL_TTL_MS = 15 * 60 * 1000;
 
@@ -67,6 +69,27 @@ export async function handleOpenOrgDocument(
   const membership = await validateUserMembership(db, auth.uid, orgId);
   if (!membership.valid) {
     return NextResponse.json({ success: false, code: 'NOT_MEMBER' }, { status: 403 });
+  }
+  const area = storagePath.split('/')[2];
+  if (
+    area === 'documents'
+    || area === 'transactions'
+    || area === 'pendingDocuments'
+    || area === 'prebankRemittances'
+    || area === 'sepaCollectionRuns'
+  ) {
+    const denied = requirePermission(membership, {
+      code: 'MOVIMENTS_ROUTE_REQUIRED',
+      check: canAccessMovimentsRoute,
+    });
+    if (denied) return denied;
+  }
+  if (area === 'offBankExpenses' || area === 'expenseReports') {
+    const denied = requirePermission(membership, {
+      code: 'PROJECT_MODULE_REQUIRED',
+      check: canAccessProjectsArea,
+    });
+    if (denied) return denied;
   }
 
   const bucket = deps.storageBucket ?? getStorage(getAdminApp()).bucket();

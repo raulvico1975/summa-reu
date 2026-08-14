@@ -1,5 +1,5 @@
 
-'use server';
+import 'server-only';
 
 /**
  * @fileOverview Automatically categorizes transactions using AI based on descriptions, amounts, and keywords.

@@ -20,7 +20,14 @@ import { getAuth, type Auth } from 'firebase-admin/auth';
 import type { Bucket } from '@google-cloud/storage';
 import { validateUserMembership } from '@/lib/api/admin-sdk';
 import { requireOperationalAccess } from '@/lib/api/require-operational-access';
-import { safeUpdate, SafeWriteValidationError } from '@/lib/safe-write';
+import { getMembershipPermissions } from '@/lib/api/require-permission';
+import { SafeWriteValidationError } from '@/lib/safe-write';
+import { resolveServerEntitlement, type EntitlementDbLike } from '@/lib/api/require-entitlement';
+import { mutateTransactionDocumentsAdmin } from '@/lib/server/transaction-document-registry';
+import {
+  buildPendingDocumentStorageIdentity,
+  pendingDocumentStoragePathsMatch,
+} from '@/lib/server/pending-document-storage-identity';
 
 // =============================================================================
 // FIREBASE ADMIN INITIALIZATION
@@ -135,6 +142,8 @@ interface RelinkDocumentRequest {
   pendingId: string;
 }
 
+const ID_PATTERN = /^[A-Za-z0-9_-]{1,160}$/;
+
 interface RelinkDocumentResponse {
   success: boolean;
   idempotent?: boolean;
@@ -148,10 +157,8 @@ interface RelinkDocumentDeps {
   getAdminStorageFn?: () => Bucket;
   validateUserMembershipFn?: typeof validateUserMembership;
   requireOperationalAccessFn?: typeof requireOperationalAccess;
-}
-
-function getOrganizationStoragePrefix(orgId: string): string {
-  return `organizations/${orgId}/`;
+  resolveEntitlementFn?: typeof resolveServerEntitlement;
+  mutateTransactionDocumentsAdminFn?: typeof mutateTransactionDocumentsAdmin;
 }
 
 export async function handleRelinkDocumentPost(
@@ -164,6 +171,8 @@ export async function handleRelinkDocumentPost(
   const getAdminStorageFn = deps.getAdminStorageFn ?? getAdminStorage;
   const validateUserMembershipFn = deps.validateUserMembershipFn ?? validateUserMembership;
   const requireOperationalAccessFn = deps.requireOperationalAccessFn ?? requireOperationalAccess;
+  const resolveEntitlementFn = deps.resolveEntitlementFn ?? resolveServerEntitlement;
+  const mutateTransactionDocumentsAdminFn = deps.mutateTransactionDocumentsAdminFn ?? mutateTransactionDocumentsAdmin;
 
   // 1. Autenticació
   const authResult = await verifyIdTokenFn(request);
@@ -192,7 +201,7 @@ export async function handleRelinkDocumentPost(
   const { orgId, pendingId } = body;
 
   // 3. Validar camps obligatoris
-  if (!orgId || !pendingId) {
+  if (typeof orgId !== 'string' || typeof pendingId !== 'string' || !ID_PATTERN.test(orgId) || !ID_PATTERN.test(pendingId)) {
     return NextResponse.json(
       { success: false, error: 'orgId i pendingId són obligatoris', code: 'MISSING_PARAMS' },
       { status: 400 }
@@ -203,6 +212,41 @@ export async function handleRelinkDocumentPost(
   const membership = await validateUserMembershipFn(db, uid, orgId);
   const accessError = requireOperationalAccessFn(membership);
   if (accessError) return accessError;
+  const permissions = getMembershipPermissions(membership);
+  const userAllowed = permissions['moviments.editar'] === true;
+  if (!userAllowed) {
+    return NextResponse.json(
+      { success: false, error: 'No tens permís per editar moviments.', code: 'PERMISSION_DENIED' },
+      { status: 403 }
+    );
+  }
+
+  const [pendingMutationEntitlement, pendingMatchEntitlement, transactionDocumentEntitlement] = await Promise.all([
+    resolveEntitlementFn({
+      db: db as unknown as EntitlementDbLike,
+      orgId,
+      capability: 'pendingDocuments.mutate',
+      userAllowed,
+    }),
+    resolveEntitlementFn({
+      db: db as unknown as EntitlementDbLike,
+      orgId,
+      capability: 'pendingDocuments.match',
+      userAllowed,
+    }),
+    resolveEntitlementFn({
+      db: db as unknown as EntitlementDbLike,
+      orgId,
+      capability: 'transactionDocuments.mutate',
+      userAllowed,
+    }),
+  ]);
+  if (!pendingMutationEntitlement.allowed || !pendingMatchEntitlement.allowed || !transactionDocumentEntitlement.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'El pla no permet modificar documents.', code: 'ENTITLEMENT_DENIED' },
+      { status: 403 }
+    );
+  }
 
   // 5. Carregar pending document
   const pendingRef = db.doc(`organizations/${orgId}/pendingDocuments/${pendingId}`);
@@ -227,13 +271,35 @@ export async function handleRelinkDocumentPost(
   }
 
   // 7. Validar que té filename
-  const filename = pendingData?.file?.filename;
+  const identity = buildPendingDocumentStorageIdentity({
+    orgId,
+    pendingDocumentId: pendingId,
+    transactionId: bankTxId,
+    filename: pendingData?.file?.filename,
+  });
 
-  if (!filename) {
+  if (!identity) {
     console.error(`${logPrefix} INCIDENT_MISSING_FILENAME: pendingId=${pendingId}, orgId=${orgId}`);
     return NextResponse.json(
       { success: false, error: 'Incidència: document del pendent no té filename', code: 'MISSING_DOCUMENT' },
       { status: 400 }
+    );
+  }
+  const { filename, finalPath: destPath } = identity;
+  const candidateA = pendingData?.file?.storagePath as string;
+  const candidateFinal = pendingData?.file?.finalStoragePath ?? null;
+  if (!pendingDocumentStoragePathsMatch({
+    identity,
+    originalPath: pendingData?.file?.storagePath,
+    finalPath: candidateFinal,
+  })) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'El document pendent referencia un fitxer fora de la seva organització.',
+        code: 'PENDING_DOCUMENT_FILE_FORBIDDEN',
+      },
+      { status: 403 }
     );
   }
 
@@ -250,50 +316,15 @@ export async function handleRelinkDocumentPost(
 
   const txData = txSnap.data();
 
-  // 9. Idempotència: si ja té document, comprovar si és el mateix
-  if (txData?.document) {
-    // Ja té document vinculat - considerem idempotent
-    console.log(`${logPrefix} Transacció ${bankTxId} ja té document (idempotent)`);
-    return NextResponse.json({
-      success: true,
-      idempotent: true,
-    });
-  }
+  // No retornem abans del servei canònic: el mirror pot existir sense
+  // metadata/registry i una repetició ha de reparar aquesta inconsistència.
 
   // 10. Cercar fitxer origen amb path determinista (ordre de prioritat)
   // destPath: ubicació final on ha d'estar el document (font estable)
   // candidateFinal: finalStoragePath guardat prèviament (si existeix)
   // candidateA: storagePath original guardat a Firestore
   // candidateB: path canònic construït a partir de {orgId, pendingId, filename}
-  const orgStoragePrefix = getOrganizationStoragePrefix(orgId);
-  const destPath = `organizations/${orgId}/documents/${bankTxId}/${filename}`;
-  const candidateFinal = pendingData?.file?.finalStoragePath || null;
-  const candidateA = pendingData?.file?.storagePath || null;
-  const candidateB = `organizations/${orgId}/pendingDocuments/${pendingId}/${filename}`;
-
-  if (typeof candidateFinal === 'string' && candidateFinal && !candidateFinal.startsWith(orgStoragePrefix)) {
-    console.error(`${logPrefix} FORBIDDEN_STORAGE_PATH candidateFinal=${candidateFinal} orgId=${orgId}`);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'El document pendent referencia un fitxer fora de la seva organització.',
-        code: 'PENDING_DOCUMENT_FILE_FORBIDDEN',
-      },
-      { status: 403 }
-    );
-  }
-
-  if (typeof candidateA === 'string' && candidateA && !candidateA.startsWith(orgStoragePrefix)) {
-    console.error(`${logPrefix} FORBIDDEN_STORAGE_PATH candidateA=${candidateA} orgId=${orgId}`);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'El document pendent referencia un fitxer fora de la seva organització.',
-        code: 'PENDING_DOCUMENT_FILE_FORBIDDEN',
-      },
-      { status: 403 }
-    );
-  }
+  const candidateB = candidateA;
 
   // Log diagnòstic (només en dev)
   if (process.env.NODE_ENV !== 'production') {
@@ -307,6 +338,8 @@ export async function handleRelinkDocumentPost(
 
   let sourceStoragePath: string | null = null;
   let alreadyAtDestination = false;
+  let copiedByThisAttempt = false;
+  const destFile = bucket.file(destPath);
   const writeContextBase = {
     updatedBy: uid,
     source: 'user' as const,
@@ -315,7 +348,6 @@ export async function handleRelinkDocumentPost(
 
   try {
     // 1. Primer comprovar si el fitxer ja existeix al destí final (ruta estable)
-    const destFile = bucket.file(destPath);
     const [destExists] = await destFile.exists();
     if (destExists) {
       sourceStoragePath = destPath;
@@ -380,6 +412,7 @@ export async function handleRelinkDocumentPost(
       const sourceFile = bucket.file(sourceStoragePath);
       console.log(`${logPrefix} Copiant: ${sourceStoragePath} -> ${destPath}`);
       await sourceFile.copy(destFile);
+      copiedByThisAttempt = true;
     } else {
       console.log(`${logPrefix} Fitxer ja existeix al destí, no cal copiar`);
     }
@@ -390,31 +423,34 @@ export async function handleRelinkDocumentPost(
       expires: '03-01-2500', // URL de llarga durada
     });
 
-    // 12. Actualitzar la transacció amb el document
-    await safeUpdate({
-      data: {
-        document: signedUrl,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      context: writeContextBase,
-      write: async (payload) => {
-        await txRef.update(payload);
+    // 12. Vincular metadata + mirror + registry canònic en una transacció Admin.
+    await mutateTransactionDocumentsAdminFn({
+      db,
+      orgId,
+      transactionId: bankTxId,
+      actorUid: uid,
+      relatedWrites: (!alreadyAtDestination || !pendingData?.file?.finalStoragePath) ? [{
+        path: `organizations/${orgId}/pendingDocuments/${pendingId}`,
+        action: 'update',
+        expected: { matchedTransactionId: bankTxId },
+        data: { 'file.finalStoragePath': destPath },
+      }] : [],
+      mutation: {
+        action: 'link',
+        makePrimary: true,
+        document: {
+          url: signedUrl,
+          storagePath: destPath,
+          filename,
+          contentType: null,
+          size: null,
+          isPrimary: true,
+          createdAt: new Date().toISOString(),
+          createdByUid: uid,
+          source: 'transaction-upload',
+        },
       },
     });
-
-    // 13. Guardar finalStoragePath al pending document (font estable per futures operacions)
-    if (!alreadyAtDestination || !pendingData?.file?.finalStoragePath) {
-      await safeUpdate({
-        data: {
-          'file.finalStoragePath': destPath,
-        },
-        context: writeContextBase,
-        write: async (payload) => {
-          await pendingRef.update(payload);
-        },
-      });
-      console.log(`${logPrefix} Guardat file.finalStoragePath: ${destPath}`);
-    }
 
     console.log(`${logPrefix} Document re-vinculat: pendingId=${pendingId}, bankTxId=${bankTxId}, filename=${filename}`);
 
@@ -422,6 +458,9 @@ export async function handleRelinkDocumentPost(
       success: true,
     });
   } catch (error) {
+    if (copiedByThisAttempt) {
+      await destFile.delete({ ignoreNotFound: true }).catch(() => undefined);
+    }
     if (error instanceof SafeWriteValidationError) {
       return NextResponse.json(
         { success: false, error: error.message, code: error.code },

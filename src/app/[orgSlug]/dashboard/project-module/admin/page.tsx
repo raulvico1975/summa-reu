@@ -13,6 +13,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, PlayCircle, AlertCircle, CheckCircle2, FolderSearch } from 'lucide-react';
 import { useTranslations } from '@/i18n';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface MigrationDetail {
   orgId: string;
@@ -31,32 +32,63 @@ interface MigrationResult {
 }
 
 export default function ProjectModuleAdminPage() {
-  const { firebaseApp } = useFirebase();
+  const { firebaseApp, firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { t, tr } = useTranslations();
 
   const [isRunning, setIsRunning] = React.useState(false);
   const [result, setResult] = React.useState<MigrationResult | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = React.useState<boolean | null>(null);
+  const migrationKeysRef = React.useRef<Record<'dryRun' | 'apply', string | undefined>>({
+    dryRun: undefined,
+    apply: undefined,
+  });
+
+  React.useEffect(() => {
+    let active = true;
+    if (!user) {
+      setIsSuperAdmin(false);
+      return;
+    }
+    getDoc(doc(firestore, 'systemSuperAdmins', user.uid))
+      .then((snapshot) => active && setIsSuperAdmin(snapshot.exists()))
+      .catch(() => active && setIsSuperAdmin(false));
+    return () => { active = false; };
+  }, [firestore, user]);
 
   const runMigration = async (dryRun: boolean) => {
+    if (isSuperAdmin !== true || !organizationId) return;
     setIsRunning(true);
     setError(null);
     setResult(null);
 
     try {
+      const attempt = dryRun ? 'dryRun' : 'apply';
+      const idempotencyKey = migrationKeysRef.current[attempt] ?? crypto.randomUUID();
+      migrationKeysRef.current[attempt] = idempotencyKey;
       const functions = getFunctions(firebaseApp, 'europe-west1');
-      const migrate = httpsCallable<{ dryRun: boolean; orgId?: string }, MigrationResult>(
+      const migrate = httpsCallable<{
+        dryRun: boolean;
+        orgId: string;
+        reason: string;
+        idempotencyKey: string;
+      }, MigrationResult>(
         functions,
         'migrateProjectModulePaths'
       );
 
       const response = await migrate({
         dryRun,
-        orgId: organizationId || undefined,
+        orgId: organizationId,
+        reason: dryRun
+          ? 'Previsualització SuperAdmin de la migració legacy de Projectes'
+          : 'Migració SuperAdmin autoritzada dels paths legacy de Projectes',
+        idempotencyKey,
       });
 
       setResult(response.data);
+      migrationKeysRef.current[attempt] = undefined;
     } catch (err) {
       console.error('Error executing migration:', err);
       setError(err instanceof Error ? err.message : tr('projectModule.admin.unknownError'));
@@ -64,6 +96,10 @@ export default function ProjectModuleAdminPage() {
       setIsRunning(false);
     }
   };
+
+  if (isSuperAdmin !== true) {
+    return <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>{t.common.error}</AlertTitle><AlertDescription>Accés exclusiu de SuperAdmin.</AlertDescription></Alert>;
+  }
 
   return (
     <div className="space-y-6">

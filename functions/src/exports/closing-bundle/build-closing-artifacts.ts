@@ -25,12 +25,14 @@ export interface ClosingBundleEntry {
 }
 
 export function buildDocumentResolutionIncident(
-  diagnostic: DocumentDiagnostic
+  diagnostic: DocumentDiagnostic,
+  documentDiagnosticKey?: string
 ): ClosingIncident | null {
   switch (diagnostic.status) {
     case 'URL_NOT_PARSEABLE':
       return {
         txId: diagnostic.txId,
+        documentDiagnosticKey,
         type: 'DOCUMENT_NO_RESOLUBLE',
         severity: 'alta',
         message: 'Document no resoluble: URL o referència no reconeguda',
@@ -38,6 +40,7 @@ export function buildDocumentResolutionIncident(
     case 'BUCKET_MISMATCH':
       return {
         txId: diagnostic.txId,
+        documentDiagnosticKey,
         type: 'DOCUMENT_NO_RESOLUBLE',
         severity: 'alta',
         message: 'Document no resoluble: bucket diferent del configurat',
@@ -45,6 +48,7 @@ export function buildDocumentResolutionIncident(
     case 'NOT_FOUND':
       return {
         txId: diagnostic.txId,
+        documentDiagnosticKey,
         type: 'DOCUMENT_NO_RESOLUBLE',
         severity: 'alta',
         message: 'Document no resoluble: fitxer no trobat al bucket',
@@ -52,6 +56,7 @@ export function buildDocumentResolutionIncident(
     case 'DOWNLOAD_ERROR':
       return {
         txId: diagnostic.txId,
+        documentDiagnosticKey,
         type: 'DOCUMENT_NO_RESOLUBLE',
         severity: 'alta',
         message: 'Document no resoluble: error descarregant el fitxer',
@@ -68,14 +73,11 @@ export function buildVisibleIncidents(
 ): ClosingIncident[] {
   const visibleIncidents = [...incidents];
 
-  for (const tx of transactions) {
-    const diagnostic = diagnostics.get(tx.id);
-    if (!diagnostic) continue;
-
-    const incident = buildDocumentResolutionIncident(diagnostic);
-    if (incident) {
-      visibleIncidents.push(incident);
-    }
+  const transactionIds = new Set(transactions.map((transaction) => transaction.id));
+  for (const [key, diagnostic] of diagnostics.entries()) {
+    if (!transactionIds.has(diagnostic.txId)) continue;
+    const incident = buildDocumentResolutionIncident(diagnostic, key);
+    if (incident) visibleIncidents.push(incident);
   }
 
   return visibleIncidents;
@@ -86,7 +88,10 @@ export function getDocumentStatusForIncident(
   diagnostics: Map<string, DocumentDiagnostic>
 ): DocumentDiagnosticStatus | '' {
   if (incident.type !== 'DOCUMENT_NO_RESOLUBLE') return '';
-  const diagnostic = diagnostics.get(incident.txId);
+  const diagnostic = (incident.documentDiagnosticKey ? diagnostics.get(incident.documentDiagnosticKey) : null)
+    ?? diagnostics.get(incident.txId)
+    ?? [...diagnostics.values()].find((candidate) => candidate.txId === incident.txId
+      && candidate.status !== 'OK' && candidate.status !== 'NO_DOCUMENT');
   if (!diagnostic) return '';
   if (diagnostic.status === 'NO_DOCUMENT' || diagnostic.status === 'OK') return '';
   return diagnostic.status;
@@ -133,6 +138,7 @@ export function buildClosingBundleManifest(params: {
   totalIncome: number;
   totalExpense: number;
   totalWithDocRef: number;
+  totalDocumentRefs?: number;
   totalIncluded: number;
   totalIncidents: number;
   statusCounts: DocumentStatusCounts;
@@ -147,6 +153,7 @@ export function buildClosingBundleManifest(params: {
     totalIncome,
     totalExpense,
     totalWithDocRef,
+    totalDocumentRefs,
     totalIncluded,
     totalIncidents,
     statusCounts,
@@ -164,6 +171,7 @@ export function buildClosingBundleManifest(params: {
     totalExpense,
     balance: totalIncome + totalExpense,
     totalWithDocRef,
+    ...(typeof totalDocumentRefs === 'number' ? { totalDocumentRefs } : {}),
     totalIncluded,
     totalIncidents,
     statusCounts,
@@ -218,6 +226,7 @@ export function buildSummaryText(params: {
   totalIncome: number;
   totalExpense: number;
   totalWithDocRef: number;
+  totalDocumentRefs?: number;
   totalIncluded: number;
   statusCounts: DocumentStatusCounts;
   totalIncidents: number;
@@ -230,6 +239,7 @@ export function buildSummaryText(params: {
     totalIncome,
     totalExpense,
     totalWithDocRef,
+    totalDocumentRefs = totalWithDocRef,
     totalIncluded,
     statusCounts,
   } = params;
@@ -254,6 +264,7 @@ Saldo: ${saldo.toFixed(2)} EUR
 DOCUMENTS
 ---------
 Moviments amb document adjunt: ${totalWithDocRef}
+Documents referenciats: ${totalDocumentRefs}
 Documents inclosos al ZIP: ${totalIncluded}
 Moviments sense document: ${movimentsSenseDoc}
 `;
@@ -266,6 +277,7 @@ export function buildDebugSummaryText(params: {
   dateTo: string;
   totalTransactions: number;
   totalWithDocRef: number;
+  totalDocumentRefs?: number;
   totalIncluded: number;
   statusCounts: DocumentStatusCounts;
 }): string {
@@ -276,11 +288,12 @@ export function buildDebugSummaryText(params: {
     dateTo,
     totalTransactions,
     totalWithDocRef,
+    totalDocumentRefs = totalWithDocRef,
     totalIncluded,
     statusCounts,
   } = params;
 
-  const totalNotIncluded = totalWithDocRef - totalIncluded;
+  const totalNotIncluded = Math.max(0, totalDocumentRefs - totalIncluded);
 
   return `DIAGNÒSTIC TÈCNIC - PAQUET DE TANCAMENT
 ========================================
@@ -306,6 +319,7 @@ DOWNLOAD_ERROR (error de xarxa): ${statusCounts.downloadError}
 RESUM
 -----
 Moviments amb document referenciat: ${totalWithDocRef}
+Documents referenciats: ${totalDocumentRefs}
 Documents inclosos al ZIP: ${totalIncluded}
 Documents no inclosos: ${totalNotIncluded}
 
