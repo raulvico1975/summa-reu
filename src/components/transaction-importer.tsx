@@ -209,10 +209,14 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   } | null>(null);
   const { toast } = useToast();
   const { firestore, auth } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organization, organizationId } = useCurrentOrganization();
   const { can } = usePermissions();
   const { canUseCapability } = useEntitlements();
   const canExecuteAiCategorization = canUseCapability('aiCategorization.execute', {
+    userAllowed: can('moviments.editar'),
+  });
+  const canSuggestPendingDocumentMatches = canUseCapability('pendingDocuments.match', {
+    operationalEnabled: organization?.features?.pendingDocs ?? false,
     userAllowed: can('moviments.editar'),
   });
   const { buildUrl } = useOrgUrl();
@@ -966,7 +970,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         const newTransactions = (result.createdTransactions || []) as Transaction[];
 
         // Post-import: suggerir conciliació amb documents pendents
-        if (newTransactions.length > 0 && availableContacts) {
+        if (canSuggestPendingDocumentMatches && newTransactions.length > 0 && availableContacts) {
           try {
             await suggestPendingDocumentMatches(
               firestore,

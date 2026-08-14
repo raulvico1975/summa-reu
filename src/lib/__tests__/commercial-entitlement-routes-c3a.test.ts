@@ -268,6 +268,8 @@ test('UI i importador bloquegen IA abans de decisions locals, writes o fetch', a
   assert.match(importerSource, /canUseCapability\('aiCategorization\.execute',[\s\S]*?userAllowed: can\('moviments\.editar'\)/);
   assert.match(importerSource, /if \(canExecuteAiCategorization && availableContacts/);
   assert.match(importerSource, /if \(canExecuteAiCategorization && availableCategories/);
+  assert.match(importerSource, /canUseCapability\('pendingDocuments\.match',[\s\S]*?operationalEnabled: organization\?\.features\?\.pendingDocs \?\? false,[\s\S]*?userAllowed: can\('moviments\.editar'\)/);
+  assert.match(importerSource, /if \(canSuggestPendingDocumentMatches && newTransactions\.length > 0 && availableContacts\)/);
   assert.match(rowSource, /canCategorizeWithAi && <CommandGroup>/);
   assert.match(filtersSource, /canExecuteAiCategorization && <div/);
 });

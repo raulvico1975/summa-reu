@@ -35,6 +35,18 @@ test('C3a UI: import bancari conserva el flux i nomes invoca IA amb pla i permí
   assert.match(importer, /fetch\('\/api\/ai\/categorize-transaction'/);
 });
 
+test('import bancari no consulta ni suggereix documents pendents fora de Complete', () => {
+  const importer = source('src/components/transaction-importer.tsx');
+  assert.match(
+    importer,
+    /canSuggestPendingDocumentMatches = canUseCapability\('pendingDocuments\.match',\s*\{\s*operationalEnabled: organization\?\.features\?\.pendingDocs \?\? false,\s*userAllowed: can\('moviments\.editar'\)/m,
+  );
+  const suggestionCall = importer.indexOf('await suggestPendingDocumentMatches(');
+  const guardedBlock = importer.lastIndexOf('if (canSuggestPendingDocumentMatches', suggestionCall);
+  assert.ok(suggestionCall >= 0);
+  assert.ok(guardedBlock >= 0 && guardedBlock < suggestionCall);
+});
+
 test('C3a UI: Model 347 no consulta dades en Control i separa lectura d export', () => {
   const report = source('src/components/suppliers-report-generator.tsx');
   assert.match(report, /canUseCapability\('model347\.read'/);
