@@ -7,7 +7,7 @@ import * as React from 'react';
 import { useTranslations, type Language, type TrFunction } from '@/i18n';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, getDoc, getDocs, limit } from 'firebase/firestore';
-import { getStorage, ref, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
+import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import {
   getOpenIncidents,
   countOpenIncidentsByType,
@@ -245,15 +245,6 @@ const INITIAL_CHECKS: HealthCheck[] = [
     humanExplanation: 'Verifica que es puguin consultar moviments reals de l’organització seleccionada.',
     status: 'pending',
     requiresOrg: true,
-  },
-  {
-    id: 'storage-upload',
-    name: 'Pujada Storage',
-    description: 'Prova de pujada real a Storage',
-    humanExplanation: 'Comprova que l’organització pugui pujar fitxers i que el flux de documents no estigui bloquejat.',
-    status: 'pending',
-    requiresOrg: true,
-    actionable: 'testRealUpload', // Quan OK: botó test real.
   },
   {
     id: 'legacy-redirect',
@@ -1209,39 +1200,7 @@ export function SystemHealth() {
       updateCheck('firestore-transactions', { status: 'warning', message: tr('admin.health.messages.selectOrg', 'Cal seleccionar org') });
     }
 
-    // 8. Check pendingDocuments upload (requires org)
-    // Política TEMPORAL: qualsevol usuari autenticat pot pujar
-    if (selectedOrg && user) {
-      const testFileName = `_healthcheck/${Date.now()}.txt`;
-      const testPath = `organizations/${selectedOrgId}/pendingDocuments/${testFileName}`;
-      const testRef = ref(storage, testPath);
-      const testContent = new Blob(['health check'], { type: 'text/plain' });
-
-      try {
-        await uploadBytes(testRef, testContent);
-        // Cleanup: delete the test file
-        await deleteObject(testRef);
-        updateCheck('storage-upload', { status: 'ok', message: 'Upload OK' });
-      } catch (err) {
-        const error = err as { code?: string };
-        if (error.code === 'storage/unauthorized') {
-          // Amb la política temporal, si falla és problema de rules
-          updateCheck('storage-upload', {
-            status: 'error',
-            message: tr('admin.health.messages.badStorageRules', 'Rules Storage incorrectes'),
-          });
-
-        } else {
-          updateCheck('storage-upload', { status: 'error', message: (err as Error).message });
-        }
-      }
-    } else if (!user) {
-      updateCheck('storage-upload', { status: 'warning', message: tr('admin.health.messages.notAuthenticated', 'No autenticat') });
-    } else {
-      updateCheck('storage-upload', { status: 'warning', message: tr('admin.health.messages.selectOrg', 'Cal seleccionar org') });
-    }
-
-    // 9. Check legacy quick-expense redirect
+    // 8. Check legacy quick-expense redirect
     if (selectedOrg) {
       try {
         const response = await fetch(`/${selectedOrg.slug}/quick-expense`, {
@@ -1802,27 +1761,6 @@ export function SystemHealth() {
                                 </div>
                               )}
 
-                              {/* Botó "Provar pujada real" quan pendingDocuments OK */}
-                              {check.id === 'storage-upload' && check.status === 'ok' && selectedOrg && (
-                                <div className="mt-2 space-y-1">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-6 text-[10px] w-full"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      // Navegar a la pantalla real de documents pendents
-                                      window.open(`/${selectedOrg.slug}/dashboard/movimientos/pendents`, '_blank');
-                                    }}
-                                  >
-                                    <ExternalLink className="h-3 w-3 mr-1" />
-                                    {tr('admin.health.actions.testRealUpload', 'Provar pujada real')}
-                                  </Button>
-                                  <p className="text-[9px] text-muted-foreground leading-tight">
-                                    {tr('admin.health.actions.testRealUploadHint', 'Obre la pantalla real de pujada per confirmar que funciona.')}
-                                  </p>
-                                </div>
-                              )}
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="bottom" className="max-w-[250px]">

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { ExternalLink, FileText, Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -106,11 +106,17 @@ export function OffBankDocumentCompletionDialog({
   const { toast } = useToast();
   const { tr } = useTranslations();
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const canUploadRef = React.useRef(false);
   const [isUploading, setIsUploading] = React.useState(false);
 
   const expenseId = getOffBankExpenseId(row);
   const canUpload = canEdit && Boolean(organizationId && expenseId);
   const isProcessing = isUploading || isUpdating;
+
+  React.useEffect(() => {
+    canUploadRef.current = canUpload;
+    if (!canUpload && open) onOpenChange(false);
+  }, [canUpload, onOpenChange, open]);
 
   const handleOpenAttachment = React.useCallback((attachment: OffBankAttachment) => {
     if (!organizationId || !user) {
@@ -127,7 +133,7 @@ export function OffBankDocumentCompletionDialog({
   }, [organizationId, user]);
 
   const handleFiles = React.useCallback(async (files: File[]) => {
-    if (!organizationId || !expenseId || !row) return;
+    if (!canUploadRef.current || !organizationId || !expenseId || !row) return;
 
     const validFiles = files.filter((file) => isAcceptedFile(file) && file.size <= MAX_FILE_SIZE);
     if (validFiles.length === 0) {
@@ -140,11 +146,14 @@ export function OffBankDocumentCompletionDialog({
     }
 
     setIsUploading(true);
+    const uploadedByThisAttempt: ReturnType<typeof ref>[] = [];
+    let persisted = false;
     try {
       const usedNames = new Set(attachments.map((attachment) => attachment.name));
       const uploaded: OffBankAttachment[] = [];
 
       for (const file of validFiles) {
+        if (!canUploadRef.current) throw new Error('PROJECT_MUTATION_NOT_ALLOWED');
         const baseName = buildDocumentFilename({
           dateISO: row.paymentDate || row.dateExpense,
           concept: row.concept,
@@ -160,6 +169,7 @@ export function OffBankDocumentCompletionDialog({
             originalFileName: file.name,
           },
         });
+        uploadedByThisAttempt.push(storageRef);
         const url = await getDownloadURL(result.ref);
         uploaded.push({
           url,
@@ -171,7 +181,9 @@ export function OffBankDocumentCompletionDialog({
         });
       }
 
+      if (!canUploadRef.current) throw new Error('PROJECT_MUTATION_NOT_ALLOWED');
       await update(expenseId, { attachments: [...attachments, ...uploaded] });
+      persisted = true;
       await onSaved();
       toast({
         title: tr('projectModule.documentReview.complete.savedTitle'),
@@ -179,6 +191,11 @@ export function OffBankDocumentCompletionDialog({
       });
       onOpenChange(false);
     } catch (error) {
+      if (!persisted) {
+        await Promise.all(uploadedByThisAttempt.map((storageRef) =>
+          deleteObject(storageRef).catch(() => undefined)
+        ));
+      }
       toast({
         variant: 'destructive',
         title: tr('projectModule.documentReview.complete.errorTitle'),
@@ -187,7 +204,7 @@ export function OffBankDocumentCompletionDialog({
     } finally {
       setIsUploading(false);
     }
-  }, [attachments, expenseId, onOpenChange, onSaved, organizationId, row, storage, toast, tr, update]);
+  }, [attachments, canUpload, expenseId, onOpenChange, onSaved, organizationId, row, storage, toast, tr, update]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

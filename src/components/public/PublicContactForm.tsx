@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { trackPublicAnalyticsEvent } from '@/lib/public-analytics';
+import type { PublicPlanId } from '@/lib/public-plans';
 
 const NAME_MIN_LENGTH = 2;
 const MESSAGE_MIN_LENGTH = 10;
@@ -31,11 +32,12 @@ interface PublicContactFormProps {
     messagePlaceholder: string;
   };
   initialMessage?: string;
+  planId?: PublicPlanId;
 }
 
 type SubmitStatus = 'idle' | 'sending' | 'success' | 'error';
 
-export function PublicContactForm({ locale, labels, initialMessage = '' }: PublicContactFormProps) {
+export function PublicContactForm({ locale, labels, initialMessage = '', planId }: PublicContactFormProps) {
   const [name, setName] = useState('');
   const [senderEmail, setSenderEmail] = useState('');
   const [organization, setOrganization] = useState('');
@@ -98,6 +100,7 @@ export function PublicContactForm({ locale, labels, initialMessage = '' }: Publi
           message: message.trim(),
           website,
           language: locale,
+          planId,
         }),
       });
 
@@ -108,6 +111,7 @@ export function PublicContactForm({ locale, labels, initialMessage = '' }: Publi
       trackPublicAnalyticsEvent('generate_lead', {
         form_id: 'public_contact',
         locale,
+        plan_id: planId,
       });
       setStatus('success');
       setFeedback(labels.success);

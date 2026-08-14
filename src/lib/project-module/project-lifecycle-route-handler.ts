@@ -8,6 +8,7 @@ import {
 } from '@/lib/api/admin-sdk';
 import { requirePermission } from '@/lib/api/require-permission';
 import { can } from '@/lib/permissions';
+import { resolveServerEntitlement, type EntitlementDbLike } from '@/lib/api/require-entitlement';
 import {
   resolveProjectDeletePolicy,
   type ProjectDeletePolicy,
@@ -34,6 +35,7 @@ type ProjectLifecycleRouteDeps = {
   verifyIdTokenFn: typeof verifyIdToken;
   getAdminDbFn: typeof getAdminDb;
   validateUserMembershipFn: typeof validateUserMembership;
+  resolveEntitlementFn?: typeof resolveServerEntitlement;
 };
 
 const defaultDeps: ProjectLifecycleRouteDeps = {
@@ -116,9 +118,19 @@ export async function handleProjectLifecyclePost(
   const membership = await deps.validateUserMembershipFn(db, authResult.uid, orgId);
   const denied = requirePermission(membership, {
     code: 'PROJECTES_MANAGE_REQUIRED',
-    check: (permissions) => can('projectes.manage', permissions),
+    check: (permissions) => can('sections.projectes', permissions) && can('projectes.manage', permissions),
   });
   if (denied) return denied;
+
+  const entitlement = await (deps.resolveEntitlementFn ?? resolveServerEntitlement)({
+    db: db as unknown as EntitlementDbLike,
+    orgId,
+    capability: action === 'inspectDelete' ? 'projects.readHistorical' : 'projects.mutate',
+    userAllowed: true,
+  });
+  if (!entitlement.allowed) {
+    return jsonError('ENTITLEMENT_DENIED', 'El pla no permet aquesta operació de projectes.', 403);
+  }
 
   const projectRef = db.doc(`organizations/${orgId}/projectModule/_/projects/${projectId}`);
   const projectSnap = await projectRef.get();

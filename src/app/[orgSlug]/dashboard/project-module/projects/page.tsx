@@ -6,7 +6,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useProjectLifecycle, useProjects } from '@/hooks/use-project-module';
+import { useProjectCommercialAccess, useProjectLifecycle, useProjects } from '@/hooks/use-project-module';
 import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,7 @@ interface ProjectCardProps {
   project: Project;
   executedAmount: number;
   isMutating: boolean;
+  canMutate: boolean;
   onRequestClose: (project: Project) => void;
   onRequestDelete: (project: Project) => void;
 }
@@ -66,6 +67,7 @@ function ProjectCard({
   project,
   executedAmount,
   isMutating,
+  canMutate,
   onRequestClose,
   onRequestDelete,
 }: ProjectCardProps) {
@@ -179,15 +181,17 @@ function ProjectCard({
               <Eye className="h-4 w-4" />
             </Button>
           </Link>
-          <Link
-            href={buildUrl(`/dashboard/project-module/projects/${project.id}/edit`)}
-            onClick={handleEditClick}
-          >
-            <Button variant="ghost" size="sm" title={tr('projectModule.editProject')}>
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </Link>
-          {project.status === 'active' && (
+          {canMutate && (
+            <Link
+              href={buildUrl(`/dashboard/project-module/projects/${project.id}/edit`)}
+              onClick={handleEditClick}
+            >
+              <Button variant="ghost" size="sm" title={tr('projectModule.editProject')}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
+          {canMutate && project.status === 'active' && (
             <Button
               variant="ghost"
               size="sm"
@@ -199,16 +203,18 @@ function ProjectCard({
               <Archive className="h-4 w-4" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            title={tr('projectModule.projects.deleteAction', 'Eliminar projecte buit')}
-            onClick={handleDeleteClick}
-            disabled={isMutating}
-            className="text-muted-foreground hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {canMutate && (
+            <Button
+              variant="ghost"
+              size="sm"
+              title={tr('projectModule.projects.deleteAction', 'Eliminar projecte buit')}
+              onClick={handleDeleteClick}
+              disabled={isMutating}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -246,6 +252,7 @@ export default function ProjectsListPage() {
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { t, tr } = useTranslations();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   // Carregar tots els expenseLinks per calcular execució per projecte
   const [executionByProject, setExecutionByProject] = React.useState<Map<string, number>>(new Map());
@@ -253,6 +260,13 @@ export default function ProjectsListPage() {
   const [projectToClose, setProjectToClose] = React.useState<Project | null>(null);
   const [projectToDelete, setProjectToDelete] = React.useState<Project | null>(null);
   const [deleteInspection, setDeleteInspection] = React.useState<(ProjectDeletePolicy & { usage: ProjectDeleteUsage }) | null>(null);
+
+  React.useEffect(() => {
+    if (canMutateProjects) return;
+    setProjectToClose(null);
+    setProjectToDelete(null);
+    setDeleteInspection(null);
+  }, [canMutateProjects]);
   const [isInspectingDelete, setIsInspectingDelete] = React.useState(false);
 
   React.useEffect(() => {
@@ -297,6 +311,7 @@ export default function ProjectsListPage() {
   }, [projects.length]);
 
   const handleRequestDelete = React.useCallback(async (project: Project) => {
+    if (!canMutateProjects) return;
     setProjectToDelete(project);
     setDeleteInspection(null);
     setIsInspectingDelete(true);
@@ -314,10 +329,10 @@ export default function ProjectsListPage() {
     } finally {
       setIsInspectingDelete(false);
     }
-  }, [inspectDeleteProject, toast, tr]);
+  }, [canMutateProjects, inspectDeleteProject, toast, tr]);
 
   const handleConfirmClose = React.useCallback(async () => {
-    if (!projectToClose) return;
+    if (!canMutateProjects || !projectToClose) return;
 
     try {
       await closeProject(projectToClose.id);
@@ -335,10 +350,10 @@ export default function ProjectsListPage() {
         description: err instanceof Error ? err.message : tr('projectModule.projects.closeErrorBody', 'Torna-ho a provar.'),
       });
     }
-  }, [closeProject, projectToClose, refresh, toast, tr]);
+  }, [canMutateProjects, closeProject, projectToClose, refresh, toast, tr]);
 
   const handleConfirmDelete = React.useCallback(async () => {
-    if (!projectToDelete) return;
+    if (!canMutateProjects || !projectToDelete) return;
 
     try {
       await deleteProject(projectToDelete.id);
@@ -357,15 +372,15 @@ export default function ProjectsListPage() {
         description: err instanceof Error ? err.message : tr('projectModule.projects.deleteErrorBody', 'Tanca el projecte si cal conservar-ne la traçabilitat.'),
       });
     }
-  }, [deleteProject, projectToDelete, refresh, toast, tr]);
+  }, [canMutateProjects, deleteProject, projectToDelete, refresh, toast, tr]);
 
   const handleCloseFromDeleteBlock = React.useCallback(async () => {
-    if (!projectToDelete) return;
+    if (!canMutateProjects || !projectToDelete) return;
 
     setProjectToClose(projectToDelete);
     setProjectToDelete(null);
     setDeleteInspection(null);
-  }, [projectToDelete]);
+  }, [canMutateProjects, projectToDelete]);
 
   if (error) {
     return (
@@ -390,12 +405,14 @@ export default function ProjectsListPage() {
             {tr('projectModule.projectsDescription')}
           </p>
         </div>
-        <Link href={buildUrl('/dashboard/project-module/projects/new')}>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            {tr('projectModule.newProject')}
-          </Button>
-        </Link>
+        {canMutateProjects && (
+          <Link href={buildUrl('/dashboard/project-module/projects/new')}>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              {tr('projectModule.newProject')}
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Llistat */}
@@ -421,12 +438,14 @@ export default function ProjectsListPage() {
           title={tr('emptyStates.projects.noData')}
           description={tr('emptyStates.projects.noDataDesc')}
         >
-          <Link href={buildUrl('/dashboard/project-module/projects/new')}>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              {tr('emptyStates.projects.addNew')}
-            </Button>
-          </Link>
+          {canMutateProjects && (
+            <Link href={buildUrl('/dashboard/project-module/projects/new')}>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                {tr('emptyStates.projects.addNew')}
+              </Button>
+            </Link>
+          )}
         </EmptyState>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -436,6 +455,7 @@ export default function ProjectsListPage() {
               project={project}
               executedAmount={executionByProject.get(project.id) ?? 0}
               isMutating={isMutating}
+              canMutate={canMutateProjects}
               onRequestClose={setProjectToClose}
               onRequestDelete={handleRequestDelete}
             />
@@ -443,7 +463,7 @@ export default function ProjectsListPage() {
         </div>
       )}
 
-      <AlertDialog open={!!projectToClose} onOpenChange={(open) => !open && setProjectToClose(null)}>
+      <AlertDialog open={canMutateProjects && !!projectToClose} onOpenChange={(open) => !open && setProjectToClose(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{tr('projectModule.projects.closeDialogTitle', 'Tancar projecte')}</AlertDialogTitle>
@@ -454,7 +474,7 @@ export default function ProjectsListPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmClose} disabled={isMutating}>
+            <AlertDialogAction onClick={handleConfirmClose} disabled={!canMutateProjects || isMutating}>
               {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {tr('projectModule.projects.closeConfirm', 'Tancar projecte')}
             </AlertDialogAction>
@@ -462,7 +482,7 @@ export default function ProjectsListPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => {
+      <AlertDialog open={canMutateProjects && !!projectToDelete} onOpenChange={(open) => {
         if (!open) {
           setProjectToDelete(null);
           setDeleteInspection(null);
@@ -498,14 +518,14 @@ export default function ProjectsListPage() {
             {deleteInspection?.canDelete ? (
               <AlertDialogAction
                 onClick={handleConfirmDelete}
-                disabled={isMutating}
+                disabled={!canMutateProjects || isMutating}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {tr('projectModule.projects.deleteConfirm', 'Eliminar definitivament')}
               </AlertDialogAction>
             ) : deleteInspection && projectToDelete?.status === 'active' ? (
-              <AlertDialogAction onClick={handleCloseFromDeleteBlock}>
+              <AlertDialogAction onClick={handleCloseFromDeleteBlock} disabled={!canMutateProjects}>
                 {tr('projectModule.projects.closeInstead', 'Tancar projecte')}
               </AlertDialogAction>
             ) : null}

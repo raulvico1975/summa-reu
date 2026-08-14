@@ -17,7 +17,12 @@ service cloud.firestore {
     }
 
     function getMemberRole(orgId) {
-      return get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role;
+      return memberData(orgId).get('role', 'viewer');
+    }
+
+    function memberData(orgId) {
+      let path = /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid);
+      return request.auth != null && exists(path) ? get(path).data : {};
     }
 
     function isAdminOf(orgId) {
@@ -30,23 +35,172 @@ service cloud.firestore {
     // Admin: bypass total per rol. Sense capabilities → false (fail-closed).
     // ───────────────────────────────────────────────────────────────────────
 
+    function memberPermissionDenied(orgId, permKey) {
+      let member = memberData(orgId);
+      let overrides = member.get('userOverrides', {});
+      return overrides is map ? overrides.get('deny', []).hasAny([permKey]) : false;
+    }
+
+    function memberPermissionGranted(orgId, permKey) {
+      let member = memberData(orgId);
+      let grants = member.get('userGrants', []);
+      return grants is list ? grants.hasAny([permKey]) : false;
+    }
+
+    function roleDefaultAllowsPermission(orgId, permKey) {
+      let role = memberData(orgId).get('role', 'viewer');
+      return (permKey == 'moviments.read' && role in ['admin', 'user', 'viewer'])
+        || (permKey == 'moviments.editar' && role in ['admin', 'user'])
+        || (permKey == 'projectes.manage' && role in ['admin', 'user'])
+        || (permKey == 'sections.projectes' && role in ['admin', 'user', 'viewer']);
+    }
+
     function hasCapability(orgId, permKey) {
       return request.auth != null
         && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid))
+        && !memberPermissionDenied(orgId, permKey)
         && (
-          get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin'
-          || get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.get('capabilities', {}).get(permKey, false) == true
+          roleDefaultAllowsPermission(orgId, permKey)
+          || memberData(orgId).get('capabilities', {}).get(permKey, false) == true
+          || memberPermissionGranted(orgId, permKey)
         );
     }
 
     function hasProjectCapability(orgId) {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid))
+      return hasCapability(orgId, 'sections.projectes')
+        && (hasCapability(orgId, 'projectes.manage')
+        || (request.auth != null
+          && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid))
+          && !memberPermissionDenied(orgId, 'projectes.expenseInput')
+          && (memberData(orgId).get('capabilities', {}).get('projectes.expenseInput', false) == true
+            || memberPermissionGranted(orgId, 'projectes.expenseInput'))));
+    }
+
+    function canEditMovements(orgId) {
+      let member = memberData(orgId);
+      return isMemberOf(orgId)
+        && !memberPermissionDenied(orgId, 'moviments.editar')
+        && (roleDefaultAllowsPermission(orgId, 'moviments.editar')
+          || member.get('capabilities', {}).get('moviments.editar', false) == true
+          || memberPermissionGranted(orgId, 'moviments.editar'));
+    }
+
+    // Entitlements comercials v3. Només una config v3 explícita pot obrir
+    // off/shadow; absència, corrupció o versió desconeguda fallen a active.
+    function entitlementSystemConfigCompatible() {
+      let path = /databases/$(database)/documents/system/entitlements;
+      let data = exists(path) ? get(path).data : {};
+      return data.get('catalogVersion', 0) == 3
+        && data.get('enforcementMode', 'invalid') in ['off', 'shadow', 'active'];
+    }
+
+    function entitlementEnforcementMode() {
+      let path = /databases/$(database)/documents/system/entitlements;
+      let data = exists(path) ? get(path).data : {};
+      return data.get('catalogVersion', 0) == 3
+          && data.get('enforcementMode', 'invalid') in ['off', 'shadow', 'active']
+        ? data.get('enforcementMode', 'active') : 'active';
+    }
+
+    function transactionDocumentsOperationallyEnabled(orgId) {
+      let orgPath = /databases/$(database)/documents/organizations/$(orgId);
+      let data = exists(orgPath) ? get(orgPath).data : {};
+      return exists(orgPath) && data.get('features', {}).get('transactionDocuments', true) != false;
+    }
+
+    function subscriptionSnapshotMatchesCatalogV3(orgId) {
+      let subscriptionPath = /databases/$(database)/documents/organizations/$(orgId)/subscription/current;
+      let data = exists(subscriptionPath) ? get(subscriptionPath).data : {};
+      let plan = data.get('planId', 'unknown');
+      let fingerprint = data.get('catalogFingerprint', 'missing');
+      return data.get('catalogVersion', 0) == 3
+        && data.get('status', 'cancelled') in ['trial', 'active']
         && (
-          get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin'
-          || get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.get('capabilities', {}).get('projectes.manage', false) == true
-          || get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.get('capabilities', {}).get('projectes.expenseInput', false) == true
+          (plan == 'control' && fingerprint == 'summa-entitlements-v3-control')
+          || (plan == 'management' && fingerprint == 'summa-entitlements-v3-management')
+          || (plan == 'complete' && fingerprint == 'summa-entitlements-v3-complete')
         );
+    }
+
+    function canMutateTransactionDocuments(orgId) {
+      let mode = entitlementEnforcementMode();
+      let subscriptionPath = /databases/$(database)/documents/organizations/$(orgId)/subscription/current;
+      return transactionDocumentsOperationallyEnabled(orgId)
+        && ((mode == 'off' || mode == 'shadow')
+        || (
+          mode == 'active'
+          && entitlementSystemConfigCompatible()
+          && exists(subscriptionPath)
+          && subscriptionSnapshotMatchesCatalogV3(orgId)
+          && get(subscriptionPath).data.get('planId', 'control') in ['management', 'complete']
+        ));
+    }
+
+    function pendingDocumentsOperationallyEnabled(orgId) {
+      let orgPath = /databases/$(database)/documents/organizations/$(orgId);
+      let data = exists(orgPath) ? get(orgPath).data : {};
+      return data.get('features', {}).get('pendingDocs', false) == true;
+    }
+
+    function canMutatePendingDocuments(orgId) {
+      let mode = entitlementEnforcementMode();
+      let subscriptionPath = /databases/$(database)/documents/organizations/$(orgId)/subscription/current;
+      return pendingDocumentsOperationallyEnabled(orgId)
+        && ((mode == 'off' || mode == 'shadow')
+        || (
+          mode == 'active'
+          && entitlementSystemConfigCompatible()
+          && exists(subscriptionPath)
+          && subscriptionSnapshotMatchesCatalogV3(orgId)
+          && get(subscriptionPath).data.get('planId', 'control') == 'complete'
+        ));
+    }
+
+    function canMatchPendingDocuments(orgId) {
+      let mode = entitlementEnforcementMode();
+      let subscriptionPath = /databases/$(database)/documents/organizations/$(orgId)/subscription/current;
+      return pendingDocumentsOperationallyEnabled(orgId)
+        && ((mode == 'off' || mode == 'shadow')
+        || (
+          mode == 'active'
+          && entitlementSystemConfigCompatible()
+          && exists(subscriptionPath)
+          && subscriptionSnapshotMatchesCatalogV3(orgId)
+          && get(subscriptionPath).data.get('planId', 'control') == 'complete'
+        ));
+    }
+
+    function projectModuleOperationallyEnabled(orgId) {
+      let orgPath = /databases/$(database)/documents/organizations/$(orgId);
+      let data = exists(orgPath) ? get(orgPath).data : {};
+      return data.get('features', {}).get('projectModule', false) == true;
+    }
+
+    function canUseCompletePlan(orgId) {
+      let mode = entitlementEnforcementMode();
+      let subscriptionPath = /databases/$(database)/documents/organizations/$(orgId)/subscription/current;
+      return (mode == 'off' || mode == 'shadow')
+        || (mode == 'active'
+          && entitlementSystemConfigCompatible()
+          && exists(subscriptionPath)
+          && subscriptionSnapshotMatchesCatalogV3(orgId)
+          && get(subscriptionPath).data.get('planId', 'control') == 'complete'
+        );
+    }
+
+    function canMutateProjects(orgId) {
+      return projectModuleOperationallyEnabled(orgId)
+        && canUseCompletePlan(orgId);
+    }
+
+    function canMutateProjectBudgets(orgId) {
+      return projectModuleOperationallyEnabled(orgId)
+        && canUseCompletePlan(orgId);
+    }
+
+    function canMutateMulticurrency(orgId) {
+      return projectModuleOperationallyEnabled(orgId)
+        && canUseCompletePlan(orgId);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -237,11 +391,32 @@ service cloud.firestore {
       // Crear: només Super Admin
       allow create: if isSuperAdmin();
       
-      // Actualitzar: admins de l'org o Super Admin
-      allow update: if isAdminOf(orgId) || isSuperAdmin();
+      // Fail closed: l'admin d'org només pot canviar camps funcionals coneguts.
+      // Pla, facturació, flags i qualsevol camp futur desconegut són backend-owned.
+      allow update: if exists(/databases/$(database)/documents/organizations/$(orgId))
+        && (isSuperAdmin()
+        || (isAdminOf(orgId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'taxId', 'address', 'city', 'province', 'zipCode', 'phone',
+            'email', 'website', 'logoUrl', 'signatureUrl', 'signatoryName',
+            'signatoryRole', 'contactAlertThreshold', 'language',
+            'returnEmailTemplate', 'onboarding', 'updatedAt'
+          ])));
       
       // Eliminar: només Super Admin
       allow delete: if isSuperAdmin();
+
+      // Projecció backend-owned. Els membres només la poden llegir.
+      match /subscription/{subscriptionId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow write: if false;
+      }
+
+      // Marker canònic backend-owned; el client només el pot consultar.
+      match /transactionDocumentRegistry/{transactionId} {
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow create, update, delete: if false;
+      }
 
       // ─────────────────────────────────────────────────────────────────────
       // MEMBRES de l'organització
@@ -294,29 +469,25 @@ service cloud.firestore {
               // VALIDACIÓ DE TIPUS: amount ha de ser número
               && request.resource.data.amount is number
               // VALIDACIÓ: amount no pot ser NaN (implícit amb is number)
-          );
+              && request.resource.data.get('document', null) == null);
 
         // Update: enforcem moviments.editar a capa de dades
         // Manté validació mínima d'amount per no trencar edicions parcials
-        allow update: if isSuperAdmin()
+        allow update: if exists(/databases/$(database)/documents/organizations/$(orgId)/transactions/$(transactionId))
+          && (isSuperAdmin()
           || (hasCapability(orgId, 'moviments.editar')
               // Si s'actualitza amount, ha de ser number
               && (!('amount' in request.resource.data) || request.resource.data.amount is number)
-          );
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['document'])));
 
-        allow delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+        allow delete: if exists(/databases/$(database)/documents/organizations/$(orgId)/transactions/$(transactionId))
+          && (isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']))
+          && resource.data.get('document', null) == null
+          && !exists(/databases/$(database)/documents/organizations/$(orgId)/transactionDocumentRegistry/$(transactionId));
 
         match /documents/{documentId} {
           allow read: if isSuperAdmin() || hasCapability(orgId, 'moviments.read');
-          allow create, update: if isSuperAdmin()
-            || (hasCapability(orgId, 'moviments.editar')
-              && request.resource.data.keys().hasAll(['url', 'filename', 'isPrimary', 'createdAt', 'source'])
-              && request.resource.data.url is string
-              && request.resource.data.filename is string
-              && request.resource.data.isPrimary is bool
-              && request.resource.data.createdAt is string
-              && request.resource.data.source in ['transaction-upload', 'legacy-document']);
-          allow delete: if isSuperAdmin() || hasCapability(orgId, 'moviments.editar');
+          allow create, update, delete: if false;
         }
       }
 
@@ -546,9 +717,61 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /projectModule/{document=**} {
-        allow read: if isMemberOf(orgId) || isSuperAdmin();
-        // SECURITY FIX: enforça projectes.manage o projectes.expenseInput (capabilities D1)
-        allow write: if isSuperAdmin() || hasProjectCapability(orgId);
+        allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+        allow write: if false;
+      }
+
+      match /projectModule/_/projects/{projectId} {
+        allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+        allow create, delete: if canMutateProjects(orgId)
+          && (isSuperAdmin() || hasProjectCapability(orgId));
+        allow update: if exists(/databases/$(database)/documents/organizations/$(orgId)/projectModule/_/projects/$(projectId))
+          && canMutateProjects(orgId)
+          && (isSuperAdmin() || hasProjectCapability(orgId))
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['fxRate', 'fxCurrency'])
+              || canMutateMulticurrency(orgId));
+
+        match /budgetLines/{lineId} {
+          allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+          allow create, update, delete: if canMutateProjectBudgets(orgId)
+            && (isSuperAdmin() || hasProjectCapability(orgId));
+        }
+
+        match /fundingBudgetAllocations/{allocationId} {
+          allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+          allow create, update, delete: if canMutateProjectBudgets(orgId)
+            && (isSuperAdmin() || hasProjectCapability(orgId));
+        }
+
+        match /fxTransfers/{transferId} {
+          allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+          allow create, update, delete: if canMutateMulticurrency(orgId)
+            && (isSuperAdmin() || hasProjectCapability(orgId));
+        }
+
+        match /fundingSources/{sourceId} {
+          allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+          allow create, update, delete: if canMutateProjects(orgId)
+            && (isSuperAdmin() || hasProjectCapability(orgId));
+        }
+
+        match /fundingExpenseAllocations/{allocationId} {
+          allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+          allow create, update, delete: if canMutateProjects(orgId)
+            && (isSuperAdmin() || hasProjectCapability(orgId));
+        }
+      }
+
+      match /projectModule/_/expenseLinks/{linkId} {
+        allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+        allow create, update, delete: if canMutateProjects(orgId)
+          && (isSuperAdmin() || hasProjectCapability(orgId));
+      }
+
+      match /projectModule/_/offBankExpenses/{expenseId} {
+        allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+        allow create, update, delete: if canMutateProjects(orgId)
+          && (isSuperAdmin() || hasProjectCapability(orgId));
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -558,12 +781,14 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /expenseReports/{reportId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
-        allow create: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+        allow read: if isSuperAdmin() || hasProjectCapability(orgId);
+        allow create: if canMutateProjects(orgId)
+          && (isSuperAdmin() || hasProjectCapability(orgId));
 
         // UPDATE: bloquejar transició a 'archived' i camps de traça des de client
         // Només l'API (Admin SDK) pot arxivar amb validació de tiquets
-        allow update: if (isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']))
+        allow update: if canMutateProjects(orgId)
+          && (isSuperAdmin() || hasProjectCapability(orgId))
           && (
             // Si l'estat canvia a 'archived', només via API
             request.resource.data.status != 'archived' || resource.data.status == 'archived'
@@ -588,8 +813,21 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /pendingDocuments/{docId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
-        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+        allow read: if isSuperAdmin() || hasCapability(orgId, 'moviments.read');
+        allow create: if canMutatePendingDocuments(orgId)
+          && (request.resource.data.get('status', 'draft') != 'matched' || canMatchPendingDocuments(orgId))
+          && (isSuperAdmin() || canEditMovements(orgId));
+        allow update: if exists(/databases/$(database)/documents/organizations/$(orgId)/pendingDocuments/$(docId))
+          && canMutatePendingDocuments(orgId)
+          && (
+            !(request.resource.data.diff(resource.data).affectedKeys().hasAny([
+              'matchedTransactionId', 'matchedAt', 'matchedByUid', 'matchedDocumentId'
+            ]) || request.resource.data.get('status', '') == 'matched' || resource.data.get('status', '') == 'matched')
+            || canMatchPendingDocuments(orgId)
+          )
+          && (isSuperAdmin() || canEditMovements(orgId));
+        allow delete: if canMutatePendingDocuments(orgId)
+          && (isSuperAdmin() || canEditMovements(orgId));
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -614,8 +852,9 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /prebankRemittances/{remittanceId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
-        allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+        allow read: if isSuperAdmin() || hasCapability(orgId, 'moviments.read');
+        allow create, update, delete: if canMutatePendingDocuments(orgId)
+          && (isSuperAdmin() || canEditMovements(orgId));
       }
 
       // ─────────────────────────────────────────────────────────────────────

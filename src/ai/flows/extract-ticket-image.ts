@@ -1,4 +1,4 @@
-'use server';
+import 'server-only';
 
 /**
  * @fileOverview Extreu dades estructurades d'un ticket/rebut en format imatge (JPEG/PNG).

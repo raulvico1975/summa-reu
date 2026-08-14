@@ -53,6 +53,7 @@ interface TransactionsFiltersProps {
   noContactCount: number;
   donationsNoContactCount: number;
   hasUncategorized: boolean;
+  canExecuteAiCategorization: boolean;
   isBatchCategorizing: boolean;
   onBatchCategorize: () => void;
   onCancelBatch?: () => void;
@@ -135,6 +136,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   uncategorizedCount,
   donationsNoContactCount,
   hasUncategorized,
+  canExecuteAiCategorization,
   isBatchCategorizing,
   onBatchCategorize,
   onCancelBatch,
@@ -197,7 +199,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
       <div className="hidden md:block h-6 w-px bg-border" />
 
       {/* Suggerir categories + Mode ràpid (junts) */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {canExecuteAiCategorization && <div className="flex items-center gap-2 flex-wrap">
         {isBatchCategorizing ? (
           <div className="flex items-center gap-3">
             {/* Progress bar visual */}
@@ -279,9 +281,10 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
             </Tooltip>
           </div>
         )}
+      </div>}
 
-        {/* Toggle incloure arxivades (només SuperAdmin) */}
-        {isSuperAdmin && onShowArchivedChange && (
+      {/* Toggle incloure arxivades (només SuperAdmin) */}
+      {isSuperAdmin && onShowArchivedChange && (
           <div className="flex items-center gap-1.5 pl-2 border-l border-border/50">
             <Switch
               id="show-archived"
@@ -302,8 +305,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
               </TooltipContent>
             </Tooltip>
           </div>
-        )}
-      </div>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════
           ESPAI FLEXIBLE + ACCIONS DRETA (Filtres + Opcions taula)

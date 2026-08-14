@@ -9,6 +9,8 @@ import { useTranslations } from '@/i18n';
 import { trackUX } from '@/lib/ux/trackUX';
 import type { Transaction, Category, ClassificationMemoryEntry } from '@/lib/data';
 import { resolveAutomaticCategoryDecision } from '@/lib/transaction-classification/decision-engine';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { usePermissions } from '@/hooks/use-permissions';
 
 // =============================================================================
 // TYPES
@@ -42,6 +44,7 @@ interface UseTransactionCategorizationReturn {
     delayMs: number;
     source: 'rules' | 'ai' | null;
   } | null;
+  canExecuteAiCategorization: boolean;
 
   // Actions
   handleCategorize: (txId: string) => Promise<void>;
@@ -240,7 +243,12 @@ export function useTransactionCategorization({
 }: UseTransactionCategorizationParams): UseTransactionCategorizationReturn {
   const { toast } = useToast();
   const { user } = useFirebase();
-  const { t, language } = useTranslations();
+  const { can } = usePermissions();
+  const { canUseCapability } = useEntitlements();
+  const canExecuteAiCategorization = canUseCapability('aiCategorization.execute', {
+    userAllowed: can('moviments.editar'),
+  });
+  const { t, language, tr } = useTranslations();
   // pt fa fallback a ca per missatges d'error (getErrorMessage només té ca/es/fr)
   const errorLang = language === 'pt' ? 'ca' : language;
 
@@ -293,6 +301,14 @@ export function useTransactionCategorization({
     if (!transactions) return;
     const transaction = transactions.find((tx) => tx.id === txId);
     if (!transaction || !availableCategories || !transactionsCollection) return;
+    if (!canExecuteAiCategorization) {
+      toast({
+        variant: 'destructive',
+        title: tr('plans.managementFeatureTitle'),
+        description: tr('plans.aiCategorizationUnavailable'),
+      });
+      return;
+    }
 
     setLoadingStates((prev) => ({ ...prev, [txId]: true }));
     try {
@@ -323,7 +339,6 @@ export function useTransactionCategorization({
       if (!organizationId || !user) {
         throw new Error('Sessió no vàlida. Torna a iniciar sessió.');
       }
-
       const idToken = await user.getIdToken();
       const result = await callCategorizationAPI({
         orgId: organizationId,
@@ -385,6 +400,7 @@ export function useTransactionCategorization({
     language,
     toast,
     t,
+    canExecuteAiCategorization,
   ]);
 
   // ---------------------------------------------------------------------------
@@ -399,6 +415,14 @@ export function useTransactionCategorization({
 
     if (!transactions || !availableCategories || !transactionsCollection || !organizationId || !user) {
       toast({ title: t.movements.table.dataUnavailable, description: t.movements.table.dataLoadError });
+      return;
+    }
+    if (!canExecuteAiCategorization) {
+      toast({
+        variant: 'destructive',
+        title: tr('plans.managementFeatureTitle'),
+        description: tr('plans.aiBulkCategorizationUnavailable'),
+      });
       return;
     }
 
@@ -637,6 +661,7 @@ export function useTransactionCategorization({
     language,
     toast,
     t,
+    canExecuteAiCategorization,
   ]);
 
   // ---------------------------------------------------------------------------
@@ -649,6 +674,7 @@ export function useTransactionCategorization({
     isBatchCategorizing,
     batchProgress,
     batchStatus,
+    canExecuteAiCategorization,
 
     // Actions
     handleCategorize,

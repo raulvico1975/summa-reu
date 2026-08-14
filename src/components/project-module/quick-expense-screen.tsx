@@ -30,6 +30,7 @@ import { useOrgUrl } from '@/hooks/organization-provider';
 
 interface QuickExpenseScreenProps {
   organizationId: string;
+  canUseOcr: boolean;
   /** Mode landing: 100dvh, sense scroll, footer absolut amb safe-area */
   isLandingMode?: boolean;
 }
@@ -105,7 +106,7 @@ function buildAttachmentsFromUploads(entries: PendingUpload[]): OffBankAttachmen
 // COMPONENT
 // =============================================================================
 
-export function QuickExpenseScreen({ organizationId, isLandingMode = false }: QuickExpenseScreenProps) {
+export function QuickExpenseScreen({ organizationId, canUseOcr, isLandingMode = false }: QuickExpenseScreenProps) {
   const { storage, auth } = useFirebase();
   const { save, isSaving } = useSaveOffBankExpense();
   const { update, isUpdating } = useUpdateOffBankExpense();
@@ -138,7 +139,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
   // Estat IA
   const [aiState, setAIState] = useState<AIExtractionState>('idle');
   const [aiExtraction, setAIExtraction] = useState<AIExtraction | null>(null);
-  const [lastAIAttempt, setLastAIAttempt] = useState<{ fileUrl: string; storagePath: string } | null>(null);
+  const [lastAIAttempt, setLastAIAttempt] = useState<{ fileUrl: string; storagePath: string; targetId: string } | null>(null);
 
   // Derivats
   const hasAttachments = uploads.some(u => u.url && !u.error);
@@ -200,16 +201,18 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       if (draftExpenseId) {
         await update(draftExpenseId, { attachments: [] });
       }
-      return;
+      return draftExpenseId;
     }
 
     setIsDraftSyncing(true);
     try {
       if (draftExpenseId) {
         await update(draftExpenseId, payload);
+        return draftExpenseId;
       } else {
         const newId = await save(payload);
         setDraftExpenseId(newId);
+        return newId;
       }
     } catch (error) {
       console.error('[QuickExpense] Draft sync error:', error);
@@ -228,9 +231,10 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
   // IA EXTRACTION
   // ---------------------------------------------------------------------------
 
-  const extractWithAI = useCallback(async (fileUrl: string, storagePath: string) => {
+  const extractWithAI = useCallback(async (fileUrl: string, storagePath: string, targetId: string) => {
+    if (!canUseOcr) return;
     // Només intentem extracció per imatges
-    setLastAIAttempt({ fileUrl, storagePath });
+    setLastAIAttempt({ fileUrl, storagePath, targetId });
     setAIState('extracting');
 
     try {
@@ -245,7 +249,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
           'Content-Type': 'application/json',
           Authorization: `Bearer ${await authUser.getIdToken()}`,
         },
-        body: JSON.stringify({ orgId: organizationId, storagePath }),
+        body: JSON.stringify({ orgId: organizationId, storagePath, context: 'projects', target: 'offBank', targetId }),
       });
 
       if (!response.ok) {
@@ -255,6 +259,11 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       }
 
       const result = await response.json();
+      if (result.ok !== true || typeof result.confidence !== 'number' || result.confidence < 0.3) {
+        setAIExtraction(null);
+        setAIState('done');
+        return;
+      }
       const extraction: AIExtraction = {
         date: result.date ?? null,
         amount: result.amount ?? null,
@@ -298,11 +307,11 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       console.error('[QuickExpense] AI extraction error:', error);
       setAIState('error');
     }
-  }, [date, amountEUR, amountOriginal, concept, organizationId, auth]);
+  }, [date, amountEUR, amountOriginal, concept, organizationId, auth, canUseOcr]);
 
   const handleRetryAI = useCallback(() => {
     if (!lastAIAttempt || aiState === 'extracting') return;
-    extractWithAI(lastAIAttempt.fileUrl, lastAIAttempt.storagePath);
+    extractWithAI(lastAIAttempt.fileUrl, lastAIAttempt.storagePath, lastAIAttempt.targetId);
   }, [aiState, extractWithAI, lastAIAttempt]);
 
   // ---------------------------------------------------------------------------
@@ -378,15 +387,25 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       }
     }
 
-    // Fer extracció IA automàtica amb la primera imatge pujada
-    if (firstImageUpload && aiState === 'idle') {
-      extractWithAI(firstImageUpload.url, firstImageUpload.storagePath);
+    let syncedDraftId: string | null = draftExpenseId;
+    if (nextUploads.some((entry) => entry.url && !entry.error)) {
+      try {
+        syncedDraftId = await syncDraftExpense(nextUploads);
+      } catch {
+        const createdIds = new Set(validFiles.map((entry) => entry.id));
+        await Promise.all(nextUploads
+          .filter((entry) => createdIds.has(entry.id) && entry.storagePath)
+          .map((entry) => deleteObject(ref(storage, entry.storagePath!)).catch(() => undefined)));
+        setUploads((current) => current.filter((entry) => !createdIds.has(entry.id)));
+        return;
+      }
     }
 
-    if (nextUploads.some((entry) => entry.url && !entry.error)) {
-      await syncDraftExpense(nextUploads);
+    // Fer extracció IA només després que el path estigui lligat al draft canònic.
+    if (canUseOcr && firstImageUpload && syncedDraftId && aiState === 'idle') {
+      extractWithAI(firstImageUpload.url, firstImageUpload.storagePath, syncedDraftId);
     }
-  }, [aiState, extractWithAI, syncDraftExpense, uploadFile, uploads]);
+  }, [aiState, canUseOcr, draftExpenseId, extractWithAI, storage, syncDraftExpense, uploadFile, uploads]);
 
   const handleRemoveUpload = useCallback(async (id: string) => {
     const upload = uploads.find(u => u.id === id);
@@ -630,19 +649,19 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
               )}
 
               {/* Indicador extracció IA */}
-              {aiState === 'extracting' && (
+              {canUseOcr && aiState === 'extracting' && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>{tr('projectModule.quickExpense.aiExtracting')}</span>
                 </div>
               )}
-              {aiState === 'done' && aiExtraction && aiExtraction.confidence > 0 && (
+              {canUseOcr && aiState === 'done' && aiExtraction && aiExtraction.confidence > 0 && (
                 <Badge variant="secondary" className="gap-1">
                   <Sparkles className="h-3 w-3" />
                   {tr('projectModule.quickExpense.aiSuggested')}
                 </Badge>
               )}
-              {aiState === 'error' && (
+              {canUseOcr && aiState === 'error' && (
                 <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
                   <p className="text-sm font-medium text-destructive">
                     {tr('projectModule.quickExpense.aiErrorTitle')}

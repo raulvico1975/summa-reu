@@ -11,6 +11,7 @@ import {
   ClosingIncident,
   ClosingManifestRow,
   ClosingDocumentInfo,
+  ClosingTransactionDocument,
   DocumentDiagnostic,
   DocumentStatusCounts,
   MAX_DOCUMENTS,
@@ -194,6 +195,127 @@ function getDocumentUrlFromTxData(data: FirebaseFirestore.DocumentData): string 
   });
 }
 
+interface RawClosingDocumentMetadata {
+  id: string;
+  url?: unknown;
+  storagePath?: unknown;
+  filename?: unknown;
+  contentType?: unknown;
+  isPrimary?: unknown;
+}
+
+export function resolveClosingDocumentReferences(input: {
+  legacyDocument: string | null;
+  metadataDocuments: RawClosingDocumentMetadata[];
+}): ClosingTransactionDocument[] {
+  if (input.metadataDocuments.length === 0) {
+    return input.legacyDocument ? [{
+      id: 'legacy',
+      value: input.legacyDocument,
+      storagePath: null,
+      url: input.legacyDocument,
+      filename: null,
+      contentType: null,
+      isPrimary: true,
+      source: 'legacy',
+    }] : [];
+  }
+
+  const seen = new Set<string>();
+  return input.metadataDocuments
+    .map((metadata): ClosingTransactionDocument | null => {
+      const storagePath = typeof metadata.storagePath === 'string' && metadata.storagePath.trim()
+        ? metadata.storagePath.trim()
+        : null;
+      const url = typeof metadata.url === 'string' && metadata.url.trim() ? metadata.url.trim() : null;
+      const value = storagePath ?? url ?? '';
+      const extractedPath = value ? extractStorageRef(value).path : null;
+      const dedupeKey = extractedPath ? `path:${extractedPath}` : `raw:${value || metadata.id}`;
+      if (seen.has(dedupeKey)) return null;
+      seen.add(dedupeKey);
+      return {
+        id: metadata.id,
+        value,
+        storagePath,
+        url,
+        filename: typeof metadata.filename === 'string' ? metadata.filename : null,
+        contentType: typeof metadata.contentType === 'string' ? metadata.contentType : null,
+        isPrimary: metadata.isPrimary === true,
+        source: 'metadata',
+      };
+    })
+    .filter((document): document is ClosingTransactionDocument => document !== null)
+    .sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary) || left.id.localeCompare(right.id));
+}
+
+function transactionDocumentReferences(tx: ClosingTransaction): ClosingTransactionDocument[] {
+  if (tx.documents) return tx.documents;
+  return resolveClosingDocumentReferences({ legacyDocument: tx.document, metadataDocuments: [] });
+}
+
+function diagnosticKey(txId: string, document: ClosingTransactionDocument, total: number): string {
+  return total === 1 && document.source === 'legacy' ? txId : `${txId}::${document.id}`;
+}
+
+function isCanonicalTransactionDocumentPath(tx: ClosingTransaction, path: string): boolean {
+  if (!tx.organizationId) return true;
+  const prefix = `organizations/${tx.organizationId}/documents/${tx.id}/`;
+  const basename = path.startsWith(prefix) ? path.slice(prefix.length) : '';
+  return !!basename && !basename.includes('/');
+}
+
+function diagnoseDocumentReference(
+  tx: ClosingTransaction,
+  document: ClosingTransactionDocument,
+  configuredBucket: string | null
+): DocumentDiagnostic {
+  const ref = extractStorageRef(document.value);
+  if (!ref.path) {
+    return {
+      txId: tx.id,
+      rawDocumentValue: document.value,
+      extractedPath: null,
+      bucketConfigured: configuredBucket,
+      bucketInUrl: ref.bucket,
+      status: 'URL_NOT_PARSEABLE',
+      kind: ref.kind,
+    };
+  }
+  if (!isCanonicalTransactionDocumentPath(tx, ref.path)) {
+    return {
+      txId: tx.id,
+      rawDocumentValue: document.value,
+      extractedPath: ref.path,
+      bucketConfigured: configuredBucket,
+      bucketInUrl: ref.bucket,
+      status: 'URL_NOT_PARSEABLE',
+      kind: ref.kind,
+      errorCode: 'PATH_IDENTITY_MISMATCH',
+      errorMessage: 'La ruta no pertany a la transacció i organització esperades',
+    };
+  }
+  if (ref.bucket && configuredBucket && !areEquivalentStorageBuckets(ref.bucket, configuredBucket)) {
+    return {
+      txId: tx.id,
+      rawDocumentValue: document.value,
+      extractedPath: ref.path,
+      bucketConfigured: configuredBucket,
+      bucketInUrl: ref.bucket,
+      status: 'BUCKET_MISMATCH',
+      kind: ref.kind,
+    };
+  }
+  return {
+    txId: tx.id,
+    rawDocumentValue: document.value,
+    extractedPath: ref.path,
+    bucketConfigured: configuredBucket,
+    bucketInUrl: ref.bucket,
+    status: 'OK',
+    kind: ref.kind,
+  };
+}
+
 /**
  * Diagnostica l'estat d'un document per a una transacció.
  * Retorna informació completa per a la pestanya Debug.
@@ -271,7 +393,17 @@ export function prepareDiagnostics(
   const diagnostics = new Map<string, DocumentDiagnostic>();
 
   for (const tx of transactions) {
-    diagnostics.set(tx.id, diagnoseTxDocument(tx, configuredBucket));
+    const documents = transactionDocumentReferences(tx);
+    if (documents.length === 0) {
+      diagnostics.set(tx.id, diagnoseTxDocument(tx, configuredBucket));
+      continue;
+    }
+    for (const document of documents) {
+      diagnostics.set(
+        diagnosticKey(tx.id, document, documents.length),
+        diagnoseDocumentReference(tx, document, configuredBucket)
+      );
+    }
   }
 
   return diagnostics;
@@ -295,7 +427,27 @@ export async function loadTransactions(
 
   const transactions: ClosingTransaction[] = [];
 
-  for (const doc of snapshot.docs) {
+  const eligibleDocs = snapshot.docs.filter((transactionDoc) => {
+    const data = transactionDoc.data();
+    if (data.deletedAt) return false;
+    if (data.parentTransactionId) return false;
+    if (data.isRemittanceItem === true) return false;
+    if (data.source === 'remittance') return false;
+    if (data.transactionType === 'donation' || data.transactionType === 'fee') return false;
+    return true;
+  });
+  const documentSnapshots = new Map<string, FirebaseFirestore.QuerySnapshot>();
+  const concurrency = 20;
+  for (let offset = 0; offset < eligibleDocs.length; offset += concurrency) {
+    const chunk = eligibleDocs.slice(offset, offset + concurrency);
+    const loaded = await Promise.all(chunk.map(async (transactionDoc) => ({
+      transactionId: transactionDoc.id,
+      snapshot: await transactionDoc.ref.collection('documents').get(),
+    })));
+    for (const result of loaded) documentSnapshots.set(result.transactionId, result.snapshot);
+  }
+
+  for (const doc of eligibleDocs) {
     const data = doc.data();
 
     // Excloure si té deletedAt
@@ -315,8 +467,15 @@ export async function loadTransactions(
     if (transactionType === 'donation') continue; // Stripe donation child
     if (transactionType === 'fee') continue;      // Stripe fee child
 
-    // Lectura robusta de l'URL del document (pot estar a diferents camps)
     const documentUrl = getDocumentUrlFromTxData(data);
+    const documentsSnapshot = documentSnapshots.get(doc.id);
+    const documents = resolveClosingDocumentReferences({
+      legacyDocument: documentUrl,
+      metadataDocuments: (documentsSnapshot?.docs ?? []).map((documentDoc) => ({
+        id: documentDoc.id,
+        ...documentDoc.data(),
+      })),
+    });
 
     transactions.push({
       id: doc.id,
@@ -328,6 +487,8 @@ export async function loadTransactions(
       contactId: data.contactId ?? null,
       contactName: data.contactName ?? null,
       document: documentUrl,
+      organizationId: orgId,
+      documents,
       transactionType,
       isRemittance: data.isRemittance === true,
       remittanceStatus: data.remittanceStatus ?? null,
@@ -375,7 +536,7 @@ export function detectIncidents(transactions: ClosingTransaction[]): ClosingInci
     const isExpense = tx.amount < 0;
 
     // FALTA_DOCUMENT: despesa sense document
-    if (isExpense && !tx.document) {
+    if (isExpense && transactionDocumentReferences(tx).length === 0) {
       incidents.push({
         txId: tx.id,
         type: 'FALTA_DOCUMENT',
@@ -442,36 +603,41 @@ export function prepareDocuments(
 
   for (let i = 0; i < transactions.length; i++) {
     const tx = transactions[i];
-    const diagnostic = diagnostics.get(tx.id);
+    const references = transactionDocumentReferences(tx);
+    for (let documentIndex = 0; documentIndex < references.length; documentIndex++) {
+      const reference = references[documentIndex];
+      const key = diagnosticKey(tx.id, reference, references.length);
+      const diagnostic = diagnostics.get(key);
+      if (!diagnostic?.extractedPath || diagnostic.status !== 'OK') continue;
 
-    // Només incloure si té path extret i no és BUCKET_MISMATCH/URL_NOT_PARSEABLE/NO_DOCUMENT
-    if (!diagnostic || !diagnostic.extractedPath) continue;
-    if (diagnostic.status !== 'OK') continue;
+      const storagePath = diagnostic.extractedPath;
+      const ordre = i + 1;
+      const extension = inferExtension(reference.contentType, reference.filename ?? storagePath);
+      const baseFileName = buildDocumentFileName({
+        ordre,
+        date: tx.date,
+        amount: tx.amount,
+        concept: tx.description,
+        txId: tx.id,
+        extension,
+      });
+      const suffix = references.length > 1 ? `_adjunt_${String(documentIndex + 1).padStart(2, '0')}` : '';
+      const fileName = suffix ? baseFileName.replace(/(\.[^.]+)$/, `${suffix}$1`) : baseFileName;
+      const docInfo: ClosingDocumentInfo = {
+        txId: tx.id,
+        documentId: reference.id,
+        diagnosticKey: key,
+        ordre,
+        storagePath,
+        bucketName: resolveDocumentBucketName(diagnostic.bucketInUrl, diagnostic.bucketConfigured),
+        fileName,
+        contentType: reference.contentType,
+        size: null,
+      };
 
-    const storagePath = diagnostic.extractedPath;
-    const ordre = i + 1;
-    const extension = inferExtension(null, storagePath);
-    const fileName = buildDocumentFileName({
-      ordre,
-      date: tx.date,
-      amount: tx.amount,
-      concept: tx.description,
-      txId: tx.id,
-      extension,
-    });
-
-    const docInfo: ClosingDocumentInfo = {
-      txId: tx.id,
-      ordre,
-      storagePath,
-      bucketName: resolveDocumentBucketName(diagnostic.bucketInUrl, diagnostic.bucketConfigured),
-      fileName,
-      contentType: null,
-      size: null,
-    };
-
-    docs.push(docInfo);
-    txWithDoc.set(tx.id, docInfo);
+      docs.push(docInfo);
+      if (!txWithDoc.has(tx.id)) txWithDoc.set(tx.id, docInfo);
+    }
   }
 
   return { docs, txWithDoc };
@@ -494,20 +660,25 @@ export async function validateLimits(
   // Calcular mida total amb metadata
   let totalSize = 0;
 
-  for (const doc of docs) {
-    try {
-      const bucket = doc.bucketName ? admin.storage().bucket(doc.bucketName) : admin.storage().bucket();
-      const file = bucket.file(doc.storagePath);
-      const [metadata] = await file.getMetadata();
-      const size = parseInt(metadata.size as string, 10) || 0;
-      doc.size = size;
-      doc.contentType = (metadata.contentType as string) || null;
-      totalSize += size;
-    } catch {
-      // Si no podem obtenir metadata, assumim 0 i continuem
-      doc.size = 0;
+  const concurrency = 20;
+  for (let offset = 0; offset < docs.length; offset += concurrency) {
+    const chunk = docs.slice(offset, offset + concurrency);
+    const sizes = await Promise.all(chunk.map(async (doc) => {
+      try {
+        const bucket = doc.bucketName ? admin.storage().bucket(doc.bucketName) : admin.storage().bucket();
+        const file = bucket.file(doc.storagePath);
+        const [metadata] = await file.getMetadata();
+        const size = parseInt(metadata.size as string, 10) || 0;
+        doc.size = size;
+        doc.contentType = (metadata.contentType as string) || null;
+        return size;
+      } catch {
+        doc.size = 0;
+        return 0;
+      }
+    }));
+    for (const size of sizes) totalSize += size;
     }
-  }
 
   const totalSizeMB = totalSize / (1024 * 1024);
 
@@ -575,7 +746,7 @@ export function buildManifestRows(
       categoria,
       contacte,
       txId: tx.id,
-      teDocument: !!tx.document,
+      teDocument: (tx.documents?.length ?? 0) > 0 || !!tx.document,
       nomDocument: wasDownloaded && docInfo ? docInfo.fileName : '',
     };
   });

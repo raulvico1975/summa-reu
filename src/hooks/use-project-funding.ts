@@ -25,6 +25,7 @@ import type {
   ProjectFundingSourceFormData,
 } from '@/lib/project-module-types';
 import { parseEuropeanAmountInput } from '@/lib/project-module-funding';
+import { useProjectCommercialAccess } from '@/hooks/use-project-module';
 
 const MAX_FUNDING_BATCH_WRITES = 50;
 
@@ -142,10 +143,12 @@ export function useFundingExpenseAllocations(projectId: string) {
 export function useSaveProjectFunding() {
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateProjects, canMutateBudgets } = useProjectCommercialAccess();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const enableMultiFunder = useCallback(async (projectId: string) => {
+    if (!canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !user) throw new Error('No autenticat');
     setIsSaving(true);
     setError(null);
@@ -162,13 +165,14 @@ export function useSaveProjectFunding() {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId, user]);
+  }, [canMutateProjects, firestore, organizationId, user]);
 
   const saveFundingSource = useCallback(async (
     projectId: string,
     data: ProjectFundingSourceFormData,
     sourceId?: string
   ): Promise<string> => {
+    if (!canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !user) throw new Error('No autenticat');
     const name = data.name.trim();
     if (!name) throw new Error('El nom de la font és obligatori');
@@ -212,9 +216,10 @@ export function useSaveProjectFunding() {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId, user]);
+  }, [canMutateProjects, firestore, organizationId, user]);
 
   const archiveFundingSource = useCallback(async (projectId: string, sourceId: string) => {
+    if (!canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !user) throw new Error('No autenticat');
     setIsSaving(true);
     setError(null);
@@ -231,7 +236,7 @@ export function useSaveProjectFunding() {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId, user]);
+  }, [canMutateProjects, firestore, organizationId, user]);
 
   const saveFundingBudgetAllocation = useCallback(async (
     projectId: string,
@@ -239,6 +244,7 @@ export function useSaveProjectFunding() {
     fundingSourceId: string,
     amountValue: string
   ) => {
+    if (!canMutateBudgets) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !user) throw new Error('No autenticat');
     const amountEUR = parseEuropeanAmountInput(amountValue, { required: true });
     const allocationId = `${budgetLineId}__${fundingSourceId}`;
@@ -261,7 +267,7 @@ export function useSaveProjectFunding() {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId, user]);
+  }, [canMutateBudgets, firestore, organizationId, user]);
 
   const saveFundingExpenseAllocationsForExpense = useCallback(async (params: {
     projectId: string;
@@ -270,6 +276,7 @@ export function useSaveProjectFunding() {
     expenseSource: 'bank' | 'offBank';
     lines: ProjectFundingExpenseAllocationFormLine[];
   }) => {
+    if (!canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !user) throw new Error('No autenticat');
     const normalizedLines = params.lines
       .map((line) => ({
@@ -323,7 +330,7 @@ export function useSaveProjectFunding() {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId, user]);
+  }, [canMutateProjects, firestore, organizationId, user]);
 
   return {
     enableMultiFunder,

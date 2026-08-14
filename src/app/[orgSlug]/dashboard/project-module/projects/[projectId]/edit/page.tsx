@@ -4,7 +4,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useProjectDetail } from '@/hooks/use-project-module';
+import { useProjectCommercialAccess, useProjectDetail } from '@/hooks/use-project-module';
 import { ProjectForm } from '@/components/project-module/project-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -19,6 +19,7 @@ export default function EditProjectPage() {
   const projectId = params.projectId as string;
   const { buildUrl } = useOrgUrl();
   const { t, tr } = useTranslations();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   const { project, isLoading, error } = useProjectDetail(projectId);
 
@@ -56,5 +57,8 @@ export default function EditProjectPage() {
     );
   }
 
+  if (!canMutateProjects) {
+    return <div className="space-y-4"><p className="font-medium">{project.name}</p><p className="text-muted-foreground">Mode de lectura: el pla actual no permet editar projectes.</p><Link href={buildUrl('/dashboard/project-module/projects')}><Button variant="outline">{t.common.back}</Button></Link></div>;
+  }
   return <ProjectForm project={project} mode="edit" />;
 }

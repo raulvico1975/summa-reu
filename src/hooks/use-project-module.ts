@@ -4,7 +4,12 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { computeFxAmountEUR, resolveManualExpenseFxRate } from '@/lib/project-module/fx';
+import {
+  computeFxAmountEUR,
+  computeWeightedProjectFxRate,
+  getEffectiveProjectFxRate,
+  resolveManualExpenseFxRate,
+} from '@/lib/project-module/fx';
 import { parseEuropeanAmountInput } from '@/lib/project-module-funding';
 import { validateAssignments } from '@/lib/project-module/normalize-assignments';
 import type { ProjectDeletePolicy, ProjectDeleteUsage } from '@/lib/project-module/project-lifecycle-policy';
@@ -53,8 +58,23 @@ import type {
   OffBankAttachment,
 } from '@/lib/project-module-types';
 import { safeSet, safeUpdate } from '@/lib/safe-write';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const PAGE_SIZE = 50;
+
+export function useProjectCommercialAccess() {
+  const { organization } = useCurrentOrganization();
+  const { canAccessProjectsArea } = usePermissions();
+  const { canUseCapability } = useEntitlements();
+  const operationalEnabled = organization?.features?.projectModule === true;
+  return {
+    canMutateProjects: canUseCapability('projects.mutate', { operationalEnabled, userAllowed: canAccessProjectsArea }),
+    canMutateBudgets: canUseCapability('projectBudgets.mutate', { operationalEnabled, userAllowed: canAccessProjectsArea }),
+    canMutateMulticurrency: canUseCapability('multicurrency.mutate', { operationalEnabled, userAllowed: canAccessProjectsArea }),
+    canExportGrantJustification: canUseCapability('grantJustification.export', { operationalEnabled, userAllowed: canAccessProjectsArea }),
+  };
+}
 
 /**
  * Helper per dividir un array en chunks de mida `size`.
@@ -863,11 +883,13 @@ interface UseSaveOffBankExpenseResult {
 export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const save = useCallback(async (data: OffBankExpenseFormData): Promise<string> => {
+    if (!canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !user) {
       throw new Error('No autenticat');
     }
@@ -991,7 +1013,7 @@ export function useSaveOffBankExpense(): UseSaveOffBankExpenseResult {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId, user]);
+  }, [canMutateProjects, firestore, organizationId, user]);
 
   return {
     save,
@@ -1013,11 +1035,13 @@ interface UseUpdateOffBankExpenseResult {
 export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const update = useCallback(async (expenseId: string, data: Partial<OffBankExpenseFormData>): Promise<void> => {
+    if (!canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !user) {
       throw new Error('No autenticat');
     }
@@ -1151,7 +1175,7 @@ export function useUpdateOffBankExpense(): UseUpdateOffBankExpenseResult {
     } finally {
       setIsUpdating(false);
     }
-  }, [firestore, organizationId, user]);
+  }, [canMutateProjects, firestore, organizationId, user]);
 
   return {
     update,
@@ -1179,11 +1203,13 @@ interface UseHardDeleteOffBankExpenseResult {
 export function useHardDeleteOffBankExpense(): UseHardDeleteOffBankExpenseResult {
   const { firestore, storage } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const hardDelete = useCallback(async (target: HardDeleteTarget): Promise<void> => {
+    if (!canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId) {
       throw new Error('No autenticat');
     }
@@ -1246,7 +1272,7 @@ export function useHardDeleteOffBankExpense(): UseHardDeleteOffBankExpenseResult
     } finally {
       setIsDeleting(false);
     }
-  }, [firestore, storage, organizationId]);
+  }, [canMutateProjects, firestore, storage, organizationId]);
 
   return {
     hardDelete,
@@ -1368,6 +1394,7 @@ interface UseSaveExpenseLinkResult {
 export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -1378,6 +1405,7 @@ export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
     note: string | null,
     justification?: ExpenseJustification | null
   ) => {
+    if (!canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !user) {
       throw new Error('No autenticat');
     }
@@ -1444,9 +1472,10 @@ export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId, user]);
+  }, [canMutateProjects, firestore, organizationId, user]);
 
   const remove = useCallback(async (txId: string) => {
+    if (!canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId) {
       throw new Error('No autenticat');
     }
@@ -1475,7 +1504,7 @@ export function useSaveExpenseLink(): UseSaveExpenseLinkResult {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId]);
+  }, [canMutateProjects, firestore, organizationId]);
 
   return {
     save,
@@ -1631,11 +1660,13 @@ interface UseSaveProjectResult {
 export function useSaveProject(): UseSaveProjectResult {
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const save = useCallback(async (data: ProjectFormData, projectId?: string): Promise<string> => {
+    if (!canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !user) {
       throw new Error('No autenticat');
     }
@@ -1697,7 +1728,7 @@ export function useSaveProject(): UseSaveProjectResult {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId, user]);
+  }, [canMutateProjects, firestore, organizationId, user]);
 
   return {
     save,
@@ -1721,6 +1752,7 @@ interface UseProjectLifecycleResult {
 export function useProjectLifecycle(): UseProjectLifecycleResult {
   const { user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -1729,6 +1761,7 @@ export function useProjectLifecycle(): UseProjectLifecycleResult {
     action: 'inspectDelete' | 'close' | 'delete',
     projectId: string
   ) => {
+    if (action !== 'inspectDelete' && !canMutateProjects) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !projectId || !user) {
       throw new Error('No autenticat');
     }
@@ -1759,7 +1792,7 @@ export function useProjectLifecycle(): UseProjectLifecycleResult {
     }
 
     return result;
-  }, [organizationId, user]);
+  }, [canMutateProjects, organizationId, user]);
 
   const inspectDeleteProject = useCallback(async (
     projectId: string
@@ -1824,6 +1857,7 @@ interface UseSaveProjectFxResult {
 export function useSaveProjectFx(): UseSaveProjectFxResult {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateMulticurrency } = useProjectCommercialAccess();
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -1833,6 +1867,7 @@ export function useSaveProjectFx(): UseSaveProjectFxResult {
     fxRate: number | null,
     fxCurrency: string | null
   ): Promise<void> => {
+    if (!canMutateMulticurrency) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId) {
       throw new Error('No autenticat');
     }
@@ -1865,7 +1900,7 @@ export function useSaveProjectFx(): UseSaveProjectFxResult {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId]);
+  }, [canMutateMulticurrency, firestore, organizationId]);
 
   return {
     saveFx,
@@ -1884,11 +1919,7 @@ export function useSaveProjectFx(): UseSaveProjectFxResult {
  * Compatible amb expense.fxRate (amountEUR = originalAmount × fxRate)
  */
 export function computeWeightedFxRate(transfers: FxTransfer[]): number | null {
-  if (transfers.length === 0) return null;
-  const totalEur = transfers.reduce((s, t) => s + t.eurSent, 0);
-  const totalLocal = transfers.reduce((s, t) => s + t.localReceived, 0);
-  if (totalLocal <= 0) return null;
-  return totalEur / totalLocal;
+  return computeWeightedProjectFxRate(transfers);
 }
 
 /**
@@ -1910,10 +1941,7 @@ export function getEffectiveProjectTC(
   fxTransfers: FxTransfer[],
   project: Project
 ): number | null {
-  const weighted = computeWeightedFxRate(fxTransfers);
-  if (weighted !== null) return weighted;
-  if (project.fxRate && project.fxRate > 0) return 1 / project.fxRate;
-  return null;
+  return getEffectiveProjectFxRate(fxTransfers, project);
 }
 
 /**
@@ -2033,6 +2061,7 @@ interface UseSaveFxTransferResult {
 export function useSaveFxTransfer(): UseSaveFxTransferResult {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateMulticurrency } = useProjectCommercialAccess();
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -2042,6 +2071,7 @@ export function useSaveFxTransfer(): UseSaveFxTransferResult {
     data: FxTransferFormData,
     transferId?: string
   ): Promise<string> => {
+    if (!canMutateMulticurrency) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId) {
       throw new Error('No autenticat');
     }
@@ -2112,9 +2142,10 @@ export function useSaveFxTransfer(): UseSaveFxTransferResult {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId]);
+  }, [canMutateMulticurrency, firestore, organizationId]);
 
   const remove = useCallback(async (projectId: string, transferId: string) => {
+    if (!canMutateMulticurrency) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId) {
       throw new Error('No autenticat');
     }
@@ -2145,7 +2176,7 @@ export function useSaveFxTransfer(): UseSaveFxTransferResult {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId]);
+  }, [canMutateMulticurrency, firestore, organizationId]);
 
   return {
     save,
@@ -2171,6 +2202,7 @@ interface UseReapplyProjectFxResult {
 export function useReapplyProjectFx(): UseReapplyProjectFxResult {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateMulticurrency } = useProjectCommercialAccess();
   const [isRunning, setIsRunning] = useState(false);
 
   const reapply = useCallback(async (
@@ -2178,6 +2210,7 @@ export function useReapplyProjectFx(): UseReapplyProjectFxResult {
     fxTransfers: FxTransfer[],
     project: Project
   ): Promise<{ updated: number; skippedManualTC: number }> => {
+    if (!canMutateMulticurrency) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId) throw new Error('No autenticat');
 
     setIsRunning(true);
@@ -2295,7 +2328,7 @@ export function useReapplyProjectFx(): UseReapplyProjectFxResult {
     } finally {
       setIsRunning(false);
     }
-  }, [firestore, organizationId]);
+  }, [canMutateMulticurrency, firestore, organizationId]);
 
   return { reapply, isRunning };
 }
@@ -2399,6 +2432,7 @@ interface UseSaveBudgetLineResult {
 export function useSaveBudgetLine(): UseSaveBudgetLineResult {
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateBudgets } = useProjectCommercialAccess();
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -2408,6 +2442,7 @@ export function useSaveBudgetLine(): UseSaveBudgetLineResult {
     data: BudgetLineFormData,
     lineId?: string
   ): Promise<string> => {
+    if (!canMutateBudgets) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId || !user) {
       throw new Error('No autenticat');
     }
@@ -2474,9 +2509,10 @@ export function useSaveBudgetLine(): UseSaveBudgetLineResult {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId, user]);
+  }, [canMutateBudgets, firestore, organizationId, user]);
 
   const remove = useCallback(async (projectId: string, lineId: string) => {
+    if (!canMutateBudgets) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId) {
       throw new Error('No autenticat');
     }
@@ -2507,7 +2543,7 @@ export function useSaveBudgetLine(): UseSaveBudgetLineResult {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId]);
+  }, [canMutateBudgets, firestore, organizationId]);
 
   return {
     save,
@@ -2535,6 +2571,7 @@ interface UseSetBudgetLineResult {
 export function useSetBudgetLine(): UseSetBudgetLineResult {
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { canMutateBudgets } = useProjectCommercialAccess();
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -2545,6 +2582,7 @@ export function useSetBudgetLine(): UseSetBudgetLineResult {
     budgetLineId: string | null,
     budgetLineName: string | null
   ) => {
+    if (!canMutateBudgets) throw new Error('ENTITLEMENT_DENIED');
     if (!organizationId) {
       throw new Error('No autenticat');
     }
@@ -2595,7 +2633,7 @@ export function useSetBudgetLine(): UseSetBudgetLineResult {
     } finally {
       setIsSaving(false);
     }
-  }, [firestore, organizationId]);
+  }, [canMutateBudgets, firestore, organizationId]);
 
   return {
     setBudgetLineForAssignment,

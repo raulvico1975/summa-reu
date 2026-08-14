@@ -73,6 +73,9 @@ import { formatCurrencyEU } from '@/lib/normalize';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
 import { TicketsInbox } from '@/components/expense-reports/tickets-inbox';
+import { useEntitlements } from '@/hooks/use-entitlements';
+import { usePermissions } from '@/hooks/use-permissions';
+import { useProjectCommercialAccess } from '@/hooks/use-project-module';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -152,12 +155,15 @@ function getStatusInfo(report: ExpenseReport, t: TranslationsContextType['t']): 
 
 export default function LiquidacionsPage() {
   const router = useRouter();
-  const { organization, organizationId, userRole } = useCurrentOrganization();
+  const { organization, organizationId } = useCurrentOrganization();
   const { firestore, storage, user } = useFirebase();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
   const { t, tr } = useTranslations();
   const isMobile = useIsMobile();
+  const { canUseCapability } = useEntitlements();
+  const { can } = usePermissions();
+  const { canMutateProjects } = useProjectCommercialAccess();
 
   // Helper defensiu per traduccions JSON (evita mostrar claus literals)
   const trSafe = React.useCallback(
@@ -172,7 +178,11 @@ export default function LiquidacionsPage() {
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
 
   // Admin i user poden operar (superadmin es resol com admin). Viewer: només lectura.
-  const canOperate = userRole === 'admin' || userRole === 'user';
+  const canOperate = canMutateProjects && can('sections.moviments') && can('moviments.editar');
+  const canUseOcr = canUseCapability('pendingDocuments.ocr', {
+    operationalEnabled: isPendingDocsEnabled,
+    userAllowed: can('sections.moviments') && can('moviments.editar'),
+  });
 
   // Tab principal (liquidacions, tickets o quilometratge)
   const [mainTab, setMainTab] = React.useState<'liquidacions' | 'tickets' | 'quilometratge'>('liquidacions');
@@ -797,6 +807,7 @@ export default function LiquidacionsPage() {
               storage={storage}
               organizationId={organizationId}
               canOperate={canOperate}
+              canUseOcr={canUseOcr}
             />
           )}
         </TabsContent>

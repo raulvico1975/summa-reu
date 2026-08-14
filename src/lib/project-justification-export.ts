@@ -555,9 +555,37 @@ export interface MultiFunderExportParams {
   budgetAllocations: ProjectFundingBudgetAllocation[];
   expenseAllocations: ProjectFundingExpenseAllocation[];
   resolveAssignmentAmountEUR?: ProjectFundingImputedAmountResolver;
+  labels?: MultiFunderExportLabels;
 }
 
+export interface MultiFunderExportLabels {
+  expenseHeaders: [string, string, string, string, string, string, string, string, string, string, string, string, string, string, string];
+  totalDistributed: string;
+  difference: string;
+  status: string;
+  notes: string;
+  summaryBudgetLine: string;
+  summaryBudgeted: string;
+  summaryExecuted: string;
+  summaryDifference: string;
+  budgetedSuffix: string;
+  executedSuffix: string;
+  differenceSuffix: string;
+  expenseSheetName: string;
+  summarySheetName: string;
+  filenamePrefix: string;
+}
+
+const DEFAULT_MULTI_FUNDER_LABELS: MultiFunderExportLabels = {
+  expenseHeaders: ['Num.', 'Data despesa', 'Data factura', 'Data pagament', 'Concepte', 'Proveidor / contrapart', 'NIF/CIF', 'Num. factura', 'Num. justificant', 'Partida principal', 'Moneda', 'Import total moneda original', 'Tipus de canvi', 'Import total EUR', 'Import imputat EUR'],
+  totalDistributed: 'Total distribuit', difference: 'Diferencia', status: 'Estat', notes: 'Notes',
+  summaryBudgetLine: 'Partida', summaryBudgeted: 'Pressupost total', summaryExecuted: 'Executat total', summaryDifference: 'Diferencia total',
+  budgetedSuffix: 'pressupost', executedSuffix: 'executat', differenceSuffix: 'diferencia',
+  expenseSheetName: 'Despeses', summarySheetName: 'Resum per partida i financador', filenamePrefix: 'justificacio_projecte_diversos_financadors',
+};
+
 export function buildProjectMultiFunderJustificationXlsx(params: MultiFunderExportParams): ExportResult {
+  const labels = params.labels ?? DEFAULT_MULTI_FUNDER_LABELS;
   const activeSources = params.fundingSources
     .filter((source) => source.archivedAt === null)
     .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
@@ -580,26 +608,12 @@ export function buildProjectMultiFunderJustificationXlsx(params: MultiFunderExpo
 
   const expenseSheetRows: (string | number | null)[][] = [
     [
-      'Num.',
-      'Data despesa',
-      'Data factura',
-      'Data pagament',
-      'Concepte',
-      'Proveidor / contrapart',
-      'NIF/CIF',
-      'Num. factura',
-      'Num. justificant',
-      'Partida principal',
-      'Moneda',
-      'Import total moneda original',
-      'Tipus de canvi',
-      'Import total EUR',
-      'Import imputat EUR',
+      ...labels.expenseHeaders,
       ...activeSources.map((source) => source.name),
-      'Total distribuit',
-      'Diferencia',
-      'Estat',
-      'Notes',
+      labels.totalDistributed,
+      labels.difference,
+      labels.status,
+      labels.notes,
     ],
     ...expenseRows.map((row) => [
       row.order,
@@ -627,14 +641,14 @@ export function buildProjectMultiFunderJustificationXlsx(params: MultiFunderExpo
 
   const summarySheetRows: (string | number)[][] = [
     [
-      'Partida',
-      'Pressupost total',
-      'Executat total',
-      'Diferencia total',
+      labels.summaryBudgetLine,
+      labels.summaryBudgeted,
+      labels.summaryExecuted,
+      labels.summaryDifference,
       ...activeSources.flatMap((source) => [
-        `${source.name} pressupost`,
-        `${source.name} executat`,
-        `${source.name} diferencia`,
+        `${source.name} ${labels.budgetedSuffix}`,
+        `${source.name} ${labels.executedSuffix}`,
+        `${source.name} ${labels.differenceSuffix}`,
       ]),
     ],
     ...summaryRows.map((row) => [
@@ -677,8 +691,8 @@ export function buildProjectMultiFunderJustificationXlsx(params: MultiFunderExpo
     { wch: 16 },
     { wch: 24 },
   ];
-  XLSX.utils.book_append_sheet(wb, expenseSheet, 'Despeses');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summarySheetRows), 'Resum per partida i financador');
+  XLSX.utils.book_append_sheet(wb, expenseSheet, labels.expenseSheetName);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summarySheetRows), labels.summarySheetName);
 
   const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -688,7 +702,7 @@ export function buildProjectMultiFunderJustificationXlsx(params: MultiFunderExpo
     .slice(0, 60);
   return {
     blob,
-    filename: `justificacio_projecte_diversos_financadors_${projectPart}_${dateStr}.xlsx`,
+    filename: `${labels.filenamePrefix}_${projectPart}_${dateStr}.xlsx`,
   };
 }
 
@@ -726,6 +740,7 @@ export interface FundingExportParams {
   columnLabels?: FundingColumnLabels;
   sheetName?: string;
   filenamePrefix?: string;
+  resolveAssignmentAmountEUR?: ProjectFundingImputedAmountResolver;
 }
 
 /**
@@ -773,6 +788,7 @@ export function buildProjectJustificationFundingXlsx(
     columnLabels,
     sheetName = 'Justificació',
     filenamePrefix = 'justificacio_financador',
+    resolveAssignmentAmountEUR,
   } = params;
 
   // 1. Obtenir files base (ordre per partida, usat també per ZIP)
@@ -892,7 +908,12 @@ export function buildProjectJustificationFundingXlsx(
     if (typeof totalEUR === 'number') totalJ += totalEUR;
 
     // M: Import imputat al projecte (EUR) — calculat primer per usar al % imputat
-    const assignedEUR: number | string = row.amountAssignedEUR ?? '';
+    const resolvedAssignedEUR = assignment
+      ? resolveAssignmentAmountEUR?.({ link: link!, assignment, expense: expense ?? null, projectId })
+      : null;
+    const assignedEUR: number | string = resolvedAssignedEUR != null
+      ? Math.abs(resolvedAssignedEUR)
+      : row.amountAssignedEUR ?? '';
     if (typeof assignedEUR === 'number') totalL += assignedEUR;
 
     // K: % imputat (valor intern 0..1 per format Excel percentual)

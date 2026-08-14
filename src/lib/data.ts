@@ -532,7 +532,7 @@ export type OrganizationStatus = 'active' | 'suspended' | 'pending';
  */
 export type OrganizationLanguage = 'ca' | 'es';
 
-export type OrganizationBillingPlan = 'initial' | 'management' | 'fiscal_documents';
+export type OrganizationBillingPlan = 'initial' | 'management' | 'fiscal_documents' | 'control' | 'complete';
 export type OrganizationBillingStatus = 'trial' | 'active' | 'past_due' | 'cancelled';
 
 /**
@@ -540,6 +540,7 @@ export type OrganizationBillingStatus = 'trial' | 'active' | 'past_due' | 'cance
  * Permet activar/desactivar mòduls opcionals.
  */
 export type OrganizationFeatures = {
+  transactionDocuments?: boolean; // Configuració operativa; només pot restringir l'entitlement comercial
   projectModule?: boolean;         // Mòdul de projectes i justificació econòmica
   pendingDocs?: boolean;           // Documents pendents de conciliació (factures/nòmines pre-banc)
   expenseReports?: {

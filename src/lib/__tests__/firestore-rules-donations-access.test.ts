@@ -19,6 +19,6 @@ test('firestore rules gate transactions update behind moviments.editar capabilit
 
   assert.match(
     rules,
-    /match \/transactions\/\{transactionId\}\s*\{[\s\S]*allow update: if isSuperAdmin\(\)\s*\|\|\s*\(hasCapability\(orgId, 'moviments\.editar'\)[\s\S]*request\.resource\.data\.amount is number[\s\S]*\);/m,
+    /match \/transactions\/\{transactionId\}\s*\{[\s\S]*allow update: if exists\(\/databases\/\$\(database\)\/documents\/organizations\/\$\(orgId\)\/transactions\/\$\(transactionId\)\)[\s\S]*\(isSuperAdmin\(\)[\s\S]*\|\| \(hasCapability\(orgId, 'moviments\.editar'\)[\s\S]*!request\.resource\.data\.diff\(resource\.data\)\.affectedKeys\(\)\.hasAny\(\['document'\]\)/m,
   );
 });

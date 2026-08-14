@@ -161,15 +161,15 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
         },
       },
       conciliation: {
-        label: 'Conciliació bancària (amb IA)',
+        label: 'Conciliació bancària assistida',
         title: 'Moviments, extractes i conciliació',
         description:
           'Del banc a la pantalla de treball: importes, assignes i deixes cada moviment connectat amb el seu context.',
         items: {
           assignment: {
-            title: 'Assignació intel·ligent',
+            title: 'Propostes de categorització',
             description:
-              'Summa aprèn de les decisions anteriors i proposa contactes, categories i relacions abans que hagis d’entrar manualment.',
+              'Summa proposa contactes i categories a partir de les dades disponibles perquè els puguis revisar abans de confirmar-los.',
           },
         },
       },
@@ -181,15 +181,15 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
       },
       payments: {
         label: 'Cobraments i pagaments',
-        title: 'Remeses, devolucions i cobrament recurrent',
+        title: 'Remeses SEPA i devolucions',
         description:
-          'Quotes, remeses, devolucions i cobrament de donacions dins d’un mateix flux econòmic.',
+          'Quotes, remeses SEPA i gestió manual de devolucions dins d’un mateix flux econòmic.',
       },
       fiscal: {
-        label: 'Fiscalitat (models AEAT ready)',
+        label: 'Fiscalitat preparada per revisar',
         title: 'Donacions, certificats i models fiscals',
         description:
-          'Quan arriba el moment fiscal, la informació ja està preparada per generar certificats i models sense reconstruccions finals.',
+          'Quan arriba el moment fiscal, la informació queda preparada per revisar certificats i models abans de presentar-los.',
       },
       projects: {
         label: 'Gestió de projectes',
@@ -210,7 +210,7 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
           reporting: {
             title: 'Justificació i exportació',
             description:
-              'Preparació de la justificació amb materials exportables i documentació agrupada.',
+              'XLSX estructurat i documentació agrupada per preparar la justificació econòmica.',
           },
         },
       },
@@ -253,15 +253,15 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
         },
       },
       conciliation: {
-        label: 'Conciliación bancaria (con IA)',
+        label: 'Conciliación bancaria asistida',
         title: 'Movimientos, extractos y conciliación',
         description:
           'Del banco a la pantalla de trabajo: importas, asignas y dejas cada movimiento conectado con su contexto.',
         items: {
           assignment: {
-            title: 'Asignación inteligente',
+            title: 'Propuestas de categorización',
             description:
-              'Summa aprende de decisiones anteriores y propone contactos, categorías y relaciones antes de que tengas que entrar manualmente.',
+              'Summa propone contactos y categorías a partir de los datos disponibles para que puedas revisarlos antes de confirmarlos.',
           },
         },
       },
@@ -273,15 +273,15 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
       },
       payments: {
         label: 'Cobros y pagos',
-        title: 'Remesas, devoluciones y cobro recurrente',
+        title: 'Remesas SEPA y devoluciones',
         description:
-          'Cuotas, remesas, devoluciones y cobro de donaciones dentro de un mismo flujo económico.',
+          'Cuotas, remesas SEPA y gestión manual de devoluciones dentro de un mismo flujo económico.',
       },
       fiscal: {
-        label: 'Fiscalidad (modelos AEAT ready)',
+        label: 'Fiscalidad preparada para revisar',
         title: 'Donaciones, certificados y modelos fiscales',
         description:
-          'Cuando llega el momento fiscal, la información ya está preparada para generar certificados y modelos sin reconstrucciones finales.',
+          'Cuando llega el momento fiscal, la información queda preparada para revisar certificados y modelos antes de presentarlos.',
       },
       projects: {
         label: 'Gestión de proyectos',
@@ -302,7 +302,7 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
           reporting: {
             title: 'Justificación y exportación',
             description:
-              'Preparación de la justificación con materiales exportables y documentación agrupada.',
+              'XLSX estructurado y documentación agrupada para preparar la justificación económica.',
           },
         },
       },
@@ -345,15 +345,15 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
         },
       },
       conciliation: {
-        label: 'Rapprochement bancaire (avec IA)',
+        label: 'Rapprochement bancaire assisté',
         title: 'Mouvements, relevés et rapprochement',
         description:
           'De la banque à l’écran de travail : vous importez, assignez et reliez chaque mouvement à son contexte.',
         items: {
           assignment: {
-            title: 'Affectation intelligente',
+            title: 'Propositions de catégorisation',
             description:
-              'Summa apprend des décisions précédentes et propose contacts, catégories et relations avant la saisie manuelle.',
+              'Summa propose contacts et catégories à partir des données disponibles, pour vérification avant confirmation.',
           },
         },
       },
@@ -365,15 +365,15 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
       },
       payments: {
         label: 'Encaissements et paiements',
-        title: 'Prélèvements, rejets et encaissement récurrent',
+        title: 'Prélèvements SEPA et rejets',
         description:
-          'Cotisations, remises, rejets et encaissement des dons dans un même flux économique.',
+          'Cotisations, prélèvements SEPA et gestion manuelle des rejets dans un même flux économique.',
       },
       fiscal: {
-        label: 'Fiscalité (modèles AEAT ready)',
+        label: 'Fiscalité préparée pour vérification',
         title: 'Dons, certificats et modèles fiscaux',
         description:
-          'Quand arrive le moment fiscal, les données sont déjà prêtes pour certificats et déclarations.',
+          'Au moment fiscal, les données sont préparées pour vérifier certificats et déclarations avant dépôt.',
       },
       projects: {
         label: 'Gestion des projets',
@@ -394,7 +394,7 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
           reporting: {
             title: 'Justification et export',
             description:
-              'Préparation de la justification avec matériaux exportables et documentation groupée.',
+              'XLSX structuré et documentation groupée pour préparer la justification économique.',
           },
         },
       },
@@ -437,15 +437,15 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
         },
       },
       conciliation: {
-        label: 'Reconciliação bancária (com IA)',
+        label: 'Reconciliação bancária assistida',
         title: 'Movimentos, extratos e reconciliação',
         description:
           'Do banco ao ecrã de trabalho: importas, atribuis e ligas cada movimento ao contexto certo.',
         items: {
           assignment: {
-            title: 'Atribuição inteligente',
+            title: 'Propostas de categorização',
             description:
-              'O Summa aprende com decisões anteriores e propõe contactos, categorias e relações antes da introdução manual.',
+              'O Summa propõe contactos e categorias a partir dos dados disponíveis para revisão antes da confirmação.',
           },
         },
       },
@@ -457,15 +457,15 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
       },
       payments: {
         label: 'Cobranças e pagamentos',
-        title: 'Remessas, devoluções e cobrança recorrente',
+        title: 'Remessas SEPA e devoluções',
         description:
-          'Quotas, remessas, devoluções e cobrança de doações dentro do mesmo fluxo económico.',
+          'Quotas, remessas SEPA e gestão manual de devoluções dentro do mesmo fluxo económico.',
       },
       fiscal: {
-        label: 'Fiscalidade (modelos AEAT ready)',
+        label: 'Fiscalidade preparada para revisão',
         title: 'Doações, certificados e modelos fiscais',
         description:
-          'Quando chega a fiscalidade, a informação já está pronta para certificados e modelos sem reconstruções finais.',
+          'Quando chega a fiscalidade, a informação fica preparada para rever certificados e modelos antes da apresentação.',
       },
       projects: {
         label: 'Gestão de projetos',
@@ -486,7 +486,7 @@ const FEATURES_PAGE_COPY: Record<PublicLocale, PageCopy> = {
           reporting: {
             title: 'Justificação e exportação',
             description:
-              'Preparação da justificação com materiais exportáveis e documentação agrupada.',
+              'XLSX estruturado e documentação agrupada para preparar a justificação económica.',
           },
         },
       },
