@@ -202,8 +202,6 @@ export interface PublicTranslations {
     orientationTitle: string;
     orientationText: string;
     orientationPoints: string[];
-    differentiatorTitle: string;
-    differentiatorText: string;
     implantationTitle: string;
     implantationText: string;
     implantationPrice: string;
@@ -1274,9 +1272,6 @@ const ca: PublicTranslations = {
       'Gestió: documents vinculats als moviments',
       'Complet: tancament, projectes i pressupostos',
     ],
-    differentiatorTitle: 'Tots els plans permeten importar extractes bancaris',
-    differentiatorText:
-      'La diferència entre Control i Gestió és documental: amb Gestió també podeu pujar i vincular factures, nòmines, tiquets i altres justificants als moviments.',
     implantationTitle: 'Implantació inicial',
     implantationText:
       'Abans de treballar bé, cal ordenar les dades de partida: contactes, extractes, categories, remeses i criteris fiscals. Per això Summa Social inclou una implantació inicial pressupostada segons el cas.',
@@ -1322,7 +1317,7 @@ const ca: PublicTranslations = {
           'Pujada i vinculació de documents als moviments',
           'Control dels moviments sense document',
           'Categorització assistida amb IA',
-          'Preparació del Model 347, subjecta a revisió',
+          'Preparació del Model 347',
         ],
       },
       {
@@ -1335,13 +1330,14 @@ const ca: PublicTranslations = {
           'Per a entitats que volen preparar el tancament econòmic i gestionar pressupostos, despeses i justificacions de projectes.',
         features: [
           'Tot el pla Gestió',
+          'Gestió completa de projectes o subvencions',
+          'Control de la imputació de despeses entre projectes',
+          'Multidivisa dins dels projectes',
+          'XLSX estructurat per preparar la justificació econòmica',
           'Safata de documents previs o pendents de vincular',
           'Propostes de conciliació assistida de documents',
           'Captura de tiquets i extracció assistida de dades',
           'Paquet de tancament amb moviments i documents',
-          'Projectes, partides i pressupostos',
-          'Multidivisa dins dels projectes',
-          'XLSX estructurat per preparar la justificació econòmica',
         ],
       },
     ],
@@ -1986,9 +1982,6 @@ const es: PublicTranslations = {
       'Gestión: documentos vinculados a los movimientos',
       'Completo: cierre, proyectos y presupuestos',
     ],
-    differentiatorTitle: 'Todos los planes permiten importar extractos bancarios',
-    differentiatorText:
-      'La diferencia entre Control y Gestión es documental: con Gestión también podéis subir y vincular facturas, nóminas, tickets y otros justificantes a los movimientos.',
     implantationTitle: 'Implantación inicial',
     implantationText:
       'Antes de trabajar bien, hay que ordenar los datos de partida: contactos, extractos, categorías, remesas y criterios fiscales. Por eso Summa Social incluye una implantación inicial presupuestada según el caso.',
@@ -2034,7 +2027,7 @@ const es: PublicTranslations = {
           'Subida y vinculación de documentos a los movimientos',
           'Control de movimientos sin documento',
           'Categorización asistida con IA',
-          'Preparación del Modelo 347, sujeta a revisión',
+          'Preparación del Modelo 347',
         ],
       },
       {
@@ -2047,13 +2040,14 @@ const es: PublicTranslations = {
           'Para entidades que quieren preparar el cierre económico y gestionar presupuestos, gastos y justificaciones de proyectos.',
         features: [
           'Todo el plan Gestión',
+          'Gestión completa de proyectos o subvenciones',
+          'Control de imputación de gastos entre proyectos',
+          'Multidivisa dentro de los proyectos',
+          'XLSX estructurado para preparar la justificación económica',
           'Bandeja de documentos previos o pendientes de vincular',
           'Propuestas de conciliación asistida de documentos',
           'Captura de tickets y extracción asistida de datos',
           'Paquete de cierre con movimientos y documentos',
-          'Proyectos, partidas y presupuestos',
-          'Multidivisa dentro de los proyectos',
-          'XLSX estructurado para preparar la justificación económica',
         ],
       },
     ],
@@ -2698,9 +2692,6 @@ const fr: PublicTranslations = {
       'Gestion : documents liés aux mouvements',
       'Complet : clôture, projets et budgets',
     ],
-    differentiatorTitle: 'Tous les plans permettent d’importer des relevés bancaires',
-    differentiatorText:
-      'La différence entre Contrôle et Gestion est documentaire : Gestion permet aussi de déposer et relier factures, fiches de paie, tickets et autres justificatifs aux mouvements.',
     implantationTitle: 'Mise en place initiale',
     implantationText:
       'Avant de bien travailler, il faut ordonner les données de départ : contacts, relevés, catégories, prélèvements et critères fiscaux. C’est pourquoi Summa Social inclut une mise en place initiale chiffrée selon le cas.',
@@ -2746,7 +2737,7 @@ const fr: PublicTranslations = {
           'Dépôt et liaison de documents aux mouvements',
           'Suivi des mouvements sans document',
           'Catégorisation assistée par IA',
-          'Préparation du Modèle 347, soumise à vérification',
+          'Préparation du Modèle 347',
         ],
       },
       {
@@ -2759,13 +2750,14 @@ const fr: PublicTranslations = {
           'Pour les organisations qui veulent préparer la clôture économique et gérer budgets, dépenses et justificatifs de projets.',
         features: [
           'Tout le plan Gestion',
+          'Gestion complète de projets ou subventions',
+          'Contrôle de l’imputation des dépenses entre projets',
+          'Multidevise au sein des projets',
+          'XLSX structuré pour préparer la justification économique',
           'Boîte de documents préalables ou en attente de liaison',
           'Propositions de rapprochement documentaire assisté',
           'Capture de tickets et extraction assistée des données',
           'Dossier de clôture avec mouvements et documents',
-          'Projets, postes et budgets',
-          'Multidevise au sein des projets',
-          'XLSX structuré pour préparer la justification économique',
         ],
       },
     ],
@@ -3409,9 +3401,6 @@ const pt: PublicTranslations = {
       'Gestão: documentos ligados aos movimentos',
       'Completo: fecho, projetos e orçamentos',
     ],
-    differentiatorTitle: 'Todos os planos permitem importar extratos bancários',
-    differentiatorText:
-      'A diferença entre Controlo e Gestão é documental: com Gestão também podem carregar e ligar faturas, folhas de pagamento, tickets e outros comprovativos aos movimentos.',
     implantationTitle: 'Implementação inicial',
     implantationText:
       'Antes de trabalhar bem, é preciso ordenar os dados de partida: contactos, extratos, categorias, remessas e critérios fiscais. Por isso o Summa Social inclui uma implementação inicial orçamentada segundo o caso.',
@@ -3457,7 +3446,7 @@ const pt: PublicTranslations = {
           'Carregamento e ligação de documentos aos movimentos',
           'Controlo de movimentos sem documento',
           'Categorização assistida com IA',
-          'Preparação do Modelo 347, sujeita a revisão',
+          'Preparação do Modelo 347',
         ],
       },
       {
@@ -3470,13 +3459,14 @@ const pt: PublicTranslations = {
           'Para entidades que querem preparar o fecho económico e gerir orçamentos, despesas e justificações de projetos.',
         features: [
           'Todo o plano Gestão',
+          'Gestão completa de projetos ou subvenções',
+          'Controlo da imputação de despesas entre projetos',
+          'Multidivisa dentro dos projetos',
+          'XLSX estruturado para preparar a justificação económica',
           'Caixa de documentos prévios ou pendentes de ligação',
           'Propostas de reconciliação assistida de documentos',
           'Captura de tickets e extração assistida de dados',
           'Pacote de fecho com movimentos e documentos',
-          'Projetos, rubricas e orçamentos',
-          'Multidivisa dentro dos projetos',
-          'XLSX estruturado para preparar a justificação económica',
         ],
       },
     ],
