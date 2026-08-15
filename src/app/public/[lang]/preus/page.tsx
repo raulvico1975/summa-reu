@@ -110,15 +110,6 @@ export default async function PricingPage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className={`${PUBLIC_WIDE_SHELL} pb-10`}>
-        <div className="rounded-lg border border-primary/25 bg-primary/5 p-5 sm:p-6">
-          <h2 className="text-lg font-semibold">{t.pricing.differentiatorTitle}</h2>
-          <p className="mt-2 max-w-4xl text-sm leading-6 text-muted-foreground">
-            {t.pricing.differentiatorText}
-          </p>
-        </div>
-      </section>
-
       <section className={`${PUBLIC_WIDE_SHELL} pb-16`}>
         <div className="grid gap-5 lg:grid-cols-3 lg:items-stretch">
           {t.pricing.plans.map((plan) => (
