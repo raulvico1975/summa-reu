@@ -202,6 +202,39 @@ describe('calculateDonorNet', () => {
     assert.strictEqual(result.returnsCount, 1);
   });
 
+  it('també evita dobles comptatges quan no hi ha link explícit però coincideixen donant+data+import', () => {
+    const result = calculateDonorNet({
+      transactions: [
+        createTransaction({
+          amount: 200,
+          date: '2024-03-01',
+          transactionType: 'donation',
+        }),
+        createTransaction({
+          amount: 100,
+          date: '2024-06-01',
+          transactionType: 'donation',
+          donationStatus: 'returned',
+          id: 'donation-returned',
+        }),
+        createTransaction({
+          amount: -100,
+          date: '2024-06-01',
+          transactionType: 'return',
+          id: 'return-fallback',
+        }),
+      ],
+      donorId: 'donor-1',
+      year: 2024,
+    });
+
+    assert.strictEqual(result.grossDonationsCents, 20000);
+    assert.strictEqual(result.returnsCents, -10000);
+    assert.strictEqual(result.netCents, 10000);
+    assert.strictEqual(result.donationsCount, 1);
+    assert.strictEqual(result.returnsCount, 1);
+  });
+
   it('ignora pares split i transaccions arxivades com a donació fiscal', () => {
     const result = calculateDonorNet({
       transactions: [
