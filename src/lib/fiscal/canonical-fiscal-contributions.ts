@@ -13,6 +13,26 @@ type CanonicalFiscalInputTransaction = {
   isRemittance?: boolean;
 };
 
+function normalizeLinkedTransactionId(linkedTransactionId?: string | null): string | null {
+  if (!linkedTransactionId) return null;
+  const trimmed = linkedTransactionId.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeAmountCents(amount: number): number {
+  return Math.round(Math.abs(amount) * 100);
+}
+
+function canonicalReturnPairingKey(tx: CanonicalFiscalInputTransaction): string | null {
+  const contactId = tx.contactId?.trim();
+  if (!contactId || !tx.date) {
+    return null;
+  }
+
+  const dateKey = tx.date.slice(0, 10);
+  return `${contactId}|${dateKey}|${normalizeAmountCents(tx.amount)}`;
+}
+
 export interface CanonicalFiscalContribution<T extends CanonicalFiscalInputTransaction = Transaction> {
   sourceIndex: number;
   tx: T;
@@ -80,7 +100,7 @@ export function buildCanonicalFiscalContributions<T extends CanonicalFiscalInput
 
     if (isReturnCandidate(tx) && tx.id) {
       returnIndexesById.set(tx.id, index);
-      const linkedDonationId = tx.linkedTransactionId?.trim();
+      const linkedDonationId = normalizeLinkedTransactionId(tx.linkedTransactionId);
       if (linkedDonationId) {
         const current = returnIndexesByLinkedDonationId.get(linkedDonationId) ?? [];
         current.push(index);
@@ -98,8 +118,9 @@ export function buildCanonicalFiscalContributions<T extends CanonicalFiscalInput
       return;
     }
 
-    const linkedReturnIndex = tx.linkedTransactionId?.trim()
-      ? returnIndexesById.get(tx.linkedTransactionId.trim())
+    const linkedReturnId = normalizeLinkedTransactionId(tx.linkedTransactionId);
+    const linkedReturnIndex = linkedReturnId
+      ? returnIndexesById.get(linkedReturnId)
       : undefined;
     const reverseReturnIndexes = returnIndexesByLinkedDonationId.get(tx.id) ?? [];
 
@@ -119,12 +140,53 @@ export function buildCanonicalFiscalContributions<T extends CanonicalFiscalInput
       return;
     }
 
-    const returnedDonationIndex = returnedDonationIndexesById.get(tx.linkedTransactionId.trim());
+    const linkedDonationId = normalizeLinkedTransactionId(tx.linkedTransactionId);
+    const returnedDonationIndex = linkedDonationId
+      ? returnedDonationIndexesById.get(linkedDonationId)
+      : undefined;
     if (returnedDonationIndex !== undefined) {
       pairedReturnIndexes.add(returnIndex);
       pairedReturnedDonationIndexes.add(returnedDonationIndex);
     }
   });
+
+  // Casos de dades legacy o imports sense link explícit:
+  // si coincideixen per donant + data + import exacte, emparella un-a-un.
+  const unpairedReturnedByKey = new Map<string, number[]>();
+  const unpairedReturnsByKey = new Map<string, number[]>();
+
+  transactions.forEach((tx, index) => {
+    if (isReturnedDonationCandidate(tx) && !pairedReturnedDonationIndexes.has(index)) {
+      const key = canonicalReturnPairingKey(tx);
+      if (key) {
+        const current = unpairedReturnedByKey.get(key) ?? [];
+        current.push(index);
+        unpairedReturnedByKey.set(key, current);
+      }
+    }
+
+    if (isReturnCandidate(tx) && !pairedReturnIndexes.has(index)) {
+      const key = canonicalReturnPairingKey(tx);
+      if (key) {
+        const current = unpairedReturnsByKey.get(key) ?? [];
+        current.push(index);
+        unpairedReturnsByKey.set(key, current);
+      }
+    }
+  });
+
+  for (const [key, returnedIndexes] of unpairedReturnedByKey.entries()) {
+    const returnIndexes = unpairedReturnsByKey.get(key);
+    if (!returnIndexes || returnIndexes.length === 0) {
+      continue;
+    }
+
+    const pairCount = Math.min(returnedIndexes.length, returnIndexes.length);
+    for (let i = 0; i < pairCount; i++) {
+      pairedReturnedDonationIndexes.add(returnedIndexes[i]);
+      pairedReturnIndexes.add(returnIndexes[i]);
+    }
+  }
 
   const contributions = transactions.map((tx, sourceIndex) => {
     if (isRegularDonationCandidate(tx)) {
