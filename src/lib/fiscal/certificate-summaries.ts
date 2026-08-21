@@ -1,5 +1,5 @@
 import type { Donor, Transaction } from '@/lib/data';
-import { calculateTransactionNetAmount } from '@/lib/model182';
+import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal-contributions';
 
 export interface CertificateDonor {
   id: string;
@@ -50,8 +50,11 @@ function toCertificateDonor(donor: Donor): CertificateDonor {
   return result;
 }
 
-function toCertificateFiscalMovement(tx: Transaction, index: number): CertificateFiscalMovement {
-  const amount = calculateTransactionNetAmount(tx);
+function toCertificateFiscalMovement(
+  tx: Transaction,
+  index: number,
+  amount: number
+): CertificateFiscalMovement {
   const transactionType: 'donation' | 'return' = amount >= 0 ? 'donation' : 'return';
   const result: CertificateFiscalMovement = {
     id: `cert-${transactionType}-${tx.date}-${index}`,
@@ -73,11 +76,16 @@ export function buildCertificateDonorSummaries(input: {
 
   for (const donor of input.donors) {
     const donorTransactions = input.fiscalTransactions.filter(tx => tx.contactId === donor.id);
-    const donorDonations = donorTransactions.filter(tx => calculateTransactionNetAmount(tx) > 0);
-    const donorReturns = donorTransactions.filter(tx => calculateTransactionNetAmount(tx) < 0);
+    const canonicalContributions = buildCanonicalFiscalContributions(donorTransactions).contributions;
+    const donorDonations = canonicalContributions.filter((contribution) => contribution.canonicalAmount > 0);
+    const donorReturns = canonicalContributions.filter((contribution) => contribution.canonicalAmount < 0);
 
-    const grossAmount = donorDonations.reduce((sum, tx) => sum + calculateTransactionNetAmount(tx), 0);
-    const returnedAmount = donorReturns.reduce((sum, tx) => sum + Math.abs(calculateTransactionNetAmount(tx)), 0);
+    const grossAmount = donorDonations.reduce((sum, contribution) => {
+      return sum + contribution.canonicalAmount;
+    }, 0);
+    const returnedAmount = donorReturns.reduce((sum, contribution) => {
+      return sum + Math.abs(contribution.canonicalAmount);
+    }, 0);
     const netAmount = Math.max(0, grossAmount - returnedAmount);
 
     if (netAmount <= 0) continue;
@@ -85,10 +93,18 @@ export function buildCertificateDonorSummaries(input: {
     summaries.push({
       donor: toCertificateDonor(donor),
       donations: donorDonations
-        .map(toCertificateFiscalMovement)
+        .map((contribution) => toCertificateFiscalMovement(
+          contribution.tx,
+          contribution.sourceIndex,
+          contribution.canonicalAmount
+        ))
         .sort((left, right) => left.date.localeCompare(right.date)),
       returns: donorReturns
-        .map(toCertificateFiscalMovement)
+        .map((contribution) => toCertificateFiscalMovement(
+          contribution.tx,
+          contribution.sourceIndex,
+          contribution.canonicalAmount
+        ))
         .sort((left, right) => left.date.localeCompare(right.date)),
       totalAmount: netAmount,
       grossAmount,

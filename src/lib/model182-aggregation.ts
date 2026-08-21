@@ -8,7 +8,7 @@
 
 import type { Transaction, AnyContact, Donor } from '@/lib/data';
 import type { DonationReportRow } from '@/lib/model182-aeat';
-import { calculateTransactionNetAmount } from '@/lib/model182';
+import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal-contributions';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FUNCIÓ PRINCIPAL
@@ -49,7 +49,10 @@ export function buildModel182Candidates(
   // PROCESSAR TOTES LES TRANSACCIONS ACTIVES (any actual + històric)
   // HOTFIX: activeTxs ja filtrades client-side amb tolerància !tx.archivedAt
   // ═══════════════════════════════════════════════════════════════════════
-  for (const tx of activeTxs) {
+  const canonicalContributions = buildCanonicalFiscalContributions(activeTxs);
+
+  for (const contribution of canonicalContributions.contributions) {
+    const tx = contribution.tx as Transaction;
     const txYear = new Date(tx.date).getFullYear();
 
     if (!tx.contactId || !donorMap.has(tx.contactId)) continue;
@@ -64,7 +67,7 @@ export function buildModel182Candidates(
       };
     }
 
-    const netAmount = calculateTransactionNetAmount(tx);
+    const netAmount = contribution.canonicalAmount;
 
     if (txYear === year) {
       if (netAmount > 0) {

@@ -4,6 +4,7 @@
  * Aquesta funció no depèn de Firebase ni cap altre servei extern,
  * per tal de poder ser testejada fàcilment amb tests unitaris.
  */
+import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal-contributions';
 
 // =============================================================================
 // TIPUS
@@ -28,6 +29,7 @@ export interface Transaction {
   archivedAt?: string | null;  // soft-delete: excloure del còmput fiscal
   isRemittance?: boolean;      // pare de remesa: ignorar del còmput fiscal
   isSplit?: boolean;           // pare de split: ignorar del còmput fiscal
+  linkedTransactionId?: string | null;
 }
 
 export interface DonorTotals {
@@ -154,9 +156,11 @@ export function calculateModel182Totals(
   // Estadístiques de devolucions
   let excludedReturns = 0;
   let excludedAmount = 0;
+  const canonicalContributions = buildCanonicalFiscalContributions(transactions);
 
   // Processar totes les transaccions
-  for (const tx of transactions) {
+  for (const contribution of canonicalContributions.contributions) {
+    const tx = contribution.tx;
     const txYear = new Date(tx.date).getFullYear();
 
     // Només processar transaccions amb donant assignat i amb DNI
@@ -176,10 +180,10 @@ export function calculateModel182Totals(
     }
 
     // Calcular import net de la transacció
-    const netAmount = calculateTransactionNetAmount(tx);
+    const netAmount = contribution.canonicalAmount;
 
     // Comptar devolucions de l'any actual
-    if (txYear === year && isReturnTransaction(tx)) {
+    if (txYear === year && netAmount < 0) {
       excludedReturns++;
       excludedAmount += Math.abs(netAmount);
     }
