@@ -150,7 +150,7 @@ describe('calculateDonorNet', () => {
     assert.strictEqual(result.returnsCount, 0);
   });
 
-  it('resta donacions marcades com returned', () => {
+  it('neutralitza donacions marcades com returned perquè no es van arribar a donar', () => {
     const result = calculateDonorNet({
       transactions: [
         createTransaction({ amount: 100, date: '2024-03-01', transactionType: 'donation' }),
@@ -161,9 +161,9 @@ describe('calculateDonorNet', () => {
     });
 
     assert.strictEqual(result.grossDonationsCents, 10000);
-    assert.strictEqual(result.returnsCents, -10000);
-    assert.strictEqual(result.netCents, 0);
-    assert.strictEqual(result.returnsCount, 1);
+    assert.strictEqual(result.returnsCents, 0);
+    assert.strictEqual(result.netCents, 10000);
+    assert.strictEqual(result.returnsCount, 0);
   });
 
   it('evita dobles comptatges amb linkedTransactionId entre returned + return', () => {
@@ -196,10 +196,10 @@ describe('calculateDonorNet', () => {
     });
 
     assert.strictEqual(result.grossDonationsCents, 20000);
-    assert.strictEqual(result.returnsCents, -10000);
-    assert.strictEqual(result.netCents, 10000);
+    assert.strictEqual(result.returnsCents, 0);
+    assert.strictEqual(result.netCents, 20000);
     assert.strictEqual(result.donationsCount, 1);
-    assert.strictEqual(result.returnsCount, 1);
+    assert.strictEqual(result.returnsCount, 0);
   });
 
   it('també evita dobles comptatges quan no hi ha link explícit però coincideixen donant+data+import', () => {
@@ -229,10 +229,10 @@ describe('calculateDonorNet', () => {
     });
 
     assert.strictEqual(result.grossDonationsCents, 20000);
-    assert.strictEqual(result.returnsCents, -10000);
-    assert.strictEqual(result.netCents, 10000);
+    assert.strictEqual(result.returnsCents, 0);
+    assert.strictEqual(result.netCents, 20000);
     assert.strictEqual(result.donationsCount, 1);
-    assert.strictEqual(result.returnsCount, 1);
+    assert.strictEqual(result.returnsCount, 0);
   });
 
   it('ignora pares split i transaccions arxivades com a donació fiscal', () => {
