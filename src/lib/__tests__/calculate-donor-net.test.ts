@@ -14,6 +14,7 @@ import { calculateDonorNet, calculateDonorNetEuros } from '../fiscal/calculateDo
 
 const createTransaction = (overrides: {
   amount: number;
+  id?: string;
   date?: string;
   transactionType?: string;
   donationStatus?: string;
@@ -21,12 +22,15 @@ const createTransaction = (overrides: {
   archivedAt?: string | null;
   isSplit?: boolean;
   isRemittance?: boolean;
+  linkedTransactionId?: string;
 }) => ({
   amount: overrides.amount,
+  id: overrides.id,
   date: overrides.date ?? '2024-06-15',
   transactionType: overrides.transactionType ?? (overrides.amount > 0 ? 'donation' : undefined),
   donationStatus: overrides.donationStatus,
   contactId: overrides.contactId ?? 'donor-1',
+  linkedTransactionId: overrides.linkedTransactionId,
   archivedAt: overrides.archivedAt,
   isSplit: overrides.isSplit,
   isRemittance: overrides.isRemittance,
@@ -159,6 +163,42 @@ describe('calculateDonorNet', () => {
     assert.strictEqual(result.grossDonationsCents, 10000);
     assert.strictEqual(result.returnsCents, -10000);
     assert.strictEqual(result.netCents, 0);
+    assert.strictEqual(result.returnsCount, 1);
+  });
+
+  it('evita dobles comptatges amb linkedTransactionId entre returned + return', () => {
+    const result = calculateDonorNet({
+      transactions: [
+        createTransaction({
+          amount: 200,
+          date: '2024-03-01',
+          transactionType: 'donation',
+          id: 'donation-normal',
+        }),
+        createTransaction({
+          amount: 100,
+          date: '2024-06-01',
+          transactionType: 'donation',
+          donationStatus: 'returned',
+          id: 'donation-returned',
+          linkedTransactionId: 'return-100',
+        }),
+        createTransaction({
+          amount: -100,
+          date: '2024-06-15',
+          transactionType: 'return',
+          id: 'return-100',
+          linkedTransactionId: 'donation-returned',
+        }),
+      ],
+      donorId: 'donor-1',
+      year: 2024,
+    });
+
+    assert.strictEqual(result.grossDonationsCents, 20000);
+    assert.strictEqual(result.returnsCents, -10000);
+    assert.strictEqual(result.netCents, 10000);
+    assert.strictEqual(result.donationsCount, 1);
     assert.strictEqual(result.returnsCount, 1);
   });
 

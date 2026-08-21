@@ -55,7 +55,7 @@ import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
-import { calculateTransactionNetAmount, isReturnTransaction } from '@/lib/model182';
+import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal-contributions';
 import type { Donation } from '@/lib/types/donations';
 import { mergeTransactionsWithStripeDonations } from '@/lib/fiscal/stripe-donations-fiscal-source';
 
@@ -279,7 +279,10 @@ export function DonationsReportGenerator() {
     // PROCESSAR TOTES LES TRANSACCIONS ACTIVES (any actual + històric)
     // HOTFIX: Usar activeTxs (filtrat client-side amb tolerància !tx.archivedAt)
     // ═══════════════════════════════════════════════════════════════════════════
-    fiscalTxs.forEach(tx => {
+    const canonicalContributions = buildCanonicalFiscalContributions(fiscalTxs).contributions;
+
+    canonicalContributions.forEach(contribution => {
+      const tx = contribution.tx;
       const txYear = new Date(tx.date).getFullYear();
 
       // Només processar transaccions amb donant assignat
@@ -301,8 +304,8 @@ export function DonationsReportGenerator() {
         // ═══════════════════════════════════════════════════════════════════════
 
         // Calcular import net de la transacció
-        const netAmount = calculateTransactionNetAmount(tx);
-        if (txYear === year && isReturnTransaction(tx) && netAmount < 0) {
+        const netAmount = contribution.canonicalAmount;
+        if (txYear === year && netAmount < 0) {
           excludedReturns++;
           excludedAmount += Math.abs(netAmount);
         }

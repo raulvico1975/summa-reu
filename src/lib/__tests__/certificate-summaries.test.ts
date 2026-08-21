@@ -107,3 +107,51 @@ test('certificate movement conversion keeps generated PDFs on sanitized data', (
   assert.equal(tx.category, null);
   assert.equal(tx.document, null);
 });
+
+test('certificate summaries no compten dues vegades una devolució enllaçada (returned + return)', () => {
+  const [summary] = buildCertificateDonorSummaries({
+    donors: [donor],
+    fiscalTransactions: [
+      {
+        id: 'd-normal',
+        date: '2025-01-01',
+        description: 'Donació inicial',
+        amount: 200,
+        category: null,
+        document: null,
+        contactId: 'donor-1',
+        transactionType: 'donation',
+      },
+      {
+        id: 'd-return',
+        date: '2025-02-01',
+        description: 'Donació retornada',
+        amount: 100,
+        category: null,
+        document: null,
+        contactId: 'donor-1',
+        transactionType: 'donation',
+        donationStatus: 'returned',
+        linkedTransactionId: 'r-return',
+      },
+      {
+        id: 'r-return',
+        date: '2025-02-02',
+        description: 'Devolució bancària',
+        amount: -100,
+        category: null,
+        document: null,
+        contactId: 'donor-1',
+        transactionType: 'return',
+        linkedTransactionId: 'd-return',
+      },
+    ],
+  });
+
+  assert.equal(summary.grossAmount, 200);
+  assert.equal(summary.returnedAmount, 100);
+  assert.equal(summary.totalAmount, 100);
+  assert.equal(summary.donations.length, 1);
+  assert.equal(summary.returns.length, 1);
+  assert.equal(summary.returns[0].id.startsWith('cert-return-'), true);
+});
