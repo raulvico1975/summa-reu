@@ -152,6 +152,47 @@ describe('calculateDonorSummary', () => {
     assert.deepEqual(result.returns.items.map(item => item.id), ['d-unlinked-returned', 'r-link']);
   });
 
+  it('usa la mateixa lògica canònica per a imports fiscals i evita el doble recompte returned+return', () => {
+    const transactions: DonorSummaryTransaction[] = [
+      tx({
+        id: 'd-link',
+        amount: 200,
+        date: '2026-01-09',
+        transactionType: 'donation',
+        contactId: 'donor-1',
+      }),
+      tx({
+        id: 'd-return',
+        amount: 100,
+        date: '2026-01-10',
+        transactionType: 'donation',
+        donationStatus: 'returned',
+        linkedTransactionId: 'r-return',
+        contactId: 'donor-1',
+      }),
+      tx({
+        id: 'r-return',
+        amount: -100,
+        date: '2026-01-11',
+        transactionType: 'return',
+        linkedTransactionId: 'd-return',
+        contactId: 'donor-1',
+      }),
+    ];
+
+    const result = calculateDonorSummary({
+      transactions,
+      donorId: 'donor-1',
+      year: 2026,
+    });
+
+    assert.equal(result.currentYearGross, 200);
+    assert.equal(result.currentYearReturned, 100);
+    assert.equal(result.currentYearNet, 100);
+    assert.deepEqual(result.includedDonationIds, ['d-link']);
+    assert.deepEqual(result.includedReturnIds, ['r-return']);
+  });
+
   it('manté fingerprint estable sense id encara que canviï l’ordre del dataset', () => {
     const txA = tx({
       id: undefined,

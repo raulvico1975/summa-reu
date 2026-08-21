@@ -228,6 +228,42 @@ describe('calculateModel182Totals - Devolucions', () => {
     assert.strictEqual(result.stats.excludedAmount, 40);
   });
 
+  it('no duplica una devolució quan returned i return tenen linkedTransactionId', () => {
+    const donors = [createDonor({ id: 'donor-1' })];
+    const transactions = [
+      createTransaction({
+        id: 'donation-normal',
+        contactId: 'donor-1',
+        amount: 200,
+        date: '2024-03-01',
+      }),
+      createTransaction({
+        id: 'donation-returned',
+        contactId: 'donor-1',
+        amount: 100,
+        date: '2024-06-01',
+        donationStatus: 'returned',
+        linkedTransactionId: 'return-100',
+      }),
+      createTransaction({
+        id: 'return-100',
+        contactId: 'donor-1',
+        amount: -100,
+        date: '2024-06-15',
+        transactionType: 'return',
+        linkedTransactionId: 'donation-returned',
+      }),
+    ];
+
+    const result = calculateModel182Totals(transactions, donors, 2024);
+
+    assert.strictEqual(result.donorTotals.length, 1);
+    assert.strictEqual(result.donorTotals[0].totalAmount, 100);
+    assert.strictEqual(result.donorTotals[0].returnedAmount, 100);
+    assert.strictEqual(result.stats.excludedReturns, 1);
+    assert.strictEqual(result.stats.excludedAmount, 100);
+  });
+
   it('ignora pares de remesa i transaccions arxivades', () => {
     const donors = [createDonor({ id: 'donor-1' })];
     const transactions = [

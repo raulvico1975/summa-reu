@@ -2,7 +2,7 @@
 // Motor únic de càlcul fiscal per donants
 // Centralitza la lògica duplicada en donor-detail-drawer, donation-certificate-generator, etc.
 
-import { calculateTransactionNetAmount, isReturnTransaction } from '@/lib/model182';
+import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal-contributions';
 
 /**
  * Input per al càlcul del net fiscal d'un donant
@@ -49,26 +49,28 @@ export interface DonorNetResult {
 export function calculateDonorNet(input: DonorNetInput): DonorNetResult {
   const { transactions, donorId, year } = input;
   const yearStr = year.toString();
+  const contributions = buildCanonicalFiscalContributions(input.transactions).contributions;
 
   let grossDonationsCents = 0;
   let returnsCents = 0;
   let donationsCount = 0;
   let returnsCount = 0;
 
-  for (const tx of transactions) {
+  for (const contribution of contributions) {
+    const tx = contribution.tx;
     // Només transaccions d'aquest donant
     if (tx.contactId !== donorId) continue;
 
     // Només transaccions de l'any especificat
     if (!tx.date.startsWith(yearStr)) continue;
 
-    const netAmount = calculateTransactionNetAmount(tx);
+    const netAmount = contribution.canonicalAmount;
     if (netAmount > 0) {
       grossDonationsCents += Math.round(netAmount * 100);
       donationsCount++;
     }
 
-    if (netAmount < 0 && isReturnTransaction(tx)) {
+    if (netAmount < 0) {
       // returnsCents serà negatiu
       returnsCents += Math.round(netAmount * 100);
       returnsCount++;

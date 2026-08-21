@@ -1,6 +1,6 @@
 import { calculateDonorNet } from '@/lib/fiscal/calculateDonorNet';
 import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
-import { calculateTransactionNetAmount, isReturnTransaction } from '@/lib/model182';
+import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal-contributions';
 
 export interface DonorSummaryTransaction {
   id?: string;
@@ -139,6 +139,13 @@ export function calculateDonorSummary(input: DonorSummaryInput): DonorSummaryRes
     return createEmptyDonorSummary({ ...input, transactions: [] });
   }
 
+  const canonicalContributions = buildCanonicalFiscalContributions(input.transactions);
+  const canonicalAmountByIndex = new Map<number, number>();
+
+  for (const contribution of canonicalContributions.contributions) {
+    canonicalAmountByIndex.set(contribution.sourceIndex, contribution.canonicalAmount);
+  }
+
   const currentYearStr = String(input.year);
   const previousYear = input.year - 1;
   const previousYearStr = String(previousYear);
@@ -177,7 +184,7 @@ export function calculateDonorSummary(input: DonorSummaryInput): DonorSummaryRes
     }
   });
 
-  input.transactions.forEach((tx) => {
+  input.transactions.forEach((tx, sourceIndex) => {
     const txKey = getDonorSummaryTransactionKey(tx);
 
     if (isDrawerDonationCandidate(tx)) {
@@ -252,11 +259,11 @@ export function calculateDonorSummary(input: DonorSummaryInput): DonorSummaryRes
 
     // IDs inclosos en còmput fiscal net: mateix criteri que calculateDonorNet/model182
     if (tx.contactId === input.donorId && tx.date.startsWith(currentYearStr)) {
-      const netAmount = calculateTransactionNetAmount(tx);
+      const netAmount = canonicalAmountByIndex.get(sourceIndex) ?? 0;
       if (netAmount > 0) {
         includedDonationIds.push(txKey);
       }
-      if (netAmount < 0 && isReturnTransaction(tx)) {
+      if (netAmount < 0) {
         includedReturnIds.push(txKey);
       }
     }
