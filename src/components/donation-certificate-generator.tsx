@@ -561,8 +561,8 @@ export function DonationCertificateGenerator() {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     const donorBodyText = donorLocation
-      ? t.certificates.pdf.donorBodyWithAddress(donorName, donorTaxId, donorLocation, selectedYear, amountFormatted, summary.donationCount)
-      : t.certificates.pdf.donorBody(donorName, donorTaxId, selectedYear, amountFormatted, summary.donationCount);
+      ? t.certificates.pdf.donorNetBodyWithAddress(donorName, donorTaxId, donorLocation, selectedYear, amountFormatted)
+      : t.certificates.pdf.donorNetBody(donorName, donorTaxId, selectedYear, amountFormatted);
     const donorBodyLines = doc.splitTextToSize(donorBodyText, textWidth);
     doc.text(donorBodyLines, margin, y);
     y += donorBodyLines.length * lineHeight + 6;
@@ -571,45 +571,6 @@ export function DonationCertificateGenerator() {
     const irrevocableLines = doc.splitTextToSize(t.certificates.pdf.irrevocableClause, textWidth);
     doc.text(irrevocableLines, margin, y);
     y += irrevocableLines.length * lineHeight + 6;
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // BLOC DE RESUM FISCAL (només si hi ha devolucions)
-    // ═══════════════════════════════════════════════════════════════════════════
-    if (summary.returnedAmount > 0) {
-      y += 4;
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.setDrawColor(200);
-      doc.setFillColor(250, 250, 250);
-
-      const boxX = margin + 20;
-      const boxWidth = pageWidth - margin * 2 - 40;
-      const boxHeight = 32;
-      doc.roundedRect(boxX, y - 4, boxWidth, boxHeight, 2, 2, 'FD');
-
-      y += 6;
-      doc.setFont('helvetica', 'bold');
-      doc.text(language === 'ca' ? 'Resum fiscal:' : 'Resumen fiscal:', boxX + 5, y);
-      y += lineHeight;
-
-      doc.setFont('helvetica', 'normal');
-      const col1 = boxX + 5;
-      const col2 = boxX + boxWidth - 5;
-
-      doc.text(language === 'ca' ? 'Donacions rebudes:' : 'Donaciones recibidas:', col1, y);
-      doc.text(formatCurrencyEU(summary.grossAmount), col2, y, { align: 'right' });
-      y += lineHeight;
-
-      doc.text(language === 'ca' ? 'Devolucions efectuades:' : 'Devoluciones efectuadas:', col1, y);
-      doc.text(`-${formatCurrencyEU(summary.returnedAmount)}`, col2, y, { align: 'right' });
-      y += lineHeight;
-
-      doc.setFont('helvetica', 'bold');
-      doc.text(language === 'ca' ? 'Import net certificat:' : 'Importe neto certificado:', col1, y);
-      doc.text(formatCurrencyEU(summary.totalAmount), col2, y, { align: 'right' });
-
-      y += lineHeight + 8;
-    }
 
     // 5. Fórmula d'expedició (data i lloc)
     doc.setFontSize(11);
@@ -1389,32 +1350,13 @@ export function DonationCertificateGenerator() {
                     const donorLocation = buildLocationString(previewDonor.donor.zipCode, previewDonor.donor.city, previewDonor.donor.province);
                     const amountFormatted = formatCurrencyEU(previewDonor.totalAmount);
                     return donorLocation
-                      ? t.certificates.pdf.donorBodyWithAddress(donorName, donorTaxId, donorLocation, selectedYear, amountFormatted, previewDonor.donationCount)
-                      : t.certificates.pdf.donorBody(donorName, donorTaxId, selectedYear, amountFormatted, previewDonor.donationCount);
+                      ? t.certificates.pdf.donorNetBodyWithAddress(donorName, donorTaxId, donorLocation, selectedYear, amountFormatted)
+                      : t.certificates.pdf.donorNetBody(donorName, donorTaxId, selectedYear, amountFormatted);
                   })()}
                 </p>
 
                 {/* Clàusula d'irrevocabilitat */}
                 <p>{t.certificates.pdf.irrevocableClause}</p>
-
-                {/* Bloc resum fiscal (només si hi ha devolucions) */}
-                {previewDonor.returnedAmount > 0 && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3 text-xs">
-                    <p className="font-bold mb-1">{language === 'ca' ? 'Resum fiscal:' : 'Resumen fiscal:'}</p>
-                    <div className="flex justify-between">
-                      <span>{language === 'ca' ? 'Donacions rebudes:' : 'Donaciones recibidas:'}</span>
-                      <span>{formatCurrencyEU(previewDonor.grossAmount)}</span>
-                    </div>
-                    <div className="flex justify-between text-orange-600">
-                      <span>{language === 'ca' ? 'Devolucions efectuades:' : 'Devoluciones efectuadas:'}</span>
-                      <span>-{formatCurrencyEU(previewDonor.returnedAmount)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold mt-1 pt-1 border-t border-gray-200">
-                      <span>{language === 'ca' ? 'Import net certificat:' : 'Importe neto certificado:'}</span>
-                      <span>{formatCurrencyEU(previewDonor.totalAmount)}</span>
-                    </div>
-                  </div>
-                )}
 
                 {/* Fórmula d'expedició */}
                 <p>

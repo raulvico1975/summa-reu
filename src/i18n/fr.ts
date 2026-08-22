@@ -1680,6 +1680,10 @@ export const fr = {
       // Corps principal : donateur sans adresse
       donorBody: (donorName: string, donorTaxId: string, year: string, amount: string, count: number) =>
         `Que ${donorName}, avec NIF/CIF ${donorTaxId}, a effectué des dons en faveur de cette entité durant l'exercice fiscal ${year}, pour un montant total de ${amount}, correspondant à ${count} ${count === 1 ? 'don' : 'dons'}.`,
+      donorNetBodyWithAddress: (donorName: string, donorTaxId: string, donorAddress: string, year: string, amount: string) =>
+        `Que ${donorName}, avec NIF/CIF ${donorTaxId} et domicilié à ${donorAddress}, a effectué des dons en faveur de cette entité durant l'exercice fiscal ${year}, pour un montant net total de ${amount}.`,
+      donorNetBody: (donorName: string, donorTaxId: string, year: string, amount: string) =>
+        `Que ${donorName}, avec NIF/CIF ${donorTaxId}, a effectué des dons en faveur de cette entité durant l'exercice fiscal ${year}, pour un montant net total de ${amount}.`,
       // Clause d'irrévocabilité
       irrevocableClause: "Ces dons ont été effectués de manière irrévocable, sans contrepartie, et ont été intégralement destinés à l'accomplissement des objectifs sociaux de l'entité.",
       // Formule d'émission (avec lieu)

@@ -33,3 +33,13 @@ test('individual certificate UI and private generator use the same canonical PDF
   assert.equal(privateGenerator.includes("from '@/lib/fiscal/individual-donation-certificate-pdf'"), true);
   assert.equal(privateGenerator.includes('individualDonationCertificatePdfBytes(pdfInput)'), true);
 });
+
+test('annual certificate exposes only the net amount in its PDF body', () => {
+  const mass = readProjectFile('src/components/donation-certificate-generator.tsx');
+  const drawer = readProjectFile('src/components/donor-detail-drawer.tsx');
+
+  assert.equal(mass.includes('donorNetBodyWithAddress'), true);
+  assert.equal(mass.includes('Resum fiscal:'), false);
+  assert.equal(drawer.includes('donorNetBodyWithAddress'), true);
+  assert.equal(drawer.includes('BLOC DE RESUM FISCAL'), false);
+});
