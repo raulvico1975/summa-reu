@@ -56,12 +56,12 @@ describe('calculateTransactionNetAmount', () => {
     assert.strictEqual(calculateTransactionNetAmount(tx), -50);
   });
 
-  it('retorna l\'import negatiu per una donació marcada com returned', () => {
+  it('retorna 0 per una donació marcada com returned', () => {
     const tx = createTransaction({
       amount: 75,
       donationStatus: 'returned',
     });
-    assert.strictEqual(calculateTransactionNetAmount(tx), -75);
+    assert.strictEqual(calculateTransactionNetAmount(tx), 0);
   });
 
   it('retorna 0 per transaccions que no són donacions ni devolucions', () => {
@@ -206,7 +206,7 @@ describe('calculateModel182Totals - Devolucions', () => {
     assert.strictEqual(result.stats.excludedAmount, 30);
   });
 
-  it('resta donacions marcades com returned (donationStatus === "returned")', () => {
+  it('neutralitza donacions marcades com returned (donationStatus === "returned")', () => {
     const donors = [createDonor({ id: 'donor-1' })];
     const transactions = [
       createTransaction({ id: 'tx-1', contactId: 'donor-1', amount: 100, date: '2024-03-01' }),
@@ -222,10 +222,10 @@ describe('calculateModel182Totals - Devolucions', () => {
     const result = calculateModel182Totals(transactions, donors, 2024);
 
     assert.strictEqual(result.donorTotals.length, 1);
-    assert.strictEqual(result.donorTotals[0].totalAmount, 60);
-    assert.strictEqual(result.donorTotals[0].returnedAmount, 40);
-    assert.strictEqual(result.stats.excludedReturns, 1);
-    assert.strictEqual(result.stats.excludedAmount, 40);
+    assert.strictEqual(result.donorTotals[0].totalAmount, 100);
+    assert.strictEqual(result.donorTotals[0].returnedAmount, 0);
+    assert.strictEqual(result.stats.excludedReturns, 0);
+    assert.strictEqual(result.stats.excludedAmount, 0);
   });
 
   it('no duplica una devolució quan returned i return tenen linkedTransactionId', () => {
@@ -258,10 +258,10 @@ describe('calculateModel182Totals - Devolucions', () => {
     const result = calculateModel182Totals(transactions, donors, 2024);
 
     assert.strictEqual(result.donorTotals.length, 1);
-    assert.strictEqual(result.donorTotals[0].totalAmount, 100);
-    assert.strictEqual(result.donorTotals[0].returnedAmount, 100);
-    assert.strictEqual(result.stats.excludedReturns, 1);
-    assert.strictEqual(result.stats.excludedAmount, 100);
+    assert.strictEqual(result.donorTotals[0].totalAmount, 200);
+    assert.strictEqual(result.donorTotals[0].returnedAmount, 0);
+    assert.strictEqual(result.stats.excludedReturns, 0);
+    assert.strictEqual(result.stats.excludedAmount, 0);
   });
 
   it('no duplica una devolució quan coincidència és per donant+data+import però sense linkedTransactionId', () => {
@@ -292,10 +292,10 @@ describe('calculateModel182Totals - Devolucions', () => {
     const result = calculateModel182Totals(transactions, donors, 2024);
 
     assert.strictEqual(result.donorTotals.length, 1);
-    assert.strictEqual(result.donorTotals[0].totalAmount, 100);
-    assert.strictEqual(result.donorTotals[0].returnedAmount, 100);
-    assert.strictEqual(result.stats.excludedReturns, 1);
-    assert.strictEqual(result.stats.excludedAmount, 100);
+    assert.strictEqual(result.donorTotals[0].totalAmount, 200);
+    assert.strictEqual(result.donorTotals[0].returnedAmount, 0);
+    assert.strictEqual(result.stats.excludedReturns, 0);
+    assert.strictEqual(result.stats.excludedAmount, 0);
   });
 
   it('ignora pares de remesa i transaccions arxivades', () => {

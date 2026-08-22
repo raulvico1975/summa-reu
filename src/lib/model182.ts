@@ -81,9 +81,9 @@ export function calculateTransactionNetAmount(tx: Transaction): number {
     return tx.amount; // ja és negatiu
   }
 
-  // Donació marcada com retornada → valor negatiu
+  // Donació marcada com retornada → aportació fallida, no certificable
   if (tx.amount > 0 && tx.donationStatus === 'returned') {
-    return -tx.amount;
+    return 0;
   }
 
   // Donació fiscal vàlida → valor positiu
@@ -121,8 +121,8 @@ export function isReturnTransaction(tx: Transaction): boolean {
  *
  * Regles de càlcul:
  * 1. Suma totes les donacions positives de l'any
- * 2. Resta les devolucions (transactionType === 'return')
- * 3. Resta les donacions marcades com retornades (donationStatus === 'returned')
+ * 2. Resta les devolucions sense parella (transactionType === 'return')
+ * 3. Neutralitza les donacions marcades com retornades i la seva devolució vinculada
  * 4. Calcula valor1 (any-1) i valor2 (any-2) per determinar recurrència
  * 5. Un donant és recurrent si valor1 > 0 AND valor2 > 0
  * 6. Ignora donants sense DNI (taxId buit)

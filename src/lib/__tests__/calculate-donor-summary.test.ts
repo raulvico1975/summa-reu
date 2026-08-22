@@ -58,12 +58,12 @@ describe('calculateDonorSummary', () => {
 
     // Net fiscal: mateix criteri que calculateDonorNet/model182
     assert.equal(result.currentYearGross, 100);
-    assert.equal(result.currentYearReturned, 30);
-    assert.equal(result.currentYearNet, 70);
+    assert.equal(result.currentYearReturned, 20);
+    assert.equal(result.currentYearNet, 80);
 
     // Traçabilitat d'IDs inclosos al còmput fiscal net
     assert.deepEqual(result.includedDonationIds, ['d1']);
-    assert.deepEqual(result.includedReturnIds, ['r1', 'r2']);
+    assert.deepEqual(result.includedReturnIds, ['r1']);
     assert.equal(result.validDonationsCount, 1);
     assert.equal(result.currentYearDonationCandidatesCount, 3);
 
@@ -187,10 +187,10 @@ describe('calculateDonorSummary', () => {
     });
 
     assert.equal(result.currentYearGross, 200);
-    assert.equal(result.currentYearReturned, 100);
-    assert.equal(result.currentYearNet, 100);
+    assert.equal(result.currentYearReturned, 0);
+    assert.equal(result.currentYearNet, 200);
     assert.deepEqual(result.includedDonationIds, ['d-link']);
-    assert.deepEqual(result.includedReturnIds, ['r-return']);
+    assert.deepEqual(result.includedReturnIds, []);
   });
 
   it('també evita el doble recompte en cas legacy sense linkedTransactionId', () => {
@@ -226,10 +226,10 @@ describe('calculateDonorSummary', () => {
     });
 
     assert.equal(result.currentYearGross, 200);
-    assert.equal(result.currentYearReturned, 100);
-    assert.equal(result.currentYearNet, 100);
+    assert.equal(result.currentYearReturned, 0);
+    assert.equal(result.currentYearNet, 200);
     assert.deepEqual(result.includedDonationIds, ['d-link']);
-    assert.deepEqual(result.includedReturnIds, ['r-return']);
+    assert.deepEqual(result.includedReturnIds, []);
   });
 
   it('manté fingerprint estable sense id encara que canviï l’ordre del dataset', () => {

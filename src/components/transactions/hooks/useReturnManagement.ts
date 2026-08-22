@@ -1,8 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { doc, query, where, getDocs, limit, type CollectionReference } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase';
+import { query, where, getDocs, limit, type CollectionReference } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -12,6 +11,7 @@ import {
   getSplitValidationError,
   type SplitRow,
 } from '@/lib/returns/createReturnSplit';
+import { assignReturnAtomically } from '@/lib/returns/assignReturnAtomically';
 import {
   acquireProcessLock,
   getLockFailureMessage,
@@ -355,41 +355,19 @@ export function useReturnManagement({
         return;
       }
 
-      const returnUpdate: Record<string, unknown> = {
-        transactionType: 'return',
-        contactId: returnDonorIdState,
-        contactType: 'donor',
-        linkedTransactionId: returnLinkedTxIdState ?? null,
-      };
-
-      updateDocumentNonBlocking(
-        doc(transactionsCollection, returnTransaction.id),
-        returnUpdate
-      );
-
-      if (returnLinkedTxIdState) {
-        updateDocumentNonBlocking(
-          doc(transactionsCollection, returnLinkedTxIdState),
-          {
-            donationStatus: 'returned',
-            linkedTransactionId: returnTransaction.id,
-          }
-        );
-
-        if (contactsCollection) {
-          const donor = donors.find((item) => item.id === returnDonorIdState);
-          if (donor) {
-            updateDocumentNonBlocking(
-              doc(contactsCollection, returnDonorIdState),
-              {
-                returnCount: (donor.returnCount || 0) + 1,
-                lastReturnDate: new Date().toISOString(),
-                status: 'pending_return',
-              }
-            );
-          }
-        }
+      if (!organizationId) {
+        throw new Error('Missing organizationId for return assignment');
       }
+
+      await assignReturnAtomically({
+        transactionsCollection,
+        contactsCollection,
+        organizationId,
+        returnTransactionId: returnTransaction.id,
+        donorId: returnDonorIdState,
+        linkedDonationId: returnLinkedTxIdState,
+        route: '/transactions/manage-return',
+      });
 
       toast({
         title: t.movements.table.returnAssigned,
