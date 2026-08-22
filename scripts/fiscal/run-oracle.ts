@@ -9,6 +9,7 @@ import {
 import { calculateDonorNet } from '@/lib/fiscal/calculateDonorNet';
 import { buildCertificateDonorSummaries } from '@/lib/fiscal/certificate-summaries';
 import { calculateModel182Totals } from '@/lib/model182';
+import { buildModel182Candidates } from '@/lib/model182-aggregation';
 import type { Donor, Transaction } from '@/lib/data';
 
 type Stage = 'predeploy' | 'postdeploy' | 'ci';
@@ -95,6 +96,13 @@ function run(): number {
     [returnedPairDonor],
     year
   ).stats.totalAmount;
+  const returnedPairBreakdown = buildModel182Candidates(
+    returnedPairTransactions,
+    [returnedPairDonor],
+    year
+  )[0];
+  const returnedPairGross = returnedPairBreakdown?.grossAmount ?? 0;
+  const returnedPairReturns = returnedPairBreakdown?.returnsAmount ?? 0;
 
   if (returnedPairNet !== 60) {
     diffs.push(`returnedPairNet: expected=60 actual=${returnedPairNet}`);
@@ -104,6 +112,12 @@ function run(): number {
   }
   if (returnedPairModel182 !== 60) {
     diffs.push(`returnedPairModel182: expected=60 actual=${returnedPairModel182}`);
+  }
+  if (returnedPairGross !== 70) {
+    diffs.push(`returnedPairGross: expected=70 actual=${returnedPairGross}`);
+  }
+  if (returnedPairReturns !== -10) {
+    diffs.push(`returnedPairReturns: expected=-10 actual=${returnedPairReturns}`);
   }
 
   if (diffs.length > 0) {
@@ -116,7 +130,7 @@ function run(): number {
 
   console.log(`[fiscal-oracle] OK (${stage})`);
   console.log(`[fiscal-oracle] donorNet=${actual.donorNet} total182=${actual.total182} certificateNet=${actual.certificateNet} pendingExcluded=${actual.pendingExcludedCount}`);
-  console.log(`[fiscal-oracle] returnedPairNet=${returnedPairNet} returnedPairCertificate=${returnedPairCertificate} returnedPairModel182=${returnedPairModel182}`);
+  console.log(`[fiscal-oracle] returnedPairGross=${returnedPairGross} returnedPairReturns=${returnedPairReturns} returnedPairNet=${returnedPairNet} returnedPairCertificate=${returnedPairCertificate} returnedPairModel182=${returnedPairModel182}`);
   return 0;
 }
 
