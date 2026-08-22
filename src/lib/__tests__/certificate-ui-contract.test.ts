@@ -41,5 +41,8 @@ test('annual certificate exposes only the net amount in its PDF body', () => {
   assert.equal(mass.includes('donorNetBodyWithAddress'), true);
   assert.equal(mass.includes('Resum fiscal:'), false);
   assert.equal(drawer.includes('donorNetBodyWithAddress'), true);
+  assert.equal(drawer.includes('donorBodyWithAddress(donor.name'), false);
+  assert.equal(drawer.includes('donorBody(donor.name'), false);
+  assert.equal(drawer.includes('donationsCount)'), false);
   assert.equal(drawer.includes('BLOC DE RESUM FISCAL'), false);
 });
