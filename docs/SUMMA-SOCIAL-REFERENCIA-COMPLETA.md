@@ -2019,6 +2019,16 @@ Si algunes devolucions no es poden identificar:
 
 > **Regla clau:** Les devolucions resten al Model 182 quan existeixen filles amb `contactId`, independentment de l'estat global de la remesa (`partial` o `complete`).
 
+#### Desglossament visible del Model 182
+
+La pantalla del Model 182 separa els fets econòmics del net fiscal canònic:
+
+- **Donacions:** suma bruta dels moviments positius de donació fiscalment inclosos, inclosa una donació marcada `returned` quan existeix com a moviment original.
+- **Devolucions:** suma negativa dels moviments bancaris `return`, comptats una sola vegada.
+- **Net:** import fiscal canònic certificable i exportable.
+
+Quan una donació `returned` té una devolució negativa vinculada, la donació continua sent visible dins del brut i la devolució continua sent visible al desglossament, però la parella no produeix doble impacte en el net. Les files oficials i els exports continuen utilitzant únicament el net canònic. No existeix cap columna d'ajust o **Descomptat fiscalment**.
+
 ### 3.4.8 UI de devolucions
 
 #### Banner (Moviments)
@@ -2622,6 +2632,8 @@ Estadístiques per projecte:
 **Data límit:** 31 de gener
 
 **Exportació Excel per Gestoria:**
+
+La pantalla pot mostrar el desglossament **Donacions / Devolucions / Net**, però els camps fiscals exportats `VALOR` i `IMPORTE` continuen sent exclusivament el net canònic de l'exercici.
 
 | Columna | Valor | Font |
 |---------|-------|------|

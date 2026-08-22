@@ -20,11 +20,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '@/components/ui/alert';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -55,7 +50,7 @@ import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
-import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal-contributions';
+import { buildModel182Candidates } from '@/lib/model182-aggregation';
 import type { Donation } from '@/lib/types/donations';
 import { mergeTransactionsWithStripeDonations } from '@/lib/fiscal/stripe-donations-fiscal-source';
 
@@ -160,8 +155,9 @@ interface DonationReportRow {
   donorProvince: string;       // Codi província (2 dígits)
   donorNaturaleza: 'F' | 'J';  // F = persona física, J = persona jurídica
   donorMembershipType: 'one-time' | 'recurring';  // Per export gestoria (F0/A0)
+  grossAmount: number;
+  returnsAmount: number;
   totalAmount: number;
-  returnedAmount: number;
   valor1: number;              // Donacions any anterior (year-1)
   valor2: number;              // Donacions dos anys abans (year-2)
   recurrente: boolean;         // true si valor1 > 0 AND valor2 > 0
@@ -169,9 +165,10 @@ interface DonationReportRow {
 
 interface ReportStats {
   totalDonors: number;
+  grossAmount: number;
+  returnsAmount: number;
+  returnCount: number;
   totalAmount: number;
-  excludedReturns: number;
-  excludedAmount: number;
 }
 
 export function DonationsReportGenerator() {
@@ -257,133 +254,45 @@ export function DonationsReportGenerator() {
     }
 
     const year = parseInt(selectedYear, 10);
-    const year1 = year - 1;  // Any anterior
-    const year2 = year - 2;  // Dos anys abans
-
-    // Crear mapa de donants per ID
     const donorMap = new Map(donors.map(d => [d.id, d]));
+    const candidates = buildModel182Candidates(fiscalTxs, contacts, year);
+    const generatedReportData: DonationReportRow[] = candidates.map((candidate) => {
+      const donor = donorMap.get(candidate.donorId);
+      const valor1 = candidate.previousYearAmount ?? 0;
+      const valor2 = candidate.twoYearsAgoAmount ?? 0;
 
-    const donationsByDonor: Record<string, {
-      donor: Donor,
-      total: number,
-      returned: number,
-      totalYear1: number,  // Donacions any-1
-      totalYear2: number,  // Donacions any-2
-    }> = {};
-
-    // Estadístiques globals
-    let excludedReturns = 0;
-    let excludedAmount = 0;
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // PROCESSAR TOTES LES TRANSACCIONS ACTIVES (any actual + històric)
-    // HOTFIX: Usar activeTxs (filtrat client-side amb tolerància !tx.archivedAt)
-    // ═══════════════════════════════════════════════════════════════════════════
-    const canonicalContributions = buildCanonicalFiscalContributions(fiscalTxs).contributions;
-
-    canonicalContributions.forEach(contribution => {
-      const tx = contribution.tx;
-      const txYear = new Date(tx.date).getFullYear();
-
-      // Només processar transaccions amb donant assignat
-      if (tx.contactId && donorMap.has(tx.contactId)) {
-
-        // Inicialitzar si no existeix
-        if (!donationsByDonor[tx.contactId]) {
-          donationsByDonor[tx.contactId] = {
-            donor: donorMap.get(tx.contactId)!,
-            total: 0,
-            returned: 0,
-            totalYear1: 0,
-            totalYear2: 0,
-          };
-        }
-
-        // ═══════════════════════════════════════════════════════════════════════
-        // LÒGICA DE CÀLCUL PER ANY
-        // ═══════════════════════════════════════════════════════════════════════
-
-        // Calcular import net de la transacció
-        const netAmount = contribution.canonicalAmount;
-        if (txYear === year && netAmount < 0) {
-          excludedReturns++;
-          excludedAmount += Math.abs(netAmount);
-        }
-
-        // Acumular segons l'any
-        if (txYear === year) {
-          if (netAmount > 0) {
-            donationsByDonor[tx.contactId].total += netAmount;
-          } else {
-            donationsByDonor[tx.contactId].returned += Math.abs(netAmount);
-          }
-        } else if (txYear === year1) {
-          donationsByDonor[tx.contactId].totalYear1 += Math.max(0, netAmount);
-        } else if (txYear === year2) {
-          donationsByDonor[tx.contactId].totalYear2 += Math.max(0, netAmount);
-        }
-      }
+      return {
+        donorName: candidate.donor.name,
+        donorTaxId: candidate.donor.taxId ?? '',
+        donorZipCode: candidate.donor.zipCode ?? '',
+        donorProvince: getProvinceCode(donor?.province, candidate.donor.zipCode),
+        donorNaturaleza: candidate.donor.donorType === 'company' ? 'J' : 'F',
+        donorMembershipType: donor?.membershipType ?? 'one-time',
+        grossAmount: candidate.grossAmount,
+        returnsAmount: candidate.returnsAmount,
+        totalAmount: candidate.totalAmount,
+        valor1,
+        valor2,
+        recurrente: valor1 > 0 && valor2 > 0,
+      };
     });
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // CALCULAR TOTAL NET: donacions - devolucions per cada donant
-    // ═══════════════════════════════════════════════════════════════════════════
-    const generatedReportData: DonationReportRow[] = Object.values(donationsByDonor)
-      .map(({ donor, total, returned, totalYear1, totalYear2 }) => {
-        const netAmount = Math.max(0, total - returned);
-        const valor1 = totalYear1;
-        const valor2 = totalYear2;
-
-        return {
-          donorName: donor.name,
-          donorTaxId: donor.taxId,
-          donorZipCode: donor.zipCode,
-          donorProvince: getProvinceCode(donor.province, donor.zipCode),
-          donorNaturaleza: donor.donorType === 'company' ? 'J' as const : 'F' as const,
-          donorMembershipType: donor.membershipType,
-          totalAmount: netAmount,
-          returnedAmount: returned,
-          valor1,
-          valor2,
-          recurrente: valor1 > 0 && valor2 > 0,
-        };
-      })
-      // Només incloure donants amb total positiu
-      .filter(({ totalAmount }) => totalAmount > 0)
-      .sort((a, b) => b.totalAmount - a.totalAmount);
-    
-    // Calcular estadístiques
     const stats: ReportStats = {
       totalDonors: generatedReportData.length,
+      grossAmount: generatedReportData.reduce((sum, row) => sum + row.grossAmount, 0),
+      returnsAmount: generatedReportData.reduce((sum, row) => sum + row.returnsAmount, 0),
+      returnCount: candidates.reduce((sum, row) => sum + row.returnCount, 0),
       totalAmount: generatedReportData.reduce((sum, row) => sum + row.totalAmount, 0),
-      excludedReturns,
-      excludedAmount,
     };
 
     setReportData(generatedReportData);
     setReportStats(stats);
     setIsLoading(false);
     
-    // Toast amb informació de devolucions si n'hi ha
-    if (excludedReturns > 0) {
-      toast({ 
-        title: t.reports.reportGenerated, 
-        description: (
-          <div>
-            <p>{t.reports.reportGeneratedDescription(selectedYear, generatedReportData.length)}</p>
-            <p className="text-orange-600 mt-1">
-              ⚠️ {t.reports.returnsDiscountedToast(excludedReturns, formatCurrencyEU(excludedAmount))}
-            </p>
-          </div>
-        ),
-        duration: 6000,
-      });
-    } else {
-      toast({ 
-        title: t.reports.reportGenerated, 
-        description: t.reports.reportGeneratedDescription(selectedYear, generatedReportData.length) 
-      });
-    }
+    toast({
+      title: t.reports.reportGenerated,
+      description: t.reports.reportGeneratedDescription(selectedYear, generatedReportData.length),
+    });
   };
 
   const handleExportExcel = async () => {
@@ -806,19 +715,6 @@ export function DonationsReportGenerator() {
         </CardHeader>
         <CardContent className="space-y-4">
             {/* ═══════════════════════════════════════════════════════════════════
-                AVÍS DE DEVOLUCIONS DESCOMPTADES
-                ═══════════════════════════════════════════════════════════════════ */}
-            {reportStats && reportStats.excludedReturns > 0 && (
-              <Alert className="border-orange-200 bg-orange-50">
-                <Undo2 className="h-4 w-4 text-orange-600" />
-                <AlertTitle className="text-orange-800">{t.reports.returnsDiscountedTitle}</AlertTitle>
-                <AlertDescription className="text-orange-700">
-                  {t.reports.returnsDiscountedDescription(reportStats.excludedReturns, formatCurrencyEU(reportStats.excludedAmount))}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* ═══════════════════════════════════════════════════════════════════
                 RESUM D'ESTADÍSTIQUES
                 ═══════════════════════════════════════════════════════════════════ */}
             {reportStats && reportData.length > 0 && (
@@ -828,21 +724,17 @@ export function DonationsReportGenerator() {
                   <p className="text-2xl font-bold text-green-700">{reportStats.totalDonors}</p>
                 </div>
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-xs text-green-600 font-medium">{t.certificates.totalDonated}</p>
-                  <p className="text-2xl font-bold text-green-700">{formatCurrencyEU(reportStats.totalAmount)}</p>
+                  <p className="text-xs text-green-600 font-medium">{tr('reports.grossDonations', 'Donacions')}</p>
+                  <p className="text-2xl font-bold text-green-700">{formatCurrencyEU(reportStats.grossAmount)}</p>
                 </div>
-                {reportStats.excludedReturns > 0 && (
-                  <>
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                      <p className="text-xs text-orange-600 font-medium">{t.reports.returns}</p>
-                      <p className="text-2xl font-bold text-orange-700">{reportStats.excludedReturns}</p>
-                    </div>
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                      <p className="text-xs text-orange-600 font-medium">{t.reports.discountedAmount}</p>
-                      <p className="text-2xl font-bold text-orange-700">{formatCurrencyEU(reportStats.excludedAmount)}</p>
-                    </div>
-                  </>
-                )}
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                  <p className="text-xs text-orange-600 font-medium">{tr('reports.returns', 'Devolucions')}</p>
+                  <p className="text-2xl font-bold text-orange-700">{formatCurrencyEU(reportStats.returnsAmount)}</p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-600 font-medium">{tr('reports.netAmount', 'Net')}</p>
+                  <p className="text-2xl font-bold text-blue-700">{formatCurrencyEU(reportStats.totalAmount)}</p>
+                </div>
               </div>
             )}
 
@@ -872,7 +764,7 @@ export function DonationsReportGenerator() {
                       title={
                         <span className="flex items-center gap-2">
                           {row.donorName}
-                          {row.returnedAmount > 0 && (
+                          {row.returnsAmount < 0 && (
                             <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 text-xs px-1.5 py-0">
                               Dev.
                             </Badge>
@@ -883,20 +775,21 @@ export function DonationsReportGenerator() {
                         { label: 'NIF', value: row.donorTaxId },
                         { label: 'CP', value: row.donorZipCode },
                         {
+                          label: tr('reports.grossDonations', 'Donacions'),
+                          value: formatCurrencyEU(row.grossAmount),
+                        },
+                        {
+                          label: tr('reports.returns', 'Devolucions'),
+                          value: formatCurrencyEU(row.returnsAmount),
+                        },
+                        {
+                          label: tr('reports.netAmount', 'Net'),
                           value: (
                             <span className="font-mono text-green-600 font-medium">
                               {formatCurrencyEU(row.totalAmount)}
                             </span>
                           )
-                        },
-                        ...(row.returnedAmount > 0 ? [{
-                          value: (
-                            <span className="flex items-center gap-1 font-mono text-orange-500">
-                              <Undo2 className="h-3 w-3" />
-                              -{formatCurrencyEU(row.returnedAmount)}
-                            </span>
-                          )
-                        }] : [])
+                        }
                       ]}
                     />
                   ))
@@ -911,10 +804,9 @@ export function DonationsReportGenerator() {
                       <TableHead className="w-[40%]">{t.reports.donorName}</TableHead>
                       <TableHead className="w-[150px]">{t.reports.donorTaxId}</TableHead>
                       <TableHead className="w-[100px]">{t.reports.donorZipCode}</TableHead>
-                      <TableHead className="w-[140px] text-right">{t.reports.totalAmount}</TableHead>
-                      {reportStats?.excludedReturns ? (
-                        <TableHead className="w-[140px] text-right text-orange-600">{t.reports.columnDiscounted}</TableHead>
-                      ) : null}
+                      <TableHead className="w-[120px] text-right">{tr('reports.grossDonations', 'Donacions')}</TableHead>
+                      <TableHead className="w-[120px] text-right text-orange-600">{tr('reports.returns', 'Devolucions')}</TableHead>
+                      <TableHead className="w-[120px] text-right text-blue-600">{tr('reports.netAmount', 'Net')}</TableHead>
                   </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -923,7 +815,7 @@ export function DonationsReportGenerator() {
                         <TableCell className="min-w-0 font-medium">
                           <span className="flex min-w-0 items-center gap-2">
                             <span className="truncate">{row.donorName}</span>
-                            {row.returnedAmount > 0 && (
+                            {row.returnsAmount < 0 && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 text-xs px-1.5 py-0">
@@ -941,25 +833,26 @@ export function DonationsReportGenerator() {
                         <TableCell className="whitespace-nowrap">{row.donorTaxId}</TableCell>
                         <TableCell className="whitespace-nowrap">{row.donorZipCode}</TableCell>
                         <TableCell className="whitespace-nowrap text-right font-mono text-green-600 font-medium">
+                          {formatCurrencyEU(row.grossAmount)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-right font-mono text-orange-500">
+                          {row.returnsAmount !== 0 ? (
+                            <span className="flex items-center justify-end gap-1">
+                              <Undo2 className="h-3 w-3" />
+                              {formatCurrencyEU(row.returnsAmount)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-right font-mono text-blue-600 font-medium">
                           {formatCurrencyEU(row.totalAmount)}
                         </TableCell>
-                        {reportStats?.excludedReturns ? (
-                          <TableCell className="whitespace-nowrap text-right font-mono text-orange-500">
-                            {row.returnedAmount > 0 ? (
-                              <span className="flex items-center justify-end gap-1">
-                                <Undo2 className="h-3 w-3" />
-                                -{formatCurrencyEU(row.returnedAmount)}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                        ) : null}
                       </TableRow>
                   ))}
                   {reportData.length === 0 && (
                       <TableRow>
-                          <TableCell colSpan={reportStats?.excludedReturns ? 5 : 4} className="text-center text-muted-foreground h-24">
+                          <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
                              {isLoading ? t.reports.generating : t.reports.noData}
                           </TableCell>
                       </TableRow>

@@ -21,3 +21,23 @@
 - L'informe de marketing separa les visites procedents de ChatGPT, Perplexity, Claude, Gemini i Copilot, i resumeix els rastrejadors d'IA declarats sense confondre'ls amb visites humanes.
 - OAI-SearchBot es contrasta amb els rangs IPv4 oficials publicats per OpenAI; la resta de rastrejadors queden etiquetats nomes com a declarats.
 - No hi ha dependencies noves, migracions ni canvis destructius de Firestore; tampoc s'escriu `undefined`.
+
+## Impacte d'aquest canvi
+
+### Metadata
+- date: 2026-08-22
+- change_scope: desglossament fiscal del Model 182 per separar donacions, devolucions i net canònic
+
+### Declaracio obligatoria
+- help_topics_updated: []
+- manual_updated: no
+- manual_sections: []
+- faq_updated: no
+- faq_questions: []
+- justification_if_no_change: el contracte queda documentat al document mestre i a QA-FISCAL.md; no cal modificar el manual d'usuari ni la FAQ en aquest canvi intern fiscal
+
+### Notes
+- L'agregació compartida del Model 182 exposa Donacions brutes, Devolucions negatives una sola vegada i Net fiscal canònic.
+- Una donació `returned` amb `return` vinculat continua visible al brut i al desglossament, sense doble impacte al net ni als exports oficials.
+- QA-FISCAL.md incorpora els casos 70/-10/60, devolució parcial, exercici diferent i exclusió de net zero.
+- No hi ha dependencies noves, migracions ni canvis destructius de Firestore; tampoc s'escriu `undefined`.
