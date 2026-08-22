@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Última actualització: 17 Juny 2026
+# Última actualització: 22 Agost 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -96,14 +96,45 @@ Summa Social comunica un model comercial públic per plans mensuals:
 | Pla | Preu públic | Orientació |
 |-----|-------------|------------|
 | Control | 49 €/mes | Banc, moviments manuals, socis i donants, SEPA, devolucions manuals, certificats i preparació del Model 182. |
-| Gestió | 79 €/mes | Tot Control, més documents vinculats, control sense document, IA assistida i preparació del Model 347. |
-| Complet | 119 €/mes | Tot Gestió, més documents previs o pendents, OCR, tancament, projectes, pressupostos, multidivisa dins dels projectes i XLSX estructurat. |
+| Control de Gestió | 79 €/mes | Tot Control, més documents vinculats, control sense document, IA assistida i preparació del Model 347. |
+| Complet | 119 €/mes | Tot Control de Gestió, més documents previs o pendents, OCR, tancament, projectes, pressupostos, multidivisa dins dels projectes i XLSX estructurat. |
 
 La implantació inicial es pressuposta segons l'estat de les dades, el volum de contactes i la complexitat del procés, a partir de 300 €.
 
 La segmentació es governa amb una capa d'entitlements separada de la configuració operativa i dels permisos d'usuari. El pla fixa el màxim disponible; la configuració i els permisos poden restringir-lo, però no ampliar-lo. En un downgrade, les dades històriques es conserven en lectura o descàrrega quan correspon, mentre es bloquegen les noves mutacions reservades al pla superior.
 
 La contractació continua sent assistida i no introdueix Stripe Billing, checkout públic, portal client ni automatització de cobrament.
+
+## 1.3.2 Novetats desplegades: 22 juliol – 22 agost 2026
+
+Aquesta secció resumeix les funcionalitats i millores que consten al registre de deploys de producció del període. No inclou canvis que només existeixen en una branca o que no tenen un deploy independent confirmat.
+
+### Millores tècniques
+
+| Data | Àrea | Canvi desplegat |
+|------|------|-----------------|
+| 27/07/2026 | Analítica i privacitat | Analítica pròpia de la web pública, gestió de preferències i actualització de la pàgina de privacitat. |
+| 27/07/2026 | SEO i descoberta | Millores de metadades, sitemap, `llms.txt`, IndexNow, landings de recursos i optimització per a cercadors i sistemes d'IA. |
+| 03/08/2026 | Integracions privades | Nova fase de preparació segura per a importacions bancàries, classificació de donacions i certificats, sense aplicar canvis automàticament. |
+| 03/08/2026 | MCP privat | Operacions conversacionals acotades per consultar dades i preparar plans d'importació, classificació i certificats, amb autenticació per organització i auditoria. |
+| 14/08/2026 | Entitlements | Capa tècnica que governa quines funcionalitats i mutacions corresponen a cada pla, amb controls de servidor, Firestore i Storage. |
+| 14/08/2026 | Robustesa | Protecció del matching després d'importacions i separació entre processos de build i migració. |
+| 21/08/2026 | Fiscalitat | Càlcul fiscal canònic per a donacions, devolucions, certificats i Model 182, amb ampliació de proves automatitzades. |
+
+### Millores per als usuaris
+
+| Data | Àrea | Canvi desplegat |
+|------|------|-----------------|
+| 27/07/2026 | Web pública | Navegació, portada i presentació dels recursos millorades, amb suport de les noves landings públiques. |
+| 27/07/2026 | Conciliació bancària | Plantilles de conciliació bancària disponibles en català i castellà, en formats Excel i CSV. |
+| 14/08/2026 | Plans | Publicació dels plans Control de Gestió i Complet, amb textos, preus i funcionalitats diferenciades. |
+| 15/08/2026 | Comunicació comercial | Reordenació i simplificació dels missatges del pla Complet. |
+| 14/08/2026 | Accés per pla | Les funcionalitats documentals, de moviments i de justificació s'adapten al pla contractat, conservant les dades històriques quan correspon. |
+| 21/08/2026 | Donacions i fiscalitat | Millora de la coherència dels totals nets de donacions, devolucions, certificats i informes fiscals. |
+
+### Estat de la correcció de donacions retornades
+
+El repositori conté una correcció posterior per garantir que una donació retornada i la seva devolució es compensin correctament, incloent assignació atòmica i proves de regressió. En el moment d'aquesta actualització, aquesta correcció no consta com un deploy independent posterior al registre del 21/08/2026; per tant, no es considera una funcionalitat confirmada en producció fins a verificar la revisió activa i els casos reals corresponents.
 
 ## 1.4 URLs i Recursos
 
@@ -2841,6 +2872,8 @@ Evita errors AEAT 20701 per separacions artificials en denominacions socials.
 **Càlcul de l'import:**
 - Import = Σ donacions - Σ devolucions
 - Si import ≤ 0 → No es genera certificat
+- El certificat anual exposa únicament l'import net certificable; no mostra recompte de donacions, import brut ni devolucions.
+- El certificat individual per donació conserva el seu contracte propi i no utilitza el cos anual simplificat.
 
 **Lectura fiscal acotada per certificats:**
 - Endpoint: `POST /api/fiscal/certificates/summary`
@@ -7079,5 +7112,5 @@ Les següents regles han de ser certes en tot moment. Si es trenca alguna, cal c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: 11 Juny 2026
+# Última actualització: 22 Agost 2026
 # ═══════════════════════════════════════════════════════════════════════════════
