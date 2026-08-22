@@ -149,9 +149,8 @@ test('certificate summaries no compten dues vegades una devolució enllaçada (r
   });
 
   assert.equal(summary.grossAmount, 200);
-  assert.equal(summary.returnedAmount, 100);
-  assert.equal(summary.totalAmount, 100);
+  assert.equal(summary.returnedAmount, 0);
+  assert.equal(summary.totalAmount, 200);
   assert.equal(summary.donations.length, 1);
-  assert.equal(summary.returns.length, 1);
-  assert.equal(summary.returns[0].id.startsWith('cert-return-'), true);
+  assert.equal(summary.returns.length, 0);
 });

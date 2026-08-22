@@ -9,6 +9,7 @@ import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal
  */
 export interface DonorNetInput {
   transactions: Array<{
+    id?: string;
     amount: number;
     date: string;
     transactionType?: string;
@@ -17,6 +18,7 @@ export interface DonorNetInput {
     archivedAt?: string | null;
     isSplit?: boolean;
     isRemittance?: boolean;
+    linkedTransactionId?: string | null;
   }>;
   donorId: string;
   year: number;
@@ -40,7 +42,9 @@ export interface DonorNetResult {
  *
  * Criteris:
  * - Donacions fiscals: transactionType === 'donation'
- * - Devolucions: transactionType === 'return' (amount < 0) o donationStatus === 'returned'
+ * - Donació returned: aportació fallida, efecte fiscal 0
+ * - Devolució return sense parella: resta una vegada
+ * - Parella returned + return: efecte fiscal conjunt 0
  * - Exclusions: archivedAt informat o pare de remesa (isRemittance === true)
  * - Net: gross + returns (returns són negatius, per tant és una resta)
  *

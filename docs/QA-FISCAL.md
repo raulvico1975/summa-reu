@@ -424,15 +424,21 @@ Ronda de verificació visual i funcional prèvia a deploy per canvis en modals f
 **Context:**
 Quan una devolució negativa està vinculada a la donació original, la fitxa/certificat no han de comptar dues devolucions pel mateix cas.
 
+Cas de regressió obligatori: el 5 de gener hi ha una aportació de +10 € marcada
+com a retornada i el seu moviment bancari de −10 €. De febrer a juliol hi ha sis
+aportacions cobrades de +10 €. El gener té efecte fiscal 0 € i el net anual és
+exactament 60 €.
+
 **Passos:**
 1. Obrir fitxa d'un donant amb cas vinculat (`return` negatiu + donació `returned`) el mateix any.
 2. Revisar targeta "Devolucions" i la llista de "Últimes devolucions".
 3. Generar certificat anual del mateix any.
 
 **Expected:**
-- [ ] El cas vinculat compta una sola vegada com a devolució efectiva.
-- [ ] `Total devuelto` no suma duplicat del mateix cas.
-- [ ] El net del certificat no aplica doble resta pel mateix retorn.
+- [ ] La llista operativa mostra una sola devolució de 10 € al gener.
+- [ ] L'aportació retornada i el moviment bancari vinculat tenen efecte fiscal conjunt 0 €.
+- [ ] El net de fitxa, certificat i Model 182 és exactament 60 €.
+- [ ] Una devolució negativa sense parella continua restant una sola vegada.
 
 ---
 

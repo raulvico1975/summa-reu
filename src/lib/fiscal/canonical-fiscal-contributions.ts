@@ -79,9 +79,15 @@ function isReturnCandidate(tx: CanonicalFiscalInputTransaction): boolean {
 }
 
 /**
- * Construeix l'import efectiu de cada apunt fiscal, evitant dobles còmputs de devolucions
- * quan existeix parella explícita:
- *   - donationStatus='returned' + transactionType='return' vinculades per linkedTransactionId.
+ * Construeix l'import efectiu de cada apunt fiscal.
+ *
+ * Una donació positiva marcada com a `returned` no és una segona devolució: és
+ * l'aportació fallida i, per tant, no és certificable. Quan també existeix el
+ * moviment bancari negatiu que representa el mateix retorn, tots dos apunts
+ * formen una sola parella operativa amb efecte fiscal total zero.
+ *
+ * Una devolució negativa sense parella continua restant una sola vegada perquè
+ * pot correspondre a una donació que ja havia estat comptabilitzada abans.
  */
 export function buildCanonicalFiscalContributions<T extends CanonicalFiscalInputTransaction>(
   transactions: readonly T[]
@@ -201,7 +207,7 @@ export function buildCanonicalFiscalContributions<T extends CanonicalFiscalInput
       return {
         sourceIndex,
         tx,
-        canonicalAmount: pairedReturnedDonationIndexes.has(sourceIndex) ? 0 : -Math.abs(tx.amount),
+        canonicalAmount: 0,
       };
     }
 
@@ -209,7 +215,7 @@ export function buildCanonicalFiscalContributions<T extends CanonicalFiscalInput
       return {
         sourceIndex,
         tx,
-        canonicalAmount: -Math.abs(tx.amount),
+        canonicalAmount: pairedReturnIndexes.has(sourceIndex) ? 0 : -Math.abs(tx.amount),
       };
     }
 
