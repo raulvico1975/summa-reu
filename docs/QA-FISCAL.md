@@ -416,6 +416,9 @@ Ronda de verificació visual i funcional prèvia a deploy per canvis en modals f
 - [ ] Import del certificat = net de la fitxa donant
 - [ ] Usa el mateix motor de càlcul que la fitxa
 - [ ] Format fiscal correcte (import en lletres, NIF, etc.)
+- [ ] El certificat anual mostra només l'import net: sense recompte, import brut, devolucions ni quadre de resum fiscal
+- [ ] Previsualització, descàrrega, generació massiva i PDF adjunt de correu coincideixen
+- [ ] El certificat individual per donació manté el seu contingut propi
 
 ---
 

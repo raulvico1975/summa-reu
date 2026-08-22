@@ -1680,6 +1680,10 @@ export const ca = {
       // Cos principal: donant sense adreça
       donorBody: (donorName: string, donorTaxId: string, year: string, amount: string, count: number) =>
         `Que ${donorName}, amb NIF/CIF ${donorTaxId}, ha efectuat donacions dineràries a favor d'aquesta entitat durant l'exercici fiscal ${year}, per un import total de ${amount}, corresponent a ${count} ${count === 1 ? 'donació' : 'donacions'}.`,
+      donorNetBodyWithAddress: (donorName: string, donorTaxId: string, donorAddress: string, year: string, amount: string) =>
+        `Que ${donorName}, amb NIF/CIF ${donorTaxId} i domicili a ${donorAddress}, ha efectuat donacions dineràries a favor d'aquesta entitat durant l'exercici fiscal ${year}, per un import net total de ${amount}.`,
+      donorNetBody: (donorName: string, donorTaxId: string, year: string, amount: string) =>
+        `Que ${donorName}, amb NIF/CIF ${donorTaxId}, ha efectuat donacions dineràries a favor d'aquesta entitat durant l'exercici fiscal ${year}, per un import net total de ${amount}.`,
       // Clàusula d'irrevocabilitat
       irrevocableClause: "Que aquestes donacions han estat realitzades amb caràcter irrevocable, sense contraprestació, i s'han destinat íntegrament al compliment dels fins socials de l'entitat.",
       // Fórmula d'expedició (amb lloc)

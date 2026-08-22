@@ -910,45 +910,6 @@ export function DonorDetailDrawer({
       y += paragraph3Wrapped.length * lineHeight + 15;
 
       // ═══════════════════════════════════════════════════════════════════════
-      // BLOC DE RESUM FISCAL (només si hi ha devolucions)
-      // ═══════════════════════════════════════════════════════════════════════
-
-      if (returnedAmount > 0) {
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setDrawColor(200);
-        doc.setFillColor(250, 250, 250);
-
-        const boxX = margin + 20;
-        const boxWidth = pageWidth - margin * 2 - 40;
-        const boxHeight = 32;
-        doc.roundedRect(boxX, y - 4, boxWidth, boxHeight, 2, 2, 'FD');
-
-        y += 6;
-        doc.setFont('helvetica', 'bold');
-        doc.text(t.donorDetail.certificate.fiscalSummary, boxX + 5, y);
-        y += lineHeight;
-
-        doc.setFont('helvetica', 'normal');
-        const col1 = boxX + 5;
-        const col2 = boxX + boxWidth - 5;
-
-        doc.text(t.donorDetail.certificate.receivedDonations, col1, y);
-        doc.text(formatCurrencyEU(grossAmount), col2, y, { align: 'right' });
-        y += lineHeight;
-
-        doc.text(t.donorDetail.certificate.processedReturns, col1, y);
-        doc.text(`-${formatCurrencyEU(returnedAmount)}`, col2, y, { align: 'right' });
-        y += lineHeight;
-
-        doc.setFont('helvetica', 'bold');
-        doc.text(t.donorDetail.certificate.certifiedNetAmount, col1, y);
-        doc.text(formatCurrencyEU(netAmount), col2, y, { align: 'right' });
-
-        y += lineHeight * 2;
-      }
-
-      // ═══════════════════════════════════════════════════════════════════════
       // NOTA LEGAL
       // ═══════════════════════════════════════════════════════════════════════
 
@@ -1270,7 +1231,7 @@ export function DonorDetailDrawer({
       : await loadRestrictedAnnualCertificateScope(year);
     if (!annualScope) return;
 
-    const { yearLabel, grossAmount, returnedAmount, netAmount, donationsCount } = annualScope;
+    const { yearLabel, netAmount } = annualScope;
 
     if (netAmount === 0) {
       toast({
@@ -1396,8 +1357,8 @@ export function DonorDetailDrawer({
       const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '';
       // Usar plantilla institucional consistent amb el certificat massiu
       const paragraph1 = donorAddress
-        ? t.certificates.pdf.donorBodyWithAddress(donor.name, donor.taxId || 'N/A', donorAddress, yearLabel, formatCurrencyEU(netAmount), donationsCount)
-        : t.certificates.pdf.donorBody(donor.name, donor.taxId || 'N/A', yearLabel, formatCurrencyEU(netAmount), donationsCount);
+        ? t.certificates.pdf.donorNetBodyWithAddress(donor.name, donor.taxId || 'N/A', donorAddress, yearLabel, formatCurrencyEU(netAmount))
+        : t.certificates.pdf.donorNetBody(donor.name, donor.taxId || 'N/A', yearLabel, formatCurrencyEU(netAmount));
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
       doc.text(paragraph1Wrapped, margin, y);
       y += paragraph1Wrapped.length * lineHeight + 6;

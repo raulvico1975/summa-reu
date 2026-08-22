@@ -62,14 +62,7 @@ Import Net = Donacions Brutes − |Devolucions|
 
 El bloc de resum fiscal només apareix al PDF si hi ha devolucions:
 
-```
-┌─────────────────────────────────────────┐
-│ Resum fiscal:                           │
-│ Donacions rebudes:          1.200,00 €  │
-│ Devolucions efectuades:      -200,00 €  │
-│ Import net certificat:      1.000,00 €  │
-└─────────────────────────────────────────┘
-```
+El certificat anual mostra únicament l'import net certificable. No inclou el recompte de donacions, l'import brut, les devolucions ni un quadre de resum fiscal.
 
 ---
 
