@@ -10,6 +10,20 @@ import type { Transaction, AnyContact, Donor } from '@/lib/data';
 import type { DonationReportRow } from '@/lib/model182-aeat';
 import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal-contributions';
 
+export interface Model182Candidate extends DonationReportRow {
+  donorId: string;
+  /** Suma dels moviments positius de donació de l'any, inclosos els retornats. */
+  grossAmount: number;
+  /** Suma dels moviments bancaris de devolució de l'any, amb signe negatiu. */
+  returnsAmount: number;
+  /** Nombre de moviments bancaris de devolució de l'any. */
+  returnCount: number;
+  /** Import negatiu que realment resta del net canònic (les parelles són 0). */
+  canonicalReturnsAmount: number;
+  /** Nombre de devolucions que realment resten del net canònic. */
+  canonicalReturnCount: number;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FUNCIÓ PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
@@ -30,7 +44,7 @@ export function buildModel182Candidates(
   activeTxs: Transaction[],
   contacts: AnyContact[],
   year: number
-): DonationReportRow[] {
+): Model182Candidate[] {
   const year1 = year - 1;
   const year2 = year - 2;
 
@@ -41,6 +55,11 @@ export function buildModel182Candidates(
     donor: Donor;
     total: number;
     returned: number;
+    grossAmount: number;
+    returnsAmount: number;
+    returnCount: number;
+    canonicalReturnsAmount: number;
+    canonicalReturnCount: number;
     totalYear1: number;
     totalYear2: number;
   }> = {};
@@ -62,6 +81,11 @@ export function buildModel182Candidates(
         donor: donorMap.get(tx.contactId)!,
         total: 0,
         returned: 0,
+        grossAmount: 0,
+        returnsAmount: 0,
+        returnCount: 0,
+        canonicalReturnsAmount: 0,
+        canonicalReturnCount: 0,
         totalYear1: 0,
         totalYear2: 0,
       };
@@ -70,10 +94,33 @@ export function buildModel182Candidates(
     const netAmount = contribution.canonicalAmount;
 
     if (txYear === year) {
+      if (
+        !tx.archivedAt &&
+        !tx.isRemittance &&
+        !tx.isSplit &&
+        tx.amount > 0 &&
+        tx.transactionType === 'donation'
+      ) {
+        donationsByDonor[tx.contactId].grossAmount += tx.amount;
+      }
+
+      if (
+        !tx.archivedAt &&
+        !tx.isRemittance &&
+        !tx.isSplit &&
+        tx.amount < 0 &&
+        tx.transactionType === 'return'
+      ) {
+        donationsByDonor[tx.contactId].returnsAmount += tx.amount;
+        donationsByDonor[tx.contactId].returnCount += 1;
+      }
+
       if (netAmount > 0) {
         donationsByDonor[tx.contactId].total += netAmount;
-      } else {
+      } else if (netAmount < 0) {
         donationsByDonor[tx.contactId].returned += Math.abs(netAmount);
+        donationsByDonor[tx.contactId].canonicalReturnsAmount += netAmount;
+        donationsByDonor[tx.contactId].canonicalReturnCount += 1;
       }
     } else if (txYear === year1) {
       donationsByDonor[tx.contactId].totalYear1 += Math.max(0, netAmount);
@@ -85,10 +132,11 @@ export function buildModel182Candidates(
   // ═══════════════════════════════════════════════════════════════════════
   // CALCULAR TOTAL NET I CONSTRUIR LLISTA PER generateModel182AEATFile
   // ═══════════════════════════════════════════════════════════════════════
-  return Object.values(donationsByDonor)
-    .map(({ donor, total, returned, totalYear1, totalYear2 }) => {
+  return Object.entries(donationsByDonor)
+    .map(([donorId, { donor, total, returned, grossAmount, returnsAmount, returnCount, canonicalReturnsAmount, canonicalReturnCount, totalYear1, totalYear2 }]) => {
       const netAmount = Math.max(0, total - returned);
       return {
+        donorId,
         donor: {
           name: donor.name,
           taxId: donor.taxId,
@@ -98,6 +146,11 @@ export function buildModel182Candidates(
         totalAmount: netAmount,
         previousYearAmount: totalYear1,
         twoYearsAgoAmount: totalYear2,
+        grossAmount,
+        returnsAmount,
+        returnCount,
+        canonicalReturnsAmount,
+        canonicalReturnCount,
       };
     })
     .filter(row => row.totalAmount > 0)

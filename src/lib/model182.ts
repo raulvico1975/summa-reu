@@ -4,7 +4,11 @@
  * Aquesta funció no depèn de Firebase ni cap altre servei extern,
  * per tal de poder ser testejada fàcilment amb tests unitaris.
  */
-import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal-contributions';
+import type {
+  Donor as DataDonor,
+  Transaction as DataTransaction,
+} from '@/lib/data';
+import { buildModel182Candidates } from '@/lib/model182-aggregation';
 
 // =============================================================================
 // TIPUS
@@ -132,105 +136,59 @@ export function calculateModel182Totals(
   donors: Donor[],
   year: number
 ): Model182Result {
-  // Crear mapa de donants per ID (només amb taxId vàlid)
-  const donorMap = new Map<string, Donor>();
-  for (const donor of donors) {
-    if (donor.taxId && donor.taxId.trim()) {
-      donorMap.set(donor.id, donor);
-    }
-  }
+  // API històrica: el càlcul real viu a l'agregació compartida del Model 182.
+  const validDonors = donors.filter((donor) => donor.taxId && donor.taxId.trim());
+  const donorMap = new Map(validDonors.map((donor) => [donor.id, donor]));
+  const sharedDonors: DataDonor[] = validDonors.map((donor) => ({
+    id: donor.id,
+    type: 'donor',
+    name: donor.name,
+    taxId: donor.taxId,
+    zipCode: donor.zipCode,
+    province: donor.province,
+    donorType: donor.donorType,
+    membershipType: 'one-time',
+    createdAt: '1970-01-01',
+  }));
+  const sharedTransactions: DataTransaction[] = transactions.map((tx, index) => ({
+    id: tx.id ?? `legacy-model182-${index}`,
+    date: tx.date,
+    description: '',
+    amount: tx.amount,
+    category: null,
+    document: null,
+    contactId: tx.contactId ?? null,
+    transactionType: tx.transactionType as DataTransaction['transactionType'],
+    donationStatus: tx.donationStatus as DataTransaction['donationStatus'],
+    linkedTransactionId: tx.linkedTransactionId ?? null,
+    archivedAt: tx.archivedAt ?? undefined,
+    isRemittance: tx.isRemittance,
+    isSplit: tx.isSplit,
+  }));
 
-  // Anys per comparar recurrència
-  const year1 = year - 1;
-  const year2 = year - 2;
+  const candidates = buildModel182Candidates(sharedTransactions, sharedDonors, year);
+  const donorTotals: DonorTotals[] = candidates.map((candidate) => {
+    const donor = donorMap.get(candidate.donorId)!;
+    const valor1 = candidate.previousYearAmount ?? 0;
+    const valor2 = candidate.twoYearsAgoAmount ?? 0;
+    return {
+      donorId: candidate.donorId,
+      donor,
+      totalAmount: candidate.totalAmount,
+      returnedAmount: Math.abs(candidate.canonicalReturnsAmount),
+      valor1,
+      valor2,
+      recurrente: valor1 > 0 && valor2 > 0,
+    };
+  });
 
-  // Acumuladors per donant
-  const donationsByDonor: Record<string, {
-    donor: Donor;
-    total: number;
-    returned: number;
-    totalYear1: number;
-    totalYear2: number;
-  }> = {};
-
-  // Estadístiques de devolucions
-  let excludedReturns = 0;
-  let excludedAmount = 0;
-  const canonicalContributions = buildCanonicalFiscalContributions(transactions);
-
-  // Processar totes les transaccions
-  for (const contribution of canonicalContributions.contributions) {
-    const tx = contribution.tx;
-    const txYear = new Date(tx.date).getFullYear();
-
-    // Només processar transaccions amb donant assignat i amb DNI
-    if (!tx.contactId || !donorMap.has(tx.contactId)) {
-      continue;
-    }
-
-    // Inicialitzar si no existeix
-    if (!donationsByDonor[tx.contactId]) {
-      donationsByDonor[tx.contactId] = {
-        donor: donorMap.get(tx.contactId)!,
-        total: 0,
-        returned: 0,
-        totalYear1: 0,
-        totalYear2: 0,
-      };
-    }
-
-    // Calcular import net de la transacció
-    const netAmount = contribution.canonicalAmount;
-
-    // Comptar devolucions de l'any actual
-    if (txYear === year && netAmount < 0) {
-      excludedReturns++;
-      excludedAmount += Math.abs(netAmount);
-    }
-
-    // Acumular segons l'any
-    if (txYear === year) {
-      if (netAmount > 0) {
-        donationsByDonor[tx.contactId].total += netAmount;
-      } else if (netAmount < 0) {
-        donationsByDonor[tx.contactId].returned += Math.abs(netAmount);
-      }
-    } else if (txYear === year1) {
-      donationsByDonor[tx.contactId].totalYear1 += Math.max(0, netAmount);
-    } else if (txYear === year2) {
-      donationsByDonor[tx.contactId].totalYear2 += Math.max(0, netAmount);
-    }
-  }
-
-  // Generar resultat final
-  const donorTotals: DonorTotals[] = Object.entries(donationsByDonor)
-    .map(([donorId, { donor, total, returned, totalYear1, totalYear2 }]) => {
-      const totalAmount = Math.max(0, total - returned);
-      const valor1 = totalYear1;
-      const valor2 = totalYear2;
-
-      return {
-        donorId,
-        donor,
-        totalAmount,
-        returnedAmount: returned,
-        valor1,
-        valor2,
-        recurrente: valor1 > 0 && valor2 > 0,
-      };
-    })
-    // Només incloure donants amb total positiu
-    .filter(({ totalAmount }) => totalAmount > 0)
-    // Ordenar per import descendent
-    .sort((a, b) => b.totalAmount - a.totalAmount);
-
-  // Calcular estadístiques
-  const stats = {
-    totalDonors: donorTotals.length,
-    totalAmount: donorTotals.reduce((sum, row) => sum + row.totalAmount, 0),
-    excludedReturns,
-    excludedAmount,
+  return {
+    donorTotals,
+    stats: {
+      totalDonors: donorTotals.length,
+      totalAmount: donorTotals.reduce((sum, row) => sum + row.totalAmount, 0),
+      excludedReturns: candidates.reduce((sum, row) => sum + row.canonicalReturnCount, 0),
+      excludedAmount: candidates.reduce((sum, row) => sum + Math.abs(row.canonicalReturnsAmount), 0),
+    },
   };
-
-  return { donorTotals, stats };
 }

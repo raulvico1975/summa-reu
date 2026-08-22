@@ -436,9 +436,30 @@ exactament 60 €.
 
 **Expected:**
 - [ ] La llista operativa mostra una sola devolució de 10 € al gener.
+- [ ] El Model 182 mostra Donacions = 70 €, Devolucions = -10 € i Net = 60 €.
+- [ ] El certificat, el net de la fitxa i les files del Model 182 són 60 €.
+- [ ] Els exports AEAT i gestoria utilitzen 60 € a `VALOR` / `IMPORTE`.
 - [ ] L'aportació retornada i el moviment bancari vinculat tenen efecte fiscal conjunt 0 €.
-- [ ] El net de fitxa, certificat i Model 182 és exactament 60 €.
 - [ ] Una devolució negativa sense parella continua restant una sola vegada.
+- [ ] No apareix cap columna o ajust visible «Descomptat fiscalment».
+
+### VF-5c Devolució parcial
+
+**Cas:** una donació positiva de 100 € i una devolució bancària posterior de -25 €.
+
+**Expected:**
+- [ ] Donacions mostra 100 €.
+- [ ] Devolucions mostra -25 € una sola vegada.
+- [ ] El net de fitxa, certificat, Model 182 i exports és 75 €.
+
+### VF-5d Devolució registrada en un exercici diferent
+
+**Cas:** donació històrica de 100 € l'any 2025, donació de 50 € l'any 2026 i devolució de -20 € l'any 2026.
+
+**Expected:**
+- [ ] Per al Model 182 de 2026, Donacions = 50 €, Devolucions = -20 € i Net = 30 €.
+- [ ] L'import històric de 2025 continua separat com a any anterior (100 €).
+- [ ] No s'introdueix cap regla temporal nova ni es mou la devolució a un altre exercici.
 
 ---
 
