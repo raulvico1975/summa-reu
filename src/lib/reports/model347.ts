@@ -147,6 +147,32 @@ export function computeModel347(
   const supplierMap = new Map(suppliers.map(s => [s.id, s]));
   const categoryMap = new Map(categories.map(c => [c.id, c.name]));
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Invariant anti doble recompte (Error 2 de l'auditoria fiscal):
+  // un pare desglossat (isSplit=true) o pare de remesa (isRemittance=true)
+  // amb filles actives NO es compta ell mateix: només compten les filles.
+  // El pare es preserva quan no té cap fill actiu (única línia real).
+  // ─────────────────────────────────────────────────────────────────────────
+  const excludedParentIds = new Set<string>();
+  for (const tx of transactions) {
+    const isParentCandidate =
+      (tx.isSplit === true || tx.isRemittance === true) &&
+      typeof tx.id === 'string' && tx.id.length > 0;
+    if (!isParentCandidate || excludedParentIds.has(tx.id)) continue;
+
+    const hasActiveChildren = transactions.some(
+      (candidate) =>
+        candidate.parentTransactionId === tx.id &&
+        !candidate.archivedAt &&
+        // Només filles del mateix proveïdor representen el mateix diners:
+        // fills d'altre contacte no han de fer desaparèixer el pare.
+        candidate.contactId === tx.contactId
+    );
+    if (hasActiveChildren) {
+      excludedParentIds.add(tx.id);
+    }
+  }
+
   // Acumulador: key = `contactId:direction`
   const buckets = new Map<string, {
     supplier: Supplier;
@@ -155,6 +181,10 @@ export function computeModel347(
   }>();
 
   for (const tx of transactions) {
+    // Invariant anti doble recompte: pares desglossats/remesa amb filles
+    // actives queden exclosos del 347 (només compten les filles).
+    if (excludedParentIds.has(tx.id)) continue;
+
     const txDate = normalizeTxDate(tx.date);
 
     // Filtre d'any
