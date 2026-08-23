@@ -119,6 +119,24 @@ export function mergeUnifiedFiscalDonations(input: {
       .filter((stripePaymentId): stripePaymentId is string => !!stripePaymentId)
   );
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Fallback anti-duplicat (Error 3 de l'auditoria fiscal):
+  // quan falta `stripePaymentId` en una de les dues bandes, dedupliquem només
+  // amb relació estructural forta: `parentTransactionId` compartit + mateix
+  // donant + data normalitzada + import + signe. Mai només donant+data+import.
+  // ─────────────────────────────────────────────────────────────────────────
+  const structuralKey = (date: string, amount: number, contactId?: string | null) =>
+    `${contactId ?? ''}|${String(date).slice(0, 10)}|${Math.round(Math.abs(amount) * 100)}|${amount >= 0 ? '+' : '-'}`;
+
+  const donationsByParentId = new Map<string, typeof mappedDonations>();
+  for (const donation of mappedDonations) {
+    if (!donation.stripePaymentId && donation.parentTransactionId) {
+      const list = donationsByParentId.get(donation.parentTransactionId) ?? [];
+      list.push(donation);
+      donationsByParentId.set(donation.parentTransactionId, list);
+    }
+  }
+
   const relevantTransactions = input.transactions
     .filter(isRelevantTransaction)
     .filter((tx) => {
@@ -129,6 +147,23 @@ export function mergeUnifiedFiscalDonations(input: {
         donationStripeIds.has(tx.stripePaymentId)
       ) {
         return false;
+      }
+
+      // Fallback estructural: la transacció és el pare d'una donació mapejada
+      // i quadren donant, data normalitzada, import i signe → duplicat.
+      if (
+        !tx.stripePaymentId &&
+        tx.id &&
+        tx.contactId &&
+        donationsByParentId.has(tx.id)
+      ) {
+        const txKey = structuralKey(tx.date, tx.amount, tx.contactId);
+        const matches = donationsByParentId
+          .get(tx.id)!
+          .some((donation) => structuralKey(donation.date, donation.amount, donation.contactId) === txKey);
+        if (matches) {
+          return false;
+        }
       }
 
       return true;
