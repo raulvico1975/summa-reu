@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import { computeModel347 } from '../src/lib/reports/model347';
-import { mergeUnifiedFiscalDonations } from '../src/lib/fiscal/getUnifiedFiscalDonations';
-import { mergeTransactionsWithStripeDonations } from '../src/lib/fiscal/stripe-donations-fiscal-source';
+import { computeModel347 } from '../../src/lib/reports/model347';
+import { mergeUnifiedFiscalDonations } from '../../src/lib/fiscal/getUnifiedFiscalDonations';
+import { mergeTransactionsWithStripeDonations } from '../../src/lib/fiscal/stripe-donations-fiscal-source';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const supplier = { id: 's1', type: 'supplier', name: 'Proveïdor SL', taxId: 'B12345678', zipCode: '08001' } as any;
