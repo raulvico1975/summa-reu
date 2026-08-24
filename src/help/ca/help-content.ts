@@ -568,57 +568,6 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
     },
     keywords: ['configuració', 'cif', 'adreça', 'logo', 'signatura', 'càrrec', 'categories', 'membres', 'rols'],
   },
-  '/dashboard/ejes-de-actuacion': {
-    title: "Ajuda · Eixos d'actuació",
-    intro:
-      "Aquesta pantalla serveix per classificar internament ingressos i despeses per àrees de treball. No és el mòdul Projectes: és una etiqueta de gestió interna.",
-    steps: [
-      "Crea un eix quan necessitis analitzar despeses per línies de treball (p. ex. sensibilització, incidència, cooperació).",
-      "Posa noms estables i clars: han de durar anys, no només un trimestre.",
-      "Assigna moviments a eixos quan això t'ajuda a explicar el pressupost intern o el reporting a junta.",
-      "Evita inflar eixos: pocs i útils és millor que molts i confusos.",
-      "Si tens dubtes, deixa el moviment sense eix i decideix-ho quan tinguis criteri.",
-    ],
-    tips: [
-      "Un eix és una classificació interna; un projecte del mòdul Projectes és una altra cosa.",
-      "No forcis eixos per quadrar: han de reflectir una lògica real de treball.",
-      "Si canvies el nom d'un eix, pensa en l'històric (consistència > estètica).",
-    ],
-    extra: {
-      order: {
-        title: 'Ordre recomanat',
-        items: [
-          'Definir 4–8 eixos estables.',
-          "Assignar eix només quan aporta valor.",
-          'Revisar anualment i ajustar mínim.',
-        ],
-      },
-      pitfalls: {
-        title: 'Errors habituals',
-        items: [
-          "Confondre eixos d'actuació amb projectes del mòdul Projectes.",
-          'Crear un eix per cada activitat i perdre perspectiva.',
-          "Reclassificar massa sovint i trencar l'històric.",
-        ],
-      },
-      whenNot: {
-        title: 'Quan no cal',
-        items: [
-          "Si l'anàlisi per eixos no s'està usant, no cal assignar-los per rutina.",
-          'No cal aplicar eix a tot: només al que vols analitzar.',
-        ],
-      },
-      manual: {
-        label: "Manual d'usuari · Projectes / Eixos d'actuació",
-        href: '/dashboard/manual#8-projectes-eixos-dactuacio',
-      },
-      video: {
-        label: 'Vídeo (properament)',
-        note: "Definir eixos d'actuació útils (6 minuts)",
-      },
-    },
-    keywords: ['eixos', 'classificació', 'àrea', 'seguiment', 'reporting', 'junta', 'intern'],
-  },
   '/dashboard/projectes': {
     title: 'Ajuda · Projectes',
     intro: 'Aquesta ajuda està pendent d\'emplenar.',

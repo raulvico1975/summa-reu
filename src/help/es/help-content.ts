@@ -573,57 +573,6 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
     keywords: ['configuración', 'cif', 'dirección', 'logo', 'firma', 'cargo', 'categorías', 'miembros', 'roles'],
   },
 
-  '/dashboard/ejes-de-actuacion': {
-    title: 'Ayuda · Ejes de actuación',
-    intro:
-      'Esta pantalla sirve para clasificar internamente ingresos y gastos por áreas de trabajo. No es el módulo Proyectos: es una etiqueta de gestión interna.',
-    steps: [
-      'Crea un eje cuando necesites analizar gastos por líneas de trabajo (p. ej. sensibilización, incidencia, cooperación).',
-      'Pon nombres estables y claros: deberían durar años, no solo un trimestre.',
-      'Asigna movimientos a ejes cuando te ayude a explicar presupuesto interno o reporting a junta.',
-      'Evita inflar ejes: pocos y útiles es mejor que muchos y confusos.',
-      'Si hay dudas, deja el movimiento sin eje y decide cuando tengas criterio.',
-    ],
-    tips: [
-      'Un eje es clasificación interna; un proyecto del módulo Proyectos es otra cosa.',
-      'No fuerces ejes para cuadrar: deben reflejar una lógica real de trabajo.',
-      'Si cambias el nombre de un eje, piensa en el histórico (consistencia > estética).',
-    ],
-    extra: {
-      order: {
-        title: 'Orden recomendado',
-        items: [
-          'Definir 4–8 ejes estables.',
-          'Asignar eje solo cuando aporta valor.',
-          'Revisar anualmente y ajustar lo mínimo.',
-        ],
-      },
-      pitfalls: {
-        title: 'Errores habituales',
-        items: [
-          'Confundir ejes de actuación con proyectos del módulo Proyectos.',
-          'Crear un eje por cada actividad y perder perspectiva.',
-          'Reclasificar demasiado y romper el histórico.',
-        ],
-      },
-      whenNot: {
-        title: 'Cuándo no hace falta',
-        items: [
-          'Si no usas análisis por ejes, no hace falta asignarlos por rutina.',
-          'No hace falta aplicar eje a todo: solo a lo que quieres analizar.',
-        ],
-      },
-      manual: {
-        label: 'Manual de usuario · Proyectos / Ejes de actuación',
-        href: '/dashboard/manual#8-projectes-eixos-dactuacio',
-      },
-      video: {
-        label: 'Vídeo (próximamente)',
-        note: 'Definir ejes de actuación útiles (6 minutos)',
-      },
-    },
-    keywords: ['ejes', 'clasificación', 'área', 'seguimiento', 'reporting', 'junta', 'interno'],
-  },
 
   '/dashboard/project-module/expenses': {
     title: 'Ayuda · Asignación de gastos (Proyectos)',
