@@ -7,7 +7,8 @@ import type { NativeBlogPost } from '@/lib/editorial-native/types'
 
 function getInternalPublishSecret(): string {
   const secret = isLocalBlogPublishStorageEnabled()
-    ? process.env.BLOG_PUBLISH_LOCAL_SECRET?.trim() || 'local-blog-publish-secret'
+    ? // SECURITY FIX (auditoria 2026-08-23): sense fallback hardcoded.
+    process.env.BLOG_PUBLISH_LOCAL_SECRET?.trim()
     : process.env.BLOG_PUBLISH_SECRET?.trim()
 
   if (!secret) {
