@@ -462,8 +462,11 @@ service cloud.firestore {
         // P1 FIX: Validació de camps crítics
         // Fase 1: Només valida tipus (amount és number, date és string)
         // No bloqueja camps opcionals per compatibilitat amb UI existent
+        // SECURITY FIX (auditoria 2026-08-23): create ara aplica la mateixa
+        // capability que update (moviments.editar) amb memberPermissionDenied,
+        // perquè un usuari amb deny no pugui crear moviments.
         allow create: if isSuperAdmin()
-          || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']
+          || (hasCapability(orgId, 'moviments.editar')
               // VALIDACIÓ MÍNIMA: camps obligatoris existeixen
               && request.resource.data.keys().hasAll(['amount', 'date', 'description'])
               // VALIDACIÓ DE TIPUS: amount ha de ser número
@@ -500,8 +503,10 @@ service cloud.firestore {
 
       match /donations/{donationId} {
         allow read: if isSuperAdmin() || hasCapability(orgId, 'moviments.read');
+        // SECURITY FIX (auditoria 2026-08-23): capability moviments.editar amb
+        // memberPermissionDenied, coherent amb transactions.
         allow create, update, delete: if isSuperAdmin()
-          || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+          || hasCapability(orgId, 'moviments.editar');
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -598,7 +603,8 @@ service cloud.firestore {
 
       match /donors/{donorId} {
         allow read: if isMemberOf(orgId) || isSuperAdmin();
-        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+        // SECURITY FIX (auditoria 2026-08-23): capability amb overrides, no rol sol.
+        allow create, update, delete: if isSuperAdmin() || hasCapability(orgId, 'moviments.editar');
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -607,7 +613,8 @@ service cloud.firestore {
 
       match /suppliers/{supplierId} {
         allow read: if isMemberOf(orgId) || isSuperAdmin();
-        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+        // SECURITY FIX (auditoria 2026-08-23): capability amb overrides, no rol sol.
+        allow create, update, delete: if isSuperAdmin() || hasCapability(orgId, 'moviments.editar');
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -616,7 +623,8 @@ service cloud.firestore {
 
       match /emissors/{emissorId} {
         allow read: if isMemberOf(orgId) || isSuperAdmin();
-        allow create, update, delete: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+        // SECURITY FIX (auditoria 2026-08-23): capability amb overrides, no rol sol.
+        allow create, update, delete: if isSuperAdmin() || hasCapability(orgId, 'moviments.editar');
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -836,8 +844,11 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /remittances/{remittanceId} {
+        // SECURITY FIX (auditoria 2026-08-23): capability amb overrides; el
+        // delete queda restringit a admin (documents financers/fiscals).
         allow read: if isMemberOf(orgId) || isSuperAdmin();
-        allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+        allow create, update: if isSuperAdmin() || hasCapability(orgId, 'moviments.editar');
+        allow delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) == 'admin');
 
         // Subcol·lecció per ítems pendents de remesa (sense taxId vàlid, etc.)
         match /pending/{pendingId} {

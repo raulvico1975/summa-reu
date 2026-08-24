@@ -51,7 +51,8 @@ export interface UnpublishBlogDeps {
 
 function getPublishSecretFromEnv(): string | null {
   if (isLocalBlogPublishStorageEnabled()) {
-    return process.env.BLOG_PUBLISH_LOCAL_SECRET?.trim() || 'local-blog-publish-secret'
+    // SECURITY FIX (auditoria 2026-08-23): sense fallback hardcoded.
+    return process.env.BLOG_PUBLISH_LOCAL_SECRET?.trim() || null
   }
 
   return process.env.BLOG_PUBLISH_SECRET?.trim() || null
