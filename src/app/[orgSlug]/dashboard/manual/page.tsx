@@ -39,7 +39,12 @@ function shouldFallbackToCatalan(locale: 'ca' | 'es' | 'fr', text: string): bool
   if (locale === 'ca') return false;
   const toc = extractToc(text);
   if (toc.length < 8) return true;
-  return !toc.some((entry) => entry.id === '11-resolucio-de-problemes');
+  if (!toc.some((entry) => entry.id === '11-resolucio-de-problemes')) return true;
+  // FIX (auditoria 2026-08-23): un manual "esquelet" amb les àncrees de
+  // navegació però contingut mínim no és útil. Comparem amb una mida
+  // referencial: el manual complet té ordre de 90 KB; un esquelet, ~10 KB.
+  if (text.trim().length < 40_000) return true;
+  return false;
 }
 
 /**

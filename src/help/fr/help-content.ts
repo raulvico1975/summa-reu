@@ -573,57 +573,6 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
     keywords: ['paramètres', 'cif', 'adresse', 'logo', 'signature', 'fonction', 'catégories', 'membres', 'rôles'],
   },
 
-  '/dashboard/ejes-de-actuacion': {
-    title: "Aide · Axes d'action",
-    intro:
-      "Cet écran sert à classer en interne recettes et dépenses par axes de travail. Ce n'est pas le module Projets : c'est une étiquette de gestion interne.",
-    steps: [
-      'Créez un axe lorsque vous devez analyser des dépenses par lignes de travail (sensibilisation, plaidoyer, coopération…).',
-      'Choisissez des noms stables et clairs : ils doivent durer dans le temps.',
-      'Affectez des mouvements à des axes lorsque cela aide au budget interne ou au reporting au conseil.',
-      'Évitez de multiplier les axes : peu et utiles vaut mieux que beaucoup et confus.',
-      'En cas de doute, laissez sans axe et décidez quand le critère est clair.',
-    ],
-    tips: [
-      'Un axe est une classification interne ; un projet du module Projets est autre chose.',
-      'Ne forcez pas des axes pour "équilibrer" : ils doivent refléter une logique réelle.',
-      "Si vous renommez un axe, pensez à l'historique (cohérence > esthétique).",
-    ],
-    extra: {
-      order: {
-        title: 'Ordre recommandé',
-        items: [
-          'Définir 4–8 axes stables.',
-          'Affecter un axe seulement si cela apporte de la valeur.',
-          'Revoir une fois par an et ajuster au minimum.',
-        ],
-      },
-      pitfalls: {
-        title: 'Erreurs fréquentes',
-        items: [
-          "Confondre axes d'action et projets du module Projets.",
-          "Créer un axe par activité et perdre la vue d'ensemble.",
-          "Reclassifier trop souvent et casser l'historique.",
-        ],
-      },
-      whenNot: {
-        title: "Quand ce n'est pas nécessaire",
-        items: [
-          "Si l'analyse par axes n'est pas utilisée, inutile de les affecter par routine.",
-          "Inutile d'affecter un axe à tout : seulement à ce que vous voulez analyser.",
-        ],
-      },
-      manual: {
-        label: "Manuel utilisateur · Projets / Axes d'action",
-        href: '/dashboard/manual#8-projectes-eixos-dactuacio',
-      },
-      video: {
-        label: 'Vidéo (bientôt)',
-        note: "Définir des axes d'action utiles (6 minutes)",
-      },
-    },
-    keywords: ['axes', 'classification', 'suivi', 'reporting', 'conseil', 'interne'],
-  },
 
   '/dashboard/project-module/expenses': {
     title: 'Aide · Affectation des dépenses (Projets)',
@@ -787,7 +736,7 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       },
       manual: {
         label: 'Manuel utilisateur · Premiers pas',
-        href: '/dashboard/manual#1-primers-passos',
+        href: '/dashboard/manual#14-entendre-el-dashboard',
       },
       video: {
         label: 'Vidéo (bientôt)',
