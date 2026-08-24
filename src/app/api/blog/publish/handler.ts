@@ -53,8 +53,10 @@ export interface PublishBlogDeps {
 }
 
 function getPublishSecretFromEnv(): string | null {
+  // SECURITY FIX (auditoria 2026-08-23): sense fallback hardcoded. Si falta
+  // el secret, l'endpoint falla amb 401 (com product-updates).
   if (isLocalBlogPublishStorageEnabled()) {
-    return process.env.BLOG_PUBLISH_LOCAL_SECRET?.trim() || 'local-blog-publish-secret'
+    return process.env.BLOG_PUBLISH_LOCAL_SECRET?.trim() || null
   }
 
   return process.env.BLOG_PUBLISH_SECRET?.trim() || null
