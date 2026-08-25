@@ -3243,7 +3243,7 @@
   "movements.table.noContact": "Sin contacto",
   "movements.table.noDonationsFound": "No se han encontrado donaciones de este donante.",
   "movements.table.noExpensesWithoutDocument": "No hay gastos sin justificante",
-  "movements.table.noLink": "No vincular",
+  "movements.table.noLink": "No se ha vinculado la donación/recibo original",
   "movements.table.noResults": "Sin resultados",
   "movements.table.noReturns": "✅ No hay devoluciones",
   "movements.table.noSearchResults": "No se han encontrado movimientos con este criterio",
