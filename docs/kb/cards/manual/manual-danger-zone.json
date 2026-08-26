@@ -1,6 +1,6 @@
 {
   "id": "manual-danger-zone",
-  "type": "manual",
+  "type": "concept",
   "domain": "general",
   "risk": "guarded",
   "guardrail": "none",
@@ -41,6 +41,9 @@
     "superadmin",
     "irreversible"
   ],
+  "source_faq": ["Q97"],
+  "source_manual": ["3.9.6"],
+  "source_guides": [],
   "related": [
     "guide-danger-delete-remittance",
     "howto-remittance-undo"

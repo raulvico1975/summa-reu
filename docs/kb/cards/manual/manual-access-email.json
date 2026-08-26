@@ -1,0 +1,40 @@
+{
+  "id": "manual-access-email",
+  "type": "concept",
+  "domain": "config",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Canviar el correu d’accés",
+    "es": "Cambiar el correo de acceso"
+  },
+  "intents": {
+    "ca": [
+      "puc canviar el meu email d acces",
+      "com canvio el correu d accés",
+      "canviar email d usuari",
+      "modificar correu d inici de sessio"
+    ],
+    "es": [
+      "puedo cambiar mi email de acceso",
+      "como cambio el correo de acceso",
+      "cambiar email de usuario",
+      "modificar correo de inicio de sesion"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "La configuració documentada permet gestionar usuaris, invitacions i rols, però no hi ha una opció d’autoservei documentada per canviar el correu d’accés.\n\nPer comprovar l’estat:\n1. Ves a **Configuració > Equip**.\n2. Revisa les opcions disponibles per al teu usuari.\n3. Si no hi ha cap opció per canviar el correu, no editis altres camps per substituir-lo: cal escalar-ho pel canal de suport de l’app.\n\nAixò evita deixar l’usuari sense accés o crear un compte duplicat.",
+    "es": "La configuración documentada permite gestionar usuarios, invitaciones y roles, pero no hay una opción de autoservicio documentada para cambiar el correo de acceso.\n\nPara comprobar el estado:\n1. Ve a **Configuración > Equipo**.\n2. Revisa las opciones disponibles para tu usuario.\n3. Si no hay ninguna opción para cambiar el correo, no edites otros campos para sustituirlo: hay que escalarlo por el canal de soporte de la app.\n\nAsí evitas dejar al usuario sin acceso o crear una cuenta duplicada."
+  },
+  "uiPaths": ["Configuració > Equip", "Configuración > Equipo"],
+  "needsSnapshot": false,
+  "keywords": ["email", "correu", "correo", "accés", "acceso", "usuari", "usuario", "login"],
+  "source_faq": [],
+  "source_manual": ["1.1", "2.1"],
+  "source_guides": ["accessSecurity"],
+  "related": ["guide-access-security", "guide-reset-password"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

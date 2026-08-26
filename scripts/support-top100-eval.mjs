@@ -26,6 +26,9 @@ console.log(
 )
 console.log(`Clarifications: ${metrics.clarifyCount}`)
 console.log(`Fallbacks: ${metrics.fallbackCount}`)
+console.log(`Card matches: ${metrics.cardMatchCount}`)
+console.log(`Safe fallbacks: ${metrics.safeFallbackCount}`)
+console.log(`Unresolved in-scope: ${metrics.unresolvedInScopeCount}`)
 console.log(`Trusted operational cards: ${metrics.trustedOperationalCount}`)
 
 if (mismatches.length > 0) {

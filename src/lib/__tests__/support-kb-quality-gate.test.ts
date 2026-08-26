@@ -30,4 +30,7 @@ test('quality gate reports top support benchmark coverage metrics', () => {
   assert.equal(typeof gate.stats.topSupport.criticalPositiveRate, 'number')
   assert.equal(typeof gate.stats.topSupport.coveredPositiveRate, 'number')
   assert.equal(typeof gate.stats.topSupport.fallbackCount, 'number')
+  assert.equal(typeof gate.stats.topSupport.cardMatchCount, 'number')
+  assert.equal(typeof gate.stats.topSupport.safeFallbackCount, 'number')
+  assert.equal(typeof gate.stats.topSupport.unresolvedInScopeCount, 'number')
 })

@@ -1,0 +1,38 @@
+{
+  "id": "manual-closed-tab",
+  "type": "troubleshooting",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "He tancat la pestanya sense voler",
+    "es": "He cerrado la pestaña sin querer"
+  },
+  "intents": {
+    "ca": [
+      "he tancat la pestanya sense voler",
+      "he perdut el que estava fent en tancar la pestanya",
+      "que passa si tanco la pestanya"
+    ],
+    "es": [
+      "he cerrado la pestaña sin querer",
+      "he perdido lo que estaba haciendo al cerrar la pestaña",
+      "que pasa si cierro la pestaña"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Tancar la pestanya no permet saber des del bot si l’últim canvi s’havia desat. Comprova-ho abans de donar-lo per perdut:\n1. Torna a obrir Summa Social i entra a la mateixa pantalla.\n2. Revisa si el canvi o el document hi apareix.\n3. Si no hi és, repeteix només el pas que no consti com desat.\n4. Si l’error es repeteix, enganxa al bot el missatge exacte o revisa la secció de problemes del manual.",
+    "es": "Cerrar la pestaña no permite saber desde el bot si el último cambio se había guardado. Compruébalo antes de darlo por perdido:\n1. Vuelve a abrir Summa Social y entra en la misma pantalla.\n2. Revisa si el cambio o el documento aparece.\n3. Si no aparece, repite solo el paso que no conste como guardado.\n4. Si el error se repite, pega en el bot el mensaje exacto o revisa la sección de problemas del manual."
+  },
+  "uiPaths": ["Ajuda contextual", "Ayuda contextual", "Manual > Resolució de problemes"],
+  "needsSnapshot": false,
+  "keywords": ["pestanya", "pestaña", "tancar", "cerrar", "perdut", "perdido", "desat", "guardado"],
+  "source_faq": [],
+  "source_manual": ["11.5"],
+  "source_guides": [],
+  "related": ["manual-common-errors", "manual-guides-hub"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

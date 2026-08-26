@@ -92,6 +92,9 @@ export type KbQualityGateResult = {
       absentPositiveRate: number
       clarifyCount: number
       fallbackCount: number
+      cardMatchCount: number
+      safeFallbackCount: number
+      unresolvedInScopeCount: number
       trustedOperationalCount: number
     }
   }
