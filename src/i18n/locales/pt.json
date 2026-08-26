@@ -3059,7 +3059,7 @@
   "movements.table.noContact": "Sense contacte",
   "movements.table.noDonationsFound": "No s'han trobat donacions d'aquest donant.",
   "movements.table.noExpensesWithoutDocument": "No hi ha despeses sense justificant",
-  "movements.table.noLink": "No vincular",
+  "movements.table.noLink": "A doação/recibo original não foi associado",
   "movements.table.noResults": "Cap resultat",
   "movements.table.noReturns": "✅ No hi ha devolucions",
   "movements.table.noSearchResults": "No s'han trobat moviments amb aquest criteri",

@@ -1458,7 +1458,11 @@ Quan tens poques devolucions o saps de qui són:
 2. Clica el banner "Devolucions pendents" → **"Revisar"**
 3. Per cada devolució, clica el botó vermell **"Assignar donant"**
 4. Cerca el donant per nom, DNI, IBAN o email
-5. Selecciona'l i confirma
+5. Selecciona'l
+6. Si coneixes el rebut o la donació original, pots vincular-lo; si no, deixa **"No s'ha vinculat la donació/rebut original"**
+7. Confirma
+
+> **Important:** assignar la devolució al donant és el que fa que resti del seu total fiscal. Vincular-la a un rebut o una donació concreta és opcional i només aporta traçabilitat.
 
 ---
 
