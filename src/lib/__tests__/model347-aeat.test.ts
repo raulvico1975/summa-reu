@@ -187,6 +187,26 @@ describe('computeModel347', () => {
     assert.strictEqual(result.expenses[0].quarters.total, 4100);
     assert.strictEqual(result.income.length, 0);
   });
+
+  it('classifica any i trimestre segons la data declarada', () => {
+    const transactions: Transaction[] = [{
+      id: 'new-year',
+      date: '2025-12-31T23:00:00.000Z',
+      description: 'Factura any nou',
+      amount: -4100,
+      category: null,
+      document: null,
+      contactId: 's1',
+      contactType: 'supplier',
+    }];
+    const suppliers: Supplier[] = [
+      { id: 's1', type: 'supplier', name: 'Proveidor 1', taxId: 'B12345678', zipCode: '08001', createdAt: '2024-01-01' },
+    ];
+
+    const result = computeModel347(transactions, suppliers, [], 2025, new Set<string>());
+
+    assert.equal(result.expenses[0].quarters.q4, 4100);
+  });
 });
 
 describe('generateModel347AEATFile', () => {

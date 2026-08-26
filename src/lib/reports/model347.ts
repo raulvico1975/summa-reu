@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import type { Transaction, Supplier, Category } from '@/lib/data';
+import { getCalendarMonth, getCalendarYear } from '@/lib/date-only';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -186,9 +187,11 @@ export function computeModel347(
     if (excludedParentIds.has(tx.id)) continue;
 
     const txDate = normalizeTxDate(tx.date);
+    const txYear = getCalendarYear(tx.date);
+    const txMonth = getCalendarMonth(tx.date);
 
     // Filtre d'any
-    if (!txDate || txDate.getFullYear() !== year) continue;
+    if (!txDate || txYear !== year) continue;
 
     // Filtre d'abast: només transaccions amb contactId existent
     // (legacy: hi ha registres amb contactType buit però contactId de proveïdor)
@@ -219,7 +222,9 @@ export function computeModel347(
       date: typeof tx.date === 'string' ? tx.date : txDate.toISOString().slice(0, 10),
       description: tx.description || '',
       amount: Math.abs(tx.amount),
-      quarter: getQuarter(txDate),
+      quarter: txMonth === null
+        ? getQuarter(txDate)
+        : (Math.floor((txMonth - 1) / 3) + 1) as 1 | 2 | 3 | 4,
       categoryId: tx.category ?? null,
       categoryName: tx.category ? (categoryMap.get(tx.category) ?? null) : null,
     });

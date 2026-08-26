@@ -17,6 +17,7 @@ import type { Organization } from '@/lib/data';
 import { useTranslations } from '@/i18n';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE } from '@/lib/returns/build-return-email-draft';
+import { stripUndefinedDeep } from '@/lib/strip-undefined-deep';
 
 export function OrganizationSettings() {
   const { firestore, storage } = useFirebase();
@@ -147,7 +148,7 @@ export function OrganizationSettings() {
         returnEmailTemplate: formData.returnEmailTemplate.trim() ? formData.returnEmailTemplate : null,
       };
 
-      await updateDoc(orgRef, dataToSave);
+      await updateDoc(orgRef, stripUndefinedDeep(dataToSave));
 
       // Si estem en onboarding, marcar pas complet i redirigir
       if (isOnboarding) {

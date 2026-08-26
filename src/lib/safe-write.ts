@@ -1,5 +1,7 @@
 type PlainObject = Record<string, unknown>;
 
+import { stripUndefinedDeep as stripUndefinedDeepValue } from '@/lib/strip-undefined-deep';
+
 export type SafeWriteSource = 'system' | 'import' | 'user';
 
 export interface SafeWriteContext {
@@ -38,33 +40,6 @@ function isPlainObject(value: unknown): value is PlainObject {
   if (value === null || typeof value !== 'object') return false;
   const proto = Object.getPrototypeOf(value);
   return proto === Object.prototype || proto === null;
-}
-
-function stripUndefinedDeep<T>(value: T): T {
-  if (value === undefined || value === null) return value;
-
-  if (Array.isArray(value)) {
-    const out: unknown[] = [];
-    for (const item of value) {
-      const cleaned = stripUndefinedDeep(item);
-      if (cleaned !== undefined) out.push(cleaned);
-    }
-    return out as T;
-  }
-
-  if (isPlainObject(value)) {
-    const out: PlainObject = {};
-    for (const [key, nested] of Object.entries(value)) {
-      if (nested === undefined) continue;
-      const cleaned = stripUndefinedDeep(nested);
-      if (cleaned !== undefined) {
-        out[key] = cleaned;
-      }
-    }
-    return out as T;
-  }
-
-  return value;
 }
 
 function getByPath(data: unknown, path: string): unknown {
@@ -146,7 +121,7 @@ function preparePayload<T extends PlainObject>({
     throw new SafeWriteValidationError('Payload invàlid: ha de ser un objecte');
   }
 
-  const cleaned = stripUndefinedDeep(data) as T;
+  const cleaned = stripUndefinedDeepValue(data) as T;
   validateFiniteNumbersDeep(cleaned);
 
   if (context.requiredFields && context.requiredFields.length > 0) {

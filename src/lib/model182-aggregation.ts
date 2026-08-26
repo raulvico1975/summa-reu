@@ -9,6 +9,7 @@
 import type { Transaction, AnyContact, Donor } from '@/lib/data';
 import type { DonationReportRow } from '@/lib/model182-aeat';
 import { buildCanonicalFiscalContributions } from '@/lib/fiscal/canonical-fiscal-contributions';
+import { getCalendarYear } from '@/lib/date-only';
 
 export interface Model182Candidate extends DonationReportRow {
   donorId: string;
@@ -72,7 +73,9 @@ export function buildModel182Candidates(
 
   for (const contribution of canonicalContributions.contributions) {
     const tx = contribution.tx as Transaction;
-    const txYear = new Date(tx.date).getFullYear();
+    const txYear = getCalendarYear(tx.date);
+
+    if (txYear === null) continue;
 
     if (!tx.contactId || !donorMap.has(tx.contactId)) continue;
 
