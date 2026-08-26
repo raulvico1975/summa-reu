@@ -398,7 +398,7 @@ export const ca = {
       loadingDonations: "Carregant donacions...",
       noDonationsFound: "No s'han trobat donacions d'aquest donant.",
       linkToDonation: "Vincular a una donació...",
-      noLink: "No vincular",
+      noLink: "No s'ha vinculat la donació/rebut original",
       linkedDonationInfo: "La donació vinculada serà marcada com \"Retornada\" i exclosa del Model 182.",
       noteLabel: "Nota",
       descriptionPlaceholder: "Descripció clara del moviment...",

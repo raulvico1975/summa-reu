@@ -932,7 +932,10 @@ Lo verás en:
 1. Abre la devolución.
 2. Busca el donante correcto.
 3. Asócialo manualmente.
-4. Guarda.
+4. Si conoces el recibo o la donación original, puedes vincularlo; si no, deja **"No se ha vinculado la donación/recibo original"**.
+5. Guarda.
+
+> **Importante:** asignar la devolución al donante es lo que hace que se reste de su total fiscal. Vincularla a un recibo o una donación concreta es opcional y solo aporta trazabilidad.
 
 Úsalo cuando hay pocos casos o el fichero bancario no ayuda.
 

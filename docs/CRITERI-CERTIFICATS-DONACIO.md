@@ -88,7 +88,8 @@ Utilitzen **exactament el mateix criteri de càlcul**:
 | **Import net = 0 €** | No es genera certificat. Toast informatiu a l'usuari. |
 | **Import net < 0 €** | Es mostra 0 € (mai negatiu). No es genera certificat. |
 | **Devolució tardana** (gener 2026 d'una donació 2025) | La devolució compta al 2026, no al 2025. Cada any és independent. |
-| **Devolució no vinculada** (`contactId = null`) | No afecta cap donant fins que s'assigni. |
+| **Devolució sense donant assignat** (`contactId = null`) | No afecta cap donant fins que s'assigni. |
+| **Devolució amb donant però sense rebut original vinculat** (`linkedTransactionId = null`) | Resta una vegada del total del donant. El vincle amb una donació o un rebut concret és opcional i només aporta traçabilitat. |
 | **Devolució assignada a donant diferent** | Resta del donant al qual s'assigna la devolució. Summa Social no infereix relacions automàtiques entre donacions i devolucions; la responsabilitat d'assignació correcta és de l'entitat. |
 | **Múltiples devolucions mateix donant** | Es sumen totes i resten del total brut. |
 | **Transacció arxivada** (`archivedAt` present) | No compta. Ni donacions ni devolucions arxivades afecten el càlcul. |

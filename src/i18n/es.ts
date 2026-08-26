@@ -398,7 +398,7 @@ export const es = {
       loadingDonations: "Cargando donaciones...",
       noDonationsFound: "No se han encontrado donaciones de este donante.",
       linkToDonation: "Vincular a una donación...",
-      noLink: "No vincular",
+      noLink: "No se ha vinculado la donación/recibo original",
       linkedDonationInfo: "La donación vinculada será marcada como \"Devuelta\" y excluida del Modelo 182.",
       noteLabel: "Nota",
       descriptionPlaceholder: "Descripción clara del movimiento...",

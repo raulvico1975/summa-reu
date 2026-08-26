@@ -398,7 +398,7 @@ export const fr = {
       loadingDonations: "Chargement des dons...",
       noDonationsFound: "Aucun don trouvé pour ce donateur.",
       linkToDonation: "Lier à un don...",
-      noLink: "Ne pas lier",
+      noLink: "Le don/reçu d'origine n'a pas été lié",
       linkedDonationInfo: "Le don lié sera marqué « Rejeté » et exclu du Modèle 182.",
       noteLabel: "Note",
       descriptionPlaceholder: "Description claire du mouvement...",

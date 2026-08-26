@@ -1882,7 +1882,10 @@ Les devolucions bancàries (rebuts retornats) es gestionen sense modificar el mo
 1. Ves a **Moviments** → Banner "Devolucions pendents" → **Revisar**
 2. Per cada devolució: botó **"Assignar donant"**
 3. Cerca per nom, DNI, IBAN o email
-4. Confirma l'assignació
+4. Selecciona opcionalment la donació o el rebut original; si no es coneix, es manté **"No s'ha vinculat la donació/rebut original"**
+5. Confirma l'assignació
+
+**Criteri funcional i fiscal:** el `contactId` del donant és necessari perquè la devolució resti del seu total. El `linkedTransactionId` és opcional i serveix per a la traçabilitat amb una donació o un rebut concret; la seva absència no impedeix la resta fiscal.
 
 ### 3.4.4 Importador de fitxer del banc
 
