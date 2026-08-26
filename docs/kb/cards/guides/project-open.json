@@ -41,6 +41,9 @@
     "listado",
     "gastos"
   ],
+  "source_faq": [],
+  "source_manual": ["10.2"],
+  "source_guides": [],
   "related": [],
   "error_key": null,
   "symptom": {

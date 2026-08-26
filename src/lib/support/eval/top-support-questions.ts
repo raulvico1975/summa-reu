@@ -33,6 +33,9 @@ export type TopSupportQuestionsMetrics = {
   absentPositiveRate: number
   clarifyCount: number
   fallbackCount: number
+  cardMatchCount: number
+  safeFallbackCount: number
+  unresolvedInScopeCount: number
   trustedOperationalCount: number
 }
 
@@ -156,7 +159,7 @@ export const TOP_SUPPORT_USER_QUESTIONS_CA: TopSupportQuestionCase[] = [
   buildCase('equip-03', 'Equip, permisos i multi-org', 'config', 'Com convido un nou usuari?', ['howto-member-invite'], 'covered', true),
   buildCase('equip-04', 'Equip, permisos i multi-org', 'config', 'Com canvio els permisos d’un usuari?', ['howto-member-user-permissions'], 'covered', true),
   buildCase('equip-05', 'Equip, permisos i multi-org', 'config', 'Puc fer que algú només entri en lectura?', ['howto-member-user-permissions'], 'covered'),
-  buildCase('equip-06', 'Equip, permisos i multi-org', 'config', 'Puc canviar el meu email d’accés?', ['guide-access-security', 'fallback-no-answer'], 'weak'),
+  buildCase('equip-06', 'Equip, permisos i multi-org', 'config', 'Puc canviar el meu email d’accés?', ['manual-access-email'], 'weak'),
   buildCase('equip-07', 'Equip, permisos i multi-org', 'config', 'Com sé quin rol tinc?', ['guide-access-security', 'fallback-no-answer'], 'weak'),
   buildCase('equip-08', 'Equip, permisos i multi-org', 'config', 'Com canvio les dades fiscals de l’entitat?', ['howto-organization-fiscal-data'], 'covered'),
   buildCase('equip-09', 'Equip, permisos i multi-org', 'transactions', 'Tenim dos comptes bancaris. Com els gestiono?', ['guide-select-bank-account'], 'covered'),
@@ -180,7 +183,7 @@ export const TOP_SUPPORT_USER_QUESTIONS_CA: TopSupportQuestionCase[] = [
   buildCase('orientacio-05', 'Inici i orientació', 'general', 'Puc fer servir Summa Social des del mòbil?', ['manual-mobile-usage'], 'covered'),
   buildCase('orientacio-06', 'Inici i orientació', 'general', 'Quant de temps em portarà això cada mes?', ['guide-monthly-flow', 'guide-first-month'], 'covered'),
   buildCase('orientacio-07', 'Inici i orientació', 'general', 'Per on començo si és la primera vegada que entro?', ['guide-first-day'], 'covered'),
-  buildCase('orientacio-08', 'Inici i orientació', 'general', 'He tancat la pestanya sense voler. He perdut el que estava fent?', ['manual-common-errors', 'fallback-no-answer'], 'weak'),
+  buildCase('orientacio-08', 'Inici i orientació', 'general', 'He tancat la pestanya sense voler. He perdut el que estava fent?', ['manual-closed-tab'], 'weak'),
   buildCase('orientacio-09', 'Inici i orientació', 'config', 'L’aplicació està en castellà i la vull en català. Com ho canvio?', ['guide-change-language'], 'covered'),
   buildCase('orientacio-10', 'Inici i orientació', 'general', 'Què és la Zona de Perill?', ['manual-danger-zone'], 'covered'),
 ]
@@ -211,6 +214,9 @@ export function evaluateTopSupportQuestionsBenchmark(
   let absentTotal = 0
   let clarifyCount = 0
   let fallbackCount = 0
+  let cardMatchCount = 0
+  let safeFallbackCount = 0
+  let unresolvedInScopeCount = 0
   let trustedOperationalCount = 0
 
   const mismatches: TopSupportQuestionsMismatch[] = []
@@ -226,6 +232,13 @@ export function evaluateTopSupportQuestionsBenchmark(
 
     const accepted = testCase.expectedAnyOfCardIds.includes(actualCardId)
     const positive = accepted
+
+    if (result.mode === 'fallback') {
+      if (accepted) safeFallbackCount += 1
+      else unresolvedInScopeCount += 1
+    } else if (actualCardId !== 'clarify-disambiguation' && accepted) {
+      cardMatchCount += 1
+    }
 
     if (testCase.critical) {
       criticalTotal += 1
@@ -279,6 +292,9 @@ export function evaluateTopSupportQuestionsBenchmark(
       absentPositiveRate: toRate(absentPositiveCount, absentTotal),
       clarifyCount,
       fallbackCount,
+      cardMatchCount,
+      safeFallbackCount,
+      unresolvedInScopeCount,
       trustedOperationalCount,
     },
     mismatches,

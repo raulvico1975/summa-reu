@@ -1,0 +1,40 @@
+{
+  "id": "howto-project-budget-import",
+  "type": "howto",
+  "domain": "projects",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Importar el pressupost d’un projecte des d’Excel",
+    "es": "Importar el presupuesto de un proyecto desde Excel"
+  },
+  "intents": {
+    "ca": [
+      "puc importar el pressupost d un projecte des d excel",
+      "com importo un pressupost de projecte",
+      "importar pressupost excel projecte",
+      "carregar pressupost excel projecte"
+    ],
+    "es": [
+      "puedo importar el presupuesto de un proyecto desde excel",
+      "como importo un presupuesto de proyecto",
+      "importar presupuesto excel proyecto",
+      "cargar presupuesto excel proyecto"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Pots importar les partides del pressupost des de la pantalla de gestió econòmica del projecte.\n\nPassos exactes:\n1. Ves a Projectes i obre el projecte.\n2. Entra a Gestió Econòmica i clica **Importar pressupost**.\n3. Puja un fitxer `.xlsx` o `.xls`.\n4. Tria la pestanya que conté el pressupost.\n5. Mapeja la columna del nom o descripció i la columna de l’import en EUR. El codi és opcional.\n6. Revisa la previsualització i clica **Importar i substituir**.\n\nImportant: aquesta acció substitueix les partides actuals del projecte. No seleccionis la columna **TOTAL PROJECTE** com a import d’una partida.",
+    "es": "Puedes importar las partidas del presupuesto desde la pantalla de gestión económica del proyecto.\n\nPasos exactos:\n1. Ve a Proyectos y abre el proyecto.\n2. Entra en Gestión Económica y haz clic en **Importar presupuesto**.\n3. Sube un archivo `.xlsx` o `.xls`.\n4. Elige la pestaña que contiene el presupuesto.\n5. Mapea la columna del nombre o descripción y la columna del importe en EUR. El código es opcional.\n6. Revisa la previsualización y haz clic en **Importar y sustituir**.\n\nImportante: esta acción sustituye las partidas actuales del proyecto. No selecciones la columna **TOTAL PROYECTO** como importe de una partida."
+  },
+  "uiPaths": ["Projectes > (projecte) > Gestió Econòmica", "Proyectos > (proyecto) > Gestión Económica"],
+  "needsSnapshot": false,
+  "keywords": ["pressupost", "presupuesto", "excel", "importar", "projecte", "proyecto", "partides", "partidas"],
+  "source_faq": [],
+  "source_manual": ["10.3"],
+  "source_guides": [],
+  "related": ["guide-projects", "guide-travel-receipts"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

@@ -13,6 +13,12 @@ export type ClarifyOption = {
   label: string
 }
 
+export type RelatedSuggestion = {
+  cardId: string
+  label: string
+  question: string
+}
+
 export type SuccessResponse = {
   ok: true
   mode: 'card' | 'fallback'
@@ -23,6 +29,7 @@ export type SuccessResponse = {
   uiPaths: string[]
   language?: InputLang
   clarifyOptions?: ClarifyOption[]
+  relatedSuggestions?: RelatedSuggestion[]
 }
 
 export type ErrorResponse = {

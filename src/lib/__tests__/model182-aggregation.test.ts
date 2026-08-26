@@ -151,4 +151,14 @@ describe('buildModel182Candidates — desglossament fiscal visible', () => {
     assert.equal(candidate.previousYearAmount, 20);
     assert.equal(candidate.twoYearsAgoAmount, 30);
   });
+
+  it('classifica l any segons la data declarada i no la zona horària', () => {
+    const [candidate] = buildModel182Candidates([
+      transaction({ id: 'year-boundary', amount: 100, date: '2025-12-31T23:00:00.000Z' }),
+      transaction({ id: 'current-year', amount: 10, date: '2026-01-05' }),
+    ], [donor], 2026);
+
+    assert.equal(candidate.totalAmount, 10);
+    assert.equal(candidate.previousYearAmount, 100);
+  });
 });

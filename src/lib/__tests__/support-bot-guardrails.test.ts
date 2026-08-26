@@ -40,6 +40,31 @@ test('orchestrator keeps operational card answer for trusted guide card', async 
   assert.match(result.response.answer, /\n1\.\s+/)
 })
 
+test('orchestrator serves the new coverage cards with trusted steps', async () => {
+  const cases = [
+    { question: 'com importo un pressupost de projecte?', cardId: 'howto-project-budget-import' },
+    { question: 'puc canviar el meu email d’accés?', cardId: 'manual-access-email' },
+    { question: 'he tancat la pestanya sense voler', cardId: 'manual-closed-tab' },
+  ] as const
+
+  for (const testCase of cases) {
+    const result = await orchestrator({
+      message: testCase.question,
+      kbLang: 'ca',
+      cards,
+      clarifyOptionIds: [],
+      assistantTone: 'neutral',
+      allowAiIntent: false,
+      allowAiReformat: false,
+    })
+
+    assert.equal(result.response.mode, 'card', testCase.question)
+    assert.equal(result.response.cardId, testCase.cardId, testCase.question)
+    assert.equal(result.meta.trustedOperationalCard, true, testCase.question)
+    assert.match(result.response.answer, /\n1\.\s+/, testCase.question)
+  }
+})
+
 test('orchestrator exposes retrieval intent diagnostics in metadata', async () => {
   const result = await orchestrator({
     message: 'com imputo un abonament de Stripe?',

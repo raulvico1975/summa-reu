@@ -93,7 +93,7 @@ export function parsePain008(xmlContent: string): Pain008ParseResult {
     for (const txInf of drctDbtTxInfs) {
       try {
         const amt = getAll(txInf, 'InstdAmt')[0];
-        const amountStr = amt?.textContent?.trim() || getText(txInf, 'InstdAmt');
+        const amountStr = amt?.textContent?.trim() || '';
         const amount = parseFloat(amountStr);
 
         if (!amount || amount <= 0) {

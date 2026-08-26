@@ -19,7 +19,7 @@ import { orchestrator } from '@/lib/support/engine/orchestrator'
 import { buildEmergencyFallback } from '@/lib/support/engine/renderer'
 import { extractOperationalSteps, normalizeUiPathsAgainstCatalog } from '@/lib/support/engine/policy'
 import { clampTimeout, normalizeAssistantTone, normalizeLang, parseClarifyOptionIds, withTimeout } from '@/lib/support/engine/normalize'
-import type { ApiResponse, AssistantTone, InputLang, ResponseSubtype } from '@/lib/support/engine/types'
+import type { ApiResponse, AssistantTone, InputLang, RelatedSuggestion, ResponseSubtype } from '@/lib/support/engine/types'
 import { normalizeSupportContext } from '@/lib/support/support-context'
 import { resolveSupportLanguage } from '@/lib/support/language'
 import {
@@ -448,6 +448,28 @@ function getCardRawAnswer(card: KBCard | null | undefined, kbLang: KbLang): stri
   return card.answer?.[kbLang] ?? card.answer?.ca ?? card.answer?.es ?? ''
 }
 
+function buildRelatedSuggestions(
+  selectedCard: KBCard | null | undefined,
+  cards: KBCard[],
+  kbLang: KbLang
+): RelatedSuggestion[] {
+  if (!selectedCard || selectedCard.type === 'fallback') return []
+
+  const suggestions: RelatedSuggestion[] = []
+  for (const relatedId of selectedCard.related ?? []) {
+    const relatedCard = cards.find(card => card.id === relatedId && card.type !== 'fallback')
+    if (!relatedCard) continue
+
+    const label = relatedCard.title?.[kbLang] ?? relatedCard.title?.ca ?? relatedCard.title?.es
+    const question = relatedCard.intents?.[kbLang]?.[0] ?? relatedCard.intents?.ca?.[0] ?? relatedCard.intents?.es?.[0]
+    if (!label || !question) continue
+    suggestions.push({ cardId: relatedCard.id, label, question })
+    if (suggestions.length >= 3) break
+  }
+
+  return suggestions
+}
+
 function isBestCardMismatch(
   deterministic: RetrievalResult,
   selectedBestCardId: string | undefined
@@ -770,10 +792,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const responseSubtype = buildResponseSubtype(result.response, result.meta.decisionReason)
+    const relatedSuggestions = buildRelatedSuggestions(result.selectedCard, retrievableCards, kbLang)
     const responseWithSubtype = {
       ...result.response,
       responseSubtype,
       language: inputLang,
+      relatedSuggestions,
     }
 
     let responsePayload: ApiResponse | (ApiResponse & { debugTrace?: BotDebugTrace }) = responseWithSubtype as ApiResponse

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Send, Loader2, Bot, User, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
   Sheet,
@@ -18,7 +18,7 @@ import { trackUX } from '@/lib/ux/trackUX';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { resolveManualAnchorFromHint } from '@/help/help-manual-links';
-import type { ResponseSubtype } from '@/lib/support/engine/types';
+import type { RelatedSuggestion, ResponseSubtype } from '@/lib/support/engine/types';
 import type { SupportTurn } from '@/lib/support/support-context';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 
@@ -40,6 +40,7 @@ interface BotMessage {
     cardId: string;
     label: string;
   }>;
+  relatedSuggestions?: RelatedSuggestion[];
 }
 
 interface BotSheetProps {
@@ -138,6 +139,74 @@ function buildWelcomeMessage(language: 'ca' | 'es' | 'fr' | 'pt'): string {
   ].join('\n');
 }
 
+function buildWelcomeSuggestions(
+  language: 'ca' | 'es' | 'fr' | 'pt',
+  pathname: string
+): RelatedSuggestion[] {
+  const isSpanish = language === 'es' || language === 'pt';
+  const path = normalizePathText(pathname);
+
+  if (path.includes('project-module')) {
+    return isSpanish
+      ? [
+          { cardId: 'howto-project-budget-import', label: 'Importar un presupuesto', question: 'como importo un presupuesto de proyecto' },
+          { cardId: 'guide-projects', label: 'Gestionar proyectos', question: 'como gestiono proyectos' },
+        ]
+      : [
+          { cardId: 'howto-project-budget-import', label: 'Importar un pressupost', question: 'com importo un pressupost de projecte' },
+          { cardId: 'guide-projects', label: 'Gestionar projectes', question: 'com gestiono projectes' },
+        ];
+  }
+
+  if (path.includes('movimientos') || path.includes('moviments')) {
+    return isSpanish
+      ? [
+          { cardId: 'guide-import-movements', label: 'Importar el extracto', question: 'como importo movimientos bancarios' },
+          { cardId: 'howto-movement-unassigned-alerts', label: 'Movimientos sin categorizar', question: 'tengo movimientos sin categorizar que hago' },
+        ]
+      : [
+          { cardId: 'guide-import-movements', label: "Importar l'extracte", question: 'com importo moviments bancaris' },
+          { cardId: 'howto-movement-unassigned-alerts', label: 'Moviments sense categoritzar', question: 'tinc moviments sense categoritzar que faig' },
+        ];
+  }
+
+  if (path.includes('donants') || path.includes('donantes')) {
+    return isSpanish
+      ? [
+          { cardId: 'howto-donor-update-details', label: 'Editar un donante', question: 'como edito los datos de un donante' },
+          { cardId: 'guide-donor-certificate', label: 'Certificado de donación', question: 'como genero un certificado de donacion' },
+        ]
+      : [
+          { cardId: 'howto-donor-update-details', label: 'Editar un donant', question: 'com edito les dades dun donant' },
+          { cardId: 'guide-donor-certificate', label: 'Certificat de donació', question: 'com genero un certificat de donacio' },
+        ];
+  }
+
+  if (path.includes('configuracio') || path.includes('configuracion')) {
+    return isSpanish
+      ? [
+          { cardId: 'manual-access-email', label: 'Cambiar correo de acceso', question: 'puedo cambiar mi email de acceso' },
+          { cardId: 'guide-reset-password', label: 'Recuperar contraseña', question: 'como recupero la contraseña' },
+        ]
+      : [
+          { cardId: 'manual-access-email', label: 'Canviar correu d’accés', question: 'puc canviar el meu email d acces' },
+          { cardId: 'guide-reset-password', label: 'Recuperar contrasenya', question: 'com recupero la contrasenya' },
+        ];
+  }
+
+  return isSpanish
+    ? [
+        { cardId: 'guide-import-movements', label: 'Importar el extracto', question: 'como importo movimientos bancarios' },
+        { cardId: 'howto-project-budget-import', label: 'Importar un presupuesto', question: 'como importo un presupuesto de proyecto' },
+        { cardId: 'guide-reset-password', label: 'Recuperar contraseña', question: 'como recupero la contraseña' },
+      ]
+    : [
+        { cardId: 'guide-import-movements', label: "Importar l'extracte", question: 'com importo moviments bancaris' },
+        { cardId: 'howto-project-budget-import', label: 'Importar un pressupost', question: 'com importo un pressupost de projecte' },
+        { cardId: 'guide-reset-password', label: 'Recuperar contrasenya', question: 'com recupero la contrasenya' },
+      ];
+}
+
 function buildRecentTurns(messages: BotMessage[]): SupportTurn[] {
   return messages
     .filter(message => message.role === 'user' || Boolean(message.questionText))
@@ -169,7 +238,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   const [feedbackPendingByMessage, setFeedbackPendingByMessage] = React.useState<Record<string, boolean>>({});
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const inputRef = React.useRef<HTMLTextAreaElement>(null);
 
   // i18n strings
   const title = tr('bot.title', language === 'es' ? 'Asistente' : 'Assistent');
@@ -203,8 +272,20 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
       uiPaths: language === 'es' ? ['Ayuda contextual', 'Manual'] : ['Ajuda contextual', 'Manual'],
       cardId: 'manual-guides-hub',
       mode: 'card',
+      relatedSuggestions: buildWelcomeSuggestions(language, pathname),
     }]);
-  }, [open, messages.length, language]);
+  }, [open, messages.length, language, pathname]);
+
+  const resizeInput = React.useCallback(() => {
+    const element = inputRef.current;
+    if (!element) return;
+    element.style.height = 'auto';
+    element.style.height = `${Math.min(element.scrollHeight, 144)}px`;
+  }, []);
+
+  React.useEffect(() => {
+    resizeInput();
+  }, [input, resizeInput]);
 
   const sendMessage = React.useCallback(async (rawText: string) => {
     const text = rawText.trim();
@@ -267,6 +348,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
           language: data.language,
           questionText: text,
           clarifyOptions,
+          relatedSuggestions: Array.isArray(data.relatedSuggestions) ? data.relatedSuggestions : undefined,
         }]);
 
         if (data.cardId === 'clarify-disambiguation' && clarifyOptions?.length) {
@@ -293,7 +375,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     } finally {
       setLoading(false);
     }
-  }, [loading, user, language, errorGeneric, messages, pathname, pendingClarifyOptionIds, searchParams, organizationId, orgSlug]);
+  }, [loading, user, language, errorGeneric, messages, pathname, pendingClarifyOptionIds, searchParams, organizationId, orgSlug, resizeInput]);
 
   const handleSend = React.useCallback(() => {
     void sendMessage(input);
@@ -310,6 +392,11 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
       handleSend();
     }
   };
+
+  const handleSuggestionClick = React.useCallback((suggestion: RelatedSuggestion) => {
+    trackUX('bot.related_suggestion_click', { cardId: suggestion.cardId, lang: language });
+    void sendMessage(suggestion.question);
+  }, [language, sendMessage]);
 
   const handleUiPathClick = React.useCallback((path: string, href: string) => {
     trackUX('bot.ui_path_click', { path, href, lang: language })
@@ -416,6 +503,23 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
                       })}
                     </div>
                   )}
+                  {msg.role === 'bot' && msg.relatedSuggestions?.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {msg.relatedSuggestions.map((suggestion) => (
+                        <Button
+                          key={suggestion.cardId}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-auto min-h-7 whitespace-normal px-2 py-1 text-left text-xs"
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          disabled={loading}
+                        >
+                          {suggestion.label}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : null}
                   {msg.role === 'bot' && msg.cardId === 'clarify-disambiguation' && msg.clarifyOptions?.length ? (
                     <div className="mt-2 flex flex-col gap-1.5">
                       {msg.clarifyOptions.map((option) => (
@@ -486,15 +590,18 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
         {/* Input area */}
         <div className="pt-3 border-t shrink-0">
           <div className="flex gap-2">
-            <Input
+            <Textarea
               ref={inputRef}
-              type="text"
               placeholder={placeholder}
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={e => {
+                setInput(e.target.value);
+                resizeInput();
+              }}
               onKeyDown={handleKeyDown}
               disabled={loading}
-              className="flex-1"
+              rows={1}
+              className="min-h-10 max-h-36 flex-1 resize-none text-sm"
             />
             <Button
               size="icon"
