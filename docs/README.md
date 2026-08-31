@@ -60,6 +60,7 @@ Exemple actual de `docs/contracts/`:
 
 - `docs/contracts/blog-publish-cover-image.md` - contracte extern OpenClaw -> Summa per al blog públic
 - `docs/contracts/private-admin-integrations-v1.md` - contracte objectiu per a integracions privades d'agents externs controlats per l'equip
+- `docs/contracts/public-conversational-mcp-phase-0.md` - contracte de producte, arquitectura, seguretat i gates per al futur MCP remot de ChatGPT i Claude
 
 ## Regles de manteniment
 
