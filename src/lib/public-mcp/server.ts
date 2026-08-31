@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { PERMISSION_KEYS, type PermissionKey } from '@/lib/permissions';
 import {
   searchBankAccountCandidates,
   searchContactCandidates,
@@ -26,7 +27,7 @@ export interface McpActorContext {
   userId: string;
   organizationId: string;
   entitlements: string[];
-  permissions: string[];
+  permissions: PermissionKey[];
   scopes: string[];
   clientId: string;
   tokenId: string;
@@ -68,7 +69,7 @@ const actorSchema = z.object({
   userId: z.string().min(1),
   organizationId: z.string().min(1),
   entitlements: z.array(z.string().min(1)),
-  permissions: z.array(z.string().min(1)),
+  permissions: z.array(z.enum(PERMISSION_KEYS)),
   scopes: z.array(z.string().min(1)),
   clientId: z.string().min(1),
   tokenId: z.string().min(1),
@@ -148,19 +149,52 @@ function toolError() {
   };
 }
 
+function toolAuthorizationError() {
+  return {
+    content: [{ type: 'text' as const, text: 'TOOL_NOT_AUTHORIZED' }],
+    isError: true,
+  };
+}
+
 function hasToolAccess(actor: PublicMcpActorContext, tool: PublicMcpReadToolName): boolean {
-  const policy: Record<PublicMcpReadToolName, { permission: string; scope: string }> = {
-    get_session_context: { permission: 'mcp.session.read', scope: 'mcp.session.read' },
-    search_bank_accounts: { permission: 'bank_accounts.read', scope: 'bank_accounts.search' },
-    search_contacts: { permission: 'contacts.read', scope: 'contacts.search' },
-    search_transactions: { permission: 'transactions.read', scope: 'transactions.search' },
-    get_entity_operational_summary: { permission: 'operational_summary.read', scope: 'transactions.search' },
+  const policy: Record<PublicMcpReadToolName, {
+    allPermissions?: PermissionKey[];
+    anyPermissions?: PermissionKey[];
+    scope: string;
+  }> = {
+    get_session_context: { scope: 'mcp.session.read' },
+    search_bank_accounts: {
+      allPermissions: ['sections.moviments', 'moviments.read'],
+      scope: 'bank_accounts.search',
+    },
+    search_contacts: {
+      anyPermissions: ['sections.donants', 'sections.proveidors', 'sections.treballadors'],
+      scope: 'contacts.search',
+    },
+    search_transactions: {
+      allPermissions: ['sections.moviments', 'moviments.read'],
+      scope: 'transactions.search',
+    },
+    get_entity_operational_summary: {
+      allPermissions: ['sections.dashboard', 'moviments.read'],
+      scope: 'transactions.search',
+    },
   };
   const requirement = policy[tool];
   return actor.allowedTools.includes(tool)
     && actor.entitlements.includes('mcp.read')
-    && actor.permissions.includes(requirement.permission)
+    && (requirement.allPermissions ?? []).every((permission) => actor.permissions.includes(permission))
+    && (!requirement.anyPermissions || requirement.anyPermissions.some((permission) => actor.permissions.includes(permission)))
     && actor.scopes.includes(requirement.scope);
+}
+
+function canReadContactType(actor: McpActorContext, type: 'donor' | 'supplier' | 'employee'): boolean {
+  const permissionByType: Record<typeof type, PermissionKey> = {
+    donor: 'sections.donants',
+    supplier: 'sections.proveidors',
+    employee: 'sections.treballadors',
+  };
+  return actor.permissions.includes(permissionByType[type]);
 }
 
 function publicBankAccounts(value: Awaited<ReturnType<PublicMcpReadService['searchBankAccounts']>>) {
@@ -171,11 +205,16 @@ function publicBankAccounts(value: Awaited<ReturnType<PublicMcpReadService['sear
   };
 }
 
-function publicContacts(value: Awaited<ReturnType<PublicMcpReadService['searchContacts']>>) {
+function publicContacts(
+  value: Awaited<ReturnType<PublicMcpReadService['searchContacts']>>,
+  actor: McpActorContext
+) {
   return {
-    candidates: value.map(({ id, name, type, taxIdMasked, emailMasked, status, confidence }) => ({
-      id, name, type, taxIdMasked, emailMasked, status, confidence,
-    })),
+    candidates: value
+      .filter(({ type }) => canReadContactType(actor, type))
+      .map(({ id, name, type, taxIdMasked, emailMasked, status, confidence }) => ({
+        id, name, type, taxIdMasked, emailMasked, status, confidence,
+      })),
   };
 }
 
@@ -231,8 +270,14 @@ export function createPublicMcpServer(options: CreatePublicMcpServerOptions): Mc
       outputSchema: contactOutputSchema,
       annotations: toolAnnotations,
     }, async ({ q, role, limit }) => {
+      if (role !== 'any' && !canReadContactType(actor, role)) {
+        return toolAuthorizationError();
+      }
       try {
-        return toResult(publicContacts(await options.readService.searchContacts(actor, { q, role, limit })));
+        return toResult(publicContacts(
+          await options.readService.searchContacts(actor, { q, role, limit }),
+          actor
+        ));
       } catch {
         return toolError();
       }
@@ -339,7 +384,14 @@ export function createLocalFixtureActor(): PublicMcpActorContext {
     userId: 'fixture-user',
     organizationId: 'fixture-organization',
     entitlements: ['mcp.read'],
-    permissions: ['mcp.session.read', 'bank_accounts.read', 'contacts.read', 'transactions.read', 'operational_summary.read'],
+    permissions: [
+      'sections.dashboard',
+      'sections.moviments',
+      'moviments.read',
+      'sections.donants',
+      'sections.proveidors',
+      'sections.treballadors',
+    ],
     scopes: ['mcp.session.read', 'bank_accounts.search', 'contacts.search', 'transactions.search'],
     clientId: 'local-fixture-client',
     tokenId: 'local-fixture-token',

@@ -91,6 +91,29 @@ test('M1 removes tools not granted by the immutable actor context', async () => 
   }
 });
 
+test('M1 reuses canonical Summa permissions and filters unauthorized contact roles', async () => {
+  const actor = createLocalFixtureActor();
+  actor.allowedTools = ['search_contacts'];
+  actor.permissions = ['sections.proveidors'];
+  const { client, server } = await connectFixtureServer(actor);
+  try {
+    const listed = await client.listTools();
+    assert.deepEqual(listed.tools.map((tool) => tool.name), ['search_contacts']);
+
+    const anyRole = await client.callTool({ name: 'search_contacts', arguments: { q: 'prova' } });
+    assert.deepEqual(anyRole.structuredContent, { candidates: [] });
+
+    const forbiddenRole = await client.callTool({
+      name: 'search_contacts',
+      arguments: { q: 'prova', role: 'donor' },
+    });
+    assert.equal(forbiddenRole.isError, true);
+    assert.match(JSON.stringify(forbiddenRole.content), /TOOL_NOT_AUTHORIZED/);
+  } finally {
+    await server.close();
+  }
+});
+
 test('the public MCP transport has no direct Firestore dependency', async () => {
   const source = await readFile(new URL('../public-mcp/server.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(source, /getAdminDb|firebase-admin|createFirestore/i);
