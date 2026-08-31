@@ -78,6 +78,11 @@ export SEARCH_CONSOLE_SITE_URL="sc-domain:summasocial.app"
 export GA4_PROPERTY_ID="547126832"
 ```
 
+Si no es defineix `GOOGLE_MARKETING_ACCESS_TOKEN`, l’informe prova de reutilitzar el
+token actiu de `gcloud auth print-access-token`. Si no es defineix `GA4_PROPERTY_ID`,
+usa per defecte la propietat `547126832`. L’accés continua sent de només lectura i
+requereix els àmbits `webmasters.readonly` i `analytics.readonly`.
+
 El token necessita els àmbits de només lectura:
 
 - `https://www.googleapis.com/auth/webmasters.readonly`

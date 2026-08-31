@@ -12,6 +12,7 @@ import {
 } from './report-lib.mjs';
 
 const DEFAULT_SITE_URL = 'sc-domain:summasocial.app';
+const DEFAULT_GA4_PROPERTY_ID = '547126832';
 const LOG_LIMIT = 50_000;
 const OPENAI_SEARCHBOT_IP_RANGES_URL = 'https://openai.com/searchbot.json';
 const AI_REFERRAL_SOURCE_PARTS = [
@@ -55,7 +56,8 @@ function parseArgs(argv) {
           'Variables opcionals:',
           '  GOOGLE_MARKETING_ACCESS_TOKEN  OAuth amb webmasters.readonly i analytics.readonly',
           '  SEARCH_CONSOLE_SITE_URL        Per defecte sc-domain:summasocial.app',
-          '  GA4_PROPERTY_ID                ID numèric de la propietat GA4',
+          '  GA4_PROPERTY_ID                Per defecte 547126832',
+          '  Si no hi ha token manual, prova gcloud auth print-access-token.',
           '',
         ].join('\n')
       );
@@ -379,12 +381,23 @@ async function readHosting(periods, includeHosting) {
   }
 }
 
+function readGcloudAccessToken() {
+  try {
+    return execFileSync('gcloud', ['auth', 'print-access-token'], {
+      encoding: 'utf8',
+      timeout: 30_000,
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const periods = buildComparisonPeriods(options.endDate, options.days);
-  const accessToken = process.env.GOOGLE_MARKETING_ACCESS_TOKEN || '';
+  const accessToken = process.env.GOOGLE_MARKETING_ACCESS_TOKEN || readGcloudAccessToken();
   const siteUrl = process.env.SEARCH_CONSOLE_SITE_URL || DEFAULT_SITE_URL;
-  const propertyId = process.env.GA4_PROPERTY_ID || '';
+  const propertyId = process.env.GA4_PROPERTY_ID || DEFAULT_GA4_PROPERTY_ID;
 
   const [searchConsole, ga4, hosting] = await Promise.all([
     readSearchConsole(accessToken, siteUrl, periods),

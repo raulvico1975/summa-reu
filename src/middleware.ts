@@ -57,6 +57,11 @@ const CA_ES_ONLY_LANDING_SLUGS = new Set([
   'programa-associacions',
 ]);
 
+// Les sondes de WordPress/PHP no corresponen a cap ruta de l'aplicació. Si
+// continuen caient al shell de l'app, els cercadors les poden interpretar com
+// a pàgines públiques vàlides (soft 404).
+const LEGACY_PROBE_PATH_PATTERN = /(?:^|\/)(?:wp-(?:admin|content|includes|login|[^/]*)(?:\/|$)|xmlrpc\.php$|[^/]+\.php$)/i;
+
 function normalizeHost(host: string): string {
   return host.trim().toLowerCase().replace(/:\d+$/, '');
 }
@@ -117,6 +122,20 @@ export function middleware(request: NextRequest) {
       : request.nextUrl.protocol.replace(/:$/, '');
     const canonicalUrl = `${protocol}://${canonicalHost}${canonicalPathname}${search}`;
     return NextResponse.redirect(canonicalUrl, 308);
+  }
+
+  if (
+    (request.method === 'GET' || request.method === 'HEAD') &&
+    !pathname.startsWith('/api/') &&
+    LEGACY_PROBE_PATH_PATTERN.test(pathname)
+  ) {
+    return new NextResponse('Not Found', {
+      status: 404,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'X-Robots-Tag': 'noindex',
+      },
+    });
   }
 
   // Mai redirigir rutes protegides (evita loops)
