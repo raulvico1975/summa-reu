@@ -277,7 +277,7 @@ const LANDING_TEASERS: Record<PublicLandingSlug, Record<PublicLocale, string>> =
   },
   'control-donacions-ong': {
     ca: 'Segueix les aportacions de cada donant i entén millor la base econòmica de l’entitat.',
-    es: 'Sigue las aportaciones de cada donante.',
+    es: 'Gestiona donaciones y donantes con un historial claro de aportaciones y devoluciones.',
     fr: 'Suivez les contributions de chaque donateur.',
     pt: 'Acompanhe as contribuicoes de cada doador.',
   },
@@ -295,7 +295,7 @@ const LANDING_TEASERS: Record<PublicLandingSlug, Record<PublicLocale, string>> =
   },
   'software-gestion-ong': {
     ca: 'Visió general del software per centralitzar moviments, donants, quotes i fiscalitat.',
-    es: 'Vision general del software de gestion para ONG.',
+    es: 'Software de gestión para ONG y asociaciones: centraliza movimientos, donantes y cuotas.',
     fr: 'Vue d ensemble du logiciel de gestion pour associations.',
     pt: 'Visao geral do software de gestao para ONG.',
   },
@@ -318,7 +318,7 @@ function buildRelatedLandingsSection(
       locale === 'ca'
         ? 'També et pot interessar'
         : locale === 'es'
-          ? 'Tambien te puede interesar'
+          ? 'También te puede interesar'
           : locale === 'fr'
             ? 'Cela peut aussi vous interesser'
             : 'Tambem te pode interessar',
@@ -326,7 +326,7 @@ function buildRelatedLandingsSection(
       locale === 'ca'
         ? 'Si estàs treballant aquesta part de la gestió econòmica, aquestes pàgines et donaran context complementari dins del mateix recorregut.'
         : locale === 'es'
-          ? 'Si estas trabajando esta parte de la gestión económica, estas páginas te dan contexto complementario dentro del mismo recorrido.'
+          ? 'Si estás trabajando en esta parte de la gestión económica, estas páginas te ofrecen contexto complementario dentro del mismo recorrido.'
           : locale === 'fr'
             ? 'Si vous travaillez cette partie de la gestion économique, ces pages apportent un contexte complémentaire.'
             : 'Se estás a trabalhar esta área da gestão económica, estas páginas dão contexto complementar.',
@@ -1699,14 +1699,14 @@ const BANK_RECONCILIATION_ONG_CONTENT_ES: PublicLandingContent = {
 
 const DONATIONS_CONTROL_ONG_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
-    title: 'Control de donacions i donants per a ONG | Summa Social',
+    title: 'Gestió de donacions i donants per a ONG | Summa Social',
     description:
-      'Centralitza aportacions, donants i devolucions per saber qui dona, quant dona i quina base fiscal té l’entitat.',
+      'Gestiona donacions i donants per a ONG i associacions: centralitza aportacions, devolucions i dades fiscals en un únic sistema.',
   },
   es: {
-    title: 'Control de donaciones y donantes para ONG | Summa Social',
+    title: 'Gestión de donaciones y donantes para ONG | Summa Social',
     description:
-      'Centraliza aportaciones, donantes y devoluciones para saber quién dona, cuánto dona y qué base fiscal tiene la entidad.',
+      'Gestiona donaciones y donantes para ONG y asociaciones: centraliza aportaciones, devoluciones y datos fiscales en un único sistema.',
   },
   fr: {
     title: 'Controle des dons pour associations | Summa Social',
@@ -1840,9 +1840,10 @@ const DONATIONS_CONTROL_ONG_CONTENT_CA: PublicLandingContent = {
 
 const DONATIONS_CONTROL_ONG_CONTENT_ES: PublicLandingContent = {
   hero: {
-    title: 'Controlar las donaciones de una ONG sin hojas de cálculo',
-    subtitle: 'Tener claro quién dona, cuánto dona y cuándo dona.',
+    title: 'Gestión de donaciones y donantes para ONG',
+    subtitle: 'Centraliza quién dona, cuánto aporta y qué devoluciones debes revisar.',
     introParagraphs: [
+      'Summa Social es una herramienta de gestión de donaciones para ONG y asociaciones que necesitan trabajar con una base clara de donantes.',
       'Para muchas entidades, las donaciones llegan por distintos canales: transferencias, cuotas de socios, aportaciones puntuales o plataformas online.',
       'Con el tiempo, esa información acaba repartida entre extractos bancarios, hojas de cálculo y listas de donantes.',
       'Summa Social permite tener una visión clara de todas las donaciones de la entidad.',
@@ -1961,11 +1962,13 @@ const DONATIONS_CONTROL_ONG_CONTENT_ES: PublicLandingContent = {
 const SOFTWARE_MANAGEMENT_ONG_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: 'Software de gestió per ONG | Summa Social',
-    description: "Software per gestionar moviments, donants i informes fiscals d'una ONG.",
+    description:
+      'Software de gestió econòmica per a ONG i associacions: centralitza moviments, donants, quotes i informes fiscals en un únic sistema.',
   },
   es: {
     title: 'Software de gestión para ONG y asociaciones | Summa Social',
-    description: 'Centraliza movimientos, donantes, cuotas y obligaciones fiscales con un software de gestión económica pensado para ONG y asociaciones.',
+    description:
+      'Software de gestión económica para ONG y asociaciones: centraliza movimientos, donantes, cuotas e informes fiscales en un único sistema.',
   },
   fr: {
     title: 'Logiciel de gestion pour associations | Summa Social',
@@ -2099,8 +2102,9 @@ const SOFTWARE_MANAGEMENT_ONG_CONTENT_CA: PublicLandingContent = {
 const SOFTWARE_MANAGEMENT_ONG_CONTENT_ES: PublicLandingContent = {
   hero: {
     title: 'Software de gestión para ONG y asociaciones',
-    subtitle: 'Controla movimientos, donantes, cuotas y fiscalidad en un único sistema.',
+    subtitle: 'Un programa de gestión económica para ordenar movimientos, donantes, cuotas e informes fiscales.',
     introParagraphs: [
+      'Si buscas un programa de gestión para una ONG o asociación, Summa Social reúne en un mismo entorno la información económica que el equipo necesita revisar.',
       'Muchas ONG gestionan su actividad económica con una combinación de hojas de cálculo, extractos bancarios y documentos dispersos.',
       'Con el tiempo, esta forma de trabajar dificulta entender qué está pasando realmente con los ingresos, los gastos y las aportaciones.',
       'Summa Social es un software de gestión económica diseñado específicamente para entidades sociales.',

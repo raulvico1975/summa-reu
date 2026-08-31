@@ -67,6 +67,19 @@ test('middleware permanently redirects the unlocalized updates route and preserv
   );
 });
 
+test('obvious legacy PHP probes return a true noindex 404 without affecting APIs', () => {
+  for (const path of ['/wp-login.php', '/wp-admin/install.php', '/this_is_a_new_hello_world.php']) {
+    const response = middleware(request(`https://summasocial.app${path}`));
+
+    assert.equal(response.status, 404);
+    assert.equal(response.headers.get('x-robots-tag'), 'noindex');
+  }
+
+  const apiResponse = middleware(request('https://summasocial.app/api/example.php'));
+  assert.equal(apiResponse.status, 200);
+  assert.equal(apiResponse.headers.get('x-middleware-next'), '1');
+});
+
 test('middleware does not leak the App Hosting runtime host in public redirects', () => {
   const response = middleware(
     request(
