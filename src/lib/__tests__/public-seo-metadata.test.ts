@@ -190,6 +190,26 @@ test('priority landing metadata is concise and aligned with observed search inte
   }
 });
 
+test('high-impression Spanish landings answer their observed search intents directly', () => {
+  const software = getPublicLandingBySlug('software-gestion-ong');
+  const donations = getPublicLandingBySlug('control-donacions-ong');
+  assert.ok(software);
+  assert.ok(donations);
+
+  const softwareMetadata = getPublicLandingMetadata(software, 'es');
+  const softwareContent = getPublicLandingContent(software, 'es');
+  assert.match(softwareMetadata.title, /software de gestión para ONG/i);
+  assert.match(softwareMetadata.description, /software de gestión económica.*ONG y asociaciones/i);
+  assert.match(softwareContent.hero.subtitle, /programa de gestión económica/i);
+  assert.match(softwareContent.hero.introParagraphs[0] ?? '', /programa de gestión.*ONG o asociación/i);
+
+  const donationsMetadata = getPublicLandingMetadata(donations, 'es');
+  const donationsContent = getPublicLandingContent(donations, 'es');
+  assert.match(donationsMetadata.title, /gestión de donaciones.*donantes para ONG/i);
+  assert.match(donationsContent.hero.title, /gestión de donaciones.*donantes para ONG/i);
+  assert.match(donationsContent.hero.introParagraphs[0] ?? '', /gestión de donaciones para ONG/i);
+});
+
 test('commercial landing sitemap stays limited to Catalan and Spanish', () => {
   const sitemapEntries = getPublicLandingSitemapEntries();
 
