@@ -16,6 +16,13 @@ npm run support:eval:top100
 node --import tsx docs/kb/validate-kb.ts
 ```
 
+La capa LLM del bot prioritza `OPENAI_API_KEY` amb el model `gpt-5-mini` (es pot
+canviar amb `OPENAI_SUPPORT_BOT_MODEL`). Si no hi ha clau OpenAI, conserva la
+compatibilitat amb Google GenAI; si no hi ha cap proveïdor disponible, el bot
+continua funcionant amb retrieval i respostes deterministes. El LLM només pot
+reformular una card informativa o ajudar a desambiguar candidates: no pot crear
+passos, modificar la KB ni substituir els guardrails.
+
 El benchmark Top-100 mostra ara `Card matches`, `Safe fallbacks` i `Unresolved in-scope`, a més de les mètriques anteriors. Un fallback segur no compta com una resposta operativa coberta.
 
 ## Revisió editorial
