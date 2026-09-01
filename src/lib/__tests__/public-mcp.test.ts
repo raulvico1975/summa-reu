@@ -40,6 +40,12 @@ test('M1 exposes exactly the read-only allowlist with MCP annotations', async ()
         idempotentHint: true,
         openWorldHint: false,
       });
+      const securitySchemes = tool._meta?.securitySchemes as Array<{
+        type?: string;
+        scopes?: string[];
+      }> | undefined;
+      assert.equal(securitySchemes?.[0]?.type, 'oauth2');
+      assert.equal((securitySchemes?.[0]?.scopes?.length ?? 0) > 0, true);
     }
   } finally {
     await server.close();

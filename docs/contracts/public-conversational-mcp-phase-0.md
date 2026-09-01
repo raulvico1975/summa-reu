@@ -297,6 +297,19 @@ Gate:
 - rate limit, payload limit, timeout i logs sanitzats;
 - sense dades reals fins a autorització separada.
 
+Checkpoint local 2026-09-01:
+
+- arquitectura `tool-only`: Summa és només resource server i no implementa cap authorization server propi;
+- Stytch B2B és el candidat de pilot perquè ofereix descoberta MCP i introspecció RFC 7662 sense dependència criptogràfica nova;
+- grant immutable d'una sola organització, vinculat a issuer, subject, usuari Summa, client OAuth, scopes i eines permeses;
+- resolució d'actor fail-closed amb expiració, issuer, audience, scopes, revocació, membre real i permisos canònics;
+- well-known principal i fallback, challenge 401, payload limit, rate limit, timeout d'autenticació i logs amb referències hashejades;
+- implementació i proves només amb fixtures; no hi ha compte Stytch, credencials, grant Firestore, dades reals, connexió de client ni desplegament.
+
+M2 no supera el gate fins que es provin el consentiment i els callbacks del proveïdor,
+es resolgui la política canònica de permisos/entitlement del MCP públic, s'implementi
+el repositori de grants de staging i es connecti la frontera OAuth a `/mcp`.
+
 ### M3 — Interoperabilitat
 
 Lliurable: connexió de ChatGPT i Claude a staging.
