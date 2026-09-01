@@ -52,6 +52,11 @@ function request(token = 'test-token') {
   return { headers: new Headers({ authorization: `Bearer ${token}` }) };
 }
 
+function fakeStytchAccessToken(clientId: string) {
+  const payload = Buffer.from(JSON.stringify({ client_id: clientId })).toString('base64url');
+  return `e30.${payload}.test-signature`;
+}
+
 function dependencies(overrides: Partial<{
   token: VerifiedPublicMcpAccessToken;
   grant: PublicMcpGrant | null;
@@ -152,8 +157,7 @@ test('M2 Stytch verifier uses RFC 7662 introspection without a new runtime depen
   let capturedInit: RequestInit | undefined;
   const verify = createStytchPublicMcpTokenVerifier({
     projectDomain: ISSUER,
-    clientId: 'stytch-client',
-    clientSecret: 'test-secret',
+    allowedClientIds: ['chatgpt-client', 'claude-client'],
     fetchFn: async (input, init) => {
       capturedUrl = input.toString();
       capturedInit = init;
@@ -169,11 +173,15 @@ test('M2 Stytch verifier uses RFC 7662 introspection without a new runtime depen
     },
   });
 
-  const token = await verify('opaque-test-token');
+  const accessToken = fakeStytchAccessToken('chatgpt-client');
+  const token = await verify(accessToken);
   assert.equal(capturedUrl, `${ISSUER}/v1/oauth2/introspect`);
   assert.equal(capturedInit?.method, 'POST');
-  assert.equal((capturedInit?.headers as Record<string, string>).authorization.startsWith('Basic '), true);
-  assert.match(capturedInit?.body?.toString() ?? '', /token=opaque-test-token/);
+  assert.equal((capturedInit?.headers as Record<string, string>).authorization, undefined);
+  const body = new URLSearchParams(capturedInit?.body?.toString());
+  assert.equal(body.get('token'), accessToken);
+  assert.equal(body.get('client_id'), 'chatgpt-client');
+  assert.equal(body.get('token_type_hint'), 'access_token');
   assert.deepEqual(token, {
     issuer: ISSUER,
     subject: 'oauth-user-1',
@@ -187,9 +195,51 @@ test('M2 Stytch verifier uses RFC 7662 introspection without a new runtime depen
 test('M2 Stytch verifier fails closed on inactive or malformed introspection', async () => {
   const verify = createStytchPublicMcpTokenVerifier({
     projectDomain: ISSUER,
-    clientId: 'stytch-client',
-    clientSecret: 'test-secret',
+    allowedClientIds: ['chatgpt-client'],
     fetchFn: async () => Response.json({ active: false }),
   });
-  await assert.rejects(verify('opaque-test-token'), /STYTCH_ACCESS_TOKEN_INACTIVE/);
+  await assert.rejects(
+    verify(fakeStytchAccessToken('chatgpt-client')),
+    /STYTCH_ACCESS_TOKEN_INACTIVE/
+  );
+  await assert.rejects(verify('opaque-test-token'), /STYTCH_ACCESS_TOKEN_MALFORMED/);
+});
+
+test('M2 Stytch verifier rejects unknown clients before network access', async () => {
+  let fetchCalls = 0;
+  const verify = createStytchPublicMcpTokenVerifier({
+    projectDomain: ISSUER,
+    allowedClientIds: ['chatgpt-client'],
+    fetchFn: async () => {
+      fetchCalls += 1;
+      return Response.json({ active: false });
+    },
+  });
+
+  await assert.rejects(
+    verify(fakeStytchAccessToken('unknown-client')),
+    /STYTCH_ACCESS_TOKEN_CLIENT_DENIED/
+  );
+  assert.equal(fetchCalls, 0);
+});
+
+test('M2 Stytch verifier treats the introspection response as authoritative', async () => {
+  const verify = createStytchPublicMcpTokenVerifier({
+    projectDomain: ISSUER,
+    allowedClientIds: ['chatgpt-client'],
+    fetchFn: async () => Response.json({
+      active: true,
+      aud: [RESOURCE],
+      client_id: 'different-client',
+      exp: NOW + 300,
+      iss: ISSUER,
+      scope: 'mcp.session.read',
+      sub: 'oauth-user-1',
+    }),
+  });
+
+  await assert.rejects(
+    verify(fakeStytchAccessToken('chatgpt-client')),
+    /STYTCH_ACCESS_TOKEN_CLIENT_MISMATCH/
+  );
 });

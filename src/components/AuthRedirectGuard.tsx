@@ -18,6 +18,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/fr',
   '/pt',
   '/public',
+  '/mcp/authorize',
   '/admin', // admin té el seu propi guard
 ];
 
