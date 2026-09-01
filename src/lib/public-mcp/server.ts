@@ -156,6 +156,13 @@ function toolAuthorizationError() {
   };
 }
 
+function toolInputError(message: string) {
+  return {
+    content: [{ type: 'text' as const, text: `INVALID_TOOL_INPUT: ${message}` }],
+    isError: true,
+  };
+}
+
 function hasToolAccess(actor: PublicMcpActorContext, tool: PublicMcpReadToolName): boolean {
   const policy: Record<PublicMcpReadToolName, {
     allPermissions?: PermissionKey[];
@@ -296,17 +303,16 @@ export function createPublicMcpServer(options: CreatePublicMcpServerOptions): Mc
         dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
         direction: z.enum(['income', 'expense', 'any']).default('any'),
         limit: z.number().int().min(1).max(10).default(10),
-      }).strict().superRefine((value, ctx) => {
-        if (!value.q && value.amount === undefined && !value.bankAccountId && !value.dateFrom && !value.dateTo && value.direction === 'any') {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one search filter is required' });
-        }
-        if (value.dateFrom && value.dateTo && value.dateFrom > value.dateTo) {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'dateFrom must not be after dateTo' });
-        }
-      }),
+      }).strict(),
       outputSchema: transactionOutputSchema,
       annotations: toolAnnotations,
     }, async (input) => {
+      if (!input.q && input.amount === undefined && !input.bankAccountId && !input.dateFrom && !input.dateTo && input.direction === 'any') {
+        return toolInputError('At least one search filter is required');
+      }
+      if (input.dateFrom && input.dateTo && input.dateFrom > input.dateTo) {
+        return toolInputError('dateFrom must not be after dateTo');
+      }
       try {
         return toResult(publicTransactions(await options.readService.searchTransactions(actor, input)));
       } catch {
@@ -321,10 +327,13 @@ export function createPublicMcpServer(options: CreatePublicMcpServerOptions): Mc
       inputSchema: z.object({
         dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      }).strict().refine((value) => value.dateFrom <= value.dateTo, 'dateFrom must not be after dateTo'),
+      }).strict(),
       outputSchema: operationalSummaryOutputSchema,
       annotations: toolAnnotations,
     }, async (input) => {
+      if (input.dateFrom > input.dateTo) {
+        return toolInputError('dateFrom must not be after dateTo');
+      }
       try {
         return toResult(await options.readService.getOperationalSummary(actor, input));
       } catch {

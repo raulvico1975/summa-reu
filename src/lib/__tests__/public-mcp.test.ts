@@ -46,6 +46,47 @@ test('M1 exposes exactly the read-only allowlist with MCP annotations', async ()
   }
 });
 
+test('M1 advertises usable input schemas for every tool with arguments', async () => {
+  const { client, server } = await connectFixtureServer();
+  try {
+    const listed = await client.listTools();
+    const byName = new Map(listed.tools.map((tool) => [tool.name, tool]));
+
+    assert.deepEqual(
+      Object.keys(byName.get('search_transactions')?.inputSchema.properties ?? {}).sort(),
+      ['amount', 'amountTolerance', 'bankAccountId', 'dateFrom', 'dateTo', 'direction', 'limit', 'q']
+    );
+    assert.deepEqual(
+      Object.keys(byName.get('get_entity_operational_summary')?.inputSchema.properties ?? {}).sort(),
+      ['dateFrom', 'dateTo']
+    );
+    assert.deepEqual(
+      byName.get('get_entity_operational_summary')?.inputSchema.required,
+      ['dateFrom', 'dateTo']
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test('M1 keeps cross-field input validation fail-closed without hiding the advertised schema', async () => {
+  const { client, server } = await connectFixtureServer();
+  try {
+    const missingFilter = await client.callTool({ name: 'search_transactions', arguments: {} });
+    assert.equal(missingFilter.isError, true);
+    assert.match(JSON.stringify(missingFilter.content), /At least one search filter is required/);
+
+    const reversedRange = await client.callTool({
+      name: 'get_entity_operational_summary',
+      arguments: { dateFrom: '2026-02-01', dateTo: '2026-01-01' },
+    });
+    assert.equal(reversedRange.isError, true);
+    assert.match(JSON.stringify(reversedRange.content), /dateFrom must not be after dateTo/);
+  } finally {
+    await server.close();
+  }
+});
+
 test('M1 applies schema validation and returns compact structured content', async () => {
   const { client, server } = await connectFixtureServer();
   try {
