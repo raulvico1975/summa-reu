@@ -10,6 +10,7 @@ import type { PublicMcpPilotConfig } from '@/lib/public-mcp/pilot-config';
 
 const config: PublicMcpPilotConfig = {
   resource: 'https://mcp.example.test/mcp',
+  issuer: 'https://auth.example.test',
   allowedClientIds: ['chatgpt-client'],
   stytchProjectDomain: 'https://auth.example.test',
   stytchProjectId: 'project-test-id',

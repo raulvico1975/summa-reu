@@ -240,7 +240,7 @@ function publicTransactions(value: Awaited<ReturnType<PublicMcpReadService['sear
 export function createPublicMcpServer(options: CreatePublicMcpServerOptions): McpServer {
   const actor = actorSchema.parse(options.actor);
   const enabledTools = PUBLIC_READ_TOOL_NAMES.filter((tool) => hasToolAccess(actor, tool));
-  const server = new McpServer({ name: 'summa-social-public-mcp-m1', version: '0.1.0' });
+  const server = new McpServer({ name: 'summa-social-public-mcp', version: '0.2.0' });
 
   if (enabledTools.includes('get_session_context')) {
     server.registerTool('get_session_context', {

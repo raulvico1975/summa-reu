@@ -138,6 +138,23 @@ test('M1 removes tools not granted by the immutable actor context', async () => 
   }
 });
 
+test('the operational summary is exposed only through transactions.search', async () => {
+  const actor = createLocalFixtureActor();
+  actor.allowedTools = ['get_entity_operational_summary'];
+  actor.scopes = ['transactions.search'];
+  const { client, server } = await connectFixtureServer(actor);
+  try {
+    const listed = await client.listTools();
+    assert.deepEqual(listed.tools.map((tool) => tool.name), ['get_entity_operational_summary']);
+    assert.deepEqual(
+      (listed.tools[0]?._meta?.securitySchemes as Array<{ scopes?: string[] }>)[0]?.scopes,
+      ['transactions.search']
+    );
+  } finally {
+    await server.close();
+  }
+});
+
 test('M1 reuses canonical Summa permissions and filters unauthorized contact roles', async () => {
   const actor = createLocalFixtureActor();
   actor.allowedTools = ['search_contacts'];

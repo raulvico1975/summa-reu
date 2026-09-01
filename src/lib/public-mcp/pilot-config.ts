@@ -1,5 +1,6 @@
 export interface PublicMcpPilotConfig {
   resource: string;
+  issuer: string;
   allowedClientIds: string[];
   stytchProjectDomain: string;
   stytchProjectId: string;
@@ -16,6 +17,23 @@ function requireValue(env: NodeJS.ProcessEnv, name: string): string {
   return value;
 }
 
+function normalizeHttpsOrigin(value: string): string {
+  const url = new URL(value);
+  if (url.protocol !== 'https:' || url.username || url.password
+    || (url.pathname && url.pathname !== '/') || url.search || url.hash) {
+    throw new Error('PUBLIC_MCP_PILOT_NOT_CONFIGURED');
+  }
+  return url.origin;
+}
+
+function requireSameHttpsOrigin(issuer: string, projectDomain: string): string {
+  const normalizedIssuer = normalizeHttpsOrigin(issuer);
+  if (normalizedIssuer !== normalizeHttpsOrigin(projectDomain)) {
+    throw new Error('PUBLIC_MCP_PILOT_NOT_CONFIGURED');
+  }
+  return normalizedIssuer;
+}
+
 export function readPublicMcpPilotConfig(
   env: NodeJS.ProcessEnv = process.env
 ): PublicMcpPilotConfig {
@@ -29,10 +47,15 @@ export function readPublicMcpPilotConfig(
     throw new Error('PUBLIC_MCP_PILOT_NOT_CONFIGURED');
   }
 
+  const issuer = requireValue(env, 'SUMMA_MCP_OAUTH_ISSUER');
+  const stytchProjectDomain = requireValue(env, 'SUMMA_MCP_STYTCH_PROJECT_DOMAIN');
+  const normalizedIssuer = requireSameHttpsOrigin(issuer, stytchProjectDomain);
+
   return {
     resource: requireValue(env, 'SUMMA_MCP_RESOURCE'),
+    issuer: normalizedIssuer,
     allowedClientIds,
-    stytchProjectDomain: requireValue(env, 'SUMMA_MCP_STYTCH_PROJECT_DOMAIN'),
+    stytchProjectDomain: normalizedIssuer,
     stytchProjectId: requireValue(env, 'SUMMA_MCP_STYTCH_PROJECT_ID'),
     stytchProjectSecret: requireValue(env, 'SUMMA_MCP_STYTCH_PROJECT_SECRET'),
     summaUserId: requireValue(env, 'SUMMA_MCP_PILOT_USER_ID'),

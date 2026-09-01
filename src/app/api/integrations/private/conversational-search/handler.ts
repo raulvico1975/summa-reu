@@ -11,36 +11,25 @@ import {
 } from '@/lib/api/integration-auth';
 import {
   resolutionStatus,
-  searchBankAccountCandidates,
-  searchContactCandidates,
-  searchTransactionCandidates,
   type BankAccountSearchInput,
   type ContactRoleFilter,
   type ContactSearchInput,
-  type ConversationalBankAccountRecord,
-  type ConversationalContactRecord,
-  type ConversationalTransactionRecord,
   type TransactionDirection,
   type TransactionSearchInput,
 } from '@/lib/private-integrations/conversational-search';
+import {
+  createCanonicalPublicMcpReadService,
+  createFirestoreConversationalSearchDataSource,
+  type ConversationalSearchDataSource,
+} from '@/lib/private-integrations/conversational-pilot-read-service';
+
+export type { ConversationalSearchDataSource } from '@/lib/private-integrations/conversational-pilot-read-service';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
-const MAX_TRANSACTION_SCAN = 1_000;
-const TRANSACTION_PAGE_SIZE = 250;
 const ISO_DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 type RequestLike = Pick<NextRequest, 'headers' | 'nextUrl'>;
-
-export interface ConversationalSearchDataSource {
-  listBankAccounts(orgId: string): Promise<ConversationalBankAccountRecord[]>;
-  listContacts(orgId: string): Promise<ConversationalContactRecord[]>;
-  listTransactions(args: {
-    orgId: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }): Promise<ConversationalTransactionRecord[]>;
-}
 
 interface SearchDeps {
   authRepository?: IntegrationAuthRepository;
@@ -73,136 +62,6 @@ function parseDirection(value: string | null): TransactionDirection | null {
   if (value === null || value === '' || value === 'any') return 'any';
   if (value === 'income' || value === 'expense') return value;
   return null;
-}
-
-function timestampToComparable(value: unknown): unknown {
-  if (value && typeof value === 'object' && 'toDate' in value) {
-    const toDate = (value as { toDate?: () => Date }).toDate;
-    if (typeof toDate === 'function') return toDate.call(value).toISOString();
-  }
-  return value;
-}
-
-export function createFirestoreConversationalSearchDataSource(): ConversationalSearchDataSource {
-  return {
-    async listBankAccounts(orgId) {
-      const snapshot = await getAdminDb()
-        .collection(`organizations/${orgId}/bankAccounts`)
-        .select('name', 'bankName', 'iban', 'isDefault', 'isActive', 'archivedAt')
-        .limit(100)
-        .get();
-      return snapshot.docs.flatMap((doc) => {
-        const data = doc.data();
-        if (typeof data.name !== 'string' || !data.name.trim()) return [];
-        return [{
-          id: doc.id,
-          name: data.name,
-          bankName: typeof data.bankName === 'string' ? data.bankName : null,
-          iban: typeof data.iban === 'string' ? data.iban : null,
-          isDefault: data.isDefault === true,
-          isActive: data.isActive !== false,
-          archivedAt: timestampToComparable(data.archivedAt),
-        }];
-      });
-    },
-
-    async listContacts(orgId) {
-      const snapshot = await getAdminDb()
-        .collection(`organizations/${orgId}/contacts`)
-        .select('name', 'taxId', 'email', 'type', 'roles', 'status', 'aliases', 'archivedAt')
-        .limit(1_000)
-        .get();
-      return snapshot.docs.flatMap((doc) => {
-        const data = doc.data();
-        if (
-          typeof data.name !== 'string'
-          || (data.type !== 'donor' && data.type !== 'supplier' && data.type !== 'employee')
-        ) {
-          return [];
-        }
-        return [{
-          id: doc.id,
-          name: data.name,
-          taxId: typeof data.taxId === 'string' ? data.taxId : null,
-          email: typeof data.email === 'string' ? data.email : null,
-          type: data.type,
-          roles: data.roles && typeof data.roles === 'object'
-            ? data.roles as ConversationalContactRecord['roles']
-            : null,
-          status: typeof data.status === 'string' ? data.status : null,
-          aliases: Array.isArray(data.aliases)
-            ? data.aliases.filter((alias): alias is string => typeof alias === 'string')
-            : null,
-          archivedAt: timestampToComparable(data.archivedAt),
-        }];
-      });
-    },
-
-    async listTransactions({ orgId, dateFrom, dateTo }) {
-      const db = getAdminDb();
-      const results: ConversationalTransactionRecord[] = [];
-      let cursor: FirebaseFirestore.QueryDocumentSnapshot | null = null;
-
-      while (results.length < MAX_TRANSACTION_SCAN) {
-        let query: FirebaseFirestore.Query = db
-          .collection(`organizations/${orgId}/transactions`)
-          .orderBy('date', 'desc');
-        if (dateFrom) query = query.where('date', '>=', dateFrom);
-        if (dateTo) query = query.where('date', '<=', `${dateTo}T23:59:59.999Z`);
-        if (cursor) query = query.startAfter(cursor);
-        const snapshot = await query.limit(TRANSACTION_PAGE_SIZE).get();
-        if (snapshot.empty) break;
-
-        for (const doc of snapshot.docs) {
-          const data = doc.data();
-          if (
-            typeof data.date !== 'string'
-            || typeof data.amount !== 'number'
-            || !Number.isFinite(data.amount)
-            || typeof data.description !== 'string'
-          ) {
-            continue;
-          }
-          results.push({
-            id: doc.id,
-            date: data.date,
-            amount: data.amount,
-            description: data.description,
-            bankAccountId: typeof data.bankAccountId === 'string' ? data.bankAccountId : null,
-            contactId: typeof data.contactId === 'string' ? data.contactId : null,
-            contactType:
-              data.contactType === 'donor' || data.contactType === 'supplier' || data.contactType === 'employee'
-                ? data.contactType
-                : null,
-            source:
-              data.source === 'bank' || data.source === 'remittance' || data.source === 'manual' || data.source === 'stripe'
-                ? data.source
-                : null,
-            transactionType:
-              data.transactionType === 'normal'
-              || data.transactionType === 'return'
-              || data.transactionType === 'return_fee'
-              || data.transactionType === 'donation'
-              || data.transactionType === 'fee'
-                ? data.transactionType
-                : null,
-            donationStatus:
-              data.donationStatus === 'completed'
-              || data.donationStatus === 'returned'
-              || data.donationStatus === 'partial'
-                ? data.donationStatus
-                : null,
-            archivedAt: timestampToComparable(data.archivedAt),
-          });
-          if (results.length >= MAX_TRANSACTION_SCAN) break;
-        }
-
-        cursor = snapshot.docs[snapshot.docs.length - 1] ?? null;
-        if (snapshot.size < TRANSACTION_PAGE_SIZE) break;
-      }
-      return results;
-    },
-  };
 }
 
 async function audit(
@@ -286,8 +145,10 @@ export async function handleConversationalBankAccountsSearch(
 
   const requestKeyHash = hashOpaqueValue(JSON.stringify(input));
   try {
-    const source = deps.dataSource ?? createFirestoreConversationalSearchDataSource();
-    const candidates = searchBankAccountCandidates(await source.listBankAccounts(auth.context.orgId), input);
+    const service = createCanonicalPublicMcpReadService(
+      deps.dataSource ?? createFirestoreConversationalSearchDataSource()
+    );
+    const candidates = await service.searchBankAccounts(auth.context.orgId, input);
     await audit(repository, auth.audit, 'allowed', 200, 'OK', requestKeyHash);
     return NextResponse.json(successResponse(candidates));
   } catch (error) {
@@ -325,8 +186,10 @@ export async function handleConversationalContactsSearch(
 
   const requestKeyHash = hashOpaqueValue(JSON.stringify(input));
   try {
-    const source = deps.dataSource ?? createFirestoreConversationalSearchDataSource();
-    const candidates = searchContactCandidates(await source.listContacts(auth.context.orgId), input);
+    const service = createCanonicalPublicMcpReadService(
+      deps.dataSource ?? createFirestoreConversationalSearchDataSource()
+    );
+    const candidates = await service.searchContacts(auth.context.orgId, input);
     await audit(repository, auth.audit, 'allowed', 200, 'OK', requestKeyHash);
     return NextResponse.json(successResponse(candidates));
   } catch (error) {
@@ -390,16 +253,10 @@ export async function handleConversationalTransactionsSearch(
 
   const requestKeyHash = hashOpaqueValue(JSON.stringify(input));
   try {
-    const source = deps.dataSource ?? createFirestoreConversationalSearchDataSource();
-    const [transactions, accounts] = await Promise.all([
-      source.listTransactions({
-        orgId: auth.context.orgId,
-        ...(input.dateFrom ? { dateFrom: input.dateFrom } : {}),
-        ...(input.dateTo ? { dateTo: input.dateTo } : {}),
-      }),
-      source.listBankAccounts(auth.context.orgId),
-    ]);
-    const candidates = searchTransactionCandidates(transactions, accounts, input);
+    const service = createCanonicalPublicMcpReadService(
+      deps.dataSource ?? createFirestoreConversationalSearchDataSource()
+    );
+    const candidates = await service.searchTransactions(auth.context.orgId, input);
     await audit(repository, auth.audit, 'allowed', 200, 'OK', requestKeyHash);
     return NextResponse.json(successResponse(candidates));
   } catch (error) {

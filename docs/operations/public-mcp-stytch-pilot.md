@@ -30,6 +30,19 @@ Els clients autoritzats han de ser `third_party_public`, preregistrats i amb:
 - access token curt;
 - únicament els quatre scopes de lectura publicats pel recurs MCP.
 
+El mapping fix del pilot és `mcp.session.read` → `session_read`,
+`bank_accounts.search` → `bank_accounts_search`, `contacts.search` →
+`contacts_search` i `transactions.search` → `transactions_search`. El resum
+operatiu comparteix l'últim scope; no afegeix cap permís nou. Els callbacks
+HTTPS han de coincidir exactament amb els clients preregistrats i l'audience ha
+de ser exactament `SUMMA_MCP_RESOURCE`.
+
+M2 usa access tokens curts (15 minuts) i no habilita `offline_access` ni
+refresh. El rate limit en memòria només és un control local: no és suficient
+per staging públic. La configuració de l'issuer, els callbacks, la revocació,
+la limitació distribuïda i la prova real amb ChatGPT i Claude continuen sent
+gates abans de qualsevol desplegament o comunicació externa.
+
 Per al pilot no s'activen DCR ni CIMD. Es revisaran després de validar almenys ChatGPT i Claude amb clients preregistrats.
 
 ## Ordre segur d'activació
