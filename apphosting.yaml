@@ -42,3 +42,28 @@ env:
     secret: STRIPE_SECRET_KEY
   - variable: OPENAI_API_KEY
     secret: OPENAI_API_KEY
+
+  # Pilot MCP públic: frontera tancada a un únic usuari i entitat, només lectura.
+  # Els identificadors no són secrets; el secret Stytch només existeix a Secret Manager.
+  - variable: SUMMA_MCP_RESOURCE
+    value: https://summasocial.app/mcp
+  - variable: SUMMA_MCP_OAUTH_ISSUER
+    value: https://oval-manager-6910.customers.stytch.dev
+  - variable: SUMMA_MCP_DOCUMENTATION_URL
+    value: https://summasocial.app/mcp/documentacio
+  - variable: SUMMA_MCP_OAUTH_CLIENT_IDS
+    value: connected-app-test-ff904e33-7d19-450e-a3a9-c3c5ffd149dc
+  - variable: SUMMA_MCP_STYTCH_PROJECT_DOMAIN
+    value: https://oval-manager-6910.customers.stytch.dev
+  - variable: SUMMA_MCP_STYTCH_PROJECT_ID
+    value: project-test-51be5078-e7dc-4a0b-9c48-de7a956d87e9
+  - variable: SUMMA_MCP_STYTCH_PROJECT_SECRET
+    secret: SUMMA_MCP_STYTCH_PROJECT_SECRET
+  - variable: SUMMA_MCP_PILOT_USER_ID
+    value: f2AHJqjXiOZkYajwkOnZ8RY6h2k2
+  - variable: SUMMA_MCP_PILOT_ORGANIZATION_ID
+    value: SkQjWvCRDJhSf1OeJAw9
+  - variable: SUMMA_MCP_STYTCH_MEMBER_ID
+    value: member-test-26daf262-e3be-4f83-8774-fb93b25b4261
+  - variable: SUMMA_MCP_STYTCH_ORGANIZATION_ID
+    value: organization-test-11d952a5-97fc-46d3-a0d8-8a5590d37cfe
