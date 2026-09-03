@@ -1,6 +1,6 @@
 # Pilot MCP públic amb Stytch
 
-Estat: **implementat i validat localment; no desplegat, no connectat a dades reals i no publicable**.
+Estat: **desplegat amb fail-closed; només activable per al pilot tancat autoritzat**.
 
 ## Resultat del M2
 
