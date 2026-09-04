@@ -152,7 +152,10 @@ function parseConsentManifest(
 ): PublicMcpConsentManifest {
   if (!value || typeof value !== 'object') throw new Error('STYTCH_AUTHORIZE_RESPONSE_INVALID');
   const root = value as Record<string, unknown>;
-  const client = root.connected_app;
+  // Stytch returns the connected-app manifest under `client` in its current
+  // OAuth authorize-start response. Keep the prior key for compatibility,
+  // while applying the same strict client and scope validation below.
+  const client = root.client ?? root.connected_app;
   if (!client || typeof client !== 'object' || !Array.isArray(root.scope_results)) {
     throw new Error('STYTCH_AUTHORIZE_RESPONSE_INVALID');
   }
