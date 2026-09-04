@@ -337,7 +337,6 @@ export function createStytchConnectedAppsClient(config: StytchConnectedAppsConfi
         scopes: request.scopes,
         state: request.state,
         code_challenge: request.codeChallenge,
-        code_challenge_method: request.codeChallengeMethod,
         member_id: identity.memberId,
         organization_id: identity.organizationId,
         consent_granted: consentGranted,
