@@ -13,12 +13,13 @@ import { createStytchPublicMcpTokenVerifier } from '@/lib/public-mcp/stytch-toke
 
 const ISSUER = 'https://auth.example.test';
 const RESOURCE = 'https://mcp.example.test/mcp';
+const PROJECT_ID = 'project-test-id';
 const NOW = 1_800_000_000;
 
 const verifiedToken: VerifiedPublicMcpAccessToken = {
   issuer: ISSUER,
   subject: 'oauth-user-1',
-  audiences: [RESOURCE],
+  audiences: [PROJECT_ID],
   clientId: 'chatgpt-client',
   scopes: ['mcp.session.read', 'contacts.search'],
   expiresAt: NOW + 300,
@@ -64,6 +65,7 @@ function dependencies(overrides: Partial<{
 }> = {}): PublicMcpOAuthDependencies {
   return {
     expectedIssuer: ISSUER,
+    expectedAudience: PROJECT_ID,
     resource: RESOURCE,
     now: () => NOW,
     async verifyAccessToken() { return overrides.token ?? verifiedToken; },
@@ -116,7 +118,7 @@ test('M2 derives an immutable actor from verified identity binding and canonical
   assert.equal(Object.isFrozen(actor.allowedTools), true);
 });
 
-test('M2 rejects expired, wrong-issuer and wrong-audience tokens', async () => {
+test('M2 rejects expired, wrong-issuer and wrong Stytch-project-audience tokens', async () => {
   await expectAuthFailure(resolvePublicMcpOAuthActor(request(), dependencies({
     token: { ...verifiedToken, expiresAt: NOW },
   })), 'TOKEN_EXPIRED');
@@ -124,7 +126,7 @@ test('M2 rejects expired, wrong-issuer and wrong-audience tokens', async () => {
     token: { ...verifiedToken, issuer: 'https://wrong.example.test' },
   })), 'ISSUER_MISMATCH');
   await expectAuthFailure(resolvePublicMcpOAuthActor(request(), dependencies({
-    token: { ...verifiedToken, audiences: ['https://other.example.test/mcp'] },
+    token: { ...verifiedToken, audiences: [RESOURCE] },
   })), 'AUDIENCE_MISMATCH');
 });
 
@@ -163,7 +165,7 @@ test('M2 Stytch verifier uses RFC 7662 introspection without a new runtime depen
       capturedInit = init;
       return Response.json({
         active: true,
-        aud: [RESOURCE],
+        aud: [PROJECT_ID],
         client_id: 'chatgpt-client',
         exp: NOW + 300,
         iss: ISSUER,
@@ -185,7 +187,7 @@ test('M2 Stytch verifier uses RFC 7662 introspection without a new runtime depen
   assert.deepEqual(token, {
     issuer: ISSUER,
     subject: 'oauth-user-1',
-    audiences: [RESOURCE],
+    audiences: [PROJECT_ID],
     clientId: 'chatgpt-client',
     scopes: ['mcp.session.read', 'contacts.search'],
     expiresAt: NOW + 300,

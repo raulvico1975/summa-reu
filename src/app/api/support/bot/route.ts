@@ -23,6 +23,13 @@ import type { ApiResponse, AssistantTone, InputLang, RelatedSuggestion, Response
 import { normalizeSupportContext } from '@/lib/support/support-context'
 import { resolveSupportLanguage } from '@/lib/support/language'
 import {
+  classifySupportBotIntent,
+  hasSupportBotOpenAiApiKey,
+  reformatSupportBotAnswer,
+  resolveSupportBotOpenAiApiKey,
+  resolveSupportBotOpenAiModel,
+} from '@/lib/support/openai'
+import {
   resolveSupportOrganizationId,
   SupportOrganizationResolutionError,
 } from '@/lib/support/request-context'
@@ -125,6 +132,7 @@ type BotDebugTrace = {
   cardsAfterSupportAccess: number
   cardsFilteredOutByAccess: Array<{ cardId: string; reason: string }>
   cardsConsidered: string[]
+  aiProvider: 'openai' | 'google' | 'none'
   allowAiIntent: boolean
   allowAiReformat: boolean
   retrieval: ReturnType<typeof debugRetrieveCard>
@@ -731,8 +739,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       : []
 
     const deterministicRetrieval = retrieveCard(message, kbLang, retrievableCards, supportContext)
-    const allowAiIntent = hasGoogleGenAiApiKey() && supportData.aiIntentEnabled !== false
-    const allowAiReformat = hasGoogleGenAiApiKey() && aiReformatEnabled
+    const openAiAvailable = hasSupportBotOpenAiApiKey()
+    const googleAvailable = hasGoogleGenAiApiKey()
+    const aiProvider: BotDebugTrace['aiProvider'] = openAiAvailable
+      ? 'openai'
+      : googleAvailable
+        ? 'google'
+        : 'none'
+    const allowAiIntent = (openAiAvailable || googleAvailable) && supportData.aiIntentEnabled !== false
+    const allowAiReformat = (openAiAvailable || googleAvailable) && aiReformatEnabled
 
     let result = await orchestrator({
       message,
@@ -743,9 +758,35 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       assistantTone,
       allowAiIntent,
       allowAiReformat,
-      classifyIntent: async ({ message: question, lang, cards }) =>
-        classifyIntentCard(question, lang, cards, intentTimeoutMs),
+      classifyIntent: async ({ message: question, lang, cards }) => {
+        if (openAiAvailable) {
+          const candidates = buildIntentCandidates(question, lang, cards)
+          if (candidates.length < 2) return null
+          const classified = await classifySupportBotIntent({
+            apiKey: resolveSupportBotOpenAiApiKey(),
+            model: resolveSupportBotOpenAiModel(),
+            userQuestion: question,
+            lang,
+            candidates,
+            timeoutMs: intentTimeoutMs,
+          })
+          if (!classified) return null
+          const selectedCard = cards.find(card => card.id === classified.cardId && card.type !== 'fallback')
+          return selectedCard ? { card: selectedCard, confidence: classified.confidence } : null
+        }
+
+        return classifyIntentCard(question, lang, cards, intentTimeoutMs)
+      },
       reformat: async input => {
+        if (openAiAvailable) {
+          return reformatSupportBotAnswer({
+            apiKey: resolveSupportBotOpenAiApiKey(),
+            model: resolveSupportBotOpenAiModel(),
+            ...input,
+            timeoutMs: reformatTimeoutMs,
+          })
+        }
+
         const { output } = await withTimeout(reformatPrompt(input), reformatTimeoutMs)
         return output?.answer ?? input.rawAnswer
       },
@@ -829,6 +870,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           cardsAfterSupportAccess: retrievableCards.length,
           cardsFilteredOutByAccess,
           cardsConsidered: retrievableCards.map(card => card.id),
+          aiProvider,
           allowAiIntent,
           allowAiReformat,
           retrieval,

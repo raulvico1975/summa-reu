@@ -51,6 +51,7 @@ export interface PublicMcpActorAccess {
 
 export interface PublicMcpOAuthDependencies {
   expectedIssuer: string;
+  expectedAudience: string;
   resource: string;
   verifyAccessToken(token: string): Promise<VerifiedPublicMcpAccessToken>;
   findGrant(issuer: string, subject: string, clientId: string): Promise<PublicMcpGrant | null>;
@@ -155,7 +156,7 @@ export async function resolvePublicMcpOAuthActor(
   if (verified.expiresAt <= (dependencies.now?.() ?? Math.floor(Date.now() / 1000))) {
     throw new PublicMcpAuthError('TOKEN_EXPIRED', 401);
   }
-  if (!verified.audiences.includes(dependencies.resource)) {
+  if (!verified.audiences.includes(dependencies.expectedAudience)) {
     throw new PublicMcpAuthError('AUDIENCE_MISMATCH', 401);
   }
 
