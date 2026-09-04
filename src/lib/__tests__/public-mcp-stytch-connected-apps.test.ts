@@ -75,7 +75,7 @@ test('M2 exchanges authorization data server-side and keeps the Stytch secret ou
       calls.push({ url: input.toString(), init });
       if (input.toString().endsWith('/authorize/start')) {
         return Response.json({
-          connected_app: {
+          client: {
             client_id: CLIENT_ID,
             client_name: 'ChatGPT Work',
             client_description: 'Connector de Summa Social',
