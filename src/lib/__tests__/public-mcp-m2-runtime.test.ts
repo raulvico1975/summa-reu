@@ -51,7 +51,7 @@ function dependencies(subject = config.stytchMemberId) {
       createTokenVerifierFn: () => async () => ({
         issuer: config.issuer,
         subject,
-        audiences: [config.stytchProjectId],
+        audiences: [config.resource],
         clientId: 'chatgpt-client',
         scopes: ['mcp.session.read', 'contacts.search'],
         expiresAt: Math.floor(Date.now() / 1000) + 60,
