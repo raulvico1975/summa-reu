@@ -4,12 +4,18 @@ import {
 } from '@/lib/public-mcp/oauth';
 
 const PKCE_CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43,128}$/;
+const OIDC_AUTHORIZATION_SCOPES = ['openid', 'email', 'offline_access'] as const;
+
+type OidcAuthorizationScope = typeof OIDC_AUTHORIZATION_SCOPES[number];
+type PublicMcpAuthorizationScope = PublicMcpOAuthScope | OidcAuthorizationScope;
 
 export interface PublicMcpAuthorizationRequest {
   clientId: string;
   redirectUri: string;
   responseType: 'code';
-  scopes: PublicMcpOAuthScope[];
+  // OIDC protocol scopes may be required by ChatGPT during authorization, but
+  // only PublicMcpOAuthScope values can become MCP permissions downstream.
+  scopes: PublicMcpAuthorizationScope[];
   state: string;
   codeChallenge: string;
   codeChallengeMethod: 'S256';
@@ -75,13 +81,18 @@ function requireBounded(value: string | null, max: number, errorCode: string): s
   return value;
 }
 
-function parseKnownScopes(value: string | null): PublicMcpOAuthScope[] {
-  const knownScopes = new Set<string>(PUBLIC_MCP_OAUTH_SCOPES);
+function parseKnownScopes(value: string | null): PublicMcpAuthorizationScope[] {
+  const knownScopes = new Set<string>([
+    ...PUBLIC_MCP_OAUTH_SCOPES,
+    ...OIDC_AUTHORIZATION_SCOPES,
+  ]);
   const scopes = Array.from(new Set((value ?? '').split(/\s+/).filter(Boolean)));
-  if (scopes.length === 0 || scopes.some((scope) => !knownScopes.has(scope))) {
+  if (scopes.length === 0
+    || !scopes.some((scope) => (PUBLIC_MCP_OAUTH_SCOPES as readonly string[]).includes(scope))
+    || scopes.some((scope) => !knownScopes.has(scope))) {
     throw new Error('PUBLIC_MCP_OAUTH_SCOPE_INVALID');
   }
-  return scopes as PublicMcpOAuthScope[];
+  return scopes as PublicMcpAuthorizationScope[];
 }
 
 export function parsePublicMcpAuthorizationRequest(
@@ -174,7 +185,7 @@ function parseConsentManifest(
       throw new Error('STYTCH_AUTHORIZE_SCOPE_MISMATCH');
     }
     return {
-      scope: scope as PublicMcpOAuthScope,
+      scope: scope as PublicMcpAuthorizationScope,
       ...(typeof scopeRecord.description === 'string' && scopeRecord.description
         ? { description: scopeRecord.description }
         : {}),
@@ -185,6 +196,11 @@ function parseConsentManifest(
     || scopes.some((scope) => !scope.isGrantable)) {
     throw new Error('STYTCH_AUTHORIZE_SCOPE_NOT_GRANTABLE');
   }
+
+  const operationalScopes = scopes.filter(
+    (scope): scope is PublicMcpConsentManifest['scopes'][number] =>
+      (PUBLIC_MCP_OAUTH_SCOPES as readonly string[]).includes(scope.scope)
+  );
 
   return {
     client: {
@@ -198,7 +214,7 @@ function parseConsentManifest(
         : {}),
     },
     consentRequired: root.consent_required !== false,
-    scopes,
+    scopes: operationalScopes,
   };
 }
 
