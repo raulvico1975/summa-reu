@@ -141,7 +141,7 @@ test('M2 exchanges the real ChatGPT scope request server-side but exposes only M
   assert.deepEqual(startBody.scopes, CHATGPT_SCOPES.split(' '));
   assert.deepEqual(submitBody.scopes, CHATGPT_SCOPES.split(' '));
   assert.equal('resources' in submitBody, false);
-  assert.equal(submitBody.code_challenge_method, 'S256');
+  assert.equal('code_challenge_method' in submitBody, false);
   assert.equal(JSON.stringify(manifest).includes('project-test-secret'), false);
 });
 
