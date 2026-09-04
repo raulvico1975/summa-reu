@@ -6,6 +6,7 @@ import {
   handlePublicMcpAuthorizationStart,
   handlePublicMcpAuthorizationSubmit,
 } from '@/app/api/mcp/oauth/authorize/handler';
+import { StytchConnectedAppsProviderError } from '@/lib/public-mcp/stytch-connected-apps';
 import type { PublicMcpPilotConfig } from '@/lib/public-mcp/pilot-config';
 
 const config: PublicMcpPilotConfig = {
@@ -123,4 +124,23 @@ test('M2 authorization submit rejects an implicit consent value', async () => {
 
   assert.equal(response.status, 400);
   assert.equal((await response.json()).error, 'INVALID_BODY');
+});
+
+test('M2 authorization submit does not expose provider metadata to the browser', async () => {
+  const response = await handlePublicMcpAuthorizationSubmit(request({
+    query: 'client_id=chatgpt-client',
+    consentGranted: true,
+  }), {
+    ...baseDeps,
+    submitAuthorizationFn: async () => {
+      throw new StytchConnectedAppsProviderError({
+        status: 400,
+        code: 'invalid_request',
+        requestId: 'request-test-1',
+      });
+    },
+  });
+
+  assert.equal(response.status, 502);
+  assert.deepEqual(await response.json(), { error: 'MCP_OAUTH_PROVIDER_UNAVAILABLE' });
 });

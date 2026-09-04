@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   createStytchConnectedAppsClient,
   parsePublicMcpAuthorizationRequest,
+  StytchConnectedAppsProviderError,
 } from '@/lib/public-mcp/stytch-connected-apps';
 
 const ISSUER = 'https://auth.example.test';
@@ -139,9 +140,44 @@ test('M2 exchanges the real ChatGPT scope request server-side but exposes only M
   assert.equal(startBody.member_id, 'member-1');
   assert.deepEqual(startBody.scopes, CHATGPT_SCOPES.split(' '));
   assert.deepEqual(submitBody.scopes, CHATGPT_SCOPES.split(' '));
-  assert.deepEqual(submitBody.resources, [RESOURCE]);
+  assert.equal('resources' in submitBody, false);
   assert.equal(submitBody.code_challenge_method, 'S256');
   assert.equal(JSON.stringify(manifest).includes('project-test-secret'), false);
+});
+
+test('M2 captures only safe Stytch failure metadata and keeps the provider payload out of errors', async () => {
+  const request = parsePublicMcpAuthorizationRequest(authorizationParams({ scope: CHATGPT_SCOPES }), {
+    allowedClientIds: [CLIENT_ID],
+    resource: RESOURCE,
+  });
+  const client = createStytchConnectedAppsClient({
+    projectDomain: ISSUER,
+    projectId: 'project-test-id',
+    projectSecret: 'project-test-secret',
+    allowedClientIds: [CLIENT_ID],
+    resource: RESOURCE,
+    fetchFn: async () => Response.json({
+      request_id: 'request-test-1',
+      error_type: 'invalid_request',
+      error_message: 'must not be exposed',
+      redirect_uri: 'https://attacker.example/secret',
+    }, { status: 400 }),
+  });
+
+  await assert.rejects(
+    client.submitAuthorization(request, { memberId: 'member-1', organizationId: 'stytch-org-1' }, true),
+    (error: unknown) => {
+      assert.ok(error instanceof StytchConnectedAppsProviderError);
+      assert.deepEqual(error.providerFailure, {
+        status: 400,
+        code: 'invalid_request',
+        requestId: 'request-test-1',
+      });
+      assert.equal(error.message.includes('attacker.example'), false);
+      assert.equal(error.message.includes('must not be exposed'), false);
+      return true;
+    }
+  );
 });
 
 test('M2 rejects ungrantable scopes and redirects outside the registered callback', async () => {

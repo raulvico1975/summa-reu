@@ -54,6 +54,17 @@ interface StytchConnectedAppsConfig {
   fetchFn?: typeof fetch;
 }
 
+export class StytchConnectedAppsProviderError extends Error {
+  constructor(readonly providerFailure: {
+    status: number;
+    code?: string;
+    requestId?: string;
+  }) {
+    super('STYTCH_CONNECTED_APPS_UNAVAILABLE');
+    this.name = 'StytchConnectedAppsProviderError';
+  }
+}
+
 function requireHttpsOrigin(value: string, errorCode: string): URL {
   const url = new URL(value);
   if (url.protocol !== 'https:'
@@ -155,6 +166,12 @@ export function parsePublicMcpAuthorizationRequest(
 function stringField(value: unknown, errorCode: string): string {
   if (typeof value !== 'string' || !value) throw new Error(errorCode);
   return value;
+}
+
+function safeProviderIdentifier(value: unknown): string | undefined {
+  return typeof value === 'string' && /^[A-Za-z0-9._-]{1,128}$/.test(value)
+    ? value
+    : undefined;
 }
 
 function parseConsentManifest(
@@ -262,7 +279,24 @@ export function createStytchConnectedAppsClient(config: StytchConnectedAppsConfi
       cache: 'no-store',
       signal: AbortSignal.timeout(timeoutMs),
     });
-    if (!response.ok) throw new Error('STYTCH_CONNECTED_APPS_UNAVAILABLE');
+    if (!response.ok) {
+      let payload: Record<string, unknown> | undefined;
+      try {
+        const value = await response.json();
+        payload = value && typeof value === 'object' ? value as Record<string, unknown> : undefined;
+      } catch {
+        // Stytch failures without JSON still map to the same fail-closed response.
+      }
+      throw new StytchConnectedAppsProviderError({
+        status: response.status,
+        ...(safeProviderIdentifier(payload?.error_type)
+          ? { code: safeProviderIdentifier(payload?.error_type) }
+          : {}),
+        ...(safeProviderIdentifier(payload?.request_id)
+          ? { requestId: safeProviderIdentifier(payload?.request_id) }
+          : {}),
+      });
+    }
     return response.json();
   }
 
@@ -304,11 +338,11 @@ export function createStytchConnectedAppsClient(config: StytchConnectedAppsConfi
         state: request.state,
         code_challenge: request.codeChallenge,
         code_challenge_method: request.codeChallengeMethod,
-        resources: [request.resource],
         member_id: identity.memberId,
         organization_id: identity.organizationId,
         consent_granted: consentGranted,
         ...(request.nonce ? { nonce: request.nonce } : {}),
+        ...(request.prompt ? { prompt: request.prompt } : {}),
       }) as Record<string, unknown>;
       return validateAuthorizationRedirect(response.redirect_uri, request.redirectUri);
     },
