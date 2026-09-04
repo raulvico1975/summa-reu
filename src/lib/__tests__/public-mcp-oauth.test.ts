@@ -19,7 +19,7 @@ const NOW = 1_800_000_000;
 const verifiedToken: VerifiedPublicMcpAccessToken = {
   issuer: ISSUER,
   subject: 'oauth-user-1',
-  audiences: [PROJECT_ID],
+  audiences: ['chatgpt-client'],
   clientId: 'chatgpt-client',
   scopes: ['mcp.session.read', 'contacts.search'],
   expiresAt: NOW + 300,
@@ -65,7 +65,7 @@ function dependencies(overrides: Partial<{
 }> = {}): PublicMcpOAuthDependencies {
   return {
     expectedIssuer: ISSUER,
-    expectedAudience: PROJECT_ID,
+    expectedAudiences: ['chatgpt-client'],
     resource: RESOURCE,
     now: () => NOW,
     async verifyAccessToken() { return overrides.token ?? verifiedToken; },
@@ -118,7 +118,7 @@ test('M2 derives an immutable actor from verified identity binding and canonical
   assert.equal(Object.isFrozen(actor.allowedTools), true);
 });
 
-test('M2 rejects expired, wrong-issuer and wrong Stytch-project-audience tokens', async () => {
+test('M2 rejects expired, wrong-issuer and wrong Connected App audience tokens', async () => {
   await expectAuthFailure(resolvePublicMcpOAuthActor(request(), dependencies({
     token: { ...verifiedToken, expiresAt: NOW },
   })), 'TOKEN_EXPIRED');
