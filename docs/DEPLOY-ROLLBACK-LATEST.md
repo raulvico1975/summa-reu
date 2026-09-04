@@ -1,17 +1,17 @@
 # Rollback Plan (auto) — Summa Social
 
-Generat: 2026-09-04 08:20
+Generat: 2026-09-04 08:38
 Risc: MITJA
 Backup curt: NO_REQUIRED
 SHA prod abans de publicar: 2a17650c2
-SHA branca a publicar (main): 27de354be
+SHA branca a publicar (main): e8fd0250f
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
 git checkout main
-git revert 27de354be --no-edit
+git revert e8fd0250f --no-edit
 git push origin main
 bash scripts/deploy.sh main
 ```
