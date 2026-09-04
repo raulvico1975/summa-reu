@@ -426,6 +426,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-08-31 15:05 | 722e29a4f | MITJA | No | 6 | OK |
 | 2026-09-03 11:08 | 45639da59 | ALT | No | 31 | OK |
 | 2026-09-04 08:38 | e8fd0250f | MITJA | No | 3 | OK |
+| 2026-09-04 09:16 | 1530e0cbf | MITJA | No | 2 | OK |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |

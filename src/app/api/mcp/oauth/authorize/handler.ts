@@ -5,6 +5,7 @@ import {
   createStytchConnectedAppsClient,
   parsePublicMcpAuthorizationRequest,
   type PublicMcpConsentManifest,
+  StytchConnectedAppsProviderError,
   type StytchPublicMcpIdentity,
 } from '@/lib/public-mcp/stytch-connected-apps';
 import {
@@ -111,6 +112,11 @@ function createClient(config: PublicMcpPilotConfig) {
 function invalidRequestResponse(error: unknown) {
   const code = error instanceof Error ? error.message : 'MCP_OAUTH_REQUEST_INVALID';
   const isProviderFailure = code === 'STYTCH_CONNECTED_APPS_UNAVAILABLE';
+  if (error instanceof StytchConnectedAppsProviderError) {
+    // Provider metadata is enough to correlate an incident with Stytch. Never
+    // log its response body, request payload, Firebase token or redirect data.
+    console.warn('Public MCP Stytch authorization provider failure', error.providerFailure);
+  }
   return NextResponse.json(
     { error: isProviderFailure ? 'MCP_OAUTH_PROVIDER_UNAVAILABLE' : 'MCP_OAUTH_REQUEST_INVALID' },
     { status: isProviderFailure ? 502 : 400 }
