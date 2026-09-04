@@ -97,6 +97,9 @@ export function createPublicMcpM2HttpDependencies(
     async resolveActor(request) {
       return resolvePublicMcpOAuthActor(request, {
         expectedIssuer: config.issuer,
+        // Connected Apps access tokens are issued to the Stytch project
+        // audience by default, not to the OAuth resource URL.
+        expectedAudience: config.stytchProjectId,
         resource: config.resource,
         verifyAccessToken,
         async findGrant(issuer, subject, clientId) {
