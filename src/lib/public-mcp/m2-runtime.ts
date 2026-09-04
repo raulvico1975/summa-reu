@@ -97,10 +97,9 @@ export function createPublicMcpM2HttpDependencies(
     async resolveActor(request) {
       return resolvePublicMcpOAuthActor(request, {
         expectedIssuer: config.issuer,
-        // The pilot Connected App is configured with this MCP resource as its
-        // exact custom access-token audience. Bind the token to this endpoint
-        // instead of accepting a project-wide audience.
-        expectedAudience: config.resource,
+        // Stytch access tokens are addressed to the registered Connected App
+        // client. Accept only the explicitly allowlisted pilot clients.
+        expectedAudiences: config.allowedClientIds,
         resource: config.resource,
         verifyAccessToken,
         async findGrant(issuer, subject, clientId) {
