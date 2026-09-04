@@ -10,6 +10,15 @@ const RESOURCE = 'https://mcp.example.test/mcp';
 const CLIENT_ID = 'chatgpt-client';
 const REDIRECT_URI = 'https://chatgpt.com/connector_platform_oauth_redirect';
 const PKCE_CHALLENGE = 'a'.repeat(43);
+const CHATGPT_SCOPES = [
+  'openid',
+  'email',
+  'offline_access',
+  'mcp.session.read',
+  'bank_accounts.search',
+  'contacts.search',
+  'transactions.search',
+].join(' ');
 
 function authorizationParams(overrides: Record<string, string> = {}) {
   return new URLSearchParams({
@@ -25,8 +34,8 @@ function authorizationParams(overrides: Record<string, string> = {}) {
   });
 }
 
-test('M2 parses only allowlisted OAuth clients, scopes, resources and PKCE requests', () => {
-  const parsed = parsePublicMcpAuthorizationRequest(authorizationParams(), {
+test('M2 accepts ChatGPT OIDC protocol scopes without turning them into MCP permissions', () => {
+  const parsed = parsePublicMcpAuthorizationRequest(authorizationParams({ scope: CHATGPT_SCOPES }), {
     allowedClientIds: [CLIENT_ID, 'claude-client'],
     resource: RESOURCE,
   });
@@ -35,7 +44,15 @@ test('M2 parses only allowlisted OAuth clients, scopes, resources and PKCE reque
     clientId: CLIENT_ID,
     redirectUri: REDIRECT_URI,
     responseType: 'code',
-    scopes: ['mcp.session.read', 'contacts.search'],
+    scopes: [
+      'openid',
+      'email',
+      'offline_access',
+      'mcp.session.read',
+      'bank_accounts.search',
+      'contacts.search',
+      'transactions.search',
+    ],
     state: 'state-1',
     codeChallenge: PKCE_CHALLENGE,
     codeChallengeMethod: 'S256',
@@ -47,6 +64,10 @@ test('M2 rejects unknown scopes, wrong resources, non-HTTPS redirects and PKCE d
   const config = { allowedClientIds: [CLIENT_ID], resource: RESOURCE };
   assert.throws(
     () => parsePublicMcpAuthorizationRequest(authorizationParams({ scope: 'admin.write' }), config),
+    /PUBLIC_MCP_OAUTH_SCOPE_INVALID/
+  );
+  assert.throws(
+    () => parsePublicMcpAuthorizationRequest(authorizationParams({ scope: 'openid email offline_access unknown.scope mcp.session.read' }), config),
     /PUBLIC_MCP_OAUTH_SCOPE_INVALID/
   );
   assert.throws(
@@ -63,7 +84,7 @@ test('M2 rejects unknown scopes, wrong resources, non-HTTPS redirects and PKCE d
   );
 });
 
-test('M2 exchanges authorization data server-side and keeps the Stytch secret out of responses', async () => {
+test('M2 exchanges the real ChatGPT scope request server-side but exposes only MCP permissions', async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const client = createStytchConnectedAppsClient({
     projectDomain: ISSUER,
@@ -83,15 +104,20 @@ test('M2 exchanges authorization data server-side and keeps the Stytch secret ou
           },
           consent_required: true,
           scope_results: [
+            { scope: 'openid', is_grantable: true },
+            { scope: 'email', is_grantable: true },
+            { scope: 'offline_access', is_grantable: true },
             { scope: 'mcp.session.read', description: 'Llegir context', is_grantable: true },
+            { scope: 'bank_accounts.search', is_grantable: true },
             { scope: 'contacts.search', description: 'Cercar contactes', is_grantable: true },
+            { scope: 'transactions.search', is_grantable: true },
           ],
         });
       }
       return Response.json({ redirect_uri: `${REDIRECT_URI}?code=code-1&state=state-1` });
     },
   });
-  const request = parsePublicMcpAuthorizationRequest(authorizationParams(), {
+  const request = parsePublicMcpAuthorizationRequest(authorizationParams({ scope: CHATGPT_SCOPES }), {
     allowedClientIds: [CLIENT_ID],
     resource: RESOURCE,
   });
@@ -102,11 +128,17 @@ test('M2 exchanges authorization data server-side and keeps the Stytch secret ou
 
   assert.equal(manifest.client.name, 'ChatGPT Work');
   assert.equal(manifest.scopes.every((scope) => scope.isGrantable), true);
+  assert.deepEqual(
+    manifest.scopes.map((scope) => scope.scope),
+    ['mcp.session.read', 'bank_accounts.search', 'contacts.search', 'transactions.search']
+  );
   assert.equal(redirect, `${REDIRECT_URI}?code=code-1&state=state-1`);
   assert.equal(calls.length, 2);
   const startBody = JSON.parse(calls[0].init?.body?.toString() ?? '{}');
   const submitBody = JSON.parse(calls[1].init?.body?.toString() ?? '{}');
   assert.equal(startBody.member_id, 'member-1');
+  assert.deepEqual(startBody.scopes, CHATGPT_SCOPES.split(' '));
+  assert.deepEqual(submitBody.scopes, CHATGPT_SCOPES.split(' '));
   assert.deepEqual(submitBody.resources, [RESOURCE]);
   assert.equal(submitBody.code_challenge_method, 'S256');
   assert.equal(JSON.stringify(manifest).includes('project-test-secret'), false);
